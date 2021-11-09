@@ -1,0 +1,10 @@
+// profile Z data from gocator
+namespace cads_flatworld;
+
+table profile{
+	frame : ulong;
+	x_off : double;
+	z_samples : [short];
+}
+
+root_type profile;

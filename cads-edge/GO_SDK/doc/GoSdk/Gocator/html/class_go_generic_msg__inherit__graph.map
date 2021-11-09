@@ -1,0 +1,5 @@
+<map id="GoGenericMsg" name="GoGenericMsg">
+<area shape="rect" id="node1" title="Represents a data message containing generic data." alt="" coords="5,155,115,181"/>
+<area shape="rect" id="node2" href="$class_go_data_msg.html" title="Represents a base message sourced from the data channel." alt="" coords="15,80,105,107"/>
+<area shape="rect" id="node3" href="A:/xml-data/build-dir/GOC-GOC5V3-JOB1/build/kApiDoc/tags.xml$classk_object.html" title=" " alt="" coords="27,5,93,32"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="GoSurfaceDim" name="GoSurfaceDim">
+<area shape="rect" id="node1" title="Represents a Surface dimension tool. all width/height/length/radius and x/y/z units are in mm,..." alt="" coords="5,304,112,331"/>
+<area shape="rect" id="node2" href="$class_go_surface_tool.html" title="Represents a base surface tool." alt="" coords="5,229,112,256"/>
+<area shape="rect" id="node3" href="$class_go_ext_tool.html" title="Represents an extensible tool." alt="" coords="17,155,100,181"/>
+<area shape="rect" id="node4" href="$class_go_tool.html" title="Represents the base tool class." alt="" coords="27,80,90,107"/>
+<area shape="rect" id="node5" href="A:/xml-data/build-dir/GOC-GOC5V3-JOB1/build/kApiDoc/tags.xml$classk_object.html" title=" " alt="" coords="25,5,92,32"/>
+</map>

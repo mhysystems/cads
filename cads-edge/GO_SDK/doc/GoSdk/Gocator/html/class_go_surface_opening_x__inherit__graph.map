@@ -1,0 +1,5 @@
+<map id="GoSurfaceOpeningX" name="GoSurfaceOpeningX">
+<area shape="rect" id="node1" title="Represents an X measurement for a Surface Opening Tool." alt="" coords="5,155,144,181"/>
+<area shape="rect" id="node2" href="$class_go_measurement.html" title="Represents the base class for a tool measurement or script output." alt="" coords="15,80,134,107"/>
+<area shape="rect" id="node3" href="A:/xml-data/build-dir/GOC-GOC5V3-JOB1/build/kApiDoc/tags.xml$classk_object.html" title=" " alt="" coords="41,5,108,32"/>
+</map>

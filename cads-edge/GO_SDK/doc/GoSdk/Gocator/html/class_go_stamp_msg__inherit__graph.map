@@ -1,0 +1,5 @@
+<map id="GoStampMsg" name="GoStampMsg">
+<area shape="rect" id="node1" title="Represents a message containing a set of acquisition stamps." alt="" coords="5,155,108,181"/>
+<area shape="rect" id="node2" href="$class_go_data_msg.html" title="Represents a base message sourced from the data channel." alt="" coords="11,80,102,107"/>
+<area shape="rect" id="node3" href="A:/xml-data/build-dir/GOC-GOC5V3-JOB1/build/kApiDoc/tags.xml$classk_object.html" title=" " alt="" coords="23,5,90,32"/>
+</map>

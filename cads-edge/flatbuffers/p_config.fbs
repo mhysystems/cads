@@ -1,0 +1,12 @@
+// Gocator sampling resolutions
+
+namespace cads_flatworld;
+
+table profile_resolution {
+	y : double;
+	x : double;
+	z : double;
+	z_off : double;
+}
+
+root_type profile_resolution;

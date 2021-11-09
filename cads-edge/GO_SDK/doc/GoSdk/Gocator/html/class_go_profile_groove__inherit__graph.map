@@ -1,0 +1,6 @@
+<map id="GoProfileGroove" name="GoProfileGroove">
+<area shape="rect" id="node1" title="Represents a profile groove tool." alt="" coords="5,229,120,256"/>
+<area shape="rect" id="node2" href="$class_go_profile_tool.html" title="Represents a base profile tool." alt="" coords="13,155,112,181"/>
+<area shape="rect" id="node3" href="$class_go_tool.html" title="Represents the base tool class." alt="" coords="31,80,94,107"/>
+<area shape="rect" id="node4" href="A:/xml-data/build-dir/GOC-GOC5V3-JOB1/build/kApiDoc/tags.xml$classk_object.html" title=" " alt="" coords="29,5,96,32"/>
+</map>

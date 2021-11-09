@@ -1,0 +1,5 @@
+<map id="GoEdgeMatchMsg" name="GoEdgeMatchMsg">
+<area shape="rect" id="node1" title="Represents a message containing edge based part matching results." alt="" coords="5,155,136,181"/>
+<area shape="rect" id="node2" href="$class_go_data_msg.html" title="Represents a base message sourced from the data channel." alt="" coords="25,80,116,107"/>
+<area shape="rect" id="node3" href="A:/xml-data/build-dir/GOC-GOC5V3-JOB1/build/kApiDoc/tags.xml$classk_object.html" title=" " alt="" coords="37,5,104,32"/>
+</map>

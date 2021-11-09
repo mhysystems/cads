@@ -1,0 +1,5 @@
+<map id="GoSurfacePlaneMaxError" name="GoSurfacePlaneMaxError">
+<area shape="rect" id="node1" title="Represents a Maximum Error measurement for a Surface Plane Tool." alt="" coords="5,155,175,181"/>
+<area shape="rect" id="node2" href="$class_go_measurement.html" title="Represents the base class for a tool measurement or script output." alt="" coords="31,80,149,107"/>
+<area shape="rect" id="node3" href="A:/xml-data/build-dir/GOC-GOC5V3-JOB1/build/kApiDoc/tags.xml$classk_object.html" title=" " alt="" coords="57,5,123,32"/>
+</map>

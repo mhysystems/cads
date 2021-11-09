@@ -1,0 +1,4 @@
+<map id="GoVoltageSetting" name="GoVoltageSetting">
+<area shape="rect" id="node1" title="Represents either 48V or 24V (with cable length) operation. Only relevant on G3210." alt="" coords="5,80,129,107"/>
+<area shape="rect" id="node2" href="A:/xml-data/build-dir/GOC-GOC5V3-JOB1/build/kApiDoc/tags.xml$classk_value.html" title=" " alt="" coords="36,5,99,32"/>
+</map>
