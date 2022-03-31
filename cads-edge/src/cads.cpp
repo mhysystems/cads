@@ -226,27 +226,33 @@ cv::Mat buffers_to_mat(deque<profile> ps, deque<tuple<double,double>> boundary, 
 	const auto n_cols = ((x_max-x_min)/x_res);
 	cv::Mat mat(ps.size(),(int)n_cols,CV_32F,cv::Scalar::all(0.0f));
 	
-	int i = 0;
-	for(auto p : ps) {
-		auto m = mat.ptr<float>(i++);
-		const auto zeros_left = (int)((p.x_off - x_min)/x_res); // Should be a multiple of x_res
+  int i = 0;
+  auto bounds = boundary.begin();
+  for(auto p : ps) {
+    auto p_x_min = get<0>(*bounds);
+    auto p_x_max = get<1>(*bounds++);
 
-		int j = 0;
-		for(;j <zeros_left;++j) {
-			m[j] = 0.0f;
-		}
+    auto m = mat.ptr<float>(i++);
+    const auto zeros_left = (int)((p_x_min - x_min)/x_res); // Should be a multiple of x_res
 
-		for_each(p.z.begin(),p.z.end(),[&](auto z) {
-			m[j++] = (float)z;
-		});
+    int j = 0;
+    for(;j <zeros_left;++j) {
+            m[j] = 0.0f;
+    }
 
-		for(;j < n_cols;++j) {
-			m[j] = 0.0f;
-		}
+    auto x_begin = int(p_x_min / x_res);
+    auto x_end = int(p_x_max / x_res);
+
+    for_each(p.z.begin() + x_begin ,p.z.begin() + x_end,[&](auto z) {
+            m[j++] = (float)z;
+    });
+
+    for(;j < n_cols;++j) {
+            m[j] = 0.0f;
+    }
 
 
-	}
-
+  }
 	return mat;
 }
 
