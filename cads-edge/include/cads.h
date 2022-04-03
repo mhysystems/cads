@@ -11,8 +11,8 @@
 #include <opencv2/core/mat.hpp>
 
 namespace cads {
-//using profile = std::tuple<uint64_t,double,std::vector<int16_t>>;
-using profile = struct profile{uint64_t y; double x_off;std::vector<int16_t> z;};
+using gocator_profile = std::tuple<uint64_t,double,std::vector<int16_t>>;
+using profile = struct profile{uint64_t y; double x_off; double left_edge; double right_edge; std::vector<int16_t> z;};
 using profile_window = std::deque<profile>;
 constexpr int16_t InvalidRange16Bit = 0x8000;
 
