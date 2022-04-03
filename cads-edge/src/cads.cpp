@@ -671,11 +671,11 @@ cv::Mat slurpcsv_mat(std::string filename)
 
 		std::condition_variable sig;
 		std::mutex m;
-		//std::queue<std::variant<uint64_t,std::string>> upload_fifo;
-		//std::thread upload(http_post_thread,std::ref(upload_fifo),std::ref(m),std::ref(sig));
+		std::queue<std::variant<uint64_t,std::string>> upload_fifo;
+		std::thread upload(http_post_thread,std::ref(upload_fifo),std::ref(m),std::ref(sig));
 		
 		// Avoid waiting for thread to join if main thread ends
-		//upload.detach(); 
+		upload.detach(); 
 
 		std::condition_variable sig_db;
 		std::mutex m_db;

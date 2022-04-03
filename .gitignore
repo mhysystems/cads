@@ -1,2 +1,4 @@
-cads-edge/subprojects/cpr-1.5.0/
-cads-edge/subprojects/spdlog-1.8.5/
+cads-edge/subprojects/**/
+cads-edge/**/*.log
+cads-edge/release/**/*
+cads-edge/debug/**/*

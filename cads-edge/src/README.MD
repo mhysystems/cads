@@ -36,7 +36,14 @@ It is an ad-hoc process for now.
 
   ## Compile with Meson ##
   This will statically link the gocator api into cads
-  meson setup builddir
+  meson setup debug --buildtype debug
   cd builddir
   ninja
+
+  ### Release
+  meson setup release --buildtype release
+  cd builddir
+  ninja
+
+
 
