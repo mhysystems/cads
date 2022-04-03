@@ -5,9 +5,13 @@
 #include <boost/program_options/value_semantic.hpp>
 #include <boost/program_options.hpp>
 
-#include <opencv2/core/mat.hpp>
+//#include <opencv2/core/mat.hpp>
 
 #include <iostream>
+#include <algorithm>
+#include <cctype>
+
+#include <spdlog/spdlog.h>
 
 namespace po = boost::program_options;
 
@@ -22,7 +26,8 @@ int main(int argn, char **argv)
 
 	desc.add_options()
 		("help,h", "produce help message")
-		("config,c", po::value<std::string>(), "Config JSON file.");
+		("config,c", po::value<std::string>(), "Config JSON file.")
+    ("level,l", po::value<std::string>(), "Logging Level");
 
 	po::variables_map vm;
 
@@ -54,6 +59,20 @@ int main(int argn, char **argv)
 		cout << desc << endl;
 		return EXIT_FAILURE;
 	}
+
+  if(vm.count("level") > 0) {
+    std::string l = vm["level"].as<std::string>();
+    std::transform(l.begin(), l.end(), l.begin(),[](unsigned char c){ return std::tolower(c); });
+
+    if(l == "info") {
+      spdlog::set_level(spdlog::level::info);
+    }else if(l == "debug") {
+      spdlog::set_level(spdlog::level::debug);
+    }
+
+  }
+
+  
 
 	process_flatbuffers();
 

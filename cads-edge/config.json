@@ -1,0 +1,17 @@
+{
+    "y_max_length" : 901000,
+    "z_height" : 29.2,
+    "x_width"  : 1.5,
+    "left_edge_nan" : 21,
+    "right_egde_nan" : 21,
+		"fiducial_depth" : 5,
+		"fiducial_x" : 50,
+		"fiducial_y" : 75,
+		"fiducial_gap" : 50,
+    "daily_upload_limit" : 3000000000,
+    "db_name" : "profile.db",
+		"sleep_sig" : "sbuf",
+    "belt_cross_correlation_threshold" : 0.4,
+		"upload_profile_to" : "http://cads:hMe-%3A%2AZO%23%29dj%7B@cads.mhysystems.com/api/whaleback/cv405/profile",
+		"upload_config_to" : "http://cads:hMe-%3A%2AZO%23%29dj%7B@cads.mhysystems.com/api/whaleback/cv405/meta"
+}

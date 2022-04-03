@@ -5,13 +5,13 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": "g++ - Build and debug active file",
+			"name": "(gdb) Meson Launch",
 			"type": "cppdbg",
 			"request": "launch",
-			"program": "${workspaceFolder}/build_static/cads",
-			"args": ["-c", "${workspaceFolder}/build_static/config.json"],
+			"program": "${workspaceFolder}/builddir/cads",
+			"args": ["-c", "${workspaceFolder}/config.json"],
 			"stopAtEntry": false,
-			"cwd": "${fileDirname}",
+			"cwd": "${workspaceFolder}/builddir",
 			"environment": [],
 			"externalConsole": false,
 			"MIMode": "gdb",
