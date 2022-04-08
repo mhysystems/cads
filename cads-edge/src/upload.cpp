@@ -59,7 +59,7 @@ void http_post_thread(std::queue<std::variant<uint64_t,std::string>> &q, std::mu
 		const auto msg = q.front();
 		const auto q_size = q.size();
 		lock.unlock();
-		log->info("pump queue");
+		
 		cpr::Response r;
 		if(msg.index() == 1) {
 				const cpr::Url endpoint{global_config["upload_config_to"].get<std::string>()};
@@ -72,7 +72,7 @@ void http_post_thread(std::queue<std::variant<uint64_t,std::string>> &q, std::mu
 			auto y = get<uint64_t>(msg);
 
 			auto p = fetch_profile(stmt,y) ; 
-
+      log->info("fetch:{},{}",p.z[0],p.z.size());
 			// profile at y not written to database yet
 			if(p.y != y) {
 				unique_lock<mutex> lock(m);

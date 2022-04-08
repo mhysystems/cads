@@ -1,9 +1,9 @@
 {
     "y_max_length" : 901000,
-    "z_height" : 29.2,
+    "z_height" : 25.0,
     "x_width"  : 1.5,
-    "left_edge_nan" : 21,
-    "right_egde_nan" : 21,
+    "left_edge_nan" : 15,
+    "right_egde_nan" : 15,
 		"fiducial_depth" : 5,
 		"fiducial_x" : 50,
 		"fiducial_y" : 75,

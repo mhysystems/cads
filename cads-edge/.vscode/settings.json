@@ -3,7 +3,22 @@
     "chrono": "cpp",
     "cmath": "cpp",
     "complex": "cpp",
-    "limits": "cpp"
+    "limits": "cpp",
+    "vector": "cpp",
+    "ranges": "cpp",
+    "array": "cpp",
+    "deque": "cpp",
+    "forward_list": "cpp",
+    "list": "cpp",
+    "string": "cpp",
+    "unordered_map": "cpp",
+    "unordered_set": "cpp",
+    "string_view": "cpp",
+    "initializer_list": "cpp",
+    "span": "cpp",
+    "regex": "cpp",
+    "valarray": "cpp",
+    "concepts": "cpp"
   },
   "cmake.configureOnOpen": false
 }

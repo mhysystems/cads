@@ -74,7 +74,7 @@ int main(int argn, char **argv)
 
   
 
-	process_flatbuffers();
+	process_flatbuffers2();
 
 	return 0;
 }

@@ -18,6 +18,7 @@ constexpr int16_t InvalidRange16Bit = 0x8000;
 
 std::string slurpfile(const std::string_view path, bool binaryMode = true);
 void process_flatbuffers();
+void process_flatbuffers2();
 
 }
 
