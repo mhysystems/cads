@@ -7,15 +7,16 @@ add_project_arguments('-w',language : 'cpp')
 thread = dependency('threads')
 boost = dependency('boost', modules : ['program_options','math_tr1f'])
 sqlite = dependency('sqlite3')
-opencv = dependency('opencv', required:false)
-flatbuffers = dependency('flatbuffers')
+opencv = dependency('opencv4', required:false)
 
 if not opencv.found()
-	opencv = dependency('opencv4')
+	opencv = dependency('opencv')
 endif
 
 http_stuff = subproject('cpr').get_variable('cpr_dep')
 log_stuff = subproject('spdlog').get_variable('spdlog_dep')
+flatbuffers = subproject('flatbuffers').get_variable('flatbuffers_dep')
+flatc = subproject('flatbuffers').get_variable('flatc')
 
 subdir('GO_SDK/Platform/kApi')
 subdir('GO_SDK/Gocator/GoSdk')
@@ -34,5 +35,5 @@ cads = executable(
 	include_directories : [GoSdkInc,kApiInc,cadsInc],
 	dependencies:[opencv,thread, boost, sqlite, http_stuff,log_stuff, flatbuffers],
   link_with : [GoSdkLib,kApiLib],
-	cpp_args : ['--std=c++20','-fcoroutines']
+	cpp_args : ['-std=c++20','-fcoroutines']
 )

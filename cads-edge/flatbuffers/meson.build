@@ -1,5 +1,3 @@
-flatc = find_program(['flatc'], required : false)
-
 z_data = custom_target(
     'z_data',
     input : 'z_data.fbs',
