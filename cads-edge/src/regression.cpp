@@ -11,7 +11,7 @@ namespace cads {
 
     auto r = yy | sr::views::take(yy.size() - 400) | sr::views::drop(400) | sr::views::filter([](int16_t a){ return a != 0x8000; });
     
-    std::vector<double> y(yy.begin()+400,yy.end()-400);
+    std::vector<double> y(r.begin(),r.end());
     
     std::vector<double> x(y.size());
 
