@@ -8,6 +8,7 @@
 #include <json.hpp>
 #include <db.h>
 #include <upload.h>
+#include <constants.h>
 
 #include <readerwriterqueue.h>
 #include <gocator_reader.h>

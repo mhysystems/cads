@@ -9,6 +9,7 @@ boost = dependency('boost', modules : ['program_options','math_tr1f'])
 sqlite = dependency('sqlite3')
 opencv = dependency('opencv4', required:false)
 
+
 if not opencv.found()
 	opencv = dependency('opencv')
 endif
@@ -17,6 +18,8 @@ http_stuff = subproject('cpr').get_variable('cpr_dep')
 log_stuff = subproject('spdlog').get_variable('spdlog_dep')
 flatbuffers = subproject('flatbuffers').get_variable('flatbuffers_dep')
 flatc = subproject('flatbuffers').get_variable('flatc')
+gtest_dep = subproject('gtest').get_variable('gtest_dep')
+gtest_main = subproject('gtest').get_variable('gtest_main_dep')
 
 subdir('GO_SDK/Platform/kApi')
 subdir('GO_SDK/Gocator/GoSdk')
@@ -24,6 +27,7 @@ subdir('GO_SDK/Gocator/GoSdk')
 cadsInc = include_directories('include')
 cadsSrc = []
 subdir('src')
+subdir('test')
 
 # Returns z_config and p_config
 # Represents header files
