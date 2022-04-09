@@ -6,7 +6,7 @@ using namespace cads;
 
 TEST(cads, nan_removal)
 {
-  auto a = nan_removal({-1,1,-1},0);
-  std::vector<int16_t> b{0,1,0};
+  auto a = nan_removal({-1,0,2,2,2,1,-1},0);
+  std::vector<int16_t> b{0,0,2,2,2,1,1};
   ASSERT_EQ(a,b);
 }
