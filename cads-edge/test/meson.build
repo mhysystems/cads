@@ -1,10 +1,11 @@
-nan_removal_tests = executable(
-  'nan_removal_tests', 
-  sources : [ 'nan_removal.cpp', meson.source_root() + '/src/nan_removal.cpp'],
+cads_unit_tests = executable(
+  'cads_unit_tests', 
+  sources : [ 'cads_unit_tests.cpp', meson.source_root() + '/src/nan_removal.cpp',  meson.source_root() + '/src/fiducial.cpp'],
   include_directories : cadsInc, 
-  dependencies : [ gtest_dep, gtest_main ],
-  cpp_args : ['-std=c++20','-fcoroutines']
+  dependencies : [opencv, gtest_dep, gtest_main, fmt_dep ],
+  cpp_args : ['-std=c++20','-fcoroutines', '-fext-numeric-literals']
   )
 
 
-test('nan_removal', nan_removal_tests)
+test('nan_removal', cads_unit_tests, args : ['--gtest_filter=cads.nan_removal'])
+test('make_fiducial', cads_unit_tests, args : ['--gtest_filter=cads.make_fiducial'])

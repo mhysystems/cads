@@ -28,7 +28,7 @@
 			"name": "(gdb) Debug nan_removal",
 			"type": "cppdbg",
 			"request": "launch",
-			"program": "${workspaceFolder}/debug/test/nan_removal_tests",
+			"program": "${workspaceFolder}/debug/test/cads_unit_tests",
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}/debug",
 			"environment": [],
