@@ -3,25 +3,19 @@
 #include <vector>
 #include <string>
 #include <iostream>
-#include "json.hpp"
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 
 
-
-
-using json = nlohmann::json;
-extern json global_config;
-
 namespace cads {
 
 using namespace std;
 
-bool create_db() {
+bool create_db(std::string name) {
     sqlite3 *db = nullptr;
     bool r = false;
-    const char *db_name = global_config["db_name"].get<std::string>().c_str();
+    const char *db_name = name.c_str();
     int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE , nullptr);
     vector<string> tables{
         R"(CREATE TABLE IF NOT EXISTS PROFILE (y INTEGER PRIMARY KEY, x_off REAL NOT NULL, left_edge REAL NOT NULL, right_edge REAL NOT NULL,z BLOB NOT NULL);)"s,
@@ -54,9 +48,9 @@ bool create_db() {
 }
 
 
-tuple<sqlite3 *,sqlite3_stmt*> open_db() {
+tuple<sqlite3 *,sqlite3_stmt*> open_db(std::string name) {
     sqlite3 *db = nullptr;
-    const char *db_name = global_config["db_name"].get<std::string>().c_str();
+    const char *db_name = name.c_str();
 
     int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_SHAREDCACHE, nullptr);
         
@@ -79,11 +73,30 @@ tuple<sqlite3 *,sqlite3_stmt*> open_db() {
 
 }
 
+
 sqlite3_stmt* fetch_profile_statement(sqlite3* db) {
     auto query = R"(SELECT * FROM PROFILE WHERE y=?)"s;
     sqlite3_stmt *stmt = nullptr;
     auto err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL); 
     return stmt;
+}
+
+cads2::profile fetch_profile2(sqlite3_stmt* stmt, uint64_t y) {
+    int err = sqlite3_bind_int64(stmt,1,y);
+		err = sqlite3_step(stmt);
+    
+    if( err == SQLITE_ROW){
+        uint64_t y = (uint64_t)sqlite3_column_int64(stmt,0);
+        double x_off = sqlite3_column_double(stmt,1);
+        float *z = (float*)sqlite3_column_blob(stmt,2);
+        int len = sqlite3_column_bytes(stmt,2) / sizeof(*z);
+				vector<float> zv{z,z+len};
+				sqlite3_reset(stmt);
+        return {y,x_off,zv};
+    }else {
+        sqlite3_reset(stmt);
+        return {std::numeric_limits<uint64_t>::max(),NAN,{}};
+    }
 }
 
 profile fetch_profile(sqlite3_stmt* stmt, uint64_t y) {
@@ -105,16 +118,15 @@ profile fetch_profile(sqlite3_stmt* stmt, uint64_t y) {
         sqlite3_reset(stmt);
         return {std::numeric_limits<uint64_t>::max(),NAN,NAN,NAN,{}};
     }
-
-
 }
 
-void store_profile_thread(std::queue<profile> &q, std::mutex &m, std::condition_variable &sig) {
+
+void store_profile_thread(std::queue<profile> &q, std::mutex &m, std::condition_variable &sig, std::string &name) {
 	  
 		auto log = spdlog::rotating_logger_st("db", "db.log", 1024 * 1024 * 5, 1);
 		
 		sqlite3 *db = nullptr;
-    const char *db_name = global_config["db_name"].get<std::string>().c_str();
+    const char *db_name = name.c_str(); 
 
     int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_SHAREDCACHE, nullptr);
         

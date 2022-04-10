@@ -683,7 +683,8 @@ cv::Mat slurpcsv_mat(std::string filename)
 		std::condition_variable sig_db;
 		std::mutex m_db;
 		std::queue<profile> db_fifo;
-		std::thread db_store(store_profile_thread,std::ref(db_fifo),std::ref(m_db),std::ref(sig_db));
+    std::string what = "profile.db";
+		std::thread db_store(store_profile_thread,std::ref(db_fifo),std::ref(m_db),std::ref(sig_db),std::ref(what));
 		db_store.detach();
 
 		deque<profile> profile_buffer;
@@ -860,7 +861,8 @@ void process_flatbuffers2()
 		std::condition_variable sig_db;
 		std::mutex m_db;
 		std::queue<profile> db_fifo;
-		std::thread db_store(store_profile_thread,std::ref(db_fifo),std::ref(m_db),std::ref(sig_db));
+    std::string what = "profile.db";
+		std::thread db_store(store_profile_thread,std::ref(db_fifo),std::ref(m_db),std::ref(sig_db),std::ref(what));
 		db_store.detach();
 
 		while(recorder_data.resume() && cnt-- > 0) {
@@ -972,7 +974,8 @@ void process_flatbuffers3()
 		std::condition_variable sig_db;
 		std::mutex m_db;
 		std::queue<profile> db_fifo;
-		std::thread db_store(store_profile_thread,std::ref(db_fifo),std::ref(m_db),std::ref(sig_db));
+    std::string what = "profile.db";
+		std::thread db_store(store_profile_thread,std::ref(db_fifo),std::ref(m_db),std::ref(sig_db),std::ref(what));
 		db_store.detach();
 
 		deque<profile> profile_buffer;

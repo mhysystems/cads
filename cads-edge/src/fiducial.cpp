@@ -32,15 +32,36 @@ Mat make_fiducial(double x_res, double y_res, double fy_mm, double fx_mm, double
 bool fiducial_as_image(Mat m) {
   auto now = fmt::format("{:%Y%m%d%H%M%S}",chrono::system_clock::now());
   auto mc = m.clone();
+  patchNaNs(mc);
 
+  double minVal, maxVal;
+  minMaxLoc( mc, &minVal, &maxVal);
+  auto f = 255.0 / (maxVal-minVal);
+  
   for(int i = 0; i < mc.rows; i++) {
     float* mci = mc.ptr<float>(i);
     for(int j = 0; j < mc.cols; j++) {
-        mci[j] *= 255.0;
+        mci[j] = (mci[j] - minVal) * f;
     }
   }
 
   return imwrite("fiducial"+now+".png", mc);
+}
+
+
+double search_for_fiducial(cv::Mat belt, cv::Mat fiducial, double c_threshold, double z_threshold) {
+	
+	cv::Mat black_belt;
+	cv::threshold(belt.colRange(0,fiducial.cols*2),black_belt,z_threshold,1.0,cv::THRESH_BINARY);
+
+	cv::Mat out(black_belt.rows - fiducial.rows + 1,black_belt.cols - fiducial.cols + 1, CV_32F);
+	cv::matchTemplate(black_belt,fiducial,out,cv::TM_SQDIFF_NORMED);
+
+	double minVal;
+  minMaxLoc( out, &minVal);
+
+	return minVal;
+
 }
 
 }
