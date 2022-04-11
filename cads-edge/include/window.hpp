@@ -6,10 +6,11 @@
 
 #include <opencv2/core/mat.hpp>
 
-namespace cads2 {
-using profile = struct profile{uint64_t y; double x_off; std::vector<float> z;};
+#include <cads.h>
+
+namespace cads {
 using window = std::deque<profile>;
 
-cv::Mat window_to_mat(std::deque<profile> win, double x_res);
+cv::Mat window_to_mat(window win, double x_res);
 
 }

@@ -9,7 +9,7 @@
 			"type": "cppdbg",
 			"request": "launch",
 			"program": "${workspaceFolder}/debug/cads",
-			"args": ["-c", "${workspaceFolder}/config.json"],
+			"args": ["-d", "-c", "${workspaceFolder}/config.json"],
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}/debug",
 			"environment": [],
@@ -25,7 +25,7 @@
 			"miDebuggerPath": "/usr/bin/gdb"
 		},
     {
-			"name": "(gdb) Debug nan_removal",
+			"name": "(gdb) Unit Tests",
 			"type": "cppdbg",
 			"request": "launch",
 			"program": "${workspaceFolder}/debug/test/cads_unit_tests",

@@ -30,7 +30,7 @@ TEST(cads, search_for_fiducial)
   auto y_res = 5.5758;
   auto x_res = 0.795;
   auto fiducial = make_fiducial(x_res,y_res,50,50,50);
-  cads2::window belt_window;
+  cads::window belt_window;
 
 
   auto [db,ignore] = open_db("testbelt.db");
@@ -38,7 +38,7 @@ TEST(cads, search_for_fiducial)
   double b = 0.2;
   int yy = 0;
   for(auto y = 60000;y < 60443+fiducial.rows;y++) {
-    auto profile = fetch_profile2(fetch_stmt,y);
+    auto profile = fetch_profile(fetch_stmt,y);
     belt_window.push_back(profile);
 
     // Wait for buffers to fill

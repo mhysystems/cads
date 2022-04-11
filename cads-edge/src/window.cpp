@@ -5,10 +5,10 @@
 
 using namespace std;
 
-namespace cads2 {
+namespace cads {
 
 
-tuple<double,double>  x_minmax(std::deque<cads2::profile>win, double x_res) {
+tuple<double,double>  x_minmax(window win, double x_res) {
   double x_min = numeric_limits<double>::max();
   double x_max = numeric_limits<double>::min();
   
@@ -21,7 +21,7 @@ tuple<double,double>  x_minmax(std::deque<cads2::profile>win, double x_res) {
 }
 
 
-cv::Mat window_to_mat(std::deque<profile> win, double x_res) {
+cv::Mat window_to_mat(window win, double x_res) {
 
   if(win.size() < 1) return cv::Mat(0,0,CV_32F);
 

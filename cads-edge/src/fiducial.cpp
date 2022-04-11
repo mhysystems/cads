@@ -29,7 +29,7 @@ Mat make_fiducial(double x_res, double y_res, double fy_mm, double fx_mm, double
 
 }
 
-bool fiducial_as_image(Mat m) {
+bool fiducial_as_image(Mat m, std::string suf) {
   auto now = fmt::format("{:%Y%m%d%H%M%S}",chrono::system_clock::now());
   auto mc = m.clone();
   patchNaNs(mc);
@@ -45,9 +45,16 @@ bool fiducial_as_image(Mat m) {
     }
   }
 
-  return imwrite("fiducial"+now+".png", mc);
+  return imwrite("fiducial"+now+suf+".png", mc);
 }
 
+bool mat_as_image(Mat m, double z_threshold) {
+	cv::Mat grey;
+	cv::threshold(m,grey,z_threshold,1.0,cv::THRESH_BINARY);
+
+	return fiducial_as_image(grey,"b");
+
+}
 
 double search_for_fiducial(cv::Mat belt, cv::Mat fiducial, double c_threshold, double z_threshold) {
 	

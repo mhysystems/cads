@@ -34,7 +34,7 @@ void http_post_thread(std::queue<std::variant<uint64_t,std::string>> &q, std::mu
 	
 	sqlite3 *db = nullptr;
 	const cpr::Url endpoint{global_config["upload_profile_to"].get<std::string>()};
-	const char *db_name = global_config["db_name"].get<std::string>().c_str();
+	const char *db_name = "profile.db"; //global_config["db_name"].get<std::string>().c_str();
 	const long up_limit = global_config["daily_upload_limit"].get<long>();
 	long up_daily = 0;
 

@@ -27,6 +27,7 @@ int main(int argn, char **argv)
 	desc.add_options()
 		("help,h", "produce help message")
 		("config,c", po::value<std::string>(), "Config JSON file.")
+    ("savedb,d", po::bool_switch(), "Only save one approx belt")
     ("level,l", po::value<std::string>(), "Logging Level");
 
 	po::variables_map vm;
@@ -73,8 +74,11 @@ int main(int argn, char **argv)
   }
 
   
-
-	process_flatbuffers2();
+  if(vm["savedb"].as<bool>()) {
+    store_profile_only();
+  }else{
+	  process_flatbuffers();
+  }
 
 	return 0;
 }
