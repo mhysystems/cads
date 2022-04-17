@@ -640,8 +640,10 @@ cv::Mat slurpcsv_mat(std::string filename)
 	{
 				
 		BlockingReaderWriterQueue<char> gocatorFifo;
-    BlockingReaderWriterQueue<char> dbFifo;
-		GocatorReader gocator(gocatorFifo);
+    BlockingReaderWriterQueue<profile> db_fifo;
+    BlockingReaderWriterQueue<std::variant<uint64_t,std::string>> upload_fifo;
+		
+    GocatorReader gocator(gocatorFifo);
 		gocator.Start();
 
 		// Must be first access to in_file; These values get written once
@@ -677,19 +679,14 @@ cv::Mat slurpcsv_mat(std::string filename)
 		auto [db, stmt] = open_db(db_name);
 		auto fetch_stmt = fetch_profile_statement(db);
 
-		std::condition_variable sig;
-		std::mutex m;
-		std::queue<std::variant<uint64_t,std::string>> upload_fifo;
-		std::thread upload(http_post_thread,std::ref(upload_fifo),std::ref(m),std::ref(sig));
+		std::thread upload(http_post_thread,std::ref(upload_fifo));
 		
 		// Avoid waiting for thread to join if main thread ends
 		upload.detach(); 
 
-		std::condition_variable sig_db;
-		std::mutex m_db;
-		std::queue<profile> db_fifo;
-		std::thread db_store(store_profile_thread,std::ref(db_fifo),std::ref(m_db),std::ref(sig_db));
-		db_store.detach();
+	  std::thread db_store(store_profile_thread,std::ref(db_fifo));
+		
+    db_store.detach();
 
 		deque<profile> profile_buffer;
 		bool pending_meta_upload = true;
@@ -700,11 +697,12 @@ cv::Mat slurpcsv_mat(std::string filename)
     auto p_now = high_resolution_clock::now();
 
     int16_t barrel_z = 0;
-		while(recorder_data.resume()) {
+		
+    while(recorder_data.resume()) {
       auto [y,x,z] = recorder_data();
       
       auto [left_edge_index,right_edge_index] = find_profile_edges(z,nan_num);
-      auto [intercept,gradient] = linear_regression(z);
+      auto [intercept,gradient] = linear_regression(z,left_edge_index,right_edge_index);
       gradient /= x_resolution;
 
       std::transform(z.begin(), z.end(), z.begin(),[gradient, i = 0](int16_t v) mutable -> int16_t{return v != InvalidRange16Bit ? v - (gradient*i++) : InvalidRange16Bit;});
@@ -730,11 +728,6 @@ cv::Mat slurpcsv_mat(std::string filename)
       //resolution["z_off"] = -1*z_resolution*get<0>(bot[0]);
       cv_threshhold = get<0>(hist[0]) - (global_config["fiducial_depth"].get<double>() / z_resolution) ;
 
-      /*
-      std::unique_lock<std::mutex> lock(m);
-      upload_fifo.push(resolution.dump());
-      lock.unlock();
-      sig.notify_one(); */
       break;
     }
    
@@ -744,7 +737,7 @@ cv::Mat slurpcsv_mat(std::string filename)
       
       auto [left_edge_index,right_edge_index] = find_profile_edges(z,nan_num);
       z = nan_removal(z,barrel_z); 
-      auto [intercept,gradient] = linear_regression(z);
+      auto [intercept,gradient] = linear_regression(z,left_edge_index,right_edge_index);
       
       std::transform(z.begin(), z.end(), z.begin(),[gradient, i = 0](int16_t v) mutable -> int16_t{return v != InvalidRange16Bit ? v - (gradient*i++) : InvalidRange16Bit;});
 
@@ -763,8 +756,8 @@ cv::Mat slurpcsv_mat(std::string filename)
 
       if(found_origin < belt_crosscorr_threshold ) {
         spdlog::info("found: {}, thresh: {}, y: {}", found_origin,belt_crosscorr_threshold,yy);
-        mat_as_image(belt.colRange(0,fiducial.cols*2),cv_threshhold);
-        fiducial_as_image(belt);
+        //mat_as_image(belt.colRange(0,fiducial.cols*2),cv_threshhold);
+        //fiducial_as_image(belt);
         yy = 0;
       }
 
@@ -777,7 +770,6 @@ cv::Mat slurpcsv_mat(std::string filename)
 
     }
 
-#if 0
     while(recorder_data.resume()) {
       auto now = std::chrono::high_resolution_clock::now();
 			auto seconds = std::chrono::duration_cast<std::chrono::seconds>(now - p_now);
@@ -785,7 +777,7 @@ cv::Mat slurpcsv_mat(std::string filename)
 
 			auto [y,x,z] = recorder_data();
       auto [left_edge_index,right_edge_index] = find_profile_edges(z,nan_num);
-      auto [intercept,gradient] = linear_regression(z);
+      auto [intercept,gradient] = linear_regression(z,left_edge_index,right_edge_index);
       gradient /= x_resolution;
 
       std::transform(z.begin(), z.end(), z.begin(),[gradient, i = 0](int16_t v) mutable -> int16_t{return v != InvalidRange16Bit ? v - (gradient*i++) : InvalidRange16Bit;});
@@ -803,7 +795,7 @@ cv::Mat slurpcsv_mat(std::string filename)
         glog->info("Skipped y:{} py:{}", y, py);
       }
       py = y;
-			profile profile{y,x,x+x_resolution*left_edge_index,x+x_resolution*right_edge_index,z};
+			profile profile{y,x,z};
 
 			profile_buffer.push_back(profile);
 
@@ -849,29 +841,20 @@ cv::Mat slurpcsv_mat(std::string filename)
 			const auto previous_profile = fetch_profile(fetch_stmt,front_profile.y);
 			
 			if(!store_profile(stmt,front_profile)) {
-				std::unique_lock<std::mutex> lock(m_db);
-				db_fifo.push(front_profile);
-				lock.unlock();
-				sig_db.notify_one();
+				db_fifo.enqueue(front_profile);
 			}
 
   
 			auto is_same = compare_samples(front_profile,previous_profile);
 			if(!is_same) {
-				std::unique_lock<std::mutex> lock(m);
-
-				if(upload_fifo.size() < y_max_samples) {
-					upload_fifo.push(front_profile.y);
-					lock.unlock();
-					sig.notify_one();
-				}
+					upload_fifo.enqueue(front_profile.y);
 			}
       
 
 			profile_buffer.pop_front();
 
 		}
-    #endif
+
 		gocator.Stop();
 		close_db(db,stmt,fetch_stmt);
 	}

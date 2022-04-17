@@ -6,9 +6,6 @@
 #include <deque>
 #include <cstdint>
 #include <string>
-#include <istream>
-
-#include <opencv2/core/mat.hpp>
 
 namespace cads {
 using gocator_profile = std::tuple<uint64_t,double,std::vector<int16_t>>;

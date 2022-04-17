@@ -76,7 +76,10 @@
     "codecvt": "cpp",
     "cfenv": "cpp",
     "cinttypes": "cpp",
-    "typeindex": "cpp"
+    "typeindex": "cpp",
+    "csignal": "cpp",
+    "hash_map": "cpp",
+    "shared_mutex": "cpp"
   },
   "cmake.configureOnOpen": false
 }

@@ -1,14 +1,15 @@
 #include "db.h"
-
 #include "json.hpp"
 
 #include <vector>
 #include <string>
 #include <iostream>
 
+#include <readerwriterqueue.h>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 
+using namespace moodycamel;
 using json = nlohmann::json;
 extern json global_config;
 
@@ -69,9 +70,6 @@ tuple<sqlite3 *,sqlite3_stmt*> open_db(std::string name) {
 		query = R"("PRAGMA journal_mode = MEMORY")"s;
     err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
     err = sqlite3_step(stmt);
-    query = R"("PRAGMA journal_mode=WAL")"s;
-    err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
-    err = sqlite3_step(stmt);
     
     query = R"(INSERT OR REPLACE INTO PROFILE (y,x_off,z) VALUES (?,?,?))"s;
     err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
@@ -107,8 +105,7 @@ profile fetch_profile(sqlite3_stmt* stmt, uint64_t y) {
     }
 }
 
-
-void store_profile_thread(std::queue<profile> &q, std::mutex &m, std::condition_variable &sig) {
+void store_profile_thread(BlockingReaderWriterQueue<profile> &db_fifo) {
 	  
 		auto log = spdlog::rotating_logger_st("db", "db.log", 1024 * 1024 * 5, 1);
 		
@@ -131,16 +128,11 @@ void store_profile_thread(std::queue<profile> &q, std::mutex &m, std::condition_
     err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
 		
 		while(true) {
-			unique_lock<mutex> lock(m);
-			
-			if(q.empty()) {            
-				sig.wait(lock,[&](){ return !q.empty();});
-			}
 			
 			log->flush();
-			const auto p = q.front(); 
-			lock.unlock();
-
+      profile p;
+      db_fifo.wait_dequeue(p);
+      
       if(p.y == std::numeric_limits<uint64_t>::max()) break;
 
 			err = sqlite3_bind_int64(stmt,1,(int64_t)p.y);
@@ -153,12 +145,11 @@ void store_profile_thread(std::queue<profile> &q, std::mutex &m, std::condition_
 				err = sqlite3_step(stmt);
 				std::this_thread::sleep_for(std::chrono::milliseconds(50));
 			}
-			sqlite3_clear_bindings(stmt);
+			
+      sqlite3_clear_bindings(stmt);
 			sqlite3_reset(stmt);  
 
-			lock.lock();
 			if(err == SQLITE_DONE) { 
-				q.pop();
 				log->info("Stored {} in DB after initial failue. Removed from queue.",p.y); 
 			}
 			else{ 
