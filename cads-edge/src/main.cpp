@@ -75,7 +75,8 @@ int main(int argn, char **argv)
 
   
   if(vm["savedb"].as<bool>()) {
-    store_profile_only();
+    process_flatbuffers();
+    //store_profile_only();
   }else{
 	  process_flatbuffers();
   }

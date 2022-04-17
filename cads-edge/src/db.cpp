@@ -101,7 +101,7 @@ profile fetch_profile(sqlite3_stmt* stmt, uint64_t y) {
 }
 
 
-void store_profile_thread(std::queue<profile> &q, std::mutex &m, std::condition_variable &sig, std::string &name) {
+void store_profile_thread(std::queue<profile> &q, std::mutex &m, std::condition_variable &sig, std::string name) {
 	  
 		auto log = spdlog::rotating_logger_st("db", "db.log", 1024 * 1024 * 5, 1);
 		

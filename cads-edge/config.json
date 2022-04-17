@@ -1,5 +1,5 @@
 {
-    "y_max_length" : 950000,
+    "y_max_length" : 930000,
     "z_height" : 25.0,
     "x_width"  : 1.5,
     "left_edge_nan" : 10,

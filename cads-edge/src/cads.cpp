@@ -686,7 +686,7 @@ cv::Mat slurpcsv_mat(std::string filename)
 		std::mutex m_db;
 		std::queue<profile> db_fifo;
     std::string what = "profile.db";
-		std::thread db_store(store_profile_thread,std::ref(db_fifo),std::ref(m_db),std::ref(sig_db),std::ref(what));
+		std::thread db_store(store_profile_thread,std::ref(db_fifo),std::ref(m_db),std::ref(sig_db),what);
 		db_store.detach();
 
 		deque<profile> profile_buffer;
@@ -874,6 +874,7 @@ cv::Mat slurpcsv_mat(std::string filename)
 		close_db(db,stmt,fetch_stmt);
 	}
 
+#if 0
  void process_flatbuffers5()
 	{
 				
@@ -1051,9 +1052,10 @@ void store_profile_only()
     spdlog::info("Gocator Stopped");
     db_store.join();
     spdlog::info("Waiting for DB Thread. Queue Size: {}", db_fifo.size());
-		close_db(db,stmt,fetch_stmt);
 	}
 
 
 
 }
+
+#endif
