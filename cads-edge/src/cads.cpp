@@ -640,6 +640,7 @@ cv::Mat slurpcsv_mat(std::string filename)
 	{
 				
 		BlockingReaderWriterQueue<char> gocatorFifo;
+    BlockingReaderWriterQueue<char> dbFifo;
 		GocatorReader gocator(gocatorFifo);
 		gocator.Start();
 
@@ -656,6 +657,7 @@ cv::Mat slurpcsv_mat(std::string filename)
 	  auto fgap = global_config["fiducial_gap"].get<double>();
 	  auto fncols = global_config["fiducial_x"].get<double>();
     auto fdepth = global_config["fiducial_depth"].get<double>() / z_resolution;
+    auto db_name = global_config["db_name"].get<std::string>();
 		
     auto fiducial = make_fiducial(x_resolution,y_resolution,fnrows,fncols,fgap);
     fiducial_as_image(fiducial);
@@ -671,7 +673,8 @@ cv::Mat slurpcsv_mat(std::string filename)
     const auto y_max_length = global_config["y_max_length"].get<uint64_t>();
 		const uint64_t y_max_samples = (uint64_t)(global_config["y_max_length"].get<double>()/y_resolution);
     
-		auto [db, stmt] = open_db();
+    create_db(db_name);
+		auto [db, stmt] = open_db(db_name);
 		auto fetch_stmt = fetch_profile_statement(db);
 
 		std::condition_variable sig;
@@ -685,8 +688,7 @@ cv::Mat slurpcsv_mat(std::string filename)
 		std::condition_variable sig_db;
 		std::mutex m_db;
 		std::queue<profile> db_fifo;
-    std::string what = "profile.db";
-		std::thread db_store(store_profile_thread,std::ref(db_fifo),std::ref(m_db),std::ref(sig_db),what);
+		std::thread db_store(store_profile_thread,std::ref(db_fifo),std::ref(m_db),std::ref(sig_db));
 		db_store.detach();
 
 		deque<profile> profile_buffer;
@@ -1054,8 +1056,8 @@ void store_profile_only()
     spdlog::info("Waiting for DB Thread. Queue Size: {}", db_fifo.size());
 	}
 
-
+#endif
 
 }
 
-#endif
+

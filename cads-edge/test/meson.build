@@ -5,7 +5,8 @@ cads_unit_tests = executable(
     meson.source_root() + '/src/nan_removal.cpp',  
     meson.source_root() + '/src/fiducial.cpp',
     meson.source_root() + '/src/db.cpp',
-    meson.source_root() + '/src/window.cpp'
+    meson.source_root() + '/src/window.cpp',
+    meson.source_root() + '/src/global_variables.cpp'
   ],
   include_directories : cadsInc, 
   dependencies : [opencv, gtest_dep, gtest_main, fmt_dep, log_stuff, sqlite ],

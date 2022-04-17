@@ -1,5 +1,7 @@
 #include "db.h"
 
+#include "json.hpp"
+
 #include <vector>
 #include <string>
 #include <iostream>
@@ -7,6 +9,8 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 
+using json = nlohmann::json;
+extern json global_config;
 
 namespace cads {
 
@@ -65,7 +69,10 @@ tuple<sqlite3 *,sqlite3_stmt*> open_db(std::string name) {
 		query = R"("PRAGMA journal_mode = MEMORY")"s;
     err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
     err = sqlite3_step(stmt);
-
+    query = R"("PRAGMA journal_mode=WAL")"s;
+    err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
+    err = sqlite3_step(stmt);
+    
     query = R"(INSERT OR REPLACE INTO PROFILE (y,x_off,z) VALUES (?,?,?))"s;
     err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
 
@@ -101,12 +108,12 @@ profile fetch_profile(sqlite3_stmt* stmt, uint64_t y) {
 }
 
 
-void store_profile_thread(std::queue<profile> &q, std::mutex &m, std::condition_variable &sig, std::string name) {
+void store_profile_thread(std::queue<profile> &q, std::mutex &m, std::condition_variable &sig) {
 	  
 		auto log = spdlog::rotating_logger_st("db", "db.log", 1024 * 1024 * 5, 1);
 		
 		sqlite3 *db = nullptr;
-    const char *db_name = name.c_str(); 
+    const char *db_name = global_config["db_name"].get<std::string>().c_str();
 
     int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_SHAREDCACHE, nullptr);
         

@@ -6,5 +6,6 @@ cadsSrc += files(
   'gocator_reader.cpp',
   'regression.cpp', 
   'nan_removal.cpp',
-  'fiducial.cpp'
+  'fiducial.cpp',
+  'global_variables.cpp'
 )
