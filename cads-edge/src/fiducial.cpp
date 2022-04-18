@@ -17,8 +17,8 @@ Mat make_fiducial(double x_res, double y_res, double fy_mm, double fx_mm, double
 	int nrows = round(fy_mm / y_res); // Y direction(belt length)
 	int gap = round(fg_mm / y_res);
 	int ncols = round(fx_mm / x_res); // X direction
-  int border_y = ceil(5 / y_res);
-  int border_x = ceil(5 / x_res);
+  int border_y = ceil(20 / y_res);
+  int border_x = ceil(2 / x_res);
 
 	Mat fiducial(gap + 2*nrows + 2*border_y,ncols + 2*border_x,CV_32F,{1.0});
 

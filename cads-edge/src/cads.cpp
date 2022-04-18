@@ -713,7 +713,7 @@ cv::Mat slurpcsv_mat(std::string filename)
 			profile_buffer.push_back(profile);
 
 			// Wait for buffers to fill
-			if (profile_buffer.size() < fiducial.rows*2) continue;
+			if (profile_buffer.size() < fiducial.rows) continue;
 
       auto [z_min,z_max] = find_minmax_z(profile_buffer);
 
@@ -732,6 +732,8 @@ cv::Mat slurpcsv_mat(std::string filename)
     }
    
     uint64_t yy = 0;
+    double min_corr = numeric_limits<double>::max();
+
     while(recorder_data.resume()) {
       auto [y,x,z] = recorder_data();
       
@@ -747,6 +749,10 @@ cv::Mat slurpcsv_mat(std::string filename)
       profile_buffer.pop_front();
       profile_buffer.push_back(profile);
       
+      if(!store_profile(stmt,profile)) {
+				db_fifo.enqueue(profile);
+			}
+      
 
       auto belt = buffers_to_mat(profile_buffer,x_resolution);
       double minVal, maxVal;
@@ -754,10 +760,11 @@ cv::Mat slurpcsv_mat(std::string filename)
       cv_threshhold = maxVal - fdepth;
 			auto found_origin = samples_contains_fiducial(belt,fiducial,belt_crosscorr_threshold,cv_threshhold);
 
-      if(found_origin < belt_crosscorr_threshold ) {
-        spdlog::info("found: {}, thresh: {}, y: {}", found_origin,belt_crosscorr_threshold,yy);
-        //mat_as_image(belt.colRange(0,fiducial.cols*2),cv_threshhold);
-        //fiducial_as_image(belt);
+      if(found_origin < min_corr * belt_crosscorr_threshold && found_origin < 0.3) {
+        spdlog::info("found: {}, thresh: {}, y: {}", found_origin,cv_threshhold,yy);
+        min_corr = std::min(found_origin,min_corr);
+        mat_as_image(belt.colRange(0,fiducial.cols*2),cv_threshhold);
+        fiducial_as_image(belt);
         yy = 0;
       }
 
