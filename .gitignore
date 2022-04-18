@@ -1,3 +1,4 @@
+**/.ionide/**
 cads-edge/subprojects/**/
 cads-edge/**/*.log
 cads-edge/release/**/*
