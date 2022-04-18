@@ -90,7 +90,7 @@ void GocatorReader::Stop()
 
 
 GocatorReader::GocatorReader(moodycamel::BlockingReaderWriterQueue<char>& gocatorFifo) : 
-	m_gocatorFifo(gocatorFifo), 
+	GocatorReaderBase(gocatorFifo), 
 	m_yResolution(0.0),
 	m_loop(true)
 {

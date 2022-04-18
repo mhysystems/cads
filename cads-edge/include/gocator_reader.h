@@ -11,10 +11,12 @@
 #include <atomic>
 #include <mutex>
 
+#include "gocator_reader_base.h"
+
 namespace cads
 {
 
-class GocatorReader
+class GocatorReader : public GocatorReaderBase
 {
 
 	GocatorReader() = delete;
@@ -26,7 +28,6 @@ class GocatorReader
 protected:
 	std::atomic<bool> m_loop;
 	double m_yResolution;
-	moodycamel::BlockingReaderWriterQueue<char>& m_gocatorFifo;
 	
 	GoSystem m_system;
 	kAssembly m_assembly;

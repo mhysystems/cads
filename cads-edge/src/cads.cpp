@@ -14,30 +14,20 @@
 
 #include <readerwriterqueue.h>
 #include <gocator_reader.h>
+#include <generator.hpp>
 
 #include <z_data_generated.h>
 #include <p_config_generated.h>
 
 #include <exception>
-#include <fstream>
-//#include <cmath>
-//#include <cstddef>
 #include <limits>
-//#include <sstream>
 #include <string>
 #include <vector>
-//#include <cstdlib>
 #include <tuple>
 #include <algorithm>
-//#include <valarray>
-//#include <memory>
-#include <coroutine>
-#include <queue>
 #include <deque>
-//#include <string_view>
 #include <thread>
-#include <condition_variable>
-#include <mutex>
+#include <memory>
 #include <ranges>
 
 #include <spdlog/spdlog.h>
@@ -58,77 +48,6 @@ auto glog = spdlog::rotating_logger_st("cads", "cads.log", 1024 * 1024 * 5, 1);
 
 namespace cads
 {
-	template <typename T, typename R = int>
-	struct generator
-	{
-		struct promise_type;
-		using handle_type = std::coroutine_handle<promise_type>;
-
-		struct suspend_always2
-		{
-			R &value_out;
-			suspend_always2() = default;
-			suspend_always2(R &a) : value_out(a) {}
-			constexpr bool await_ready() const noexcept { return false; }
-
-			constexpr void await_suspend(handle_type) const noexcept {}
-
-			R await_resume() const noexcept
-			{
-				return value_out;
-			}
-		};
-
-		struct promise_type
-		{
-			T value_in;
-			R value_out;
-			std::exception_ptr exception_;
-
-			generator get_return_object()
-			{
-				return generator(handle_type::from_promise(*this));
-			}
-
-			std::suspend_always initial_suspend() noexcept { return {}; }
-			std::suspend_always final_suspend() noexcept { return {}; }
-			void unhandled_exception() { exception_ = std::current_exception(); }
-
-			suspend_always2 yield_value(T from)
-			{
-				value_in = from;
-				return {value_out};
-			}
-			void return_void() {}
-		};
-
-		handle_type coro;
-
-		generator(handle_type h) : coro(h) {}
-		~generator() { coro.destroy(); }
-
-		bool resume()
-		{
-			return coro ? (coro.resume(), !coro.done()) : false;
-		}
-
-		bool resume(R a)
-		{
-			coro.promise().value_out = a;
-			return coro ? (coro.resume(), !coro.done()) : false;
-		}
-
-		T operator()(R a)
-		{
-			coro.promise().value_out = a;
-			return coro.promise().value_in;
-		}
-
-		T operator()()
-		{
-			return coro.promise().value_in;
-		}
-	};
 
 	std::string slurpfile(const std::string_view path, bool binaryMode)
 	{
@@ -303,8 +222,6 @@ double samples_contains_fiducial_gpu(CadsMat belt, CadsMat fiducial, double c_th
 	double minVal; double maxVal; cv::Point minLoc; cv::Point maxLoc;
   minMaxLoc( out, &minVal, &maxVal, &minLoc, &maxLoc, cv::Mat() );
 	
-	auto r = std::abs(minVal) < c_threshold ? true : false;
-
 	return minVal;
 
 }
@@ -410,52 +327,7 @@ CadsMat buffers_to_mat_gpu(profile_window ps, double x_res) {
 	return mat.getUMat(cv::ACCESS_READ,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
 }
 
-#endif
-cv::Mat draw_fiducial(double x_res, double y_res) {
 
-	int nrows = global_config["fiducial_y"].get<double>() / y_res;
-	int gap = global_config["fiducial_gap"].get<double>() / y_res;
-	int ncols = global_config["fiducial_x"].get<double>() / x_res;
-
-	cv::Mat draw(gap + 2*nrows+5,ncols+2,CV_32F,{1.0});
-
-	cv::rectangle(draw,{2,2,ncols,nrows},{0.0},-1);
-	cv::rectangle(draw,{2,2+nrows+gap,ncols,nrows},{0.0},-1);
-
-	return draw;
-
-}
-
-CadsMat draw_fiducial_gpu(double x_res, double y_res) {
-
-	int nrows = global_config["fiducial_y"].get<double>() / y_res;
-	int gap = global_config["fiducial_gap"].get<double>() / y_res;
-	int ncols = global_config["fiducial_x"].get<double>() / x_res;
-
-	CadsMat draw(gap + 2*nrows+5,ncols+2,CV_32F,{1.0});
-
-	cv::rectangle(draw,{2,2,ncols,nrows},{0.0},-1);
-	cv::rectangle(draw,{2,2+nrows+gap,ncols,nrows},{0.0},-1);
-
-	return draw;
-
-}
-
-
-
-gocator_profile extractZData(std::unique_ptr<char[]> buf) {
-
-	using namespace flatbuffers;
-
-	auto profile = cads_flatworld::Getprofile(buf.get());
-	auto y = profile->frame();
-	auto x_off = profile->x_off();
-	auto z_samples = profile->z_samples();
-	std::vector<int16_t> z(z_samples->begin(),z_samples->end());
-
-	return {y,x_off,z};
-
-}
 
 
 generator<gocator_profile> get_flatworld(std::istream& in_file) {
@@ -476,58 +348,7 @@ generator<gocator_profile> get_flatworld(std::istream& in_file) {
 	}
 }
 
-generator<gocator_profile> get_flatworld(BlockingReaderWriterQueue<char>& fifo) {
 
-	auto init = std::chrono::high_resolution_clock::now() ;
-  auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(init - init).count();
-  auto pt = milliseconds;
-  auto start = init;
-  auto end = start;
-  uint64_t cnt = 0;
-  
-  while(true) {
-		int size = 0;
-
-    if(cnt++ > 2000) {
-    //  glog->info("Average Wait in milliseconds:{}, Avg processing time:{}",milliseconds,pt);
-    //  spdlog::info("Average Wait in milliseconds:{}, Avg processing time:{}",milliseconds,pt);
-      cnt = 0;
-    } 
-		
-		start = std::chrono::high_resolution_clock::now();
-    pt = (pt + std::chrono::duration_cast<std::chrono::milliseconds>(start - end).count()) / 2;
-    fifo.wait_dequeue((char*)&size,sizeof(size));
-    end = std::chrono::high_resolution_clock::now();
-    milliseconds = (milliseconds + std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()) / 2;
-
-
-		if(size < 1) {
-			break;
-		} 
-
-    if(cnt == 0) {
-     // spdlog::info("frame bytes:{}",size);
-    } 
-
-		auto buf = std::make_unique<char[]>(size);
-		fifo.wait_dequeue(buf.get(),size);
-
-		co_yield extractZData(std::move(buf));
-	}
-}
-
-
-auto getProfile(std::unique_ptr<char[]> buf) {
-	
-	using namespace flatbuffers;
-	auto profile = cads_flatworld::Getprofile_resolution(buf.get());
-	auto y_res= profile->y();
-	auto x_res = profile->x();
-	auto z_res = profile->z();
-	auto z_off = profile->z_off();
-
-	return tuple<decltype(y_res),decltype(x_res),decltype(z_res),decltype(z_off)>{y_res,x_res,z_res,z_off};
-}
 
 
 auto get_gocator_constants(std::istream& in_file) {
@@ -543,19 +364,6 @@ auto get_gocator_constants(std::istream& in_file) {
 
 }
 
-auto get_gocator_constants(BlockingReaderWriterQueue<char>& fifo) {
-	
-	int size = 0;
-	
-	fifo.wait_dequeue((char*)&size,sizeof(size));
-
-	auto buf = std::make_unique<char[]>(size);
-	
-	fifo.wait_dequeue(buf.get(),size);
-
-	return getProfile(std::move(buf));
-
-}
 
 cv::Mat slurpcsv_mat(std::string filename)
 	{
@@ -598,7 +406,7 @@ cv::Mat slurpcsv_mat(std::string filename)
 
 		return out;
 	}
-
+#endif
 		vector<tuple<double,int16_t>> histogram(profile_window ps, int16_t min, int16_t max, double size = 100) {
 		
     const auto dz = (size-1) / (max - min);
@@ -643,8 +451,8 @@ cv::Mat slurpcsv_mat(std::string filename)
     BlockingReaderWriterQueue<profile> db_fifo;
     BlockingReaderWriterQueue<std::variant<uint64_t,std::string>> upload_fifo;
 		
-    GocatorReader gocator(gocatorFifo);
-		gocator.Start();
+    unique_ptr<GocatorReaderBase> gocator = make_unique<GocatorReader>(gocatorFifo);
+		gocator->Start();
 
 		// Must be first access to in_file; These values get written once
 		auto [y_resolution,x_resolution,z_resolution,z_offset] = get_gocator_constants(std::ref(gocatorFifo));
@@ -862,9 +670,54 @@ cv::Mat slurpcsv_mat(std::string filename)
 
 		}
 
-		gocator.Stop();
+		gocator->Stop();
 		close_db(db,stmt,fetch_stmt);
 	}
+
+
+void store_profile_only()
+	{
+				
+		BlockingReaderWriterQueue<char> gocatorFifo;
+		unique_ptr<GocatorReaderBase> gocator = make_unique<GocatorReader>(gocatorFifo);
+		gocator->Start();
+
+		// Must be first access to in_file; These values get written once
+		auto [y_resolution,x_resolution,z_resolution,z_offset] = get_gocator_constants(std::ref(gocatorFifo));
+
+		json resolution;
+	
+		resolution["y"] = y_resolution;
+		resolution["x"] = x_resolution;
+		resolution["z"] = z_resolution;
+		resolution["z_off"] = z_offset;
+		
+		spdlog::info("Gocator constants {}", resolution.dump());
+    auto recorder_data = get_flatworld(std::ref(gocatorFifo));
+		
+		uint64_t y_max_samples = (uint64_t)(global_config["y_max_length"].get<double>()/y_resolution);
+    
+		auto [db, stmt] = open_db("");
+		auto fetch_stmt = fetch_profile_statement(db);
+		
+  	while(recorder_data.resume() && y_max_samples-- > 0) {
+
+
+			auto [y,x,z] = recorder_data();
+
+			profile profile{y,x,z};
+
+			
+			store_profile(stmt,profile);
+
+		}
+
+		gocator->Stop();
+  
+    spdlog::info("Gocator Stopped");
+	}
+
+
 
 #if 0
  void process_flatbuffers5()
@@ -979,71 +832,6 @@ cv::Mat slurpcsv_mat(std::string filename)
 		
     gocator.Stop();
     close_db(db,stmt,fetch_stmt);
-	}
-
-void store_profile_only()
-	{
-				
-		BlockingReaderWriterQueue<char> gocatorFifo;
-		GocatorReader gocator(gocatorFifo);
-		gocator.Start();
-
-		// Must be first access to in_file; These values get written once
-		auto [y_resolution,x_resolution,z_resolution,z_offset] = get_gocator_constants(std::ref(gocatorFifo));
-
-
-
-		json resolution;
-	
-		resolution["y"] = y_resolution;
-		resolution["x"] = x_resolution;
-		resolution["z"] = z_resolution;
-		resolution["z_off"] = z_offset;
-		
-		spdlog::info("Gocator constants {}", resolution.dump());
-    auto recorder_data = get_flatworld(std::ref(gocatorFifo));
-		
-		uint64_t y_max_samples = (uint64_t)(global_config["y_max_length"].get<double>()/y_resolution);
-    
-		auto [db, stmt] = open_db();
-		auto fetch_stmt = fetch_profile_statement(db);
-		
-		std::condition_variable sig_db;
-		std::mutex m_db;
-		std::queue<profile> db_fifo;
-    std::string what = "profile.db";
-		std::thread db_store(store_profile_thread,std::ref(db_fifo),std::ref(m_db),std::ref(sig_db),std::ref(what));
-
-
-  	while(recorder_data.resume() && y_max_samples-- > 0) {
-
-
-			auto [y,x,z] = recorder_data();
-
-			profile profile{y,x,z};
-
-			
-			if(!store_profile(stmt,profile)) {
-				std::unique_lock<std::mutex> lock(m_db);
-				db_fifo.push(profile);
-				lock.unlock();
-				sig_db.notify_one();
-			}
-
-
-		}
-
-    {
-				std::unique_lock<std::mutex> lock(m_db);
-				db_fifo.push({std::numeric_limits<uint64_t>::max(),NAN,{}});
-				lock.unlock();
-				sig_db.notify_one();
-		}
-
-		gocator.Stop();
-    spdlog::info("Gocator Stopped");
-    db_store.join();
-    spdlog::info("Waiting for DB Thread. Queue Size: {}", db_fifo.size());
 	}
 
 #endif
