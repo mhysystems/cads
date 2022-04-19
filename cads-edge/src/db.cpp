@@ -24,9 +24,10 @@ bool create_db(std::string name) {
     int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE , nullptr);
     vector<string> tables{
         R"(CREATE TABLE IF NOT EXISTS PROFILE (y INTEGER PRIMARY KEY, x_off REAL NOT NULL, z BLOB NOT NULL);)"s,
+        R"(CREATE TABLE IF NOT EXISTS PARAMETERS (y_res REAL NOT NULL, x_res REAL NOT NULL, z_res REAL NOT NULL, z_off REAL NOT NULL);)"s
 //        R"(CREATE TABLE IF NOT EXISTS BELT (index INTEGER PRIMARY KEY AUTOINCREMENT, num_y_samples integer,num_x_samples integer,belt_length real,x_start real,x_end real,z_min real, z_max real ))"s,
 //        R"(CREATE TABLE IF NOT EXISTS GUI (anomaly_ID integer not null primary key, visible integer ))"s,
-        R"(CREATE TABLE IF NOT EXISTS A_TRACKING (anomaly_ID integer not null primary key, start real, length real, x_lower real, x_upper real, z_depth real, area real,volume real, time text, epoch integer, contour_x real, contour_theta real, category text, danger integer,comment text))"s
+//        R"(CREATE TABLE IF NOT EXISTS A_TRACKING (anomaly_ID integer not null primary key, start real, length real, x_lower real, x_upper real, z_depth real, area real,volume real, time text, epoch integer, contour_x real, contour_theta real, category text, danger integer,comment text))"s
     };
 
 
@@ -104,6 +105,71 @@ profile fetch_profile(sqlite3_stmt* stmt, uint64_t y) {
         return {std::numeric_limits<uint64_t>::max(),NAN,{}};
     }
 }
+
+
+
+std::tuple<double,double,double,double> fetch_profile_parameters(std::string name) {
+    
+  sqlite3 *db = nullptr;
+  sqlite3_stmt *stmt = nullptr;
+
+  const char *db_name = name.c_str();
+  int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READONLY, nullptr);
+  
+  auto query = R"(SELECT * FROM PARAMETERS)"s;
+  err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL); 
+  
+  err = sqlite3_step(stmt);
+  
+  std::tuple<double,double,double,double> rtn;
+  if( err == SQLITE_ROW){
+
+    rtn = {
+      sqlite3_column_double(stmt,0),
+      sqlite3_column_double(stmt,1),
+      sqlite3_column_double(stmt,2),
+      sqlite3_column_double(stmt,3)
+    };
+
+  } else {
+    rtn = {1.0,1.0,1.0,1.0};
+  }
+
+
+  if(stmt != nullptr) sqlite3_finalize(stmt);
+  if(db != nullptr) sqlite3_close(db);
+
+  return rtn;
+
+}
+
+void store_profile_parameters(double y_res, double x_res, double z_res, double z_off) 
+{
+  sqlite3 *db = nullptr;
+  sqlite3_stmt *stmt = nullptr;
+
+  const char *db_name = global_config["db_name"].get<std::string>().c_str();
+  int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX, nullptr);
+  
+  auto query = R"(INSERT OR REPLACE INTO PARAMETERS (y_res,x_res,z_res,z_off) VALUES (?,?,?,?))"s;
+  err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
+  err = sqlite3_bind_double(stmt,1,y_res);
+  err = sqlite3_bind_double(stmt,2,x_res);
+  err = sqlite3_bind_double(stmt,3,z_res);
+  err = sqlite3_bind_double(stmt,4,z_off);
+
+  err = SQLITE_BUSY;
+
+  while(err == SQLITE_BUSY) {
+    err = sqlite3_step(stmt);
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  }
+
+  if(stmt != nullptr) sqlite3_finalize(stmt);
+  if(db != nullptr) sqlite3_close(db);
+
+}
+
 
 void store_profile_thread(BlockingReaderWriterQueue<profile> &db_fifo) {
 	  

@@ -13,9 +13,14 @@
 
 #include <spdlog/spdlog.h>
 #include <db.h>
+#include <json.hpp>
 
 using namespace std;
 using namespace std::chrono;
+
+using json = nlohmann::json;
+
+extern json global_config;
 
 namespace cads
 {
@@ -53,29 +58,32 @@ void SqliteGocatorReader::RunForever()
 
 void SqliteGocatorReader::OnData()
 {
-    double xResolution = 0.0;
-    double zResolution = 0.0;
-    double xOffset = 0.0;
-    double zOffset = 0.0;
+  auto data_src = global_config["data_source"].get<std::string>();
+  auto [m_yResolution,xResolution,zResolution,zOffset] = fetch_profile_parameters(data_src);
+
+  flatbuffers::FlatBufferBuilder builder(4096);
+  
+  auto flat_buffer = cads_flatworld::Createprofile_resolution(builder,m_yResolution,xResolution,zResolution,zOffset);
+  builder.Finish(flat_buffer);
+
+  auto buf = builder.GetBufferPointer();
+  auto size = builder.GetSize();
+
+  m_gocatorFifo.enqueue((char*)&size,sizeof(size));
+  m_gocatorFifo.enqueue((char*)buf,size);
+
+  uint64_t y = 0;
+
+  
+  auto [db, stmt] = open_db(data_src);
+  auto fetch_stmt = fetch_profile_statement(db);
 
 
-    spdlog::info("First frame recieved from gocator");
-
-    flatbuffers::FlatBufferBuilder builder(4096);
-    
-    auto flat_buffer = cads_flatworld::Createprofile_resolution(builder,m_yResolution,xResolution,zResolution,zOffset);
-    builder.Finish(flat_buffer);
-
-    auto buf = builder.GetBufferPointer();
-    auto size = builder.GetSize();
-
-    m_gocatorFifo.enqueue((char*)&size,sizeof(size));
-    m_gocatorFifo.enqueue((char*)buf,size);
-
-    uint64_t y = 0;
 
     while(m_loop) {
-		  cads::profile profile = fetch_profile(nullptr, y++);
+		  cads::profile profile = fetch_profile(fetch_stmt, y++);
+
+      if(profile.y == std::numeric_limits<uint64_t>::max()) continue;
 
       flatbuffers::FlatBufferBuilder builder(4096);
       
