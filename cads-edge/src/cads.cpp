@@ -238,7 +238,7 @@ auto find_profile_edges2(std::vector<int16_t> z, int len, int approx) {
 double samples_contains_fiducial(cv::Mat belt, cv::Mat fiducial, double c_threshold, double z_threshold) {
 	
 	cv::Mat black_belt;
-	cv::threshold(belt.colRange(0,fiducial.cols*4),black_belt,z_threshold,1.0,cv::THRESH_BINARY);
+	cv::threshold(belt.colRange(0,fiducial.cols*2),black_belt,z_threshold,1.0,cv::THRESH_BINARY);
 
 	cv::Mat out(black_belt.rows - fiducial.rows + 1,black_belt.cols - fiducial.cols + 1, CV_32F);
 	cv::matchTemplate(black_belt,fiducial,out,cv::TM_SQDIFF_NORMED);
@@ -531,16 +531,16 @@ cv::Mat slurpcsv_mat(std::string filename)
 		
     const double z_height = global_config["z_height"].get<double>();
     const auto y_max_length = global_config["y_max_length"].get<uint64_t>();
-		const uint64_t y_max_samples = (uint64_t)(global_config["y_max_length"].get<double>()/y_resolution);
+		uint64_t y_max_samples = (uint64_t)(global_config["y_max_length"].get<double>()/y_resolution);
 
     const int x_samples = global_config["x_width"].get<double>() / x_resolution;
     
-		//std::thread upload(http_post_thread,std::ref(upload_fifo));
+		std::thread upload(http_post_thread,std::ref(upload_fifo));
 		
 		// Avoid waiting for thread to join if main thread ends
 		//upload.detach(); 
 
-	  //std::thread db_store(store_profile_thread,std::ref(db_fifo));
+	  std::thread db_store(store_profile_thread,std::ref(db_fifo));
 		
     //db_store.detach();
 
@@ -586,21 +586,20 @@ cv::Mat slurpcsv_mat(std::string filename)
       vector<tuple<double,int16_t>> bot(f.begin(),f.end());
       barrel_z = get<0>(bot[0]);
       spdlog::info("barrel top: {} bottom : {}", get<0>(hist[0]), get<0>(bot[0]));
-      //resolution["z_off"] = -1*z_resolution*get<0>(bot[0]);
+      resolution["z_off"] = -1*z_resolution*get<0>(bot[0]);
+      upload_fifo.enqueue(resolution.dump());
+
       cv_threshhold = get<0>(hist[0]) - (global_config["fiducial_depth"].get<double>() / z_resolution) ;
 
       break;
     }
    
     uint64_t yy = 0;
-    double min_corr = numeric_limits<double>::max();
+    double min_corr = numeric_limits<double>::max() / 1.1;
 
     while(recorder_data.resume()) {
       auto [y,x,z] = recorder_data();
       
-      if (y == 57172) {
-        int a = 0;
-      }
       z = nan_removal(z,-3000);       
       auto [left_edge_index,right_edge_index] = find_profile_edges(z,nan_num,x_samples);
       
@@ -613,121 +612,63 @@ cv::Mat slurpcsv_mat(std::string filename)
       profile_buffer.pop_front();
       profile_buffer.push_back(profile);
       
-      if(!store_profile(stmt,profile)) {
-				//db_fifo.enqueue(profile);
-			}
-      
       auto belt = buffers_to_mat(profile_buffer,x_resolution);
       double minVal, maxVal;
       minMaxLoc( belt.colRange(0,fiducial.cols*2), &minVal, &maxVal);
       cv_threshhold = maxVal - fdepth;
 			auto found_origin = samples_contains_fiducial(belt,fiducial,belt_crosscorr_threshold,cv_threshhold);
 
+      min_corr = std::min(found_origin,min_corr);
+
       if(found_origin < belt_crosscorr_threshold) {
         spdlog::info("found: {}, thresh: {}, y: {}", found_origin,cv_threshhold,yy);
-        min_corr = std::min(found_origin,min_corr);
+       
        // mat_as_image(belt.colRange(0,fiducial.cols*2),cv_threshhold);
        // fiducial_as_image(belt);
-        yy = 0;
+        yy = y+1;
+        break;
       }
 
 
       if(yy > y_max_samples) {
-        spdlog::info("Looped");
-        break;
+        spdlog::info("Looped, Min Corr: {}",min_corr);
+        min_corr = numeric_limits<double>::max() / 1.1;
+        yy = 0;
+      }else {
+        yy++;
       }
-
-      yy++;
 
     }
 
-#if 0
-    while(recorder_data.resume()) {
-      auto now = std::chrono::high_resolution_clock::now();
-			auto seconds = std::chrono::duration_cast<std::chrono::seconds>(now - p_now);
-      p_now = now;
-
-			auto [y,x,z] = recorder_data();
+    while(recorder_data.resume() && y_max_samples-- > 0) {
+      auto [y,x,z] = recorder_data();
+      
+      z = nan_removal(z,-3000);       
       auto [left_edge_index,right_edge_index] = find_profile_edges(z,nan_num,x_samples);
-      auto [intercept,gradient] = linear_regression(z,left_edge_index,right_edge_index);
-      gradient /= x_resolution;
+      
+      auto f = z | views::take(right_edge_index) | views::drop(left_edge_index);
+      profile profile{y - yy,x+left_edge_index*x_resolution,vector<int16_t>(f.begin(),f.end())};
 
-      std::transform(z.begin(), z.end(), z.begin(),[gradient, i = 0](int16_t v) mutable -> int16_t{return v != InvalidRange16Bit ? v - (gradient*i++) : InvalidRange16Bit;});
-
+      std::transform(profile.z.begin(), profile.z.end(), profile.z.begin(),[gradient, i = 0](int16_t v) mutable -> int16_t{return v != InvalidRange16Bit ? v - (gradient*i++) : InvalidRange16Bit;});
 			
-      if(y > y_max_samples) {
-        glog->info("Max Y samples reached y:{} max:{}",y,y_max_samples);
-      }
-
-
-      if(y == 0) found_origin_at = 0;
-			y = (y - found_origin_at ) % y_max_samples;
-
-      if(y - py > 1) {
-        glog->info("Skipped y:{} py:{}", y, py);
-      }
-      py = y;
-			profile profile{y,x,z};
-
 			profile_buffer.push_back(profile);
 
-			// Wait for buffers to fill
-			if (profile_buffer.size() < fiducial.rows) continue;
-
-	
-			if(cnt == 0 || cnt > 2000) {
-				pending_meta_upload = false;
-				auto [z_min,z_max] = find_minmax_z(profile_buffer);
-        spdlog::debug("Zmin:{} Zmax:{}", z_min, z_max);
-
-				resolution["z_off"] = -1*z_resolution*z_min;
-
-				auto hist = histogram(profile_buffer,z_min,z_max);
-        spdlog::debug("belt height: {}, width:{}, l:{}, r:{}",z_resolution * get<0>(hist[0]),(right_edge_index - left_edge_index)*x_resolution,x+x_resolution*left_edge_index,x+x_resolution*right_edge_index);
-				cv_threshhold = get<0>(hist[0]) - global_config["fiducial_depth"].get<double>()/z_resolution;
-        cnt = 0;
-			}
-      cnt++;
-
-			auto belt = buffers_to_mat(profile_buffer,x_resolution);
-			auto found_origin = samples_contains_fiducial(belt,fiducial,belt_crosscorr_threshold,cv_threshhold);
-
-      if((found_origin / pmin) < 1.1) {
-        spdlog::info("found: {}, pmin: {}, y: {}", found_origin,pmin,y);
-        if(found_origin < pmin) pmin = found_origin;
-      }
-      
-			if(found_origin) {
-				found_origin_at = y;
-				uint64_t i = 0;
-				 
-				// Reset buffer y values to origin
-				for(auto &p : profile_buffer) {
-					p.y = i++;
-				}
-				glog->info("Fiducial found at y:{}", y);
-			}
-
 			cads::profile front_profile = profile_buffer.front();
-			
-			const auto previous_profile = fetch_profile(fetch_stmt,front_profile.y);
 			
 			if(!store_profile(stmt,front_profile)) {
 				db_fifo.enqueue(front_profile);
 			}
 
-  
-			auto is_same = compare_samples(front_profile,previous_profile);
-			if(!is_same) {
-					upload_fifo.enqueue(front_profile.y);
-			}
-      
+			upload_fifo.enqueue(front_profile.y);
+     
 
 			profile_buffer.pop_front();
 
 		}
-#endif
+
 		gocator->Stop();
+		db_store.join();
+		upload.join();
 		close_db(db,stmt,fetch_stmt);
 	}
 
@@ -737,8 +678,6 @@ void store_profile_only()
 
   auto db_name = global_config["db_name"].get<std::string>();
   create_db(db_name);
-  auto [db, stmt] = open_db(db_name);
-  auto fetch_stmt = fetch_profile_statement(db);
 
   auto data_src = global_config["data_source"].get<std::string>();
   BlockingReaderWriterQueue<char> gocatorFifo;
@@ -755,6 +694,7 @@ void store_profile_only()
   // Must be first access to in_file; These values get written once
   auto [y_resolution,x_resolution,z_resolution,z_offset] = get_gocator_constants(std::ref(gocatorFifo));
   store_profile_parameters(y_resolution,x_resolution,z_resolution,z_offset);
+  auto [db, stmt] = open_db(db_name);
 
   json resolution;
 
@@ -770,12 +710,10 @@ void store_profile_only()
   
   while(recorder_data.resume() && y_max_samples-- > 0) {
 
-
     auto [y,x,z] = recorder_data();
 
     profile profile{y,x,z};
-
-    
+ 
     store_profile(stmt,profile);
 
   }
@@ -783,6 +721,7 @@ void store_profile_only()
   gocator->Stop();
 
   spdlog::info("Gocator Stopped");
+  close_db(db,stmt);
 }
 
 

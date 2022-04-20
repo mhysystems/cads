@@ -149,7 +149,7 @@ void store_profile_parameters(double y_res, double x_res, double z_res, double z
   sqlite3_stmt *stmt = nullptr;
 
   const char *db_name = global_config["db_name"].get<std::string>().c_str();
-  int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX, nullptr);
+  int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE, nullptr);
   
   auto query = R"(INSERT OR REPLACE INTO PARAMETERS (y_res,x_res,z_res,z_off) VALUES (?,?,?,?))"s;
   err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
