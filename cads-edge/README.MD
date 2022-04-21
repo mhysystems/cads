@@ -28,12 +28,19 @@ sudo apt update && sudo apt upgrade -y
 	## Meson Build ##
 	pip3 install --user meson
 	
-	## Boost 1.74"
+	## Boost 1.74 ##
 	sudo add-apt-repository ppa:mhier/libboost-latest
 	sudo apt-get update
-        sudo apt-get install libboost1.74-dev
-	export BOOST_LIBRARYDIR=/usr/lib
-	export BOOST_INCLUDEDIR=/usr/include/boost
+  sudo apt-get install --download-only libboost1.74-dev
+  
+  ## Extract boost 1.74 for linking via LD_LIBRARY ##
+  mkdir boost
+  dpkg-deb -R /var/cache/apt/archives/libboost1.74-dev_1.74-0~16~ubuntu18.04.1_arm64.deb boost
+  rm -rf boost/DEBIAN
+  dpkg-deb -R /var/cache/apt/archives/libboost1.74_1.74-0~16~ubuntu18.04.1_arm64.deb boost
+	export BOOST_LIBRARYDIR=$(pwd)/boost/usr/lib
+	export BOOST_INCLUDEDIR=$(pwd)/boost/usr/include/boost
+  export LD_LIBRARY=$BOOST_LIBRARYDIR
 	
 	## Meson in PATH add to ~/.bashrc ##
 	if [ -d "$HOME/.local/bin" ] ; then

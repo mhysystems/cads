@@ -5,7 +5,8 @@ from PIL import Image
 
 def process_belt(db,off,num) :
     
-    maxrows = 60000
+    maxrows = 2000
+    #maxrows = 60000
     conn = sqlite3.connect(db)
     cur = conn.cursor()
     m = 99999999999

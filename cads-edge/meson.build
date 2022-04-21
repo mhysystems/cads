@@ -10,7 +10,6 @@ sqlite = dependency('sqlite3')
 opencv = dependency('opencv4', required:false)
 tbb = dependency('tbb')
 
-
 if not opencv.found()
 	opencv = dependency('opencv')
 endif

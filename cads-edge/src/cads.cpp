@@ -535,7 +535,7 @@ cv::Mat slurpcsv_mat(std::string filename)
 
     const int x_samples = global_config["x_width"].get<double>() / x_resolution;
     
-		std::thread upload(http_post_thread,std::ref(upload_fifo));
+//		std::thread upload(http_post_thread,std::ref(upload_fifo));
 		
 		// Avoid waiting for thread to join if main thread ends
 		//upload.detach(); 
@@ -587,7 +587,7 @@ cv::Mat slurpcsv_mat(std::string filename)
       barrel_z = get<0>(bot[0]);
       spdlog::info("barrel top: {} bottom : {}", get<0>(hist[0]), get<0>(bot[0]));
       resolution["z_off"] = -1*z_resolution*get<0>(bot[0]);
-      upload_fifo.enqueue(resolution.dump());
+  //    upload_fifo.enqueue(resolution.dump());
 
       cv_threshhold = get<0>(hist[0]) - (global_config["fiducial_depth"].get<double>() / z_resolution) ;
 
@@ -622,10 +622,15 @@ cv::Mat slurpcsv_mat(std::string filename)
 
       if(found_origin < belt_crosscorr_threshold) {
         spdlog::info("found: {}, thresh: {}, y: {}", found_origin,cv_threshhold,yy);
-       
-       // mat_as_image(belt.colRange(0,fiducial.cols*2),cv_threshhold);
-       // fiducial_as_image(belt);
-        yy = y+1;
+      				uint64_t i = 0;
+			       				 
+	// Reset buffer y values to origin
+	for(auto &p : profile_buffer) {
+  		p.y = i++;
+	}	
+       mat_as_image(belt.colRange(0,fiducial.cols*2),cv_threshhold);
+       fiducial_as_image(belt);
+        yy = i;
         break;
       }
 
@@ -647,7 +652,7 @@ cv::Mat slurpcsv_mat(std::string filename)
       auto [left_edge_index,right_edge_index] = find_profile_edges(z,nan_num,x_samples);
       
       auto f = z | views::take(right_edge_index) | views::drop(left_edge_index);
-      profile profile{y - yy,x+left_edge_index*x_resolution,vector<int16_t>(f.begin(),f.end())};
+      profile profile{yy++,x+left_edge_index*x_resolution,vector<int16_t>(f.begin(),f.end())};
 
       std::transform(profile.z.begin(), profile.z.end(), profile.z.begin(),[gradient, i = 0](int16_t v) mutable -> int16_t{return v != InvalidRange16Bit ? v - (gradient*i++) : InvalidRange16Bit;});
 			
@@ -659,7 +664,7 @@ cv::Mat slurpcsv_mat(std::string filename)
 				db_fifo.enqueue(front_profile);
 			}
 
-			upload_fifo.enqueue(front_profile.y);
+//			upload_fifo.enqueue(front_profile.y);
      
 
 			profile_buffer.pop_front();
@@ -668,7 +673,7 @@ cv::Mat slurpcsv_mat(std::string filename)
 
 		gocator->Stop();
 		db_store.join();
-		upload.join();
+//		upload.join();
 		close_db(db,stmt,fetch_stmt);
 	}
 
