@@ -598,7 +598,7 @@ cv::Mat slurpcsv_mat(std::string filename)
    
     uint64_t yy = 0;
     double min_corr = numeric_limits<double>::max() / 1.1;
-
+    cv::Mat min_mat;
     while(recorder_data.resume()) {
       auto [y,x,z] = recorder_data();
       
@@ -620,6 +620,9 @@ cv::Mat slurpcsv_mat(std::string filename)
       cv_threshhold = maxVal - fdepth;
 			auto found_origin = samples_contains_fiducial(belt,fiducial,belt_crosscorr_threshold,cv_threshhold);
 
+      if(found_origin < min_corr) {
+        min_mat = belt.clone();
+      }
       min_corr = std::min(found_origin,min_corr);
 
       if(found_origin < belt_crosscorr_threshold) {
@@ -640,6 +643,8 @@ cv::Mat slurpcsv_mat(std::string filename)
       if(yy > y_max_samples) {
         spdlog::info("Looped, Min Corr: {}",min_corr);
         min_corr = numeric_limits<double>::max() / 1.1;
+        mat_as_image(min_mat.colRange(0,fiducial.cols*2),cv_threshhold);
+        fiducial_as_image(min_mat);
         yy = 0;
       }else {
         yy++;
@@ -650,7 +655,7 @@ cv::Mat slurpcsv_mat(std::string filename)
 
   auto start = std::chrono::high_resolution_clock::now();
   cnt = 0;
-    while(recorder_data.resume() /*&& y_max_samples-- > 0*/) {
+    while(recorder_data.resume() && y_max_samples-- > 0) {
       ++cnt;
   
       auto [y,x,z] = recorder_data();
