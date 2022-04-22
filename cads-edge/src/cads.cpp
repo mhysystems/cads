@@ -493,7 +493,7 @@ cv::Mat slurpcsv_mat(std::string filename)
     auto fetch_stmt = fetch_profile_statement(db);
 
     auto data_src = global_config["data_source"].get<std::string>();	
-		BlockingReaderWriterQueue<char> gocatorFifo;
+		BlockingReaderWriterQueue<profile> gocatorFifo(4096*1024);
     BlockingReaderWriterQueue<profile> db_fifo;
     BlockingReaderWriterQueue<std::variant<uint64_t,std::string>> upload_fifo;
 		
@@ -506,7 +506,7 @@ cv::Mat slurpcsv_mat(std::string filename)
 		gocator->Start();
 
 		// Must be first access to in_file; These values get written once
-		auto [y_resolution,x_resolution,z_resolution,z_offset] = get_gocator_constants(std::ref(gocatorFifo));
+		auto [y_resolution,x_resolution,z_resolution,z_offset] = gocator->get_gocator_constants();
 
 		json resolution;
 	
@@ -523,9 +523,10 @@ cv::Mat slurpcsv_mat(std::string filename)
     fiducial_as_image(fiducial);
 
 		spdlog::info("Gocator constants {}", resolution.dump());
-			
+	
+      uint64_t py = 0, cnt = 0;
 		auto recorder_data = get_flatworld(std::ref(gocatorFifo));
-		
+
     const int nan_num = global_config["left_edge_nan"].get<int>();
 		const double belt_crosscorr_threshold = global_config["belt_cross_correlation_threshold"].get<double>();
 		
@@ -540,7 +541,7 @@ cv::Mat slurpcsv_mat(std::string filename)
 		// Avoid waiting for thread to join if main thread ends
 		//upload.detach(); 
 
-	  std::thread db_store(store_profile_thread,std::ref(db_fifo));
+	  //std::thread db_store(store_profile_thread,std::ref(db_fifo));
 		
     //db_store.detach();
 
@@ -548,7 +549,7 @@ cv::Mat slurpcsv_mat(std::string filename)
 		bool pending_meta_upload = true;
 		uint64_t found_origin_at = 0;
 		int16_t cv_threshhold = 0;
-    uint64_t py = 0, cnt = 0;
+
     double pmin = numeric_limits<double>::max();
     auto p_now = high_resolution_clock::now();
 
@@ -558,6 +559,7 @@ cv::Mat slurpcsv_mat(std::string filename)
 
     while(recorder_data.resume()) {
       auto [y,x,z] = recorder_data();
+  
       z = nan_removal(z,-3000);
 
       auto [left_edge_index,right_edge_index] = find_profile_edges(z,nan_num,x_samples);
@@ -644,15 +646,20 @@ cv::Mat slurpcsv_mat(std::string filename)
       }
 
     }
+ 
 
-    while(recorder_data.resume() && y_max_samples-- > 0) {
+  auto start = std::chrono::high_resolution_clock::now();
+  cnt = 0;
+    while(recorder_data.resume() /*&& y_max_samples-- > 0*/) {
+      ++cnt;
+  
       auto [y,x,z] = recorder_data();
-      
+
       z = nan_removal(z,-3000);       
       auto [left_edge_index,right_edge_index] = find_profile_edges(z,nan_num,x_samples);
       
       auto f = z | views::take(right_edge_index) | views::drop(left_edge_index);
-      profile profile{yy++,x+left_edge_index*x_resolution,vector<int16_t>(f.begin(),f.end())};
+      profile profile{cnt++,x+left_edge_index*x_resolution,vector<int16_t>(f.begin(),f.end())};
 
       std::transform(profile.z.begin(), profile.z.end(), profile.z.begin(),[gradient, i = 0](int16_t v) mutable -> int16_t{return v != InvalidRange16Bit ? v - (gradient*i++) : InvalidRange16Bit;});
 			
@@ -661,7 +668,7 @@ cv::Mat slurpcsv_mat(std::string filename)
 			cads::profile front_profile = profile_buffer.front();
 			
 			if(!store_profile(stmt,front_profile)) {
-				db_fifo.enqueue(front_profile);
+	//			db_fifo.enqueue(front_profile);
 			}
 
 //			upload_fifo.enqueue(front_profile.y);
@@ -671,16 +678,21 @@ cv::Mat slurpcsv_mat(std::string filename)
 
 		}
 
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    spdlog::info("CADS - CNT: {}, DUR: {}, RATE(ms):{} ",cnt, duration, (double)cnt / duration);
+
 		gocator->Stop();
-		db_store.join();
+    spdlog::info("Gocator Stopped");
+//		db_store.join();
 //		upload.join();
-		close_db(db,stmt,fetch_stmt);
+	//	close_db(db,stmt,fetch_stmt);
 	}
 
 
 void store_profile_only()
 {
-
+#if 0
   auto db_name = global_config["db_name"].get<std::string>();
   create_db(db_name);
 
@@ -727,6 +739,7 @@ void store_profile_only()
 
   spdlog::info("Gocator Stopped");
   close_db(db,stmt);
+  #endif
 }
 
 

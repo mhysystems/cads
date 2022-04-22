@@ -89,10 +89,8 @@ void GocatorReader::Stop()
 }
 
 
-GocatorReader::GocatorReader(moodycamel::BlockingReaderWriterQueue<char>& gocatorFifo) : 
-	GocatorReaderBase(gocatorFifo), 
-	m_yResolution(0.0),
-	m_loop(true)
+GocatorReader::GocatorReader(moodycamel::BlockingReaderWriterQueue<profile>& gocatorFifo) : 
+	GocatorReaderBase(gocatorFifo)
 {
 	m_assembly = CreateGoSdk();
 	m_system = CreateGoSystem();
@@ -215,16 +213,10 @@ kStatus GocatorReader::OnData(GoSensor sensor, GoDataSet dataset)
 		if(1 == frame) {
 			spdlog::info("First frame recieved from gocator");
 
-			flatbuffers::FlatBufferBuilder builder(4096);
-			
-			auto flat_buffer = cads_flatworld::Createprofile_resolution(builder,m_yResolution,xResolution,zResolution,zOffset);
-			builder.Finish(flat_buffer);
+      m_xResolution = xResolution;
+      m_zResolution = zResolution;
+      m_zOffset = zOffset;
 
-			auto buf = builder.GetBufferPointer();
-			auto size = builder.GetSize();
-
-			m_gocatorFifo.enqueue((char*)&size,sizeof(size));
-			m_gocatorFifo.enqueue((char*)buf,size);
 		}
 
 		// Trim invalid values
@@ -237,17 +229,7 @@ kStatus GocatorReader::OnData(GoSensor sensor, GoDataSet dataset)
 
 		auto samples_width = distance(profile,profile_begin);
 
-		flatbuffers::FlatBufferBuilder builder(4096);
-		std::vector<k16s> z(profile_begin,profile_end);
-		
-		auto flat_buffer = cads_flatworld::CreateprofileDirect(builder,frame-1,xOffset+samples_width*xResolution,&z);
-		builder.Finish(flat_buffer);
-
-		auto buf = builder.GetBufferPointer();
-    auto size = builder.GetSize();
-
-		m_gocatorFifo.enqueue((char*)&size,sizeof(size));
-		m_gocatorFifo.enqueue((char*)buf,size);		
+	  m_gocatorFifo.enqueue({frame-1,xOffset+samples_width*xResolution,{profile_begin,profile_end}});		
 
     GoDestroy(dataset);
 

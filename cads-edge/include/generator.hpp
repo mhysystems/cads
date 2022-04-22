@@ -80,7 +80,6 @@ namespace cads
 	};
 
   generator<gocator_profile> get_flatworld(moodycamel::BlockingReaderWriterQueue<char>& fifo);
-  std::tuple<double,double,double,double> get_gocator_constants(moodycamel::BlockingReaderWriterQueue<char>& fifo);
-
+  generator<gocator_profile> get_flatworld(moodycamel::BlockingReaderWriterQueue<cads::profile>& fifo);
 
 }

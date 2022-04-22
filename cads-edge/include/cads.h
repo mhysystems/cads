@@ -7,9 +7,10 @@
 #include <cstdint>
 #include <string>
 
+#include <profile.h>
+
 namespace cads {
 using gocator_profile = std::tuple<uint64_t,double,std::vector<int16_t>>;
-using profile = struct profile{uint64_t y; double x_off; std::vector<int16_t> z;};
 using profile_window = std::deque<profile>;
 
 std::string slurpfile(const std::string_view path, bool binaryMode = true);

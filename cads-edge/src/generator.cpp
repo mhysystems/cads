@@ -29,36 +29,14 @@ namespace cads
 
   generator<gocator_profile> get_flatworld(BlockingReaderWriterQueue<char>& fifo) {
 
-	auto init = std::chrono::high_resolution_clock::now() ;
-  auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(init - init).count();
-  auto pt = milliseconds;
-  auto start = init;
-  auto end = start;
-  uint64_t cnt = 0;
-  
   while(true) {
 		int size = 0;
 
-    if(cnt++ > 2000) {
-    //  glog->info("Average Wait in milliseconds:{}, Avg processing time:{}",milliseconds,pt);
-    //  spdlog::info("Average Wait in milliseconds:{}, Avg processing time:{}",milliseconds,pt);
-      cnt = 0;
-    } 
-		
-		start = std::chrono::high_resolution_clock::now();
-    pt = (pt + std::chrono::duration_cast<std::chrono::milliseconds>(start - end).count()) / 2;
     fifo.wait_dequeue((char*)&size,sizeof(size));
-    end = std::chrono::high_resolution_clock::now();
-    milliseconds = (milliseconds + std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()) / 2;
-
 
 		if(size < 1) {
 			break;
 		} 
-
-    if(cnt == 0) {
-     // spdlog::info("frame bytes:{}",size);
-    } 
 
 		auto buf = std::make_unique<char[]>(size);
 		fifo.wait_dequeue(buf.get(),size);
@@ -67,6 +45,19 @@ namespace cads
 	}
 }
 
+  generator<gocator_profile> get_flatworld(BlockingReaderWriterQueue<profile>& fifo) {
+
+  while(true) {
+		profile p;
+
+    fifo.wait_dequeue(p);
+    if(p.y == std::numeric_limits<uint64_t>::max()) {
+      break;
+    }
+
+		co_yield {p.y,p.x_off,p.z};
+	}
+}
 
 auto getProfile(std::unique_ptr<char[]> buf) {
 	
@@ -93,7 +84,5 @@ std::tuple<double,double,double,double> get_gocator_constants(BlockingReaderWrit
 	return getProfile(std::move(buf));
 
 }
-
-
 
 }

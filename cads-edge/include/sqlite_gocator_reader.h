@@ -22,7 +22,6 @@ class SqliteGocatorReader : public GocatorReaderBase
 protected:
 	std::atomic<bool> m_loop = false;
   std::thread m_thread;
-	double m_yResolution = 0.0;
 	
   void OnData();
 
@@ -31,7 +30,7 @@ public:
   void RunForever();
 	void Start();
 	void Stop();
-	SqliteGocatorReader(moodycamel::BlockingReaderWriterQueue<char>&);
+	SqliteGocatorReader(moodycamel::BlockingReaderWriterQueue<profile>&);
 	~SqliteGocatorReader();
 };
 

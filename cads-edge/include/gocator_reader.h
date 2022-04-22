@@ -5,12 +5,6 @@
 #include <GoSdk/GoSystem.h>
 #include <kApi/kApiDef.h>
 
-
-#include <readerwriterqueue.h>
-#include <condition_variable>
-#include <atomic>
-#include <mutex>
-
 #include "gocator_reader_base.h"
 
 namespace cads
@@ -26,15 +20,10 @@ class GocatorReader : public GocatorReaderBase
 	GocatorReader& operator=(GocatorReader&&) = delete;
 
 protected:
-	std::atomic<bool> m_loop;
-	double m_yResolution;
 	
 	GoSystem m_system;
 	kAssembly m_assembly;
 	GoSensor m_sensor;
-
-	std::condition_variable m_condition;
-  std::mutex m_mutex;
 
 	static kStatus OnData(kPointer context, GoSensor sensor, GoDataSet dataset);
 	virtual kStatus OnData(GoSensor sensor, GoDataSet dataset);
@@ -44,7 +33,7 @@ public:
   void RunForever();
 	void Start();
 	void Stop();
-	GocatorReader(moodycamel::BlockingReaderWriterQueue<char>&);
+	GocatorReader(moodycamel::BlockingReaderWriterQueue<cads::profile>&);
 	~GocatorReader();
 };
 
