@@ -659,7 +659,7 @@ cv::Mat slurpcsv_mat(std::string filename)
       auto [left_edge_index,right_edge_index] = find_profile_edges(z,nan_num,x_samples);
       
       auto f = z | views::take(right_edge_index) | views::drop(left_edge_index);
-      profile profile{cnt++,x+left_edge_index*x_resolution,vector<int16_t>(f.begin(),f.end())};
+      profile profile{yy++,x+left_edge_index*x_resolution,vector<int16_t>(f.begin(),f.end())};
 
       std::transform(profile.z.begin(), profile.z.end(), profile.z.begin(),[gradient, i = 0](int16_t v) mutable -> int16_t{return v != InvalidRange16Bit ? v - (gradient*i++) : InvalidRange16Bit;});
 			
@@ -692,12 +692,12 @@ cv::Mat slurpcsv_mat(std::string filename)
 
 void store_profile_only()
 {
-#if 0
+
   auto db_name = global_config["db_name"].get<std::string>();
   create_db(db_name);
 
   auto data_src = global_config["data_source"].get<std::string>();
-  BlockingReaderWriterQueue<char> gocatorFifo;
+  BlockingReaderWriterQueue<profile> gocatorFifo;
   
   unique_ptr<GocatorReaderBase> gocator;
   if(data_src == "gocator"s) {
@@ -709,7 +709,7 @@ void store_profile_only()
   gocator->Start();
 
   // Must be first access to in_file; These values get written once
-  auto [y_resolution,x_resolution,z_resolution,z_offset] = get_gocator_constants(std::ref(gocatorFifo));
+  auto [y_resolution,x_resolution,z_resolution,z_offset] = gocator->get_gocator_constants();
   store_profile_parameters(y_resolution,x_resolution,z_resolution,z_offset);
   auto [db, stmt] = open_db(db_name);
 
@@ -739,7 +739,7 @@ void store_profile_only()
 
   spdlog::info("Gocator Stopped");
   close_db(db,stmt);
-  #endif
+
 }
 
 
