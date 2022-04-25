@@ -79,7 +79,8 @@
     "typeindex": "cpp",
     "csignal": "cpp",
     "hash_map": "cpp",
-    "shared_mutex": "cpp"
+    "shared_mutex": "cpp",
+    "source_location": "cpp"
   },
   "cmake.configureOnOpen": false
 }

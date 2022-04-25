@@ -5,11 +5,11 @@ from PIL import Image
 
 def process_belt(db,off,num) :
     
-    maxrows = 2000
-    #maxrows = 60000
+    #maxrows = 2000
+    maxrows = 60000
     conn = sqlite3.connect(db)
     cur = conn.cursor()
-    m = 99999999999
+    m = 2^64-1
     rowcnt = 1    
     ss = np.vectorize(lambda x :x if x != -32768 else -2627 ) 
     yindex = 0
@@ -19,7 +19,6 @@ def process_belt(db,off,num) :
         for row in cur.execute(f"SELECT * from PROFILE where y >= ? order by y asc limit ?",(yindex,maxrows)):
             rowcnt = rowcnt + 1
             z = np.frombuffer(row[2],dtype='i2')
-            #fz = [x if x != -32768 else -2627  for x in z.tolist() ]
             m = min(m,len(z))
             b.append(ss(z))
         if rowcnt > 0: 
@@ -46,6 +45,7 @@ def process_beltf(db,off,num) :
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Extract profile data from sqlitedb')
     parser.add_argument("db", help="Belt data with columns")
+    parser.add_argument("--off", type=int, help="offset",required=True)
 
     args = parser.parse_args()
-    process_belt(args.db,0,10)
+    process_belt(args.db,args.off,10)

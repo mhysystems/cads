@@ -6,6 +6,9 @@
 #include <window.hpp>
 #include <cmath>
 
+#include <filters.h>
+#include <constants.h>
+
 using namespace cads;
 
 TEST(cads, make_fiducial)
@@ -96,6 +99,16 @@ TEST(cads, search_for_fiducial16bitCorr)
   
   close_db(db,ignore);
   ASSERT_EQ(b,0.0) << yy << '\n';
+}
+
+TEST(cads, spike_filter)
+{
+  auto v = NaN<z_type::value_type>::value;
+  z_type in{1,v,1,1,v,1};
+  spike_filter(in,3);
+  z_type out{1,v,v,v,v,1};
+  ASSERT_EQ(in,out);
+
 }
 
 

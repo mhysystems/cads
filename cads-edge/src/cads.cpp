@@ -34,6 +34,9 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 
+#include <filters.h>
+#include <edge_detection.h>
+
 
 using namespace std;
 using namespace moodycamel;
@@ -507,6 +510,7 @@ cv::Mat slurpcsv_mat(std::string filename)
 
 		// Must be first access to in_file; These values get written once
 		auto [y_resolution,x_resolution,z_resolution,z_offset] = gocator->get_gocator_constants();
+    store_profile_parameters(y_resolution,x_resolution,z_resolution,z_offset);
 
 		json resolution;
 	
@@ -727,25 +731,245 @@ void store_profile_only()
   
   spdlog::info("Gocator constants {}", resolution.dump());
   auto recorder_data = get_flatworld(std::ref(gocatorFifo));
-  
+
   uint64_t y_max_samples = (uint64_t)(global_config["y_max_length"].get<double>()/y_resolution);
+  auto start = std::chrono::high_resolution_clock::now();
+  int cnt = 0;
   
   while(recorder_data.resume() && y_max_samples-- > 0) {
-
+    ++cnt;
     auto [y,x,z] = recorder_data();
 
     profile profile{y,x,z};
- 
     store_profile(stmt,profile);
 
   }
 
   gocator->Stop();
+  auto end = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+  spdlog::info("CADS - CNT: {}, DUR: {}, RATE(ms):{} ",cnt, duration, (double)cnt / duration);
 
   spdlog::info("Gocator Stopped");
   close_db(db,stmt);
 
 }
+
+
+	void process_experiment()
+	{
+	  auto db_name = global_config["db_name"].get<std::string>();
+    create_db(db_name);
+    auto [db, stmt] = open_db(db_name);
+    auto fetch_stmt = fetch_profile_statement(db);
+
+    auto data_src = global_config["data_source"].get<std::string>();	
+		BlockingReaderWriterQueue<profile> gocatorFifo(4096*1024);
+    BlockingReaderWriterQueue<profile> db_fifo;
+    BlockingReaderWriterQueue<std::variant<uint64_t,std::string>> upload_fifo;
+		
+    unique_ptr<GocatorReaderBase> gocator;
+    if(data_src == "gocator"s) {
+      gocator =  make_unique<GocatorReader>(gocatorFifo);
+    }else{
+      gocator = make_unique<SqliteGocatorReader>(gocatorFifo);
+    }
+		gocator->Start();
+
+		// Must be first access to in_file; These values get written once
+		auto [y_resolution,x_resolution,z_resolution,z_offset] = gocator->get_gocator_constants();
+    store_profile_parameters(y_resolution,x_resolution,z_resolution,z_offset);
+
+		json resolution;
+	
+		resolution["y"] = y_resolution;
+		resolution["x"] = x_resolution;
+		resolution["z"] = z_resolution;
+		resolution["z_off"] = z_offset;
+  	auto fnrows = global_config["fiducial_y"].get<double>();
+	  auto fgap = global_config["fiducial_gap"].get<double>();
+	  auto fncols = global_config["fiducial_x"].get<double>();
+    auto fdepth = global_config["fiducial_depth"].get<double>() / z_resolution;
+		
+    auto fiducial = make_fiducial(x_resolution,y_resolution,fnrows,fncols,fgap);
+
+		spdlog::info("Gocator constants {}", resolution.dump());
+	
+      uint64_t py = 0, cnt = 0;
+		auto recorder_data = get_flatworld(std::ref(gocatorFifo));
+
+    const int nan_num = global_config["left_edge_nan"].get<int>();
+		const double belt_crosscorr_threshold = global_config["belt_cross_correlation_threshold"].get<double>();
+		
+    const double z_height = global_config["z_height"].get<double>();
+    const auto y_max_length = global_config["y_max_length"].get<uint64_t>();
+		uint64_t y_max_samples = (uint64_t)(global_config["y_max_length"].get<double>()/y_resolution);
+
+    const int x_samples = global_config["x_width"].get<double>() / x_resolution;
+    
+//		std::thread upload(http_post_thread,std::ref(upload_fifo));
+		
+		// Avoid waiting for thread to join if main thread ends
+		//upload.detach(); 
+
+	  //std::thread db_store(store_profile_thread,std::ref(db_fifo));
+		
+    //db_store.detach();
+
+		deque<profile> profile_buffer;
+		bool pending_meta_upload = true;
+		uint64_t found_origin_at = 0;
+		int16_t cv_threshhold = 0 ,cv_threshhold2 = 0;
+    const int spike_window_size =  nan_num / 2;
+
+    double pmin = numeric_limits<double>::max();
+    auto p_now = high_resolution_clock::now();
+
+    int16_t barrel_z = 0;
+		
+    double intercept = 0.0 ,gradient = 0.0;
+
+    while(recorder_data.resume()) {
+      auto [y,x,z] = recorder_data();
+  
+      spike_filter(z,spike_window_size);
+      spike_filter(z,3);
+      auto [left_edge_index,right_edge_index] = find_profile_edges_nans(z,nan_num);
+      nan_filter(z);
+
+      auto [tintercept,tgradient] = linear_regression(z,left_edge_index,right_edge_index);
+      
+      intercept = ((intercept != 0.0 ? intercept : tintercept) + tintercept) / 2;
+      gradient = ((gradient != 0.0 ? gradient : tgradient)  + tgradient / x_resolution) / 2.0;
+
+			profile profile{y,x,z};
+
+			profile_buffer.push_back(profile);
+
+			// Wait for buffers to fill
+			if (profile_buffer.size() < fiducial.rows) continue;
+
+      auto [z_min,z_max] = find_minmax_z(profile_buffer);
+
+      spdlog::info("M:{}, m: {},  Thick {}", z_max, z_min, (z_max - z_min ) * z_resolution);
+      auto hist = histogram(profile_buffer,z_min,z_max);
+      const auto M = get<0>(hist[0]);
+      const auto thickness = z_height / z_resolution;
+      auto f = hist | views::filter([thickness,M](tuple<double,int16_t> a ){ return M - get<0>(a) > thickness; });
+      vector<tuple<double,int16_t>> bot(f.begin(),f.end());
+      barrel_z = get<0>(bot[0]);
+      spdlog::info("barrel top: {} bottom : {}", get<0>(hist[0]), get<0>(bot[0]));
+      resolution["z_off"] = -1*z_resolution*get<0>(bot[0]);
+
+      cv_threshhold = get<0>(hist[0]) - (global_config["fiducial_depth"].get<double>() / z_resolution) ;
+      cv_threshhold2 = cv_threshhold;
+      break;
+    }
+   
+    uint64_t yy = 0;
+    double min_corr = numeric_limits<double>::max() / 1.1;
+    cv::Mat min_mat;
+    profile_buffer.clear();
+
+    while(recorder_data.resume()) {
+      auto [y,x,z] = recorder_data();
+      
+      spike_filter(z,spike_window_size);
+      spike_filter(z,3);
+      auto [left_edge_index,right_edge_index] = find_profile_edges_nans(z,nan_num);
+      nan_filter(z);
+      
+      auto f = z | views::take(right_edge_index) | views::drop(left_edge_index);
+      profile profile{yy,x+left_edge_index*x_resolution,vector<int16_t>(f.begin(),f.end())};
+
+     std::transform(profile.z.begin(), profile.z.end(), profile.z.begin(),[gradient, i = 0](int16_t v) mutable -> int16_t{return v != InvalidRange16Bit ? v - (gradient*i++) : InvalidRange16Bit;});
+      
+
+      
+      profile_buffer.push_back(profile);
+			// Wait for buffers to fill
+			if (profile_buffer.size() <= fiducial.rows) continue;
+      profile_buffer.pop_front();
+
+       auto belt = buffers_to_mat(profile_buffer,x_resolution);
+      double minVal, maxVal;
+      minMaxLoc( belt.colRange(0,fiducial.cols*1.5), &minVal, &maxVal);
+      cv::Mat mout;
+      cv::multiply(belt.colRange(0,fiducial.cols),fiducial,mout);
+      auto max_val2 = cv::sum( mout)[0] / cv::countNonZero(mout);
+       cv_threshhold2 = max_val2 - fdepth;
+      cv_threshhold = maxVal - fdepth;
+      //fiducial_as_image(belt);
+			auto found_origin = samples_contains_fiducial(belt,fiducial,belt_crosscorr_threshold,cv_threshhold2);
+
+      if(found_origin < min_corr) {
+        min_mat = belt.clone();
+      }
+      min_corr = std::min(found_origin,min_corr);
+
+      if(found_origin < belt_crosscorr_threshold) {
+        spdlog::info("found: {}, thresh: {}, y: {}", found_origin,cv_threshhold,yy);
+      				uint64_t i = 0;
+			       				 
+	// Reset buffer y values to origin
+	for(auto &p : profile_buffer) {
+  		p.y = i++;
+	}	
+       mat_as_image(belt.colRange(0,fiducial.cols*2),cv_threshhold);
+       fiducial_as_image(belt);
+        yy = i;
+        break;
+      }
+
+
+      if(yy > y_max_samples) {
+        spdlog::info("Looped, Min Corr: {}",min_corr);
+        min_corr = numeric_limits<double>::max() / 1.1;
+        mat_as_image(min_mat.colRange(0,fiducial.cols*2),cv_threshhold);
+        fiducial_as_image(min_mat);
+        yy = 0;
+      }else {
+        yy++;
+      }
+
+    }
+ 
+
+  auto start = std::chrono::high_resolution_clock::now();
+  cnt = 0;
+    while(recorder_data.resume() && y_max_samples-- > 0) {
+      ++cnt;
+  
+      auto [y,x,z] = recorder_data();
+
+      z = nan_removal(z,-3000);       
+      auto [left_edge_index,right_edge_index] = find_profile_edges(z,nan_num,x_samples);
+      
+      auto f = z | views::take(right_edge_index) | views::drop(left_edge_index);
+      profile profile{yy++,x+left_edge_index*x_resolution,vector<int16_t>(f.begin(),f.end())};
+
+      std::transform(profile.z.begin(), profile.z.end(), profile.z.begin(),[gradient, i = 0](int16_t v) mutable -> int16_t{return v != InvalidRange16Bit ? v - (gradient*i++) : InvalidRange16Bit;});
+			
+			profile_buffer.push_back(profile);
+
+			cads::profile front_profile = profile_buffer.front();
+			
+			store_profile(stmt,front_profile);
+			profile_buffer.pop_front();
+
+		}
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    spdlog::info("CADS - CNT: {}, DUR: {}, RATE(ms):{} ",cnt, duration, (double)cnt / duration);
+
+		gocator->Stop();
+    spdlog::info("Gocator Stopped");
+
+		close_db(db,stmt,fetch_stmt);
+	}
+
+
 
 
 

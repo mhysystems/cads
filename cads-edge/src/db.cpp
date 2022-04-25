@@ -190,6 +190,15 @@ void store_profile_thread(BlockingReaderWriterQueue<profile> &db_fifo) {
 		query = R"("PRAGMA journal_mode = MEMORY")"s;
     err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
     err = sqlite3_step(stmt);
+		query = R"("PRAGMA temp_store = MEMORY")"s;
+    err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
+    err = sqlite3_step(stmt);
+    query = R"("PRAGMA mmap_size = 10000000")"s;
+    err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
+    err = sqlite3_step(stmt);
+    query = R"("PRAGMA page_size = 32768")"s;
+    err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
+    err = sqlite3_step(stmt);
     query = R"(INSERT OR REPLACE INTO PROFILE (y,x_off,z) VALUES (?,?,?))"s;
     err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
 		
@@ -229,7 +238,7 @@ void store_profile_thread(BlockingReaderWriterQueue<profile> &db_fifo) {
 
 }
 
-bool store_profile(sqlite3_stmt* stmt, profile p) {
+bool store_profile(sqlite3_stmt* stmt, const profile& p) {
 			int err = sqlite3_bind_int64(stmt,1,(int64_t)p.y); 
       err = sqlite3_bind_double(stmt,2,p.x_off);
 			err = sqlite3_bind_blob(stmt, 3, p.z.data(), p.z.size()*sizeof(int16_t), SQLITE_STATIC );

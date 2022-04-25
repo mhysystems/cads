@@ -27,6 +27,7 @@ int main(int argn, char **argv)
 		("help,h", "produce help message")
 		("config,c", po::value<std::string>(), "Config JSON file.")
     ("savedb,d", po::bool_switch(), "Only save one approx belt")
+    ("experiment,e", po::bool_switch(), "Test experimental features")
     ("level,l", po::value<std::string>(), "Logging Level");
 
 	po::variables_map vm;
@@ -74,6 +75,8 @@ int main(int argn, char **argv)
   
   if(vm["savedb"].as<bool>()) {
     store_profile_only();
+  }else if(vm["experiment"].as<bool>()) {
+    process_experiment();
   }else{
 	  process_flatbuffers();
   }

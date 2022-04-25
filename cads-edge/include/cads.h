@@ -16,6 +16,7 @@ using profile_window = std::deque<profile>;
 std::string slurpfile(const std::string_view path, bool binaryMode = true);
 void process_flatbuffers();
 void store_profile_only();
+void process_experiment();
 
 }
 

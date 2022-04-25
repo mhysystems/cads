@@ -15,7 +15,7 @@ def process_belt(db) :
 
     for row in cur.execute(f"SELECT * from PROFILE order by y asc"):
         z = np.frombuffer(row[2],dtype='i2').astype(np.float32)
-        cur_o.execute(query,(row[0],row[1], (z + 2391) * 0.0107 ))    
+        cur_o.execute(query,(row[0],row[1], (z + 2010) * 0.0107 ))    
 
     
     conn_o.commit()
