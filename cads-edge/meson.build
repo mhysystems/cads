@@ -21,6 +21,7 @@ flatc = subproject('flatbuffers').get_variable('flatc')
 gtest_dep = subproject('gtest').get_variable('gtest_dep')
 gtest_main = subproject('gtest').get_variable('gtest_main_dep')
 fmt_dep = subproject('fmt').get_variable('fmt_dep')
+coop_dep = subproject('coop').get_variable('coop_dep')
 
 subdir('GO_SDK/Platform/kApi')
 subdir('GO_SDK/Gocator/GoSdk')
@@ -38,7 +39,7 @@ cads = executable(
 	'cads', 
 	cadsSrc,
 	include_directories : [GoSdkInc,kApiInc,cadsInc],
-	dependencies:[opencv, tbb, thread, boost, sqlite, http_stuff,log_stuff, flatbuffers, fmt_dep],
+	dependencies:[opencv, tbb, thread, boost, sqlite, http_stuff,log_stuff, flatbuffers, fmt_dep, coop_dep],
   link_with : [GoSdkLib,kApiLib],
 	cpp_args : ['-std=c++20','-fcoroutines']
 )
