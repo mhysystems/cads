@@ -908,17 +908,18 @@ void store_profile_only()
       min_corr = std::min(found_origin,min_corr);
 
       if(found_origin < belt_crosscorr_threshold) {
-        spdlog::info("found: {}, thresh: {}, y: {}", found_origin,cv_threshhold,yy);
+        spdlog::info("found: {}, thresh: {}, y: {}", found_origin,cv_threshhold2,yy);
       				uint64_t i = 0;
 			       				 
 	// Reset buffer y values to origin
 	for(auto &p : profile_buffer) {
   		p.y = i++;
 	}	
-       mat_as_image(belt.colRange(0,fiducial.cols*2),cv_threshhold);
+       mat_as_image(belt.colRange(0,fiducial.cols*2),cv_threshhold2);
        fiducial_as_image(belt);
-        yy = i;
-        break;
+        min_corr = numeric_limits<double>::max() / 1.1;
+        yy = 0;
+        //break;
       }
 
 
