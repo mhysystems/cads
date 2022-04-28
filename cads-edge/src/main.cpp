@@ -9,6 +9,7 @@
 #include <iostream>
 #include <algorithm>
 #include <cctype>
+#include <fstream>
 
 #include <spdlog/spdlog.h>
 
@@ -16,6 +17,24 @@ namespace po = boost::program_options;
 
 using json = nlohmann::json;
 extern json global_config;
+
+std::string slurpfile(const std::string_view path, bool binaryMode = true)
+	{
+  std::ios::openmode openmode = std::ios::in;
+  if (binaryMode)
+  {
+    openmode |= std::ios::binary;
+  }
+  std::ifstream ifs(path.data(), openmode);
+  ifs.ignore(std::numeric_limits<std::streamsize>::max());
+  std::string data(ifs.gcount(), 0);
+  ifs.seekg(0);
+  ifs.read(data.data(), data.size());
+  return data;
+}
+
+
+
 
 int main(int argn, char **argv)
 {

@@ -7,10 +7,11 @@ cads_unit_tests = executable(
     meson.source_root() + '/src/db.cpp',
     meson.source_root() + '/src/window.cpp',
     meson.source_root() + '/src/global_variables.cpp',
-    meson.source_root() + '/src/filters.cpp'
+    meson.source_root() + '/src/filters.cpp',
+    meson.source_root() + '/src/edge_detection.cpp'
   ],
   include_directories : cadsInc, 
-  dependencies : [opencv, gtest_dep, gtest_main, fmt_dep, log_stuff, sqlite ],
+  dependencies : [opencv, gtest_dep, gtest_main, fmt_dep, log_stuff, sqlite, coop_dep ],
   cpp_args : ['-std=c++20','-fcoroutines', '-fext-numeric-literals']
   )
 

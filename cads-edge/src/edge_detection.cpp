@@ -42,11 +42,36 @@ template<typename T> int edge(T s, T e,int len) {
 
 }
 
+
 std::tuple<int,int> find_profile_edges_nans(const z_type& z, int len) {
 
   auto mid = int(z.size() / 2);
   auto r = mid + belt(z.begin()+mid,z.end(),len) - 1;
   auto l = z.size() - mid - belt(z.rbegin() + mid ,z.rend(),len);
+  return std::tuple<int,int>{l, r};
+}
+
+
+std::tuple<int,int> find_profile_edges_nans_outer(const z_type& z, int len) {
+  
+  auto z_min = NaN<z_type::value_type>::value;
+  
+  auto l = belt(z.begin(),z.end(),len) ;
+  auto cl = std::find_if(z.begin()+l,z.end(),[z_min](z_element z) {return z != z_min;});
+  l = std::distance(z.begin(),cl);
+
+  if(l > z.size() * 0.1) {
+    l = 0;
+  }
+
+  auto r = belt(z.rbegin(),z.rend(),len);
+  auto rl = std::find_if(z.rbegin()+r,z.rend(),[z_min](z_element z) {return z != z_min;});
+  r = z.size() - std::distance(z.rbegin(),rl);
+  
+  if(r < z.size() * 0.9) {
+    r = z.size();
+  }
+
   return std::tuple<int,int>{l, r};
 }
 

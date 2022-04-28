@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <edge_detection.h>
 #include <nan_removal.h>
 #include <fiducial.h>
 #include <db.h>
@@ -26,6 +27,14 @@ TEST(cads, nan_removal)
   ASSERT_EQ(a,b);
 }
 
+TEST(cads, find_profile_edges_nans_outer)
+{
+  auto n = NaN<z_type::value_type>::value;
+
+  auto a = find_profile_edges_nans_outer({1,1,n,n,n,n,n,1,2,2,2,1,n,n,n,n,n,1,1,1},3);
+  std::tuple<int,int> b{7,12};
+  ASSERT_EQ(a,b);
+}
 
 TEST(cads, search_for_fiducial)
 {
@@ -48,7 +57,7 @@ TEST(cads, search_for_fiducial)
     if (belt_window.size() < fiducial.rows) continue;
 
     auto window_cv = window_to_mat(belt_window,x_res);
-    auto a = search_for_fiducial(window_cv,fiducial,0.0,30.0);
+    auto a = search_for_fiducial(window_cv,fiducial,30.0);
     if(a < b) {
       b = a;
       yy = y;
@@ -86,7 +95,7 @@ TEST(cads, search_for_fiducial16bitCorr)
     if (belt_window.size() < fiducial.rows) continue;
 
     auto window_cv = window_to_mat(belt_window,x_res);
-    auto a = search_for_fiducial(window_cv,fiducial,0.0,30.0);
+    auto a = search_for_fiducial(window_cv,fiducial,30.0);
     if(a < b) {
       b = a;
       yy = y;

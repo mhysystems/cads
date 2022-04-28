@@ -19,6 +19,17 @@ namespace cads
         ++i;
       }
     }
+
+    for(int i = z.size()-window_size; i < z.size()-3;) {
+      if(z[i] == z_min && z[i+3] == z_min) {
+        for(int j = i+1; j < i + 3; ++j) {
+          z[j] = z_min;
+        }
+        i += 3;
+      }else{
+        ++i;
+      }
+    }
   }
 
   void nan_filter(z_type& z) {
@@ -48,6 +59,12 @@ namespace cads
       }else {
         e = prev_value;
       }
+    }
+  }
+
+  void barrel_height_compensate(z_type& z, z_element z_off) {
+    for(auto &e : z) {
+      e += z_off;
     }
   }
 

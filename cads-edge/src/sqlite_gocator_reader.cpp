@@ -37,7 +37,7 @@ namespace cads
   {
     if (m_loop)
     {
-      //m_loop = false;
+      m_loop = false;
       m_thread.join();
     }
   }

@@ -12,6 +12,8 @@ cadsSrc += files(
   'gocator_reader_base.cpp',
   'generator.cpp',
   'filters.cpp',
-  'edge_detection.cpp'
+  'edge_detection.cpp',
+  'profile.cpp',
+  'window.cpp'
 
 )

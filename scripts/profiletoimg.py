@@ -9,7 +9,7 @@ def process_belt(db,off,num) :
     maxrows = 60000
     conn = sqlite3.connect(db)
     cur = conn.cursor()
-    m = 2^64-1
+    m = 99999999999
     rowcnt = 1    
     ss = np.vectorize(lambda x :x if x != -32768 else -2627 ) 
     yindex = 0
@@ -45,7 +45,7 @@ def process_beltf(db,off,num) :
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Extract profile data from sqlitedb')
     parser.add_argument("db", help="Belt data with columns")
-    parser.add_argument("--off", type=int, help="offset",required=True)
+    parser.add_argument("--off", type=int, help="offset",default = 0)
 
     args = parser.parse_args()
     process_belt(args.db,args.off,10)

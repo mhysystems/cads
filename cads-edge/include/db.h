@@ -11,6 +11,8 @@
 #include "cads.h"
 #include <window.hpp>
 
+#include <coop/task.hpp>
+
 namespace cads{
 
 bool create_db(std::string name);
@@ -19,7 +21,7 @@ sqlite3_stmt* fetch_profile_statement(sqlite3*);
 bool store_profile(sqlite3_stmt*, const profile&);
 profile fetch_profile(sqlite3_stmt*, uint64_t);
 void close_db(sqlite3 *db = nullptr, sqlite3_stmt* stmt = nullptr,sqlite3_stmt* stmt2 = nullptr); 
-void store_profile_thread(moodycamel::BlockingReaderWriterQueue<cads::profile> &db_fifo);
+coop::task_t<void,true> store_profile_thread(moodycamel::BlockingReaderWriterQueue<cads::profile> &db_fifo);
 void store_profile_parameters(double y_res, double x_res, double z_res, double z_off);
 std::tuple<double,double,double,double> fetch_profile_parameters(std::string name);
 

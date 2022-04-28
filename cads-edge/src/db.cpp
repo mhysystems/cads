@@ -171,8 +171,10 @@ void store_profile_parameters(double y_res, double x_res, double z_res, double z
 }
 
 
-void store_profile_thread(BlockingReaderWriterQueue<profile> &db_fifo) {
+coop::task_t<void,true> store_profile_thread(BlockingReaderWriterQueue<profile> &db_fifo) {
 	  
+    co_await coop::suspend();
+
 		auto log = spdlog::rotating_logger_st("db", "db.log", 1024 * 1024 * 5, 1);
 		
 		sqlite3 *db = nullptr;
@@ -218,18 +220,19 @@ void store_profile_thread(BlockingReaderWriterQueue<profile> &db_fifo) {
 
 			while(err == SQLITE_BUSY) {
 				err = sqlite3_step(stmt);
-				std::this_thread::sleep_for(std::chrono::milliseconds(50));
+				//std::this_thread::sleep_for(std::chrono::milliseconds(50));
 			}
 			
-      sqlite3_clear_bindings(stmt);
+      //sqlite3_clear_bindings(stmt);
 			sqlite3_reset(stmt);  
 
-			if(err == SQLITE_DONE) { 
-				log->info("Stored {} in DB after initial failue. Removed from queue.",p.y); 
-			}
-			else{ 
-				log->info("Store {} failed with err {} . If err is 6 DB is just temporary locked.",p.y, err); 
-			}
+			//if(err == SQLITE_DONE) { 
+			//	log->info("Stored {} in DB after initial failue. Removed from queue.",p.y); 
+			//}
+			//else{ 
+				//log->info("Store {} failed with err {} . If err is 6 DB is just temporary locked.",p.y, err); 
+			//}
+      
 
 		}
 
