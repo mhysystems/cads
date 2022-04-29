@@ -19,7 +19,7 @@ using json = nlohmann::json;
 extern json global_config;
 
 std::string slurpfile(const std::string_view path, bool binaryMode = true)
-	{
+{
   std::ios::openmode openmode = std::ios::in;
   if (binaryMode)
   {
@@ -46,7 +46,7 @@ int main(int argn, char **argv)
 		("help,h", "produce help message")
 		("config,c", po::value<std::string>(), "Config JSON file.")
     ("savedb,d", po::bool_switch(), "Only save one approx belt")
-    ("experiment,e", po::bool_switch(), "Test experimental features")
+    ("once,e", po::bool_switch(), "Test experimental features")
     ("level,l", po::value<std::string>(), "Logging Level");
 
 	po::variables_map vm;
@@ -94,10 +94,10 @@ int main(int argn, char **argv)
   
   if(vm["savedb"].as<bool>()) {
     store_profile_only();
-  }else if(vm["experiment"].as<bool>()) {
-    process_experiment();
+  }else if(vm["once"].as<bool>()) {
+    process_one_revolution();
   }else{
-	  process_flatbuffers();
+	  process_daily();
   }
 
 	return 0;

@@ -13,9 +13,9 @@ namespace cads {
 using gocator_profile = std::tuple<uint64_t,double,std::vector<int16_t>>;
 using profile_window = std::deque<profile>;
 
-void process_flatbuffers();
+void process_daily();
 void store_profile_only();
-void process_experiment();
+void process_one_revolution();
 
 }
 

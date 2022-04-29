@@ -155,10 +155,27 @@ namespace cads
   }
 
 
-	void process_flatbuffers()
-	{
-	
-	}
+void process_daily()
+{
+  while(true) {
+    auto now = system_clock::now();
+    time_t now_c = system_clock::to_time_t(now);
+    tm midnight = *std::localtime(&now_c);
+
+    midnight.tm_sec = 0;
+    midnight.tm_min = 0;
+    midnight.tm_hour = 13;
+    midnight.tm_wday++;
+    midnight.tm_mday++;
+
+    auto mid = system_clock::from_time_t(mktime(&midnight));
+
+    auto rest = mid - now;
+    this_thread::sleep_for(rest);
+
+    process_one_revolution();
+  }
+}
 
 
 void store_profile_only()
@@ -203,7 +220,7 @@ void store_profile_only()
 }
 
 
-	void process_experiment()
+	void process_one_revolution()
 	{
 	  auto db_name = global_config["db_name"].get<std::string>();
     create_db(db_name);
