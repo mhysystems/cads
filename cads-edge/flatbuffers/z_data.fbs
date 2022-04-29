@@ -7,4 +7,9 @@ table profile{
 	z_samples : [short];
 }
 
+table profile_array {
+  count : ulong;
+  profiles : [profile];
+}
+
 root_type profile;

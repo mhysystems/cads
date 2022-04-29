@@ -5,7 +5,7 @@
 #include <csv.hpp>
 #include <cads.h>
 #include <regression.h>
-#include <json.hpp>
+#include <nlohmann/json.hpp>
 #include <db.h>
 #include <upload.h>
 #include <constants.h>
@@ -154,6 +154,7 @@ namespace cads
     return {profile_buffer,frame_offset - profile_buffer.size() - 1};
   }
 
+
 	void process_flatbuffers()
 	{
 	
@@ -212,7 +213,7 @@ void store_profile_only()
     auto data_src = global_config["data_source"].get<std::string>();	
 		BlockingReaderWriterQueue<profile> gocatorFifo(4096*1024);
     BlockingReaderWriterQueue<profile> db_fifo;
-    BlockingReaderWriterQueue<std::variant<uint64_t,std::string>> upload_fifo;
+    BlockingReaderWriterQueue<uint64_t> upload_fifo;
 		
     unique_ptr<GocatorReaderBase> gocator;
     if(data_src == "gocator"s) {
@@ -224,59 +225,43 @@ void store_profile_only()
 
 		// Must be first access to in_file; These values get written once
 		auto [y_resolution,x_resolution,z_resolution,z_offset] = gocator->get_gocator_constants();
-    store_profile_parameters(y_resolution,x_resolution,z_resolution,z_offset);
-
-		json resolution;
-	
-		resolution["y"] = y_resolution;
-		resolution["x"] = x_resolution;
-		resolution["z"] = z_resolution;
-		resolution["z_off"] = z_offset;
-  	auto fnrows = global_config["fiducial_y"].get<double>();
-	  auto fgap = global_config["fiducial_gap"].get<double>();
-	  auto fncols = global_config["fiducial_x"].get<double>();
+    
     auto fdepth = global_config["fiducial_depth"].get<double>() / z_resolution;
 		
-    auto fiducial = make_fiducial(x_resolution,y_resolution,fnrows,fncols,fgap);
-
-		spdlog::info("Gocator constants {}", resolution.dump());
-	
-      uint64_t py = 0, cnt = 0;
+    auto fiducial = make_fiducial(x_resolution,y_resolution);
+    
 		auto recorder_data = get_flatworld(std::ref(gocatorFifo));
 
     const int nan_num = global_config["left_edge_nan"].get<int>();
 		const double belt_crosscorr_threshold = global_config["belt_cross_correlation_threshold"].get<double>();
 		
-    const double z_height = global_config["z_height"].get<double>();
-    const auto y_max_length = global_config["y_max_length"].get<uint64_t>();
 		uint64_t y_max_samples = (uint64_t)(global_config["y_max_length"].get<double>()/y_resolution);
 
-    const int x_samples = global_config["x_width"].get<double>() / x_resolution;
-    
-//		std::thread upload(http_post_thread,std::ref(upload_fifo));
+    std::thread upload(http_post_thread_bulk,std::ref(upload_fifo));
 		
-		// Avoid waiting for thread to join if main thread ends
-		//upload.detach(); 
-
-	  //std::thread db_store(store_profile_thread,std::ref(db_fifo));
 		auto db_t = store_profile_thread(db_fifo);
-    //db_store.detach();
-
-		
 
 		z_element cv_threshhold = 0;
     const int spike_window_size =  nan_num / 4;
 
     auto [bottom, top] = barrel_offset(1024,z_resolution,recorder_data);
-    spdlog::info("Belt Avg - top: {} bottom : {}, height(mm) : {}", top, bottom, (top - bottom) / z_resolution);
+    spdlog::info("Belt Avg - top: {} bottom : {}, height(mm) : {}", top, bottom, (top - bottom) * z_resolution);
+
+  
+    store_profile_parameters(y_resolution,x_resolution,z_resolution,-bottom*z_resolution);
+    std::thread ([=]() {http_post_profile_properties(y_resolution,x_resolution,z_resolution,-bottom*z_resolution);}).detach();
+    
     auto gradient = belt_regression(64,recorder_data);
     auto [profile_buffer, frame_offset] = find_first_origin(fiducial, y_resolution, x_resolution, z_resolution, gradient, bottom, recorder_data);
         
-     auto start = std::chrono::high_resolution_clock::now();
+    
+    uint64_t cnt = 0;
+    auto start = std::chrono::high_resolution_clock::now();
     
     while(recorder_data.resume()) {
       auto [y,x,z] = recorder_data();
-
+      ++cnt;
+      
       spike_filter(z,spike_window_size);
       auto [left_edge_index,right_edge_index] = find_profile_edges_nans_outer(z,nan_num);
       nan_filter(z);
@@ -291,13 +276,14 @@ void store_profile_only()
       profile_buffer.pop_front();
 
       db_fifo.enqueue(profile);
+      upload_fifo.enqueue(profile.y);
       
       if(profile.y > y_max_samples * 0.95) {
         auto belt = window_to_mat(profile_buffer,x_resolution);
         const auto cv_threshhold = left_edge_avg_height(belt,fiducial) - fdepth;
         auto correlation = search_for_fiducial(belt,fiducial,cv_threshhold);
 
-        if(correlation < belt_crosscorr_threshold) {
+        if(correlation < belt_crosscorr_threshold || profile.y > y_max_samples) {
           break;
         }
       }
@@ -305,6 +291,7 @@ void store_profile_only()
     }
  
     db_fifo.enqueue({std::numeric_limits<uint64_t>::max(), NAN, {}});
+    upload_fifo.enqueue(std::numeric_limits<uint64_t>::max());
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
@@ -315,6 +302,9 @@ void store_profile_only()
 
 		close_db(db,stmt,fetch_stmt);
     db_t.join();
+    spdlog::info("DB Thread Stopped");
+    upload.join();
+    spdlog::info("Upload Thread Stopped");
 	}
 
 

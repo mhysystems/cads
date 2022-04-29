@@ -22,6 +22,7 @@ gtest_dep = subproject('gtest').get_variable('gtest_dep')
 gtest_main = subproject('gtest').get_variable('gtest_main_dep')
 fmt_dep = subproject('fmt').get_variable('fmt_dep')
 coop_dep = subproject('coop').get_variable('coop_dep')
+nlohmann_json_dep = subproject('nlohmann_json').get_variable('nlohmann_json_dep')
 
 subdir('GO_SDK/Platform/kApi')
 subdir('GO_SDK/Gocator/GoSdk')
@@ -39,7 +40,7 @@ cads = executable(
 	'cads', 
 	cadsSrc,
 	include_directories : [GoSdkInc,kApiInc,cadsInc],
-	dependencies:[opencv, tbb, thread, boost, sqlite, http_stuff,log_stuff, flatbuffers, fmt_dep, coop_dep],
+	dependencies:[opencv, tbb, thread, boost, sqlite, http_stuff,log_stuff, flatbuffers, fmt_dep, coop_dep, nlohmann_json_dep],
   link_with : [GoSdkLib,kApiLib],
 	cpp_args : ['-std=c++20','-fcoroutines']
 )

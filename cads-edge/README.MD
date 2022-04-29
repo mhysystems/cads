@@ -17,9 +17,9 @@ sudo apt update && sudo apt upgrade -y
 	## Newer GCC ##
 	sudo add-apt-repository ppa:ubuntu-toolchain-r/test
 	sudo apt-get update
-	sudo apt install gcc-10 g++-10
-	export CXX=`which g++-10`
-	export CC=`which gcc-10`
+	sudo apt install gcc-11 g++-11
+	export CXX=`which g++-11`
+	export CC=`which gcc-11`
 
 	## Newer cmake ##
 	sudo apt remove --purge cmake
@@ -60,6 +60,9 @@ sudo apt update && sudo apt upgrade -y
   meson setup release --buildtype release
   cd release
   ninja
+
+  "upload_profile_to" : "http://cads:hMe-%3A%2AZO%23%29dj%7B@cads.mhysystems.com/api/whaleback/cv405b/profile",
+  "upload_config_to" : "http://cads:hMe-%3A%2AZO%23%29dj%7B@cads.mhysystems.com/api/whaleback/cv405b/meta",
 
 
 

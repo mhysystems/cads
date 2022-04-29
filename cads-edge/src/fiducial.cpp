@@ -6,9 +6,12 @@
 #include <chrono>
 #include <fmt/chrono.h>
 
+#include <nlohmann/json.hpp>
 
 using namespace std;
 using namespace cv;
+using json = nlohmann::json;
+extern json global_config;
 
 namespace cads {
 
@@ -26,6 +29,16 @@ Mat make_fiducial(double x_res, double y_res, double fy_mm, double fx_mm, double
 	rectangle(fiducial,{border_x,border_y+nrows+gap,ncols,nrows},{0.0},-1);
 
 	return fiducial;
+
+}
+
+Mat make_fiducial(double x_res, double y_res) {
+
+	auto fnrows = global_config["fiducial_y"].get<double>();
+	auto fgap = global_config["fiducial_gap"].get<double>();
+	auto fncols = global_config["fiducial_x"].get<double>();
+  
+	return make_fiducial(x_res,y_res,fnrows,fncols,fgap);
 
 }
 

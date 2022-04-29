@@ -6,10 +6,14 @@
 #include <cstdint>
 
 #include <readerwriterqueue.h>
+#include <coop/task.hpp>
 
 namespace cads{
 
-void http_post_thread(moodycamel::BlockingReaderWriterQueue<std::variant<uint64_t,std::string>> &upload_fifo);
+void http_post_thread(moodycamel::BlockingReaderWriterQueue<uint64_t> &upload_fifo);
+void http_post_thread_bulk(moodycamel::BlockingReaderWriterQueue<uint64_t> &upload_fifo);
+void http_post_profile_properties(std::string json);
+void http_post_profile_properties(double y_resolution, double x_resolution, double z_resolution, double z_offset);
 
 }
 
