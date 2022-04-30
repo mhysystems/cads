@@ -12,6 +12,12 @@
 #include <limits>
 #include <queue>
 
+
+#include <date/date.h>
+#include <date/tz.h>
+#include <fmt/core.h>
+#include <fmt/chrono.h>
+
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 
@@ -134,7 +140,11 @@ void http_post_thread_bulk(moodycamel::BlockingReaderWriterQueue<uint64_t> &uplo
 	using namespace flatbuffers;
 	
 	sqlite3 *db = nullptr;
-	const cpr::Url endpoint{global_config["upload_profile_to"].get<std::string>()};
+
+	auto g = fmt::format("{:%F-%H-%M}",std::chrono::system_clock::now());
+  const cpr::Url endpoint{global_config["upload_profile_to"].get<std::string>()};
+
+  auto dd = endpoint.str();
 	const char *db_name = global_config["db_name"].get<std::string>().c_str();
 
 	int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_SHAREDCACHE, nullptr);

@@ -10,9 +10,14 @@
   "fiducial_y" : 50,
   "fiducial_gap" : 75,
   "daily_upload_limit" : 3000000000,
+  "daily_start_time" : "21:33:00",
   "db_name" : "profile.db",
   "belt_cross_correlation_threshold" : 0.26,
-  "upload_profile_to" : "http://localhost:3000/api/whaleback/cv405b/bulk",
-  "upload_config_to" : "http://localhost:3000/api/whaleback/cv405b/meta",
+  "site" : "whaleback/",
+  "belt" : "cv405b",
+  "belt_endpoint" : "bulk",
+  "host" : "http://localhost:3000/api/",
+  "upload_profile_to" : "http://localhost:3000/api/whaleback/cv405b-2022-05-01-02-00/bulk",
+  "upload_config_to" : "http://localhost:3000/api/whaleback/cv405b-2022-05-01-02-00/meta",
   "pipeline" : ["regression"]
 }

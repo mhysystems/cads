@@ -17,5 +17,6 @@ std::vector<std::tuple<double,z_element>> histogram(const window& ps, z_element 
 std::tuple<z_element,z_element> find_minmax_z(const window& ps);
 std::tuple<double,double> x_minmax(window win, double x_res); 
 double left_edge_avg_height(const cv::Mat& belt, const cv::Mat& fiducial);
+std::tuple<z_element,z_element> barrel_offset(const window& win, double z_resolution, double z_height_mm);
 
 }

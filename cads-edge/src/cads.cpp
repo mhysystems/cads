@@ -2,6 +2,9 @@
 #include <opencv2/core/types.hpp>
 #include <opencv2/imgproc.hpp>
 
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/rotating_file_sink.h>
+
 #include <csv.hpp>
 #include <cads.h>
 #include <regression.h>
@@ -30,13 +33,15 @@
 #include <thread>
 #include <memory>
 #include <ranges>
-
-#include <spdlog/spdlog.h>
-#include <spdlog/sinks/rotating_file_sink.h>
+#include <chrono>
+#include <sstream>
 
 #include <filters.h>
 #include <edge_detection.h>
-
+#include <date/date.h>
+#include <date/tz.h>
+#include <fmt/core.h>
+#include <fmt/chrono.h>
 
 using namespace std;
 using namespace moodycamel;
@@ -157,23 +162,26 @@ namespace cads
 
 void process_daily()
 {
+  using namespace date;
+  using namespace chrono;
+  
   while(true) {
-    auto now = system_clock::now();
-    time_t now_c = system_clock::to_time_t(now);
-    tm midnight = *std::localtime(&now_c);
+    auto now = current_zone()->to_local(system_clock::now());
+    auto today = chrono::floor<chrono::days>(now);
+    auto daily_time = duration_cast<seconds>(now - today);
 
-    midnight.tm_sec = 0;
-    midnight.tm_min = 0;
-    midnight.tm_hour = 13;
-    midnight.tm_wday++;
-    midnight.tm_mday++;
+    auto sts = global_config["daily_start_time"].get<std::string>();
+    std::stringstream st{sts};
+    
+    system_clock::duration run_in;
+    st >> parse("%T", run_in);
 
-    auto mid = system_clock::from_time_t(mktime(&midnight));
-
-    auto rest = mid - now;
+    auto rest = (24h - (daily_time - run_in)) % 24h;
+    auto d = fmt::format("{:%T}",rest);
+    spdlog::info("Sleep For {}", d);
     this_thread::sleep_for(rest);
-
     process_one_revolution();
+
   }
 }
 
@@ -253,8 +261,9 @@ void store_profile_only()
 		const double belt_crosscorr_threshold = global_config["belt_cross_correlation_threshold"].get<double>();
 		
 		uint64_t y_max_samples = (uint64_t)(global_config["y_max_length"].get<double>()/y_resolution);
+    const auto z_height_mm = global_config["z_height"].get<double>();
 
-    std::thread upload(http_post_thread_bulk,std::ref(upload_fifo));
+    //std::thread upload(http_post_thread_bulk,std::ref(upload_fifo));
 		
 		auto db_t = store_profile_thread(db_fifo);
 
@@ -283,7 +292,9 @@ void store_profile_only()
       auto [left_edge_index,right_edge_index] = find_profile_edges_nans_outer(z,nan_num);
       nan_filter(z);
       regression_compensate(z,left_edge_index,right_edge_index,gradient);
-      barrel_height_compensate(z,bottom - z[left_edge_index - 1]);
+      auto [bottom_avg, top_avg] = barrel_offset(profile_buffer,z_resolution,z_height_mm);
+      barrel_height_compensate(z,bottom - bottom_avg);
+      //barrel_height_compensate(z,bottom - z[left_edge_index - 1]);
 
       auto f = z | views::take(right_edge_index) | views::drop(left_edge_index);
       profile profile_back{y - frame_offset,x+left_edge_index*x_resolution,{f.begin(),f.end()}};
@@ -320,7 +331,7 @@ void store_profile_only()
 		close_db(db,stmt,fetch_stmt);
     db_t.join();
     spdlog::info("DB Thread Stopped");
-    upload.join();
+    //upload.join();
     spdlog::info("Upload Thread Stopped");
 	}
 

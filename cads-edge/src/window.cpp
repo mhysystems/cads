@@ -94,6 +94,25 @@ double left_edge_avg_height(const cv::Mat& belt, const cv::Mat& fiducial) {
   return avg_val;
 }
 
+tuple<z_element,z_element> barrel_offset(const window& win, double z_resolution, double z_height_mm) {
+
+    
+  auto [z_min,z_max] = find_minmax_z(win);
+  
+  // Histogram, first is z value, second is count 
+  auto hist = histogram(win,z_min,z_max);
+  
+  const auto peak = get<0>(hist[0]);
+  const auto thickness = z_height_mm / z_resolution;
+  
+  // Remove z values greater than the peak minus approx belt thickness.
+  // Assumes the next peak will be the barrel values
+  auto f = hist | views::filter([thickness,peak](tuple<double,z_element> a ){ return peak - get<0>(a) > thickness; });
+  vector<tuple<double,z_element>> barrel(f.begin(),f.end());
+  
+  return {get<0>(barrel[0]),peak};
+
+}
 
 #if 0
 CadsMat buffers_to_mat_gpu(profile_window ps, double x_res) {
