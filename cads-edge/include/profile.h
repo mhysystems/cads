@@ -12,6 +12,7 @@ namespace cads
 
   bool compare_samples(const profile& a, const profile& b, int threshold); 
   std::tuple<z_element,z_element> find_minmax_z(const profile& ps);
+  std::tuple<z_element,z_element> barrel_offset(const z_type& win, double z_resolution, double z_height_mm);
 
 
 

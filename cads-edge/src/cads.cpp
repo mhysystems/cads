@@ -262,8 +262,8 @@ void store_profile_only()
 		
 		uint64_t y_max_samples = (uint64_t)(global_config["y_max_length"].get<double>()/y_resolution);
     const auto z_height_mm = global_config["z_height"].get<double>();
-
-    //std::thread upload(http_post_thread_bulk,std::ref(upload_fifo));
+    auto ts = fmt::format("{:%F-%H-%M}",std::chrono::system_clock::now());
+    std::thread upload(http_post_thread_bulk,std::ref(upload_fifo),ts);
 		
 		auto db_t = store_profile_thread(db_fifo);
 
@@ -275,7 +275,7 @@ void store_profile_only()
 
   
     store_profile_parameters(y_resolution,x_resolution,z_resolution,-bottom*z_resolution);
-    std::thread ([=]() {http_post_profile_properties(y_resolution,x_resolution,z_resolution,-bottom*z_resolution);}).detach();
+    std::thread ([=]() {http_post_profile_properties(y_resolution,x_resolution,z_resolution,-bottom*z_resolution,ts);}).detach();
     
     auto gradient = belt_regression(64,recorder_data);
     auto [profile_buffer, frame_offset] = find_first_origin(fiducial, y_resolution, x_resolution, z_resolution, gradient, bottom, recorder_data);
@@ -292,7 +292,8 @@ void store_profile_only()
       auto [left_edge_index,right_edge_index] = find_profile_edges_nans_outer(z,nan_num);
       nan_filter(z);
       regression_compensate(z,left_edge_index,right_edge_index,gradient);
-      auto [bottom_avg, top_avg] = barrel_offset(profile_buffer,z_resolution,z_height_mm);
+      
+      auto [bottom_avg, top_avg] = barrel_offset(z,z_resolution,z_height_mm);
       barrel_height_compensate(z,bottom - bottom_avg);
       //barrel_height_compensate(z,bottom - z[left_edge_index - 1]);
 
@@ -331,7 +332,7 @@ void store_profile_only()
 		close_db(db,stmt,fetch_stmt);
     db_t.join();
     spdlog::info("DB Thread Stopped");
-    //upload.join();
+    upload.join();
     spdlog::info("Upload Thread Stopped");
 	}
 

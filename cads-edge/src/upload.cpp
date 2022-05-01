@@ -11,6 +11,8 @@
 #include <thread>
 #include <limits>
 #include <queue>
+#include <unordered_map>
+#include <random>
 
 
 #include <date/date.h>
@@ -29,7 +31,51 @@ using namespace std;
 namespace cads 
 {
 
-void http_post_profile_properties(double y_resolution, double x_resolution, double z_resolution, double z_offset){
+std::string ReplaceString(std::string subject, const std::string& search,
+                          const std::string& replace) {
+    size_t pos = 0;
+    while((pos = subject.find(search, pos)) != std::string::npos) {
+         subject.replace(pos, search.length(), replace);
+         pos += replace.length();
+    }
+    return subject;
+}
+
+
+void send_flatbuffer_array(
+  flatbuffers::FlatBufferBuilder &builder, 
+  std::vector<flatbuffers::Offset<cads_flatworld::profile>> &profiles_flat,
+  const cpr::Url& endpoint,
+  std::shared_ptr<spdlog::logger> log
+  ) {
+    
+    builder.Finish(cads_flatworld::Createprofile_array(builder,profiles_flat.size(),builder.CreateVector(profiles_flat)));
+
+    auto buf = builder.GetBufferPointer();
+    auto size = builder.GetSize();
+    auto start = std::chrono::high_resolution_clock::now();
+    
+    while(true) {
+     cpr::Response r = cpr::Post(endpoint,
+              cpr::Body{(char *)buf,size},
+              cpr::Header{{"Content-Type", "application/octet-stream"}});
+      
+      if(cpr::ErrorCode::OK == r.error.code && cpr::status::HTTP_OK == r.status_code) {
+        break;
+      }else {
+        log->error("Upload failed with http status code {}", r.status_code);
+      }
+    }
+
+    builder.Clear();
+    profiles_flat.clear(); 
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() / 1000.0;
+
+    log->info("SIZE: {}, DUR:{}, RATE(Kb/s):{} ",size, duration, (double)size / duration);
+}
+
+void http_post_profile_properties(double y_resolution, double x_resolution, double z_resolution, double z_offset, std::string ts){
 		json resolution;
 	
 		resolution["y"] = y_resolution;
@@ -37,13 +83,13 @@ void http_post_profile_properties(double y_resolution, double x_resolution, doub
 		resolution["z"] = z_resolution;
 		resolution["z_off"] = z_offset;
 
-    http_post_profile_properties(resolution.dump());
+    http_post_profile_properties(resolution.dump(), ts);
 }
 
-void http_post_profile_properties(std::string json) {
+void http_post_profile_properties(std::string json, std::string ts) {
   
   cpr::Response r;
-  const cpr::Url endpoint{global_config["upload_config_to"].get<std::string>()};
+  const cpr::Url endpoint{ReplaceString(global_config["upload_config_to"].get<std::string>(),"%DATETIME%"s,ts)};
     
   while(true) {
     r = cpr::Post(endpoint,
@@ -65,7 +111,7 @@ void http_post_thread(moodycamel::BlockingReaderWriterQueue<uint64_t> &upload_fi
 	using namespace flatbuffers;
 	
 	sqlite3 *db = nullptr;
-	const cpr::Url endpoint{global_config["upload_profile_to"].get<std::string>()};
+	const cpr::Url endpoint{ReplaceString(global_config["upload_profile_to"].get<std::string>(),"%DATETIME%"s,"-hello"s)};
 	const char *db_name = global_config["db_name"].get<std::string>().c_str();
 
 	int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_SHAREDCACHE, nullptr);
@@ -136,13 +182,12 @@ void http_post_thread(moodycamel::BlockingReaderWriterQueue<uint64_t> &upload_fi
 }
 
 
-void http_post_thread_bulk(moodycamel::BlockingReaderWriterQueue<uint64_t> &upload_fifo) {
+void http_post_thread_bulk(moodycamel::BlockingReaderWriterQueue<uint64_t> &upload_fifo, std::string ts) {
 	using namespace flatbuffers;
 	
 	sqlite3 *db = nullptr;
 
-	auto g = fmt::format("{:%F-%H-%M}",std::chrono::system_clock::now());
-  const cpr::Url endpoint{global_config["upload_profile_to"].get<std::string>()};
+  const cpr::Url endpoint{ReplaceString(global_config["upload_profile_to"].get<std::string>(),"%DATETIME%"s,ts)};
 
   auto dd = endpoint.str();
 	const char *db_name = global_config["db_name"].get<std::string>().c_str();
@@ -150,76 +195,68 @@ void http_post_thread_bulk(moodycamel::BlockingReaderWriterQueue<uint64_t> &uplo
 	int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_SHAREDCACHE, nullptr);
 	auto stmt = fetch_profile_statement(db);
 
-  std::queue<uint64_t> wait;
+  std::unordered_map<uint64_t,int> wait{};
 
 	auto log = spdlog::rotating_logger_st("upload", "upload.log", 1024 * 1024 * 5, 1);
 	
   auto start = std::chrono::high_resolution_clock::now();
-  auto cnt = 128;
+  auto cnt = 1;
   FlatBufferBuilder builder(4096 * 128);
   std::vector<flatbuffers::Offset<cads_flatworld::profile>> profiles_flat;
-  
-  while (true)
-	{
+  bool EOB = false;
+
+  std::default_random_engine gen;
+  while (!EOB || wait.size() > 0)
+	{	
+    log->flush();
     uint64_t y = 0;
 		
-    if(!upload_fifo.try_dequeue(y)) {
+    if(!EOB && !upload_fifo.try_dequeue(y)) {
       if(wait.size() > 0) {
-        y = wait.front();
-        wait.pop();
+        y = wait.begin()->second;
       }else {
         upload_fifo.wait_dequeue(y);
       }
     }
 
-    if(y == std::numeric_limits<uint64_t>::max() && wait.size() == 0) break;
-    if(y == std::numeric_limits<uint64_t>::max()) continue;
+    if(y == std::numeric_limits<uint64_t>::max()) EOB = true;
 
-
-		log->flush();
-		
+    if(EOB && wait.size() > 0) {
+      
+      std::uniform_int_distribution<int> dist{0, wait.bucket_count()-1};
+      auto b = dist(gen);
+      y = wait.begin(b)->second;
+    }
+    
     auto p = fetch_profile(stmt,y) ; 
     
     // profile at y not written to database yet
-    if(p.y != y) {
-      wait.push(y);
-      continue;
-    }
-
-    profiles_flat.push_back(cads_flatworld::CreateprofileDirect(builder,p.y,p.x_off,&p.z));
-    if(cnt-- > 0) continue;
-
-    cnt = 128;
-    builder.Finish(cads_flatworld::Createprofile_array(builder,128,builder.CreateVector(profiles_flat)));
-    
-
-    auto buf = builder.GetBufferPointer();
-    auto size = builder.GetSize();
-    auto start = std::chrono::high_resolution_clock::now();
-    
-    while(true) {
-     cpr::Response r = cpr::Post(endpoint,
-              cpr::Body{(char *)buf,size},
-              cpr::Header{{"Content-Type", "application/octet-stream"}});
-      
-      if(cpr::ErrorCode::OK == r.error.code && cpr::status::HTTP_OK == r.status_code) {
-        break;
-      }else {
-        log->error("Upload failed with http status code {}", r.status_code);
+    if(p.y == std::numeric_limits<uint64_t>::max()) {
+      if(y != std::numeric_limits<uint64_t>::max()) {
+        auto num = wait.count(y);
+        if( num == 0) {
+          wait.insert({y,1});
+        }else if(num > 1024) {
+          wait.erase(y);
+        }else {
+          wait[y]++;
+        }
       }
+    }else {
+      profiles_flat.push_back(cads_flatworld::CreateprofileDirect(builder,p.y,p.x_off,&p.z));
+    }
+
+    if(cnt++ == 128 || (EOB && wait.size() == 0 && profiles_flat.size() > 0)) {
+      send_flatbuffer_array(builder,profiles_flat,endpoint,log);
+      cnt = 1;
     }
     
-    builder.Clear();
-    profiles_flat.clear();
-
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() / 1000.0;
-
-    log->info("SIZE: {}, DUR:{}, RATE(Kb/s):{} ",size, duration, (double)size / duration);
 	}
 
 	close_db(db,stmt);
 
 }
+
+
 
 }

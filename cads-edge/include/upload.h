@@ -11,9 +11,9 @@
 namespace cads{
 
 void http_post_thread(moodycamel::BlockingReaderWriterQueue<uint64_t> &upload_fifo);
-void http_post_thread_bulk(moodycamel::BlockingReaderWriterQueue<uint64_t> &upload_fifo);
-void http_post_profile_properties(std::string json);
-void http_post_profile_properties(double y_resolution, double x_resolution, double z_resolution, double z_offset);
+void http_post_thread_bulk(moodycamel::BlockingReaderWriterQueue<uint64_t> &upload_fifo, std::string ts = "");
+void http_post_profile_properties(std::string json, std::string ts = "");
+void http_post_profile_properties(double y_resolution, double x_resolution, double z_resolution, double z_offset,std::string ts = "");
 
 }
 

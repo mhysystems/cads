@@ -1,7 +1,7 @@
 {
   "data_source" : "/home/me/dev/cads/profiles/profile.db", 
   "y_max_length" : 901500,
-  "z_height" : 30.0,
+  "z_height" : 27.0,
   "x_width"  : 1500,
   "left_edge_nan" : 15,
   "right_egde_nan" : 10,
@@ -10,14 +10,10 @@
   "fiducial_y" : 50,
   "fiducial_gap" : 75,
   "daily_upload_limit" : 3000000000,
-  "daily_start_time" : "21:33:00",
+  "daily_start_time" : "01:00:00",
   "db_name" : "profile.db",
   "belt_cross_correlation_threshold" : 0.26,
-  "site" : "whaleback/",
-  "belt" : "cv405b",
-  "belt_endpoint" : "bulk",
-  "host" : "http://localhost:3000/api/",
-  "upload_profile_to" : "http://localhost:3000/api/whaleback/cv405b-2022-05-01-02-00/bulk",
-  "upload_config_to" : "http://localhost:3000/api/whaleback/cv405b-2022-05-01-02-00/meta",
+  "upload_profile_to" : "http://cads:hMe-%3A%2AZO%23%29dj%7B@cads.mhysystems.com/api/whaleback/cv405b-%DATETIME%/bulk",
+  "upload_config_to" : "http://cads:hMe-%3A%2AZO%23%29dj%7B@cads.mhysystems.com/api/whaleback/cv405b-%DATETIME%/meta",
   "pipeline" : ["regression"]
 }
