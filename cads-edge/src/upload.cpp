@@ -88,6 +88,10 @@ void http_post_profile_properties(double y_resolution, double x_resolution, doub
 
 void http_post_profile_properties(std::string json, std::string ts) {
   
+  auto endpoint_url = global_config["upload_profile_to"].get<std::string>();
+  std::transform(endpoint_url.begin(), endpoint_url.end(), endpoint_url.begin(),[](unsigned char c){ return std::tolower(c); });
+  if(endpoint_url == "null") return;
+  
   cpr::Response r;
   const cpr::Url endpoint{ReplaceString(global_config["upload_config_to"].get<std::string>(),"%DATETIME%"s,ts)};
     
@@ -186,10 +190,12 @@ void http_post_thread_bulk(moodycamel::BlockingReaderWriterQueue<uint64_t> &uplo
 	using namespace flatbuffers;
 	
 	sqlite3 *db = nullptr;
-
+  auto endpoint_url = global_config["upload_profile_to"].get<std::string>();
+  std::transform(endpoint_url.begin(), endpoint_url.end(), endpoint_url.begin(),[](unsigned char c){ return std::tolower(c); });
+  if(endpoint_url == "null") return;
+  
   const cpr::Url endpoint{ReplaceString(global_config["upload_profile_to"].get<std::string>(),"%DATETIME%"s,ts)};
 
-  auto dd = endpoint.str();
 	const char *db_name = global_config["db_name"].get<std::string>().c_str();
 
 	int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_SHAREDCACHE, nullptr);
@@ -200,7 +206,7 @@ void http_post_thread_bulk(moodycamel::BlockingReaderWriterQueue<uint64_t> &uplo
 	auto log = spdlog::rotating_logger_st("upload", "upload.log", 1024 * 1024 * 5, 1);
 	
   auto start = std::chrono::high_resolution_clock::now();
-  auto cnt = 1;
+
   FlatBufferBuilder builder(4096 * 128);
   std::vector<flatbuffers::Offset<cads_flatworld::profile>> profiles_flat;
   bool EOB = false;
@@ -223,9 +229,9 @@ void http_post_thread_bulk(moodycamel::BlockingReaderWriterQueue<uint64_t> &uplo
 
     if(EOB && wait.size() > 0) {
       
-      std::uniform_int_distribution<int> dist{0, wait.bucket_count()-1};
+      std::uniform_int_distribution<int> dist{0, wait.size()-1};
       auto b = dist(gen);
-      y = wait.begin(b)->second;
+      y = wait.begin()->second;
     }
     
     auto p = fetch_profile(stmt,y) ; 
@@ -246,9 +252,8 @@ void http_post_thread_bulk(moodycamel::BlockingReaderWriterQueue<uint64_t> &uplo
       profiles_flat.push_back(cads_flatworld::CreateprofileDirect(builder,p.y,p.x_off,&p.z));
     }
 
-    if(cnt++ == 128 || (EOB && wait.size() == 0 && profiles_flat.size() > 0)) {
+    if(profiles_flat.size() == 128 || (EOB && wait.size() == 0 && profiles_flat.size() > 0)) {
       send_flatbuffer_array(builder,profiles_flat,endpoint,log);
-      cnt = 1;
     }
     
 	}

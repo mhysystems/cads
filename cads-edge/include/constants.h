@@ -15,3 +15,4 @@ namespace cads {
     static constexpr float value = NAN;
   };
 }
+

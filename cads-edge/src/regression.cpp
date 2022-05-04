@@ -12,7 +12,7 @@ namespace cads {
   std::tuple<double,double> linear_regression(const z_type& yy,int left_edge_index, int right_edge_index) {
     namespace sr = std::ranges;
 
-    auto r = yy | sr::views::take(right_edge_index) | sr::views::drop(left_edge_index) | sr::views::filter([](int16_t a){ return a != 0x8000; });
+    auto r = yy | sr::views::take(right_edge_index) | sr::views::drop(left_edge_index) | sr::views::filter([](int16_t a){ return a != NaN<z_element>::value; });
     
     std::vector<double> y(r.begin(),r.end());
     

@@ -25,6 +25,8 @@ coop_dep = subproject('coop').get_variable('coop_dep')
 date_dep = subproject('hinnant-date').get_variable('date_dep')
 tz_dep = subproject('hinnant-date').get_variable('tz_dep')
 nlohmann_json_dep = subproject('nlohmann_json').get_variable('nlohmann_json_dep')
+iir1_dep = subproject('iir1').get_variable('iir1_dep')
+
 
 subdir('GO_SDK/Platform/kApi')
 subdir('GO_SDK/Gocator/GoSdk')
@@ -42,7 +44,7 @@ cads = executable(
 	'cads', 
 	cadsSrc,
 	include_directories : [GoSdkInc,kApiInc,cadsInc],
-	dependencies:[opencv, tbb, thread, boost, sqlite, http_stuff,log_stuff, flatbuffers, fmt_dep, coop_dep, nlohmann_json_dep,date_dep,tz_dep],
+	dependencies:[opencv, tbb, thread, boost, sqlite, http_stuff,log_stuff, flatbuffers, fmt_dep, coop_dep, nlohmann_json_dep,date_dep,tz_dep,iir1_dep],
   link_with : [GoSdkLib,kApiLib],
 	cpp_args : ['-std=c++20','-fcoroutines']
 )

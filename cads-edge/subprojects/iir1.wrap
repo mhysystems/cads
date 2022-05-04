@@ -1,0 +1,8 @@
+[wrap-git]
+url = https://github.com/berndporr/iir1.git
+revision = master
+patch_directory = iir1
+
+
+[provide]
+iir1 = iir1_dep

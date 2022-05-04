@@ -64,5 +64,8 @@ sudo apt update && sudo apt upgrade -y
   "upload_profile_to" : "http://cads:hMe-%3A%2AZO%23%29dj%7B@cads.mhysystems.com/api/whaleback/cv405b/profile",
   "upload_config_to" : "http://cads:hMe-%3A%2AZO%23%29dj%7B@cads.mhysystems.com/api/whaleback/cv405b/meta",
 
+  "upload_profile_to" : "http://cads:hMe-%3A%2AZO%23%29dj%7B@cads.mhysystems.com/api/whaleback/cv405b-%DATETIME%/bulk",
+  "upload_config_to" : "http://cads:hMe-%3A%2AZO%23%29dj%7B@cads.mhysystems.com/api/whaleback/cv405b-%DATETIME%/meta",
+
 
 

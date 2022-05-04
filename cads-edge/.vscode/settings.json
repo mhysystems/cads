@@ -80,7 +80,9 @@
     "csignal": "cpp",
     "hash_map": "cpp",
     "shared_mutex": "cpp",
-    "source_location": "cpp"
+    "source_location": "cpp",
+    "charconv": "cpp",
+    "scoped_allocator": "cpp"
   },
   "cmake.configureOnOpen": false
 }

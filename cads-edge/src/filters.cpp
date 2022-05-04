@@ -2,6 +2,11 @@
 #include <constants.h>
 #include <algorithm>
 #include <ranges>
+#include <window.hpp>
+#include <global_config.h>
+#include <ranges>
+
+#include <Iir.h>
 
 namespace cads 
 {
@@ -67,5 +72,64 @@ namespace cads
       e += z_off;
     }
   }
+
+  std::function<double(double)> mk_iirfilter(const std::vector<double> as, const std::vector<double> bs, z_element init) {
+    
+    std::vector<double>  xs(bs.size()-1,init);
+    std::vector<double>  ys(as.size()-1,init);
+
+    return [=](z_element xn) mutable {
+
+      double yn = xs[0]*bs[0] - ys[0]*as[0];
+      
+      const auto M = xs.size();
+
+      for(int i = 1; i < M; ++i) {
+        yn += xs[i]*bs[i] - ys[i]*as[i];
+        xs[i-1] = xs[i];
+        ys[i-1] = ys[i];
+
+      }
+
+      yn += xn * bs.back();
+      yn *= 1 / as.back();
+      xs.back() = xn;
+      ys.back() = yn;
+
+      return yn;     
+    };
+  }
+
+  std::function<double(double)> mk_iirfilterSoS() {
+    auto coeff = global_config["iirfilter"]["sos"].get<std::vector<std::vector<double>>>();
+    auto r = coeff | std::ranges::views::join;
+    std::vector<double> in(r.begin(),r.end());
+    Iir::Custom::SOSCascade<5> a(*(double (*)[5][6])in.data());
+
+     return [=](z_element xn) mutable {
+       return a.filter(xn);
+     };
+  }
+
+  std::function<std::tuple<bool,std::tuple<uint64_t,double,z_type>>(std::tuple<uint64_t,double,z_type>)> mk_delay(size_t len) {
+    
+    std::deque<std::tuple<uint64_t,double,z_type>> delay;
+    return [=](std::tuple<uint64_t,double,z_type> p) mutable {
+      delay.push_back(p);
+      
+      if(delay.size() < len) {
+        return std::tuple{false,std::tuple<uint64_t,double,z_type>()};
+      }
+
+      auto rn = delay.front();
+      delay.pop_front();
+
+      return std::tuple{true,rn};
+
+    };
+    
+  }
+
+
 
 } // namespace cads

@@ -18,6 +18,9 @@ def me(z):
         #r.append(w[1] if s > 0 else w[0])
     return z
 
+
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Plot each profile')
     parser.add_argument("db", help="Belt data with columns")
@@ -25,6 +28,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     for z in pg.process_profile(args.db,args.y):
-        plt.plot(z)
+        plt.hist(z[ z != -32768] ,bins=100)
         plt.show()
         #input()

@@ -43,13 +43,13 @@
 #include <fmt/core.h>
 #include <fmt/chrono.h>
 
+#include <global_config.h>
+
 using namespace std;
 using namespace moodycamel;
 using json = nlohmann::json;
 using namespace std::chrono;
 using CadsMat = cv::UMat; //cv::cuda::GpuMat
-
-extern json global_config;
 
 bool trace = false;
 
@@ -111,78 +111,32 @@ namespace cads
 
   }
 
- std::tuple<window,uint64_t> find_first_origin(const cv::Mat& fiducial, double y_resolution, double x_resolution, double z_resolution, double gradient, z_element bottom, generator<gocator_profile>& recorder_data) {
-
-    const int nan_num = global_config["left_edge_nan"].get<int>();
-		const double belt_crosscorr_threshold = global_config["belt_cross_correlation_threshold"].get<double>();
-    const auto fdepth = global_config["fiducial_depth"].get<double>() / z_resolution;
-    const int spike_window_size =  nan_num / 3;
-    
-    window profile_buffer;
-
-    uint64_t frame_offset = 0;
-    while(recorder_data.resume()) {
-      auto [y,x,z] = recorder_data();
-
-      spike_filter(z,spike_window_size);
-      auto [left_edge_index,right_edge_index] = find_profile_edges_nans_outer(z,nan_num);
-      nan_filter(z);
-      regression_compensate(z,left_edge_index,right_edge_index, gradient);
-      barrel_height_compensate(z,bottom - z[left_edge_index - 1]);
-      
-      auto f = z | views::take(right_edge_index) | views::drop(left_edge_index);
-      profile profile{y,x+left_edge_index*x_resolution,{f.begin(),f.end()}};
-
-      profile_buffer.push_back(profile);
-			// Wait for buffers to fill
-			if (profile_buffer.size() <= fiducial.rows) continue;
-      profile_buffer.pop_front();
-
-     
-      auto belt = window_to_mat(profile_buffer,x_resolution);
-      const auto le = left_edge_avg_height(belt,fiducial);
-      const auto cv_threshhold = le - fdepth;
-			auto correlation = search_for_fiducial(belt,fiducial,cv_threshhold);
-
-      if(correlation < belt_crosscorr_threshold) {
-  			uint64_t i = 0;
-        frame_offset = y;
-			  // Reset buffer y values to origin
-        for(auto &p : profile_buffer) {
-          p.y = i++;
-        }
-
-        break;
-      }
-    }
-
-    return {profile_buffer,frame_offset - profile_buffer.size() - 1};
-  }
-
-
 void process_daily()
 {
   using namespace date;
   using namespace chrono;
   
-  while(true) {
-    auto now = current_zone()->to_local(system_clock::now());
-    auto today = chrono::floor<chrono::days>(now);
-    auto daily_time = duration_cast<seconds>(now - today);
+  auto sts = global_config["daily_start_time"].get<std::string>();
+  
+  do {
+    if(sts != "now"s) {
+      auto now = current_zone()->to_local(system_clock::now());
+      auto today = chrono::floor<chrono::days>(now);
+      auto daily_time = duration_cast<seconds>(now - today);
 
-    auto sts = global_config["daily_start_time"].get<std::string>();
-    std::stringstream st{sts};
-    
-    system_clock::duration run_in;
-    st >> parse("%T", run_in);
+      std::stringstream st{sts};
+      
+      system_clock::duration run_in;
+      st >> parse("%T", run_in);
 
-    auto rest = (24h - (daily_time - run_in)) % 24h;
-    auto d = fmt::format("{:%T}",rest);
-    spdlog::info("Sleep For {}", d);
-    this_thread::sleep_for(rest);
+      auto rest = (24h - (daily_time - run_in)) % 24h;
+      auto d = fmt::format("{:%T}",rest);
+      spdlog::info("Sleep For {}", d);
+      this_thread::sleep_for(rest);
+    }
     process_one_revolution();
 
-  }
+  }while(sts != "now"s);
 }
 
 
@@ -278,41 +232,70 @@ void store_profile_only()
     std::thread ([=]() {http_post_profile_properties(y_resolution,x_resolution,z_resolution,-bottom*z_resolution,ts);}).detach();
     
     auto gradient = belt_regression(64,recorder_data);
-    auto [profile_buffer, frame_offset] = find_first_origin(fiducial, y_resolution, x_resolution, z_resolution, gradient, bottom, recorder_data);
-        
+
+    auto iirfilter = mk_iirfilterSoS();
+    auto delay = mk_delay(global_config["iirfilter"]["delay"]);    
     
-    uint64_t cnt = 0;
+    uint64_t cnt = 0,frame_offset = 0;
+    bool find_first_origin = true;
+    window profile_buffer;
+
     auto start = std::chrono::high_resolution_clock::now();
     
     while(recorder_data.resume()) {
-      auto [y,x,z] = recorder_data();
+      auto [iy,ix,iz] = recorder_data();
       ++cnt;
       
-      spike_filter(z,spike_window_size);
-      auto [left_edge_index,right_edge_index] = find_profile_edges_nans_outer(z,nan_num);
+      spike_filter(iz,spike_window_size);
+      auto [bottom_avg, top_avg] = barrel_offset(iz,z_resolution,z_height_mm);
+      auto bottom_filtered = iirfilter(bottom_avg);
+      
+      auto [delayed,dd] = delay({iy,ix,iz});
+      if(!delayed) continue; 
+      
+      auto [y,x,z] = dd; 
+
+      auto [bottom_avg_dbg, top_avg_dbg] = barrel_offset(z,z_resolution,z_height_mm);
+      //std::cout << bottom_avg_dbg << ',' << bottom_filtered << '\n';
+
+      auto [left_edge_index,right_edge_index] = find_profile_edges_nans_outer(z,nan_num);      
+      
       nan_filter(z);
       regression_compensate(z,left_edge_index,right_edge_index,gradient);
       
-      auto [bottom_avg, top_avg] = barrel_offset(z,z_resolution,z_height_mm);
-      barrel_height_compensate(z,bottom - bottom_avg);
+      barrel_height_compensate(z,bottom_filtered - bottom);
       //barrel_height_compensate(z,bottom - z[left_edge_index - 1]);
 
       auto f = z | views::take(right_edge_index) | views::drop(left_edge_index);
       profile profile_back{y - frame_offset,x+left_edge_index*x_resolution,{f.begin(),f.end()}};
 
       profile_buffer.push_back(profile_back);
+      // Wait for buffers to fill
+			if (profile_buffer.size() <= fiducial.rows) continue;
       profile profile = profile_buffer.front();
       profile_buffer.pop_front();
 
       db_fifo.enqueue(profile);
       upload_fifo.enqueue(profile.y);
       
-      if(profile.y > y_max_samples * 0.95) {
+      if(find_first_origin || profile.y > y_max_samples * 0.95) {
         auto belt = window_to_mat(profile_buffer,x_resolution);
         const auto cv_threshhold = left_edge_avg_height(belt,fiducial) - fdepth;
         auto correlation = search_for_fiducial(belt,fiducial,cv_threshhold);
 
-        if(correlation < belt_crosscorr_threshold || profile.y > y_max_samples) {
+        if(correlation < belt_crosscorr_threshold) {
+          if(!find_first_origin) break;
+          
+          find_first_origin = false;
+          frame_offset = y - profile_buffer.size() + 1;
+
+			    // Reset buffer y values to origin
+          for(auto &p : profile_buffer) {
+            p.y -= frame_offset;
+          }
+        }
+
+        if(profile.y > y_max_samples) {
           break;
         }
       }
@@ -337,7 +320,72 @@ void store_profile_only()
 	}
 
 
+void process_experiment() {
+  	
+    auto data_src = global_config["data_source"].get<std::string>();	
+		BlockingReaderWriterQueue<profile> gocatorFifo(4096*1024);
 
+		
+    unique_ptr<GocatorReaderBase> gocator;
+    if(data_src == "gocator"s) {
+      gocator =  make_unique<GocatorReader>(gocatorFifo);
+    }else{
+      gocator = make_unique<SqliteGocatorReader>(gocatorFifo);
+    }
+		gocator->Start();
+
+		// Must be first access to in_file; These values get written once
+		auto [y_resolution,x_resolution,z_resolution,z_offset] = gocator->get_gocator_constants();
+    
+    auto fdepth = global_config["fiducial_depth"].get<double>() / z_resolution;
+		
+
+		auto recorder_data = get_flatworld(std::ref(gocatorFifo));
+
+    const int nan_num = global_config["left_edge_nan"].get<int>();
+		const double belt_crosscorr_threshold = global_config["belt_cross_correlation_threshold"].get<double>();
+		
+		uint64_t y_max_samples = (uint64_t)(global_config["y_max_length"].get<double>()/y_resolution);
+    const auto z_height_mm = global_config["z_height"].get<double>();
+
+		z_element cv_threshhold = 0;
+    const int spike_window_size =  nan_num / 4;
+
+
+    auto [bottom, top] = barrel_offset(1024,z_resolution,recorder_data);
+    spdlog::info("Belt Avg - top: {} bottom : {}, height(mm) : {}", top, bottom, (top - bottom) * z_resolution);
+    auto iirfilter = mk_iirfilter(global_config["iirfilter"]["a"],global_config["iirfilter"]["b"],bottom);
+    auto iirfilter2 = mk_iirfilterSoS();
+    auto delay = mk_delay(global_config["iirfilter"]["delay"]);
+  
+    auto gradient = belt_regression(64,recorder_data);
+    
+    uint64_t cnt = 0;
+    auto start = std::chrono::high_resolution_clock::now();
+  
+  while(recorder_data.resume()) {
+      auto [y,x,z] = recorder_data();
+      ++cnt;
+      
+      spike_filter(z,spike_window_size);
+      auto [left_edge_index,right_edge_index] = find_profile_edges_nans_outer(z,nan_num);
+      auto [bottom, top] = barrel_offset(z,z_resolution,z_height_mm);
+      //spdlog::info("Belt Avg - top: {} bottom : {}, height(mm) : {}", top, bottom, (top - bottom) * z_resolution);
+      //std::cout << bottom << '\n';
+      nan_filter(z);
+      auto b2 = iirfilter2(bottom);
+      std::cout << b2 << '\n';
+      regression_compensate(z,left_edge_index,right_edge_index,gradient);
+      
+      //auto [delayed,np] = delay({y,x,z});
+      //if(!delayed) continue;
+
+      barrel_height_compensate(z,bottom - b2);
+      
+
+
+    }
+}
 
 
 #if 0

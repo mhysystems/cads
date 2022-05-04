@@ -16,6 +16,7 @@ using profile_window = std::deque<profile>;
 void process_daily();
 void store_profile_only();
 void process_one_revolution();
+void process_experiment();
 
 }
 
