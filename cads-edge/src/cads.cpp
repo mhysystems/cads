@@ -239,6 +239,7 @@ void store_profile_only()
     uint64_t cnt = 0,frame_offset = 0;
     bool find_first_origin = true;
     window profile_buffer;
+    double lowest_correlation = std::numeric_limits<double>::max();
 
     auto start = std::chrono::high_resolution_clock::now();
     
@@ -263,7 +264,7 @@ void store_profile_only()
       nan_filter(z);
       regression_compensate(z,left_edge_index,right_edge_index,gradient);
       
-      barrel_height_compensate(z,bottom_filtered - bottom);
+      barrel_height_compensate(z,bottom - bottom_filtered);
       //barrel_height_compensate(z,bottom - z[left_edge_index - 1]);
 
       auto f = z | views::take(right_edge_index) | views::drop(left_edge_index);
@@ -282,8 +283,11 @@ void store_profile_only()
         auto belt = window_to_mat(profile_buffer,x_resolution);
         const auto cv_threshhold = left_edge_avg_height(belt,fiducial) - fdepth;
         auto correlation = search_for_fiducial(belt,fiducial,cv_threshhold);
-
+        
+        lowest_correlation = std::min(lowest_correlation,correlation);
+        
         if(correlation < belt_crosscorr_threshold) {
+          spdlog::info("Correlation : {} at y : {}", correlation, profile.y);
           if(!find_first_origin) break;
           
           find_first_origin = false;
@@ -296,6 +300,7 @@ void store_profile_only()
         }
 
         if(profile.y > y_max_samples) {
+          spdlog::info("Origin not found before Max samples. Lowest Correlation : {}",lowest_correlation);
           break;
         }
       }
