@@ -233,7 +233,7 @@ void store_profile_only()
     const int spike_window_size =  nan_num / 4;
 
     auto [bottom, top] = barrel_offset(1024,z_resolution,recorder_data);
-    spdlog::info("Belt Avg - top: {} bottom : {}, height(mm) : {}", top, bottom, (top - bottom) * z_resolution);
+    cadslog.info("Belt Avg - top: {} bottom : {}, height(mm) : {}", top, bottom, (top - bottom) * z_resolution);
 
   
     store_profile_parameters(y_resolution,x_resolution,z_resolution,-bottom*z_resolution);
@@ -287,7 +287,7 @@ void store_profile_only()
       db_fifo.enqueue(profile);
       upload_fifo.enqueue(profile.y);
       
-      if(find_first_origin || profile.y > y_max_samples * 0.95) {
+      if(find_first_origin || profile.y > y_max_samples * 0.90) {
         auto belt = window_to_mat(profile_buffer,x_resolution);
         const auto cv_threshhold = left_edge_avg_height(belt,fiducial) - fdepth;
         auto correlation = search_for_fiducial(belt,fiducial,cv_threshhold);
