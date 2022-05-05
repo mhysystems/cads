@@ -252,7 +252,7 @@ namespace cads
     auto delay = mk_delay(global_config["iirfilter"]["delay"]);
 
     uint64_t cnt = 0, frame_offset = 0, frame_count = 0;
-    bool find_first_origin = true, loop_forever = true;
+    bool find_first_origin = true, loop_forever = global_config["loop_forever"].get<bool>();
     window profile_buffer;
     double lowest_correlation = std::numeric_limits<double>::max();
 
@@ -273,8 +273,8 @@ namespace cads
 
       auto [y, x, z] = dd;
 
-      auto [bottom_avg_dbg, top_avg_dbg] = barrel_offset(z, z_resolution, z_height_mm);
-      // std::cout << bottom_avg_dbg << ',' << bottom_filtered << '\n';
+      //auto [bottom_avg_dbg, top_avg_dbg] = barrel_offset(z, z_resolution, z_height_mm);
+      //std::cerr << bottom_avg_dbg << ',' << bottom_filtered << '\n';
 
       auto [left_edge_index, right_edge_index] = find_profile_edges_nans_outer(z, nan_num);
 
@@ -283,7 +283,8 @@ namespace cads
 
       barrel_height_compensate(z, bottom - bottom_filtered);
       // barrel_height_compensate(z,bottom - z[left_edge_index - 1]);
-
+      //auto [bottom_avg_dbg2, top_avg_dbg2] = barrel_offset(z, z_resolution, z_height_mm);
+      
       auto f = z | views::take(right_edge_index) | views::drop(left_edge_index);
       profile profile_back{y - frame_offset, x + left_edge_index * x_resolution, {f.begin(), f.end()}};
 
@@ -335,7 +336,7 @@ namespace cads
           {
             p.y = i++;
           }
-          
+
           find_first_origin = true;
           lowest_correlation = std::numeric_limits<double>::max();
           
