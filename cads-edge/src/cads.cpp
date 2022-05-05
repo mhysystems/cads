@@ -4,6 +4,7 @@
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/rotating_file_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 
 #include <csv.hpp>
 #include <cads.h>
@@ -53,7 +54,7 @@ using CadsMat = cv::UMat; //cv::cuda::GpuMat
 
 bool trace = false;
 
-auto glog = spdlog::rotating_logger_st("cads", "cads.log", 1024 * 1024 * 5, 1);
+spdlog::logger cadslog("cads",{std::make_shared<spdlog::sinks::rotating_file_sink_st>("cads.log", 1024 * 1024 * 5, 1),std::make_shared<spdlog::sinks::stdout_color_sink_st>()});
 
 namespace cads
 {
@@ -131,7 +132,7 @@ void process_daily()
 
       auto rest = (24h - (daily_time - run_in)) % 24h;
       auto d = fmt::format("{:%T}",rest);
-      spdlog::info("Sleep For {}", d);
+      cadslog.info("Sleep For {}", d);
       this_thread::sleep_for(rest);
     }
     process_one_revolution();
@@ -151,8 +152,10 @@ void store_profile_only()
   
   unique_ptr<GocatorReaderBase> gocator;
   if(data_src == "gocator"s) {
+    cadslog.debug("Using gocator as data source");
     gocator =  make_unique<GocatorReader>(gocatorFifo);
   }else{
+    cadslog.debug("Using sqlite as data source");
     gocator = make_unique<SqliteGocatorReader>(gocatorFifo);
   }
 
@@ -160,6 +163,8 @@ void store_profile_only()
 
   // Must be first access to in_file; These values get written once
   auto [y_resolution,x_resolution,z_resolution,z_offset] = gocator->get_gocator_constants();
+  cadslog.info("Gocator contants - y_res:{}, x_res:{}, z_res:{}, z_off:{}",y_resolution,x_resolution,z_resolution,z_offset);
+
   store_profile_parameters(y_resolution,x_resolution,z_resolution,z_offset);
   auto [db, stmt] = open_db(db_name);
 
@@ -196,14 +201,17 @@ void store_profile_only()
 		
     unique_ptr<GocatorReaderBase> gocator;
     if(data_src == "gocator"s) {
+      cadslog.debug("Using gocator as data source");
       gocator =  make_unique<GocatorReader>(gocatorFifo);
     }else{
+      cadslog.debug("Using sqlite as data source");
       gocator = make_unique<SqliteGocatorReader>(gocatorFifo);
     }
 		gocator->Start();
 
 		// Must be first access to in_file; These values get written once
 		auto [y_resolution,x_resolution,z_resolution,z_offset] = gocator->get_gocator_constants();
+    cadslog.info("Gocator contants - y_res:{}, x_res:{}, z_res:{}, z_off:{}",y_resolution,x_resolution,z_resolution,z_offset);
     
     auto fdepth = global_config["fiducial_depth"].get<double>() / z_resolution;
 		
@@ -287,7 +295,7 @@ void store_profile_only()
         lowest_correlation = std::min(lowest_correlation,correlation);
         
         if(correlation < belt_crosscorr_threshold) {
-          spdlog::info("Correlation : {} at y : {}", correlation, profile.y);
+          cadslog.info("Correlation : {} at y : {}", correlation, profile.y);
           if(!find_first_origin) break;
           
           find_first_origin = false;
@@ -297,10 +305,12 @@ void store_profile_only()
           for(auto &p : profile_buffer) {
             p.y -= frame_offset;
           }
+
+          lowest_correlation = std::numeric_limits<double>::max();
         }
 
         if(profile.y > y_max_samples) {
-          spdlog::info("Origin not found before Max samples. Lowest Correlation : {}",lowest_correlation);
+          cadslog.info("Origin not found before Max samples. Lowest Correlation : {}",lowest_correlation);
           break;
         }
       }
@@ -312,16 +322,16 @@ void store_profile_only()
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    spdlog::info("CADS - CNT: {}, DUR: {}, RATE(ms):{} ",cnt, duration, (double)cnt / duration);
+    cadslog.info("CADS - CNT: {}, DUR: {}, RATE(ms):{} ",cnt, duration, (double)cnt / duration);
 
 		gocator->Stop();
-    spdlog::info("Gocator Stopped");
+    cadslog.info("Gocator Stopped");
 
 		close_db(db,stmt,fetch_stmt);
     db_t.join();
-    spdlog::info("DB Thread Stopped");
+    cadslog.info("DB Thread Stopped");
     upload.join();
-    spdlog::info("Upload Thread Stopped");
+    cadslog.info("Upload Thread Stopped");
 	}
 
 
