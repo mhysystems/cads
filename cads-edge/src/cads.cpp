@@ -317,18 +317,28 @@ namespace cads
           frame_offset = y - profile_buffer.size() + 1;
           frame_count = 0;
           // Reset buffer y values to origin
-          for (auto &p : profile_buffer)
+          for (int i = 0; auto &p : profile_buffer)
           {
-            p.y -= frame_offset;
+            p.y = i++;
           }
           profile.y = 0;
           lowest_correlation = std::numeric_limits<double>::max();
         }
 
-        if (!find_first_origin && profile.y > y_max_samples)
+        if (profile.y > y_max_samples)
         {
           cadslog.info("Origin not found before Max samples. Lowest Correlation : {}", lowest_correlation);
+          frame_offset = y - profile_buffer.size() + 1;
+          frame_count = 0;
+          // Reset buffer y values to origin
+          for (int i = 0; auto &p : profile_buffer)
+          {
+            p.y = i++;
+          }
+          
           find_first_origin = true;
+          lowest_correlation = std::numeric_limits<double>::max();
+          
           if (!loop_forever)
             break;
         }
