@@ -325,7 +325,7 @@ namespace cads
           lowest_correlation = std::numeric_limits<double>::max();
         }
 
-        if (profile.y > y_max_samples)
+        if (!find_first_origin && profile.y > y_max_samples)
         {
           cadslog.info("Origin not found before Max samples. Lowest Correlation : {}", lowest_correlation);
           find_first_origin = true;
