@@ -123,6 +123,11 @@ GocatorReader::GocatorReader(moodycamel::BlockingReaderWriterQueue<profile>& goc
 			throw runtime_error{"GoSensor_EnableData: "s + to_string(status)};
 	}
 
+  if (kIsError(status = GoSensor_EnableHealth(m_sensor, kTRUE)))
+	{
+			throw runtime_error{"GoSensor_EnableHealth: "s + to_string(status)};
+	}
+
 	auto setup = GoSensor_Setup(m_sensor);
 
 	if (kNULL == setup)
