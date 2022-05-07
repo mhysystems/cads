@@ -26,7 +26,9 @@ protected:
 	GoSensor m_sensor;
 
 	static kStatus OnData(kPointer context, GoSensor sensor, GoDataSet dataset);
+  static kStatus OnSystem(kPointer context, GoSystem system, GoDataSet data);
 	virtual kStatus OnData(GoSensor sensor, GoDataSet dataset);
+  virtual kStatus OnSystem(GoSystem system, GoDataSet dataset);
 
 public:
 

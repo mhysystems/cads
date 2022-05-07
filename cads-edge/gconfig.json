@@ -10,7 +10,7 @@
   "fiducial_y" : 67,
   "fiducial_gap" : 78,
   "daily_upload_limit" : 3000000000,
-  "daily_start_time" : "01:00:00",
+  "daily_start_time" : "now",
   "loop_forever" : false,
   "iirfilter" : {
     "delay" : 228,

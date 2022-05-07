@@ -300,7 +300,7 @@ namespace cads
       db_fifo.enqueue(profile);
       upload_fifo.enqueue(profile.y);
 
-      if (find_first_origin || profile.y > y_max_samples * 0.70)
+      if (find_first_origin || profile.y > y_max_samples * 0.95)
       {
         auto belt = window_to_mat(profile_buffer, x_resolution);
         const auto cv_threshhold = left_edge_avg_height(belt, fiducial) - fdepth;

@@ -112,21 +112,29 @@ GocatorReader::GocatorReader(moodycamel::BlockingReaderWriterQueue<profile>& goc
 	{
 			throw runtime_error{"GoSensor_Stop: "s + to_string(status)};
 	}
-
-	if (kIsError(status = GoSensor_SetDataHandler(m_sensor, OnData, this)))
+	
+  if (kIsError(status = GoSensor_SetDataHandler(m_sensor, OnData, this)))
 	{
 			throw runtime_error{"GoSensor_SetDataHandler: "s + to_string(status)};
 	}
-
+     
 	if (kIsError(status = GoSensor_EnableData(m_sensor, kTRUE)))
 	{
 			throw runtime_error{"GoSensor_EnableData: "s + to_string(status)};
+	}
+
+#if 0
+                   
+  if (kIsError(status = GoSystem_SetHealthHandler(m_system, OnSystem, this)))
+	{
+			throw runtime_error{"GoSensor_SetDataHandler: "s + to_string(status)};
 	}
 
   if (kIsError(status = GoSensor_EnableHealth(m_sensor, kTRUE)))
 	{
 			throw runtime_error{"GoSensor_EnableHealth: "s + to_string(status)};
 	}
+#endif
 
 	auto setup = GoSensor_Setup(m_sensor);
 
@@ -150,6 +158,10 @@ kStatus kCall GocatorReader::OnData(kPointer context, GoSensor sensor, GoDataSet
     return static_cast<GocatorReader*>(context)->OnData(sensor, dataset);
 }
 
+kStatus kCall GocatorReader::OnSystem(kPointer context, GoSystem system, GoDataSet data){
+  return static_cast<GocatorReader*>(context)->OnSystem(system, data);
+}
+
 
 GocatorReader::~GocatorReader() {
 	m_loop = false;
@@ -171,6 +183,27 @@ void GocatorReader::RunForever()
 	Stop();
 	spdlog::info("Stopped Gocator");
 }
+
+kStatus GocatorReader::OnSystem(GoSystem system, GoDataSet dataset)
+{
+    for (auto i = 0; i < GoDataSet_Count(dataset); ++i)
+    {
+        GoHealthMsg message = GoDataSet_At(dataset, i);
+        for (auto k = 0; k < GoHealthMsg_Count(message); k++)
+        {
+          auto healthIndicator = GoHealthMsg_At(message, k);
+          if(healthIndicator->id == GO_HEALTH_ENCODER_VALUE)
+            spdlog::info("Indicator[{}]: Id:{} Instance:{} Value:{}", k, healthIndicator->id, healthIndicator->instance, healthIndicator->value); 
+        }
+    }
+
+
+    GoDestroy(dataset);
+
+
+    return kOK;
+}
+
 
 kStatus GocatorReader::OnData(GoSensor sensor, GoDataSet dataset)
 {
