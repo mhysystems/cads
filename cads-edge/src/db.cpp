@@ -220,12 +220,12 @@ coop::task_t<void,true> store_profile_thread(BlockingReaderWriterQueue<profile> 
       err = sqlite3_step(stmt);
       auto attempts = 512;
 
-      while(err != SQLITE_OK && attempts-- > 0) {
+      while(err != SQLITE_DONE && attempts-- > 0) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         err = sqlite3_step(stmt);
       }
 
-      if(err != SQLITE_OK) {
+      if(err != SQLITE_DONE) {
         log->error("SQLite Error Code:{}",err);
       }
       
