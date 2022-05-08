@@ -47,6 +47,7 @@ int main(int argn, char **argv)
 		("config,c", po::value<std::string>(), "Config JSON file.")
     ("savedb,d", po::bool_switch(), "Only save one approx belt")
     ("once,o", po::bool_switch(), "Run once")
+    ("stop,s", po::bool_switch(), "Stop Gocator")
     ("experiment,e", po::bool_switch(), "Test experimental features")
     ("level,l", po::value<std::string>(), "Logging Level");
 
@@ -99,6 +100,8 @@ int main(int argn, char **argv)
     process_one_revolution();
   }else if(vm["experiment"].as<bool>()) {
     process_experiment();
+  }else if(vm["stop"].as<bool>()) {
+    stop_gocator();
   }else{
 	  process_daily();
   }

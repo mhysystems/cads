@@ -211,29 +211,25 @@ coop::task_t<void,true> store_profile_thread(BlockingReaderWriterQueue<profile> 
       db_fifo.wait_dequeue(p);
       
       if(p.y == std::numeric_limits<uint64_t>::max()) break;
-
-			err = sqlite3_bind_int64(stmt,1,(int64_t)p.y);
-			err = sqlite3_bind_double(stmt,2,p.x_off);
-			err = sqlite3_bind_blob(stmt, 3, p.z.data(), p.z.size()*sizeof(int16_t), SQLITE_STATIC );
-
-			err = SQLITE_BUSY;
-
-			while(err == SQLITE_BUSY) {
-				err = sqlite3_step(stmt);
-				//std::this_thread::sleep_for(std::chrono::milliseconds(50));
-			}
-			
-      //sqlite3_clear_bindings(stmt);
-			sqlite3_reset(stmt);  
-
-			//if(err == SQLITE_DONE) { 
-			//	log->info("Stored {} in DB after initial failue. Removed from queue.",p.y); 
-			//}
-			//else{ 
-				//log->info("Store {} failed with err {} . If err is 6 DB is just temporary locked.",p.y, err); 
-			//}
       
+      
+      err = sqlite3_bind_int64(stmt,1,(int64_t)p.y);
+      err = sqlite3_bind_double(stmt,2,p.x_off);
+      err = sqlite3_bind_blob(stmt, 3, p.z.data(), p.z.size()*sizeof(int16_t), SQLITE_STATIC );
 
+      err = sqlite3_step(stmt);
+      auto attempts = 512;
+
+      while(err != SQLITE_OK && attempts-- > 0) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        err = sqlite3_step(stmt);
+      }
+
+      if(err != SQLITE_OK) {
+        log->error("SQLite Error Code:{}",err);
+      }
+      
+      sqlite3_reset(stmt);  
 		}
 
 		if(stmt != nullptr) sqlite3_finalize(stmt);

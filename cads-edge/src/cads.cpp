@@ -430,6 +430,19 @@ namespace cads
     }
   }
 
+  void stop_gocator() {
+    
+    auto data_src = global_config["data_source"].get<std::string>();
+    
+    if (data_src == "gocator"s)
+    {
+        BlockingReaderWriterQueue<profile> f;
+        GocatorReader gocator(f);
+        gocator.Stop();
+    }
+
+  }
+
 #if 0
  void process_flatbuffers5()
 	{
