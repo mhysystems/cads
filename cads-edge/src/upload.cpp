@@ -121,42 +121,19 @@ void http_post_thread(moodycamel::BlockingReaderWriterQueue<uint64_t> &upload_fi
 	int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_SHAREDCACHE, nullptr);
 	auto stmt = fetch_profile_statement(db);
 
-  std::queue<uint64_t> wait;
-
 	auto log = spdlog::rotating_logger_st("upload", "upload.log", 1024 * 1024 * 5, 1);
 	
   auto start = std::chrono::high_resolution_clock::now();
   while (true)
 	{
-    uint64_t msg; 
     uint64_t y = 0;
 		
-    if(!upload_fifo.wait_dequeue_timed(msg,std::chrono::seconds(1))) {
-      if(wait.size() > 0) {
-        y = wait.front();
-        wait.pop();
-      }else {
-        upload_fifo.wait_dequeue(msg);
-        y = msg;
-      }
-
-    }else {
-      y = msg;
-    }
-
-
-		log->flush();
+    upload_fifo.wait_dequeue(y);
 		
 		cpr::Response r;
 
     auto p = fetch_profile(stmt,y) ; 
     
-    // profile at y not written to database yet
-    if(p.y != y) {
-      wait.push(y);
-      continue;
-    }
-
     FlatBufferBuilder builder(4096);
     auto flat_buffer = cads_flatworld::CreateprofileDirect(builder,p.y,p.x_off,&p.z);
     builder.Finish(flat_buffer);
@@ -201,59 +178,32 @@ void http_post_thread_bulk(moodycamel::BlockingReaderWriterQueue<uint64_t> &uplo
 	int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_SHAREDCACHE, nullptr);
 	auto stmt = fetch_profile_statement(db);
 
-  std::unordered_map<uint64_t,int> wait{};
-
 	auto log = spdlog::rotating_logger_st("upload", "upload.log", 1024 * 1024 * 5, 1);
 	
   auto start = std::chrono::high_resolution_clock::now();
 
   FlatBufferBuilder builder(4096 * 128);
   std::vector<flatbuffers::Offset<cads_flatworld::profile>> profiles_flat;
-  bool EOB = false;
 
-  std::default_random_engine gen;
-  while (!EOB || wait.size() > 0)
+  while (true)
 	{	
-    log->flush();
+
     uint64_t y = 0;
-		
-    if(!EOB && !upload_fifo.try_dequeue(y)) {
-      if(wait.size() > 0) {
-        y = wait.begin()->second;
-      }else {
-        upload_fifo.wait_dequeue(y);
-      }
-    }
+		upload_fifo.wait_dequeue(y);
 
-    if(y == std::numeric_limits<uint64_t>::max()) EOB = true;
-
-    if(EOB && wait.size() > 0) {
-      
-      std::uniform_int_distribution<int> dist{0, wait.size()-1};
-      auto b = dist(gen);
-      y = wait.begin()->second;
-    }
-    
     auto p = fetch_profile(stmt,y) ; 
     
-    // profile at y not written to database yet
-    if(p.y == std::numeric_limits<uint64_t>::max()) {
-      if(y != std::numeric_limits<uint64_t>::max()) {
-        auto num = wait.count(y);
-        if( num == 0) {
-          wait.insert({y,1});
-        }else if(num > 1024) {
-          wait.erase(y);
-        }else {
-          wait[y]++;
-        }
+    if(y != std::numeric_limits<uint64_t>::max()) {
+      profiles_flat.push_back(cads_flatworld::CreateprofileDirect(builder,p.y,p.x_off,&p.z));
+     
+      if(profiles_flat.size() == 128) {
+        send_flatbuffer_array(builder,profiles_flat,endpoint,log);
       }
     }else {
-      profiles_flat.push_back(cads_flatworld::CreateprofileDirect(builder,p.y,p.x_off,&p.z));
-    }
-
-    if(profiles_flat.size() == 128 || (EOB && wait.size() == 0 && profiles_flat.size() > 0)) {
-      send_flatbuffer_array(builder,profiles_flat,endpoint,log);
+      if(profiles_flat.size() > 0) {
+        send_flatbuffer_array(builder,profiles_flat,endpoint,log);
+      }
+      break;
     }
     
 	}

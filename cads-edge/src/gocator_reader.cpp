@@ -208,6 +208,7 @@ kStatus GocatorReader::OnSystem(GoSystem system, GoDataSet dataset)
 kStatus GocatorReader::OnData(GoSensor sensor, GoDataSet dataset)
 {
     k64u frame = 0;
+    k64s encoder = 0;
     double y = 0.0;
     k16s* profile = 0;
     kSize profileWidth = 0;
@@ -226,8 +227,11 @@ kStatus GocatorReader::OnData(GoSensor sensor, GoDataSet dataset)
             {
                 for (auto j = 0; j < GoStampMsg_Count(message); ++j)
                 {
-                    frame = GoStampMsg_At(message, j)->frameIndex;
-                    y = frame * m_yResolution;
+                    GoStamp *goStamp = GoStampMsg_At(message, j);
+                    frame = goStamp->frameIndex;
+                    encoder = goStamp->encoder;
+                    //y = frame * m_yResolution;
+                    y = encoder * 0.1221;
                 }
             }
             break;

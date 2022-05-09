@@ -59,6 +59,35 @@ spdlog::logger cadslog("cads", {std::make_shared<spdlog::sinks::rotating_file_si
 namespace cads
 {
 
+  void save_send_thread(BlockingReaderWriterQueue<profile> &profile_fifo, std::string ts) 
+  {
+    profile p;
+    profile_fifo.wait_dequeue(p);
+    
+    if(p.y == std::numeric_limits<uint64_t>::max()) return;
+    
+    BlockingReaderWriterQueue<uint64_t> upload_fifo;
+
+    std::jthread upload(http_post_thread_bulk, std::ref(upload_fifo), ts);
+
+    auto store_profile = store_profile_coro(p);
+
+    while(true) {
+
+      auto [invalid,y] = store_profile(p);
+      if(!invalid) upload_fifo.enqueue(y);
+      
+      if(p.y == std::numeric_limits<uint64_t>::max()){
+         break;
+      }
+      
+      profile_fifo.wait_dequeue(p);
+      
+    }
+    upload_fifo.enqueue(std::numeric_limits<uint64_t>::max());
+    cadslog.info("Stopping save_send_thread");
+  }
+
   tuple<z_element, z_element> barrel_offset(int cnt, double z_resolution, generator<gocator_profile> &ps)
   {
 
@@ -199,8 +228,6 @@ namespace cads
 
     auto data_src = global_config["data_source"].get<std::string>();
     BlockingReaderWriterQueue<profile> gocatorFifo(4096 * 1024);
-    BlockingReaderWriterQueue<profile> db_fifo;
-    BlockingReaderWriterQueue<uint64_t> upload_fifo;
 
     unique_ptr<GocatorReaderBase> gocator;
     if (data_src == "gocator"s)
@@ -214,6 +241,10 @@ namespace cads
       gocator = make_unique<SqliteGocatorReader>(gocatorFifo);
     }
     gocator->Start();
+
+    BlockingReaderWriterQueue<profile> db_fifo;
+    auto ts = fmt::format("{:%F-%H-%M}", std::chrono::system_clock::now());
+    std::jthread save_send(save_send_thread, std::ref(db_fifo),ts);
 
     // Must be first access to in_file; These values get written once
     auto [y_resolution, x_resolution, z_resolution, z_offset] = gocator->get_gocator_constants();
@@ -230,10 +261,6 @@ namespace cads
 
     uint64_t y_max_samples = (uint64_t)(global_config["y_max_length"].get<double>() / y_resolution);
     const auto z_height_mm = global_config["z_height"].get<double>();
-    auto ts = fmt::format("{:%F-%H-%M}", std::chrono::system_clock::now());
-    std::thread upload(http_post_thread_bulk, std::ref(upload_fifo), ts);
-
-    auto db_t = store_profile_thread(db_fifo);
 
     z_element cv_threshhold = 0;
     const int spike_window_size = nan_num / 4;
@@ -298,7 +325,6 @@ namespace cads
 
       ++frame_count;
       db_fifo.enqueue(profile);
-      upload_fifo.enqueue(profile.y);
 
       if (find_first_origin || profile.y > y_max_samples * 0.95)
       {
@@ -348,7 +374,6 @@ namespace cads
     }
 
     db_fifo.enqueue({std::numeric_limits<uint64_t>::max(), NAN, {}});
-    upload_fifo.enqueue(std::numeric_limits<uint64_t>::max());
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
@@ -358,9 +383,8 @@ namespace cads
     cadslog.info("Gocator Stopped");
 
     close_db(db, stmt, fetch_stmt);
-    db_t.join();
-    cadslog.info("DB Thread Stopped");
-    upload.join();
+
+    save_send.join();
     cadslog.info("Upload Thread Stopped");
   }
 

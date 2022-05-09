@@ -1,6 +1,7 @@
 #include "db.h"
 #include <nlohmann/json.hpp>
 
+
 #include <vector>
 #include <string>
 #include <iostream>
@@ -171,10 +172,8 @@ void store_profile_parameters(double y_res, double x_res, double z_res, double z
 }
 
 
-coop::task_t<void,true> store_profile_thread(BlockingReaderWriterQueue<profile> &db_fifo) {
+void store_profile_thread(BlockingReaderWriterQueue<profile> &db_fifo) {
 	  
-    co_await coop::suspend();
-
 		auto log = spdlog::rotating_logger_st("db", "db.log", 1024 * 1024 * 5, 1);
 		
 		sqlite3 *db = nullptr;
@@ -236,6 +235,70 @@ coop::task_t<void,true> store_profile_thread(BlockingReaderWriterQueue<profile> 
     if(db != nullptr) sqlite3_close(db);
 
 }
+
+coro<uint64_t,profile> store_profile_coro(profile p) {
+	  
+		auto log = spdlog::rotating_logger_st("db", "db.log", 1024 * 1024 * 5, 1);
+		
+		sqlite3 *db = nullptr;
+    const char *db_name = global_config["db_name"].get<std::string>().c_str();
+
+    int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_SHAREDCACHE, nullptr);
+        
+    sqlite3_stmt *stmt = nullptr;
+		auto query = R"(PRAGMA synchronous=OFF)"s;
+    err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
+    err = sqlite3_step(stmt);
+    query = R"("PRAGMA locking_mode = EXCLUSIVE")"s;
+    err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
+    err = sqlite3_step(stmt);
+		query = R"("PRAGMA journal_mode = MEMORY")"s;
+    err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
+    err = sqlite3_step(stmt);
+		query = R"("PRAGMA temp_store = MEMORY")"s;
+    err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
+    err = sqlite3_step(stmt);
+    query = R"("PRAGMA mmap_size = 10000000")"s;
+    err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
+    err = sqlite3_step(stmt);
+    query = R"("PRAGMA page_size = 32768")"s;
+    err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
+    err = sqlite3_step(stmt);
+    query = R"(INSERT OR REPLACE INTO PROFILE (y,x_off,z) VALUES (?,?,?))"s;
+    err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
+		
+		while(true) {
+			
+      err = sqlite3_bind_int64(stmt,1,(int64_t)p.y);
+      err = sqlite3_bind_double(stmt,2,p.x_off);
+      err = sqlite3_bind_blob(stmt, 3, p.z.data(), p.z.size()*sizeof(int16_t), SQLITE_STATIC );
+
+      err = sqlite3_step(stmt);
+      auto attempts = 512;
+
+      while(err != SQLITE_DONE && attempts-- > 0) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        err = sqlite3_step(stmt);
+      }
+
+      if(err != SQLITE_DONE) {
+        log->error("SQLite Error Code:{}",err);
+      }
+      
+      sqlite3_reset(stmt);
+
+      p = co_yield p.y;
+      if(p.y == std::numeric_limits<uint64_t>::max()) break;  
+		
+    }
+
+		if(stmt != nullptr) sqlite3_finalize(stmt);
+    if(db != nullptr) sqlite3_close(db);
+
+    co_return std::numeric_limits<uint64_t>::max();
+
+}
+
 
 bool store_profile(sqlite3_stmt* stmt, const profile& p) {
 			int err = sqlite3_bind_int64(stmt,1,(int64_t)p.y); 

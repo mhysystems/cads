@@ -24,7 +24,7 @@
   },
   "db_name" : "profile.db",
   "belt_cross_correlation_threshold" : 0.3,
-  "upload_profile_to" : "null",
-  "upload_config_to" : "null",
+  "upload_profile_to" : "http://localhost:5000/api/whaleback/cv405b-%DATETIME%/bulk",
+  "upload_config_to" : "http://localhost:5000/api/whaleback/cv405b-%DATETIME%/meta",
   "pipeline" : ["regression"]
 }
