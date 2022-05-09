@@ -24,6 +24,7 @@ protected:
 	GoSystem m_system;
 	kAssembly m_assembly;
 	GoSensor m_sensor;
+  k64u first_frame_offset;
 
 	static kStatus OnData(kPointer context, GoSensor sensor, GoDataSet dataset);
   static kStatus OnSystem(kPointer context, GoSystem system, GoDataSet data);

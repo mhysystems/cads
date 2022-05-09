@@ -94,6 +94,7 @@ GocatorReader::GocatorReader(moodycamel::BlockingReaderWriterQueue<profile>& goc
 {
 	m_assembly = CreateGoSdk();
 	m_system = CreateGoSystem();
+  first_frame_offset = 0;
 	
 	if (GoSystem_SensorCount(m_system) < 1)
 	{
@@ -252,9 +253,10 @@ kStatus GocatorReader::OnData(GoSensor sensor, GoDataSet dataset)
         }
     }
 
-		if(1 == frame) {
+		if(m_first_frame) {
+      m_first_frame = false;
 			spdlog::info("First frame recieved from gocator");
-
+      first_frame_offset = frame;
       m_xResolution = xResolution;
       m_zResolution = zResolution;
       m_zOffset = zOffset;
@@ -271,7 +273,7 @@ kStatus GocatorReader::OnData(GoSensor sensor, GoDataSet dataset)
 
 		auto samples_width = distance(profile,profile_begin);
 
-	  m_gocatorFifo.enqueue({frame-1,xOffset+samples_width*xResolution,{profile_begin,profile_end}});		
+	  m_gocatorFifo.enqueue({frame-first_frame_offset,xOffset+samples_width*xResolution,{profile_begin,profile_end}});		
 
     GoDestroy(dataset);
 

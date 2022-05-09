@@ -29,6 +29,7 @@ protected:
   std::condition_variable m_condition;
   std::mutex m_mutex;
   std::atomic<bool> m_loop;
+  std::atomic<bool> m_first_frame = true;
 
 public:
 
