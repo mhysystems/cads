@@ -229,7 +229,7 @@ kStatus GocatorReader::OnData(GoSensor sensor, GoDataSet dataset)
                 {
                     GoStamp *goStamp = GoStampMsg_At(message, j);
                     frame = goStamp->frameIndex;
-                    encoder = goStamp->encoder;
+                    frame = (k64u)goStamp->encoder;
                     //y = frame * m_yResolution;
                     y = encoder * 0.1221;
                 }
