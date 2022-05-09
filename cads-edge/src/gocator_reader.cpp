@@ -150,7 +150,7 @@ GocatorReader::GocatorReader(moodycamel::BlockingReaderWriterQueue<profile>& goc
 	}
 
 	// :TODO: get the actual value, not the configured one
-	m_yResolution = GoSetup_EncoderSpacing(setup);
+	m_yResolution = 0.1221; //GoSetup_EncoderSpacing(setup);
 
 }
 

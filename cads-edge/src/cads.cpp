@@ -259,7 +259,7 @@ namespace cads
     const int nan_num = global_config["left_edge_nan"].get<int>();
     const double belt_crosscorr_threshold = global_config["belt_cross_correlation_threshold"].get<double>();
 
-    uint64_t y_max_samples = (uint64_t)(global_config["y_max_length"].get<double>() / y_resolution);
+    auto y_max_length = global_config["y_max_length"].get<double>();
     const auto z_height_mm = global_config["z_height"].get<double>();
 
     z_element cv_threshhold = 0;
@@ -326,7 +326,7 @@ namespace cads
       ++frame_count;
       db_fifo.enqueue(profile);
 
-      if (find_first_origin || profile.y > y_max_samples * 0.95)
+      if (find_first_origin || profile.y * y_resolution > y_max_length * 0.95)
       {
         auto belt = window_to_mat(profile_buffer, x_resolution);
         const auto cv_threshhold = left_edge_avg_height(belt, fiducial) - fdepth;
@@ -353,7 +353,7 @@ namespace cads
           lowest_correlation = std::numeric_limits<double>::max();
         }
 
-        if (profile.y > y_max_samples)
+        if (profile.y*y_resolution > y_max_length)
         {
           cadslog.info("Origin not found before Max samples. Lowest Correlation : {}", lowest_correlation);
           frame_offset = y - profile_buffer.size() + 1;
