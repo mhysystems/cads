@@ -325,7 +325,7 @@ namespace cads
       ++frame_count;
       db_fifo.enqueue(profile);
 
-      if (find_first_origin || profile.y * y_resolution > y_max_length * 0.95)
+      if (find_first_origin || profile.y * encoder_resolution > y_max_length * 0.95)
       {
         auto belt = window_to_mat(profile_buffer, x_resolution);
         const auto cv_threshhold = left_edge_avg_height(belt, fiducial) - fdepth;
@@ -335,7 +335,7 @@ namespace cads
 
         if (correlation < belt_crosscorr_threshold)
         {
-          cadslog.info("Correlation : {} at y : {}, frame count: {}", correlation, profile.y, frame_count - 1);
+          cadslog.info("Correlation : {} at y : {}, frame count: {}", correlation, profile.y * encoder_resolution, (frame_count - 1) * y_resolution);
 
           if (!find_first_origin && !loop_forever)
             break;
@@ -352,7 +352,7 @@ namespace cads
           lowest_correlation = std::numeric_limits<double>::max();
         }
 
-        if (profile.y*y_resolution > y_max_length)
+        if (profile.y*encoder_resolution > y_max_length)
         {
           cadslog.info("Origin not found before Max samples. Lowest Correlation : {}", lowest_correlation);
           frame_offset = y - profile_buffer.size() + 1;

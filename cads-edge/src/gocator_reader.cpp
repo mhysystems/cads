@@ -273,7 +273,7 @@ kStatus GocatorReader::OnData(GoSensor sensor, GoDataSet dataset)
 
 		auto samples_width = distance(profile,profile_begin);
 
-	  m_gocatorFifo.enqueue({frame-first_frame_offset,xOffset+samples_width*xResolution,{profile_begin,profile_end}});		
+	  m_gocatorFifo.enqueue({first_frame_offset - frame,xOffset+samples_width*xResolution,{profile_begin,profile_end}});		
 
     GoDestroy(dataset);
 
