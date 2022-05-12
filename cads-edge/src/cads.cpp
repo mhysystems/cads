@@ -196,8 +196,8 @@ namespace cads
     gocator->Start();
 
     // Must be first access to in_file; These values get written once
-    auto [y_resolution, x_resolution, z_resolution, z_offset] = gocator->get_gocator_constants();
-    cadslog.info("Gocator contants - y_res:{}, x_res:{}, z_res:{}, z_off:{}", y_resolution, x_resolution, z_resolution, z_offset);
+    auto [y_resolution, x_resolution, z_resolution, z_offset,encoder_resolution] = gocator->get_gocator_constants();
+    cadslog.info("Gocator contants - y_res:{}, x_res:{}, z_res:{}, z_off:{}, encoder_res:{}", y_resolution, x_resolution, z_resolution, z_offset,encoder_resolution);
 
     store_profile_parameters(y_resolution, x_resolution, z_resolution, z_offset);
     auto [db, stmt] = open_db(db_name);
@@ -246,9 +246,8 @@ namespace cads
     auto ts = fmt::format("{:%F-%H-%M}", std::chrono::system_clock::now());
     std::jthread save_send(save_send_thread, std::ref(db_fifo),ts);
 
-    // Must be first access to in_file; These values get written once
-    auto [y_resolution, x_resolution, z_resolution, z_offset] = gocator->get_gocator_constants();
-    cadslog.info("Gocator contants - y_res:{}, x_res:{}, z_res:{}, z_off:{}", y_resolution, x_resolution, z_resolution, z_offset);
+    auto [y_resolution, x_resolution, z_resolution, z_offset,encoder_resolution] = gocator->get_gocator_constants();
+    cadslog.info("Gocator contants - y_res:{}, x_res:{}, z_res:{}, z_off:{}, encoder_res:{}", y_resolution, x_resolution, z_resolution, z_offset,encoder_resolution);
 
     auto fdepth = global_config["fiducial_depth"].get<double>() / z_resolution;
 
@@ -406,7 +405,8 @@ namespace cads
     gocator->Start();
 
     // Must be first access to in_file; These values get written once
-    auto [y_resolution, x_resolution, z_resolution, z_offset] = gocator->get_gocator_constants();
+    auto [y_resolution, x_resolution, z_resolution, z_offset,encoder_resolution] = gocator->get_gocator_constants();
+    cadslog.info("Gocator contants - y_res:{}, x_res:{}, z_res:{}, z_off:{}, encoder_res:{}", y_resolution, x_resolution, z_resolution, z_offset,encoder_resolution);
 
     auto fdepth = global_config["fiducial_depth"].get<double>() / z_resolution;
 

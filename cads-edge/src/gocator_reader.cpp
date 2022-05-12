@@ -149,8 +149,8 @@ GocatorReader::GocatorReader(moodycamel::BlockingReaderWriterQueue<profile>& goc
 			throw runtime_error{"GoSetup_EnableUniformSpacing: "s + to_string(status)};
 	}
 
-	// :TODO: get the actual value, not the configured one
-	m_yResolution = 0.1221; //GoSetup_EncoderSpacing(setup);
+	m_encoder_resolution = (double)GoTransform_EncoderResolution(GoTransform(m_sensor));
+  m_yResolution = GoSetup_EncoderSpacing(setup);
 
 }
 

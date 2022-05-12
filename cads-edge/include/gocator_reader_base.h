@@ -26,6 +26,7 @@ protected:
   double m_xResolution = 1.0;
   double m_zResolution = 1.0;
   double m_zOffset = 1.0;
+  double m_encoder_resolution = 1.0;
   std::condition_variable m_condition;
   std::mutex m_mutex;
   std::atomic<bool> m_loop;
@@ -37,7 +38,7 @@ public:
 	virtual void Start() = 0;
 	virtual void Stop() = 0;
 	GocatorReaderBase(moodycamel::BlockingReaderWriterQueue<profile>&);
-  std::tuple<double,double,double,double> get_gocator_constants();
+  virtual std::tuple<double,double,double,double,double> get_gocator_constants();
 
 };
 
