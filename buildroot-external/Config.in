@@ -1,1 +1,2 @@
 source "$BR2_EXTERNAL_DEFAULT_PATH/package/cads-edge/Config.in"
+source "$BR2_EXTERNAL_DEFAULT_PATH/package/cpr/Config.in"

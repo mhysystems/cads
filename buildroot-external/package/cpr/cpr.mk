@@ -1,11 +1,10 @@
 ################################################################################
 #
-# cads-edge
+# cpr
 #
 ################################################################################
 
-CADS_EDGE_VERSION = 0.0.1
-CADS_EDGE_SITE = $(TOPDIR)/cads-edge
-CADS_EDGE_CXXFLAGS = $(TARGET_CXXFLAGS)
+CPR_VERSION = 1.8.1
+CPR_SITE = $(call github,libcrp,cpr,$(CPR_VERSION))
 
-$(eval $(meson-package))
+$(eval $(cmake-package))
