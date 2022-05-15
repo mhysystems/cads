@@ -1,6 +1,5 @@
 #include "gocator_reader.h"
 #include <z_data_generated.h>
-#include <p_config_generated.h>
 
 
 #include <GoSdk/GoSdk.h>
@@ -94,7 +93,6 @@ GocatorReader::GocatorReader(moodycamel::BlockingReaderWriterQueue<profile>& goc
 {
 	m_assembly = CreateGoSdk();
 	m_system = CreateGoSystem();
-  first_frame_offset = 0;
 	
 	if (GoSystem_SensorCount(m_system) < 1)
 	{
@@ -230,9 +228,13 @@ kStatus GocatorReader::OnData(GoSensor sensor, GoDataSet dataset)
                 {
                     GoStamp *goStamp = GoStampMsg_At(message, j);
                     frame = goStamp->frameIndex;
-                    frame = (k64u)goStamp->encoder;
-                    //y = frame * m_yResolution;
-                    y = encoder * 0.1221;
+                    encoder = goStamp->encoder;
+                    
+                    if(m_use_encoder) {
+                      y = std::abs(encoder * m_encoder_resolution);
+                    }else {
+                      y = std::abs(frame * m_yResolution);
+                    }
                 }
             }
             break;
@@ -256,11 +258,9 @@ kStatus GocatorReader::OnData(GoSensor sensor, GoDataSet dataset)
 		if(m_first_frame) {
       m_first_frame = false;
 			spdlog::info("First frame recieved from gocator");
-      first_frame_offset = frame;
       m_xResolution = xResolution;
       m_zResolution = zResolution;
       m_zOffset = zOffset;
-
 		}
 
 		// Trim invalid values
@@ -273,7 +273,7 @@ kStatus GocatorReader::OnData(GoSensor sensor, GoDataSet dataset)
 
 		auto samples_width = distance(profile,profile_begin);
 
-	  m_gocatorFifo.enqueue({first_frame_offset - frame,xOffset+samples_width*xResolution,{profile_begin,profile_end}});		
+	  m_gocatorFifo.enqueue({y,xOffset+samples_width*xResolution,{profile_begin,profile_end}});		
 
     GoDestroy(dataset);
 

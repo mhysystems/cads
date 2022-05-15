@@ -77,14 +77,14 @@ namespace cads
       auto [invalid,y] = store_profile(p);
       if(!invalid) upload_fifo.enqueue(y);
       
-      if(p.y == std::numeric_limits<uint64_t>::max()){
+      if(p.y == std::numeric_limits<y_type>::max()){
          break;
       }
       
       profile_fifo.wait_dequeue(p);
       
     }
-    upload_fifo.enqueue(std::numeric_limits<uint64_t>::max());
+    upload_fifo.enqueue(std::numeric_limits<y_type>::max());
     cadslog.info("Stopping save_send_thread");
   }
 
@@ -140,6 +140,21 @@ namespace cads
     }
 
     return gradient / n;
+  }
+
+  unique_ptr<GocatorReaderBase> mk_gocator(BlockingReaderWriterQueue<profile> &gocatorFifo) {
+    auto data_src = global_config["data_source"].get<std::string>();
+
+    if (data_src == "gocator"s)
+    {
+      cadslog.debug("Using gocator as data source");
+      return make_unique<GocatorReader>(gocatorFifo);
+    }
+    else
+    {
+      cadslog.debug("Using sqlite as data source");
+      return make_unique<SqliteGocatorReader>(gocatorFifo);
+    }
   }
 
   void process_daily()
@@ -229,17 +244,7 @@ namespace cads
     auto data_src = global_config["data_source"].get<std::string>();
     BlockingReaderWriterQueue<profile> gocatorFifo(4096 * 1024);
 
-    unique_ptr<GocatorReaderBase> gocator;
-    if (data_src == "gocator"s)
-    {
-      cadslog.debug("Using gocator as data source");
-      gocator = make_unique<GocatorReader>(gocatorFifo);
-    }
-    else
-    {
-      cadslog.debug("Using sqlite as data source");
-      gocator = make_unique<SqliteGocatorReader>(gocatorFifo);
-    }
+    auto gocator = mk_gocator(gocatorFifo);
     gocator->Start();
 
     BlockingReaderWriterQueue<profile> db_fifo;
@@ -372,7 +377,7 @@ namespace cads
       }
     }
 
-    db_fifo.enqueue({std::numeric_limits<uint64_t>::max(), NAN, {}});
+    db_fifo.enqueue({std::numeric_limits<y_type>::max(), NAN, {}});
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
@@ -390,68 +395,7 @@ namespace cads
   void process_experiment()
   {
 
-    auto data_src = global_config["data_source"].get<std::string>();
-    BlockingReaderWriterQueue<profile> gocatorFifo(4096 * 1024);
-
-    unique_ptr<GocatorReaderBase> gocator;
-    if (data_src == "gocator"s)
-    {
-      gocator = make_unique<GocatorReader>(gocatorFifo);
-    }
-    else
-    {
-      gocator = make_unique<SqliteGocatorReader>(gocatorFifo);
-    }
-    gocator->Start();
-
-    // Must be first access to in_file; These values get written once
-    auto [y_resolution, x_resolution, z_resolution, z_offset,encoder_resolution] = gocator->get_gocator_constants();
-    cadslog.info("Gocator contants - y_res:{}, x_res:{}, z_res:{}, z_off:{}, encoder_res:{}", y_resolution, x_resolution, z_resolution, z_offset,encoder_resolution);
-
-    auto fdepth = global_config["fiducial_depth"].get<double>() / z_resolution;
-
-    auto recorder_data = get_flatworld(std::ref(gocatorFifo));
-
-    const int nan_num = global_config["left_edge_nan"].get<int>();
-    const double belt_crosscorr_threshold = global_config["belt_cross_correlation_threshold"].get<double>();
-
-    uint64_t y_max_samples = (uint64_t)(global_config["y_max_length"].get<double>() / y_resolution);
-    const auto z_height_mm = global_config["z_height"].get<double>();
-
-    z_element cv_threshhold = 0;
-    const int spike_window_size = nan_num / 4;
-
-    auto [bottom, top] = barrel_offset(1024, z_resolution, recorder_data);
-    spdlog::info("Belt Avg - top: {} bottom : {}, height(mm) : {}", top, bottom, (top - bottom) * z_resolution);
-    auto iirfilter = mk_iirfilter(global_config["iirfilter"]["a"], global_config["iirfilter"]["b"], bottom);
-    auto iirfilter2 = mk_iirfilterSoS();
-    auto delay = mk_delay(global_config["iirfilter"]["delay"]);
-
-    auto gradient = belt_regression(64, recorder_data);
-
-    uint64_t cnt = 0;
-    auto start = std::chrono::high_resolution_clock::now();
-
-    while (recorder_data.resume())
-    {
-      auto [y, x, z] = recorder_data();
-      ++cnt;
-
-      spike_filter(z, spike_window_size);
-      auto [left_edge_index, right_edge_index] = find_profile_edges_nans_outer(z, nan_num);
-      auto [bottom, top] = barrel_offset(z, z_resolution, z_height_mm);
-      // spdlog::info("Belt Avg - top: {} bottom : {}, height(mm) : {}", top, bottom, (top - bottom) * z_resolution);
-      // std::cout << bottom << '\n';
-      nan_filter(z);
-      auto b2 = iirfilter2(bottom);
-      std::cout << b2 << '\n';
-      regression_compensate(z, left_edge_index, right_edge_index, gradient);
-
-      // auto [delayed,np] = delay({y,x,z});
-      // if(!delayed) continue;
-
-      barrel_height_compensate(z, bottom - b2);
-    }
+    
   }
 
   void stop_gocator() {

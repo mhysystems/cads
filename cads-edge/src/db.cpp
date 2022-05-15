@@ -10,6 +10,8 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 
+#include <fmt/core.h>
+
 using namespace moodycamel;
 using json = nlohmann::json;
 extern json global_config;
@@ -23,8 +25,16 @@ bool create_db(std::string name) {
     bool r = false;
     const char *db_name = name.c_str();
     int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE , nullptr);
+    string ytype;
+
+    if constexpr (std::is_same_v<y_type,double>) {
+      ytype = "REAL";
+    }else {
+      ytype = "INTEGER";
+    }
+    
     vector<string> tables{
-        R"(CREATE TABLE IF NOT EXISTS PROFILE (y INTEGER PRIMARY KEY, x_off REAL NOT NULL, z BLOB NOT NULL);)"s,
+        fmt::format(R"(CREATE TABLE IF NOT EXISTS PROFILE (y {} PRIMARY KEY, x_off REAL NOT NULL, z BLOB NOT NULL);)",ytype),
         R"(CREATE TABLE IF NOT EXISTS PARAMETERS (row_id INTEGER PRIMARY KEY,  y_res REAL NOT NULL, x_res REAL NOT NULL, z_res REAL NOT NULL, z_off REAL NOT NULL);)"s
 //        R"(CREATE TABLE IF NOT EXISTS BELT (index INTEGER PRIMARY KEY AUTOINCREMENT, num_y_samples integer,num_x_samples integer,belt_length real,x_start real,x_end real,z_min real, z_max real ))"s,
 //        R"(CREATE TABLE IF NOT EXISTS GUI (anomaly_ID integer not null primary key, visible integer ))"s,
@@ -88,22 +98,36 @@ sqlite3_stmt* fetch_profile_statement(sqlite3* db) {
     return stmt;
 }
 
-profile fetch_profile(sqlite3_stmt* stmt, uint64_t y) {
-    int err = sqlite3_bind_int64(stmt,1,y);
-		err = sqlite3_step(stmt);
+profile fetch_profile(sqlite3_stmt* stmt, y_type y_p) {
+    int err;
+
+    if constexpr (std::is_same_v<y_type,double>) {
+      err = sqlite3_bind_double(stmt,1,(double)y_p);
+    }else {
+      err = sqlite3_bind_int64(stmt,1,(int64_t)y_p);
+    }
+    
+    err = sqlite3_step(stmt);
     
     if( err == SQLITE_ROW){
-        uint64_t y = (uint64_t)sqlite3_column_int64(stmt,0);
-        double x_off = sqlite3_column_double(stmt,1);
-        int16_t *z = (int16_t*)sqlite3_column_blob(stmt,2);
-        int len = sqlite3_column_bytes(stmt,2) / sizeof(*z);
-				vector<int16_t> zv{z,z+len};
-       // err = sqlite3_step(stmt);
-				sqlite3_reset(stmt);
-        return {y,x_off,zv};
+      y_type y;
+      
+      if constexpr (std::is_same_v<y_type,double>) {
+        y = (y_type)sqlite3_column_double(stmt,0);
+      }else {
+        y = (y_type)sqlite3_column_int64(stmt,0);
+      }
+        
+      double x_off = sqlite3_column_double(stmt,1);
+      z_element *z = (z_element*)sqlite3_column_blob(stmt,2);
+      int len = sqlite3_column_bytes(stmt,2) / sizeof(*z);
+      z_type zv{z,z+len};
+      // err = sqlite3_step(stmt);
+      sqlite3_reset(stmt);
+      return {y,x_off,zv};
     }else {
         sqlite3_reset(stmt);
-        return {std::numeric_limits<uint64_t>::max(),NAN,{}};
+        return {std::numeric_limits<y_type>::max(),NAN,{}};
     }
 }
 
@@ -209,10 +233,14 @@ void store_profile_thread(BlockingReaderWriterQueue<profile> &db_fifo) {
       profile p;
       db_fifo.wait_dequeue(p);
       
-      if(p.y == std::numeric_limits<uint64_t>::max()) break;
+      if(p.y == std::numeric_limits<y_type>::max()) break;
       
-      
-      err = sqlite3_bind_int64(stmt,1,(int64_t)p.y);
+      if constexpr (std::is_same_v<y_type,double>) {
+        err = sqlite3_bind_double(stmt,1,(double)p.y);
+      }else {
+        err = sqlite3_bind_int64(stmt,1,(int64_t)p.y);
+      }
+
       err = sqlite3_bind_double(stmt,2,p.x_off);
       err = sqlite3_bind_blob(stmt, 3, p.z.data(), p.z.size()*sizeof(int16_t), SQLITE_STATIC );
 
@@ -269,7 +297,11 @@ coro<uint64_t,profile> store_profile_coro(profile p) {
 		
 		while(true) {
 			
-      err = sqlite3_bind_int64(stmt,1,(int64_t)p.y);
+      if constexpr (std::is_same_v<y_type,double>) {
+        err = sqlite3_bind_double(stmt,1,(double)p.y);
+      }else {
+        err = sqlite3_bind_int64(stmt,1,(int64_t)p.y);
+      }
       err = sqlite3_bind_double(stmt,2,p.x_off);
       err = sqlite3_bind_blob(stmt, 3, p.z.data(), p.z.size()*sizeof(int16_t), SQLITE_STATIC );
 

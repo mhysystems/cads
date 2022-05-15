@@ -5,6 +5,8 @@
 #include <coroutine>
 #include <exception>
 
+#include <profile.h>
+
 namespace cads
 {
 	template <typename T, typename R = int>
