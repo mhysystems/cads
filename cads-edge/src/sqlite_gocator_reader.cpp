@@ -57,7 +57,7 @@ namespace cads
   void SqliteGocatorReader::OnData()
   {
     auto data_src = global_config["data_source"].get<std::string>();
-    auto [yResolution, xResolution, zResolution, zOffset,encoderResolution] = fetch_profile_parameters(data_src);
+    auto [yResolution, xResolution, zResolution, zOffset, encoderResolution] = fetch_profile_parameters(data_src);
 
     m_yResolution = yResolution;
     m_xResolution = xResolution;
@@ -65,12 +65,11 @@ namespace cads
     m_zOffset = zOffset;
     m_encoder_resolution = encoderResolution;
 
-		{
-			unique_lock<mutex> lock(m_mutex);
-			m_condition.notify_all();
+    {
+      unique_lock<mutex> lock(m_mutex);
+      m_condition.notify_all();
     }
 
-    uint64_t y = 0;
     sqlite3 *db = nullptr;
     sqlite3_stmt *stmt = nullptr;
 
@@ -85,28 +84,33 @@ namespace cads
       ++cnt;
       err = sqlite3_step(stmt);
       cads::profile profile;
-
+      decltype(profile::y) y;
       if (err == SQLITE_ROW)
       {
-        uint64_t y = (uint64_t)sqlite3_column_int64(stmt, 0);
+
+        if constexpr (std::is_same_v<decltype(y), double>)
+        {
+          y = sqlite3_column_double(stmt, 0);
+        }
+        else
+        {
+          y = (decltype(y))sqlite3_column_int64(stmt, 0);
+        }
         double x_off = sqlite3_column_double(stmt, 1);
-        int16_t *z = (int16_t *)sqlite3_column_blob(stmt, 2);
+        z_element *z = (z_element *)sqlite3_column_blob(stmt, 2);
         int len = sqlite3_column_bytes(stmt, 2) / sizeof(*z);
-        m_gocatorFifo.enqueue({y,x_off,{z, z + len}});
+        m_gocatorFifo.enqueue({y, x_off, {z, z + len}});
       }
       else
       {
-        m_gocatorFifo.enqueue({std::numeric_limits<uint64_t>::max(), NAN, {}});
+        m_gocatorFifo.enqueue({std::numeric_limits<decltype(y)>::max(), NAN, {}});
         m_loop = false;
       }
-
-      
     }
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    spdlog::info("CNT: {}, DUR: {}, RATE(ms):{} ",cnt, duration, (double)cnt / duration);
-
+    spdlog::info("CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, (double)cnt / duration);
 
     if (stmt != nullptr)
       sqlite3_finalize(stmt);
