@@ -264,7 +264,7 @@ kStatus GocatorReader::OnData(GoSensor sensor, GoDataSet dataset)
 		}
 
     if(m_use_encoder) {
-        y = (encoder - m_yOffset) * m_encoder_resolution;
+        y = std::abs((encoder - m_yOffset) * m_encoder_resolution);
     }else {
       y = frame * m_yResolution;
     }

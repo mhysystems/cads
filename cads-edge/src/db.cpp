@@ -364,14 +364,23 @@ namespace cads
     if (db != nullptr)
       sqlite3_close(db);
 
-    co_return std::numeric_limits<uint64_t>::max();
+    co_return std::numeric_limits<decltype(p.y)>::max();
   }
 
   bool store_profile(sqlite3_stmt *stmt, const profile &p)
   {
-    int err = sqlite3_bind_int64(stmt, 1, (int64_t)p.y);
+    int err;
+    if constexpr (std::is_same_v<decltype(p.y), double>)
+    {
+      err = sqlite3_bind_double(stmt, 1, (double)p.y);
+    }
+    else
+    {
+      err = sqlite3_bind_int64(stmt, 1, (int64_t)p.y);
+    }
+
     err = sqlite3_bind_double(stmt, 2, p.x_off);
-    err = sqlite3_bind_blob(stmt, 3, p.z.data(), p.z.size() * sizeof(int16_t), SQLITE_STATIC);
+    err = sqlite3_bind_blob(stmt, 3, p.z.data(), p.z.size() * sizeof(z_element), SQLITE_STATIC);
 
     err = sqlite3_step(stmt);
 
