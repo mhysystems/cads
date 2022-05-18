@@ -219,13 +219,14 @@ namespace cads
 
     auto recorder_data = get_flatworld(std::ref(gocatorFifo));
 
-    uint64_t y_max_samples = (uint64_t)(global_config["y_max_length"].get<double>() / y_resolution);
+    auto y_max_length = global_config["y_max_length"].get<double>();
     auto start = std::chrono::high_resolution_clock::now();
-
-    while (recorder_data.resume() && y_max_samples-- > 0)
+    double Y = 0.0;
+    while (recorder_data.resume() && Y < y_max_length)
     {
       auto [y, x, z] = recorder_data();
-
+      Y = y;
+      
       profile profile{y, x, z};
       store_profile(stmt, profile);
     }
