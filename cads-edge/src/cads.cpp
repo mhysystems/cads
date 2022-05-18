@@ -214,7 +214,7 @@ namespace cads
     auto [y_resolution, x_resolution, z_resolution, z_offset,encoder_resolution] = gocator->get_gocator_constants();
     cadslog.info("Gocator contants - y_res:{}, x_res:{}, z_res:{}, z_off:{}, encoder_res:{}", y_resolution, x_resolution, z_resolution, z_offset,encoder_resolution);
 
-    store_profile_parameters(y_resolution, x_resolution, z_resolution, z_offset);
+    store_profile_parameters(y_resolution, x_resolution, z_resolution, z_offset,encoder_resolution);
     auto [db, stmt] = open_db(db_name);
 
     auto recorder_data = get_flatworld(std::ref(gocatorFifo));
@@ -272,7 +272,7 @@ namespace cads
     auto [bottom, top] = barrel_offset(1024, z_resolution, recorder_data);
     cadslog.info("Belt Avg - top: {} bottom : {}, height(mm) : {}", top, bottom, (top - bottom) * z_resolution);
 
-    store_profile_parameters(y_resolution, x_resolution, z_resolution, -bottom * z_resolution);
+    store_profile_parameters(y_resolution, x_resolution, z_resolution, -bottom * z_resolution,encoder_resolution);
     std::thread([=]()
                 { http_post_profile_properties(y_resolution, x_resolution, z_resolution, -bottom * z_resolution, ts); })
         .detach();

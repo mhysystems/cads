@@ -152,6 +152,11 @@ GocatorReader::GocatorReader(moodycamel::BlockingReaderWriterQueue<profile>& goc
 
 }
 
+GocatorReader::GocatorReader(moodycamel::BlockingReaderWriterQueue<profile>& gocatorFifo, bool use_encoder ) : GocatorReader(gocatorFifo)
+{
+  m_use_encoder =  use_encoder;
+} 
+
 kStatus kCall GocatorReader::OnData(kPointer context, GoSensor sensor, GoDataSet dataset)
 {
     return static_cast<GocatorReader*>(context)->OnData(sensor, dataset);
@@ -229,12 +234,6 @@ kStatus GocatorReader::OnData(GoSensor sensor, GoDataSet dataset)
                     GoStamp *goStamp = GoStampMsg_At(message, j);
                     frame = goStamp->frameIndex;
                     encoder = goStamp->encoder;
-                    
-                    if(m_use_encoder) {
-                      y = std::abs(encoder * m_encoder_resolution);
-                    }else {
-                      y = std::abs(frame * m_yResolution);
-                    }
                 }
             }
             break;
@@ -261,7 +260,14 @@ kStatus GocatorReader::OnData(GoSensor sensor, GoDataSet dataset)
       m_xResolution = xResolution;
       m_zResolution = zResolution;
       m_zOffset = zOffset;
+      m_yOffset = encoder;
 		}
+
+    if(m_use_encoder) {
+        y = (encoder - m_yOffset) * m_encoder_resolution;
+    }else {
+      y = frame * m_yResolution;
+    }
 
 		// Trim invalid values
 		k16s* profile_end = profile + profileWidth - 1;

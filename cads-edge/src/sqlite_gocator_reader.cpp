@@ -57,12 +57,13 @@ namespace cads
   void SqliteGocatorReader::OnData()
   {
     auto data_src = global_config["data_source"].get<std::string>();
-    auto [yResolution, xResolution, zResolution, zOffset] = fetch_profile_parameters(data_src);
+    auto [yResolution, xResolution, zResolution, zOffset,encoderResolution] = fetch_profile_parameters(data_src);
 
     m_yResolution = yResolution;
     m_xResolution = xResolution;
     m_zResolution = zResolution;
     m_zOffset = zOffset;
+    m_encoder_resolution = encoderResolution;
 
 		{
 			unique_lock<mutex> lock(m_mutex);

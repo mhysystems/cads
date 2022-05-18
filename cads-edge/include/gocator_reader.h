@@ -25,6 +25,7 @@ protected:
 	kAssembly m_assembly;
 	GoSensor m_sensor;
   bool m_use_encoder = true;
+  k64s m_yOffset = 0;
   
 	static kStatus OnData(kPointer context, GoSensor sensor, GoDataSet dataset);
   static kStatus OnSystem(kPointer context, GoSystem system, GoDataSet data);
@@ -37,6 +38,7 @@ public:
 	void Start();
 	void Stop();
 	GocatorReader(moodycamel::BlockingReaderWriterQueue<cads::profile>&);
+  GocatorReader(moodycamel::BlockingReaderWriterQueue<cads::profile>&, bool);
 	~GocatorReader();
 };
 
