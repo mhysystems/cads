@@ -163,7 +163,7 @@ void http_post_thread(moodycamel::BlockingReaderWriterQueue<uint64_t> &upload_fi
 }
 
 
-void http_post_thread_bulk(moodycamel::BlockingReaderWriterQueue<uint64_t> &upload_fifo, std::string ts) {
+void http_post_thread_bulk(moodycamel::BlockingReaderWriterQueue<y_type> &upload_fifo, std::string ts) {
 	using namespace flatbuffers;
 	
 	sqlite3 *db = nullptr;
@@ -188,12 +188,12 @@ void http_post_thread_bulk(moodycamel::BlockingReaderWriterQueue<uint64_t> &uplo
   while (true)
 	{	
 
-    uint64_t y = 0;
+    y_type y = 0;
 		upload_fifo.wait_dequeue(y);
 
     auto p = fetch_profile(stmt,y) ; 
     
-    if(y != std::numeric_limits<uint64_t>::max()) {
+    if(y != std::numeric_limits<y_type>::max()) {
       profiles_flat.push_back(cads_flatworld::CreateprofileDirect(builder,p.y,p.x_off,&p.z));
      
       if(profiles_flat.size() == 128) {

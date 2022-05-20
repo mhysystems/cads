@@ -64,9 +64,9 @@ namespace cads
     profile p;
     profile_fifo.wait_dequeue(p);
     
-    if(p.y == std::numeric_limits<uint64_t>::max()) return;
+    if(p.y == std::numeric_limits<y_type>::max()) return;
     
-    BlockingReaderWriterQueue<uint64_t> upload_fifo;
+    BlockingReaderWriterQueue<y_type> upload_fifo;
 
     std::jthread upload(http_post_thread_bulk, std::ref(upload_fifo), ts);
 
@@ -226,13 +226,14 @@ namespace cads
     {
       auto [y, x, z] = recorder_data();
       Y = y;
-      
+
       profile profile{y, x, z};
       store_profile(stmt, profile);
     }
 
     gocator->Stop();
     close_db(db, stmt);
+    
   }
 
   void process_one_revolution()
@@ -274,16 +275,18 @@ namespace cads
     cadslog.info("Belt Avg - top: {} bottom : {}, height(mm) : {}", top, bottom, (top - bottom) * z_resolution);
 
     store_profile_parameters(y_resolution, x_resolution, z_resolution, -bottom * z_resolution,encoder_resolution);
-    std::thread([=]()
+    /*std::thread([=]()
                 { http_post_profile_properties(y_resolution, x_resolution, z_resolution, -bottom * z_resolution, ts); })
         .detach();
-
+    */    
+    http_post_profile_properties(y_resolution, x_resolution, z_resolution, -bottom * z_resolution, ts);
     auto gradient = belt_regression(64, recorder_data);
 
     auto iirfilter = mk_iirfilterSoS();
     auto delay = mk_delay(global_config["iirfilter"]["delay"]);
 
-    uint64_t cnt = 0, frame_offset = 0, frame_count = 0;
+    uint64_t cnt = 0, frame_count = 0;
+    y_type frame_offset = 0;
     bool find_first_origin = true, loop_forever = global_config["loop_forever"].get<bool>();
     window profile_buffer;
     double lowest_correlation = std::numeric_limits<double>::max();
@@ -328,8 +331,10 @@ namespace cads
       profile profile = profile_buffer.front();
       profile_buffer.pop_front();
 
-      ++frame_count;
-      db_fifo.enqueue(profile);
+      if(!find_first_origin) {
+        ++frame_count;
+        db_fifo.enqueue(profile);
+      }
 
       if (find_first_origin || profile.y * encoder_resolution > y_max_length * 0.95)
       {
@@ -347,12 +352,13 @@ namespace cads
             break;
 
           find_first_origin = false;
-          frame_offset = y - profile_buffer.size() + 1;
+          frame_offset += profile_buffer.front().y;
           frame_count = 0;
           // Reset buffer y values to origin
-          for (int i = 0; auto &p : profile_buffer)
+          for (auto off = profile_buffer.front().y; auto &p : profile_buffer)
           {
-            p.y = i++;
+            p.y -= off;
+;
           }
           profile.y = 0;
           lowest_correlation = std::numeric_limits<double>::max();

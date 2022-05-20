@@ -38,8 +38,10 @@ namespace cads
     }
 
     vector<string> tables{
+        R"(DROP TABLE IF EXISTS PROFILE;)"s,
         fmt::format(R"(CREATE TABLE IF NOT EXISTS PROFILE (y {} PRIMARY KEY, x_off REAL NOT NULL, z BLOB NOT NULL);)", ytype),
         R"(CREATE TABLE IF NOT EXISTS PARAMETERS (row_id INTEGER PRIMARY KEY,  y_res REAL NOT NULL, x_res REAL NOT NULL, z_res REAL NOT NULL, z_off REAL NOT NULL, encoder_res REAL NOT NULL);)"s
+        
         //        R"(CREATE TABLE IF NOT EXISTS BELT (index INTEGER PRIMARY KEY AUTOINCREMENT, num_y_samples integer,num_x_samples integer,belt_length real,x_start real,x_end real,z_min real, z_max real ))"s,
         //        R"(CREATE TABLE IF NOT EXISTS GUI (anomaly_ID integer not null primary key, visible integer ))"s,
         //        R"(CREATE TABLE IF NOT EXISTS A_TRACKING (anomaly_ID integer not null primary key, start real, length real, x_lower real, x_upper real, z_depth real, area real,volume real, time text, epoch integer, contour_x real, contour_theta real, category text, danger integer,comment text))"s
@@ -59,10 +61,12 @@ namespace cads
           err = sqlite3_step(stmt);
           r = true;
         }
+        
+        if (stmt != nullptr)
+          sqlite3_finalize(stmt);
       }
 
-      if (stmt != nullptr)
-        sqlite3_finalize(stmt);
+
     }
 
     if (db != nullptr)
@@ -166,11 +170,11 @@ namespace cads
     {
 
       rtn = {
-          sqlite3_column_double(stmt, 0),
           sqlite3_column_double(stmt, 1),
           sqlite3_column_double(stmt, 2),
           sqlite3_column_double(stmt, 3),
-          sqlite3_column_double(stmt, 4)};
+          sqlite3_column_double(stmt, 4),
+          sqlite3_column_double(stmt, 5)};
     }
     else
     {
@@ -292,7 +296,7 @@ namespace cads
       sqlite3_close(db);
   }
 
-  coro<uint64_t, profile> store_profile_coro(profile p)
+  coro<y_type, profile> store_profile_coro(profile p)
   {
 
     auto log = spdlog::rotating_logger_st("db", "db.log", 1024 * 1024 * 5, 1);

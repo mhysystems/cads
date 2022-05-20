@@ -1,5 +1,4 @@
-#ifndef CADS_DB
-#define CADS_DB 1
+#pragma once
 
 #include <tuple>
 #include <sqlite3.h>
@@ -8,9 +7,8 @@
 
 #include <readerwriterqueue.h>
 
-#include "cads.h"
 #include <window.hpp>
-
+#include <profile.h>
 #include <coro.hpp>
 
 namespace cads{
@@ -22,11 +20,10 @@ bool store_profile(sqlite3_stmt*, const profile&);
 profile fetch_profile(sqlite3_stmt*, y_type);
 void close_db(sqlite3 *db = nullptr, sqlite3_stmt* stmt = nullptr,sqlite3_stmt* stmt2 = nullptr); 
 void store_profile_thread(moodycamel::BlockingReaderWriterQueue<cads::profile> &db_fifo);
-coro<uint64_t,profile> store_profile_coro(profile p);
+coro<y_type,profile> store_profile_coro(profile p);
 void store_profile_parameters(double y_res, double x_res, double z_res, double z_off, double encoder_res);
 std::tuple<double,double,double,double,double> fetch_profile_parameters(std::string name);
 
 
 }
 
-#endif

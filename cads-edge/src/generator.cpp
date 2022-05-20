@@ -40,8 +40,14 @@ namespace cads
 
 		auto buf = std::make_unique<char[]>(size);
 		fifo.wait_dequeue(buf.get(),size);
-
-		co_yield extractZData(std::move(buf));
+    auto p = extractZData(std::move(buf));
+		auto y = std::get<0>(p);
+    
+    if(y == std::numeric_limits<decltype(y)>::max()) {
+      break;
+    }
+    
+    co_yield p;
 	}
 }
 
@@ -51,7 +57,7 @@ namespace cads
 		profile p;
 
     fifo.wait_dequeue(p);
-    if(p.y == std::numeric_limits<uint64_t>::max()) {
+    if(p.y == std::numeric_limits<decltype(p.y)>::max()) {
       break;
     }
 

@@ -1,6 +1,6 @@
 project('cads', ['c','cpp'],
   version : '1.0',
-  default_options : ['warning_level=0'])
+  default_options : ['warning_level=3'])
 
 add_project_arguments('-w',language : 'cpp')
 
