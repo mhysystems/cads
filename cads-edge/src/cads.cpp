@@ -346,7 +346,7 @@ namespace cads
 
         if (correlation < belt_crosscorr_threshold)
         {
-          cadslog.info("Correlation : {} at y : {}, frame count: {}", correlation, profile.y * encoder_resolution, (frame_count - 1) * y_resolution);
+          cadslog.info("Correlation : {} at y : {}, frame count: {}", correlation, profile.y, (frame_count - 1) * y_resolution);
 
           if (!find_first_origin && !loop_forever)
             break;
@@ -364,7 +364,7 @@ namespace cads
           lowest_correlation = std::numeric_limits<double>::max();
         }
 
-        if (profile.y*encoder_resolution > y_max_length)
+        if (profile.y > y_max_length)
         {
           cadslog.info("Origin not found before Max samples. Lowest Correlation : {}", lowest_correlation);
           frame_offset = y - profile_buffer.size() + 1;
