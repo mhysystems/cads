@@ -336,7 +336,7 @@ namespace cads
         db_fifo.enqueue(profile);
       }
 
-      if (find_first_origin || profile.y * encoder_resolution > y_max_length * 0.95)
+      if (find_first_origin || profile.y > y_max_length * 0.95)
       {
         auto belt = window_to_mat(profile_buffer, x_resolution);
         const auto cv_threshhold = left_edge_avg_height(belt, fiducial) - fdepth;
