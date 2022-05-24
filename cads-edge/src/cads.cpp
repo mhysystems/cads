@@ -295,6 +295,7 @@ namespace cads
 
     while (recorder_data.resume())
     {
+      cadslog.flush();
       auto [iy, ix, iz] = recorder_data();
       ++cnt;
 
@@ -347,7 +348,7 @@ namespace cads
         if (correlation < belt_crosscorr_threshold)
         {
           cadslog.info("Correlation : {} at y : {}, frame count: {}", correlation, profile.y, (frame_count - 1) * y_resolution);
-
+          fiducial_as_image(belt);
           if (!find_first_origin && !loop_forever)
             break;
 
