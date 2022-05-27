@@ -46,6 +46,7 @@
 
 #include <global_config.h>
 
+
 using namespace std;
 using namespace moodycamel;
 using json = nlohmann::json;
@@ -236,7 +237,7 @@ namespace cads
     
   }
 
-  void process_one_revolution()
+void process_one_revolution()
   {
     auto db_name = global_config["db_name"].get<std::string>();
     create_db(db_name);
@@ -309,26 +310,23 @@ namespace cads
 
       auto [y, x, z] = dd;
 
-      auto [bottom_avg_dbg, top_avg_dbg] = barrel_offset(z, z_resolution, z_height_mm);
-      //std::cerr << bottom_avg_dbg << ',' << bottom_filtered << '\n';
-
       auto [left_edge_index, right_edge_index] = find_profile_edges_nans_outer(z, nan_num);
 
       nan_filter(z);
       regression_compensate(z, left_edge_index, right_edge_index, gradient);
 
       barrel_height_compensate(z, bottom - bottom_filtered);
-      // barrel_height_compensate(z,bottom - z[left_edge_index - 1]);
-      //auto [bottom_avg_dbg2, top_avg_dbg2] = barrel_offset(z, z_resolution, z_height_mm);
-      //std::cerr << bottom_avg_dbg << ',' << bottom_filtered << '\n';
+
       
       auto f = z | views::take(right_edge_index) | views::drop(left_edge_index);
       profile profile_back{y - frame_offset, x + left_edge_index * x_resolution, {f.begin(), f.end()}};
 
       profile_buffer.push_back(profile_back);
+      
       // Wait for buffers to fill
       if (profile_buffer.size() <= fiducial.rows)
         continue;
+      
       profile profile = profile_buffer.front();
       profile_buffer.pop_front();
 
@@ -359,7 +357,169 @@ namespace cads
           for (auto off = profile_buffer.front().y; auto &p : profile_buffer)
           {
             p.y -= off;
-;
+          }
+          profile.y = 0;
+          lowest_correlation = std::numeric_limits<double>::max();
+        }
+
+        if (profile.y > y_max_length)
+        {
+          cadslog.info("Origin not found before Max samples. Lowest Correlation : {}", lowest_correlation);
+          frame_offset = y - profile_buffer.size() + 1;
+          frame_count = 0;
+          // Reset buffer y values to origin
+          for (int i = 0; auto &p : profile_buffer)
+          {
+            p.y = i++;
+          }
+
+          find_first_origin = true;
+          lowest_correlation = std::numeric_limits<double>::max();
+          
+          if (!loop_forever)
+            break;
+        }
+      }
+    }
+
+    db_fifo.enqueue({std::numeric_limits<y_type>::max(), NAN, {}});
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    cadslog.info("CADS - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, (double)cnt / duration);
+
+    gocator->Stop();
+    cadslog.info("Gocator Stopped");
+
+    close_db(db, stmt, fetch_stmt);
+
+    save_send.join();
+    cadslog.info("Upload Thread Stopped");
+  }
+
+
+
+
+  void process_one_revolution2()
+  {
+    auto db_name = global_config["db_name"].get<std::string>();
+    create_db(db_name);
+    auto [db, stmt] = open_db(db_name);
+    auto fetch_stmt = fetch_profile_statement(db);
+
+    auto data_src = global_config["data_source"].get<std::string>();
+    BlockingReaderWriterQueue<profile> gocatorFifo(4096 * 1024);
+
+    auto gocator = mk_gocator(gocatorFifo);
+    gocator->Start();
+
+    BlockingReaderWriterQueue<profile> db_fifo;
+    auto ts = fmt::format("{:%F-%H-%M}", std::chrono::system_clock::now());
+    std::jthread save_send(save_send_thread, std::ref(db_fifo),ts);
+
+    auto [y_resolution, x_resolution, z_resolution, z_offset,encoder_resolution] = gocator->get_gocator_constants();
+    cadslog.info("Gocator contants - y_res:{}, x_res:{}, z_res:{}, z_off:{}, encoder_res:{}", y_resolution, x_resolution, z_resolution, z_offset,encoder_resolution);
+
+    auto fdepth = global_config["fiducial_depth"].get<double>() / z_resolution;
+
+    auto fiducial = make_fiducial(x_resolution, y_resolution);
+
+    auto recorder_data = get_flatworld(std::ref(gocatorFifo));
+
+    const int nan_num = global_config["left_edge_nan"].get<int>();
+    const double belt_crosscorr_threshold = global_config["belt_cross_correlation_threshold"].get<double>();
+
+    auto y_max_length = global_config["y_max_length"].get<double>();
+    const auto z_height_mm = global_config["z_height"].get<double>();
+
+    z_element cv_threshhold = 0;
+    const int spike_window_size = nan_num / 4;
+
+    auto [bottom, top] = barrel_offset(1024, z_resolution, recorder_data);
+    cadslog.info("Belt Avg - top: {} bottom : {}, height(mm) : {}", top, bottom, (top - bottom) * z_resolution);
+
+    store_profile_parameters(y_resolution, x_resolution, z_resolution, -bottom * z_resolution,encoder_resolution);
+    /*std::thread([=]()
+                { http_post_profile_properties(y_resolution, x_resolution, z_resolution, -bottom * z_resolution, ts); })
+        .detach();
+    */    
+    http_post_profile_properties(y_resolution, x_resolution, z_resolution, -bottom * z_resolution, ts);
+    auto gradient = belt_regression(64, recorder_data);
+
+    auto iirfilter = mk_iirfilterSoS();
+    auto delay = mk_delay(global_config["iirfilter"]["delay"]);
+
+    uint64_t cnt = 0, frame_count = 0;
+    y_type frame_offset = 0;
+    bool find_first_origin = true, loop_forever = global_config["loop_forever"].get<bool>();
+    window profile_buffer;
+    double lowest_correlation = std::numeric_limits<double>::max();
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    while (recorder_data.resume())
+    {
+      cadslog.flush();
+      auto [iy, ix, iz] = recorder_data();
+      ++cnt;
+
+      spike_filter(iz, spike_window_size);
+      auto [bottom_avg, top_avg] = barrel_offset(iz, z_resolution, z_height_mm);
+      auto bottom_filtered = iirfilter(bottom_avg);
+
+      auto [delayed, dd] = delay({iy, ix, iz});
+      if (!delayed)
+        continue;
+
+      auto [y, x, z] = dd;
+
+      auto [left_edge_index, right_edge_index] = find_profile_edges_nans_outer(z, nan_num);
+
+      nan_filter(z);
+      regression_compensate(z, left_edge_index, right_edge_index, gradient);
+
+      barrel_height_compensate(z, bottom - bottom_filtered);
+
+      
+      auto f = z | views::take(right_edge_index) | views::drop(left_edge_index);
+      profile profile_back{y - frame_offset, x + left_edge_index * x_resolution, {f.begin(), f.end()}};
+
+      profile_buffer.push_back(profile_back);
+      
+      // Wait for buffers to fill
+      if (profile_buffer.size() <= fiducial.rows)
+        continue;
+      
+      profile profile = profile_buffer.front();
+      profile_buffer.pop_front();
+
+      if(!find_first_origin) {
+        ++frame_count;
+        db_fifo.enqueue(profile);
+      }
+
+      if (find_first_origin || profile.y > y_max_length * 0.95)
+      {
+        auto belt = window_to_mat(profile_buffer, x_resolution);
+        const auto cv_threshhold = left_edge_avg_height(belt, fiducial) - fdepth;
+        auto correlation = search_for_fiducial(belt, fiducial, cv_threshhold);
+
+        lowest_correlation = std::min(lowest_correlation, correlation);
+
+        if (correlation < belt_crosscorr_threshold)
+        {
+          cadslog.info("Correlation : {} at y : {}, frame count: {}", correlation, profile.y, (frame_count - 1) * y_resolution);
+          fiducial_as_image(belt);
+          if (!find_first_origin && !loop_forever)
+            break;
+
+          find_first_origin = false;
+          frame_offset += profile_buffer.front().y;
+          frame_count = 0;
+          // Reset buffer y values to origin
+          for (auto off = profile_buffer.front().y; auto &p : profile_buffer)
+          {
+            p.y -= off;
           }
           profile.y = 0;
           lowest_correlation = std::numeric_limits<double>::max();

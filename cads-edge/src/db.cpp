@@ -8,12 +8,15 @@
 #include <readerwriterqueue.h>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/rotating_file_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 
 #include <fmt/core.h>
 
 using namespace moodycamel;
 using json = nlohmann::json;
 extern json global_config;
+
+spdlog::logger dblog("db", {std::make_shared<spdlog::sinks::rotating_file_sink_st>("db.log", 1024 * 1024 * 5, 1), std::make_shared<spdlog::sinks::stdout_color_sink_st>()});
 
 namespace cads
 {
@@ -23,9 +26,9 @@ namespace cads
   bool create_db(std::string name)
   {
     sqlite3 *db = nullptr;
-    bool r = false;
+    bool r = true;
     const char *db_name = name.c_str();
-    int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);
+
     string ytype;
 
     if constexpr (std::is_same_v<y_type, double>)
@@ -39,13 +42,12 @@ namespace cads
 
     vector<string> tables{
         R"(DROP TABLE IF EXISTS PROFILE;)"s,
+        R"(VACUUM;)"s,
         fmt::format(R"(CREATE TABLE IF NOT EXISTS PROFILE (y {} PRIMARY KEY, x_off REAL NOT NULL, z BLOB NOT NULL);)", ytype),
         R"(CREATE TABLE IF NOT EXISTS PARAMETERS (row_id INTEGER PRIMARY KEY,  y_res REAL NOT NULL, x_res REAL NOT NULL, z_res REAL NOT NULL, z_off REAL NOT NULL, encoder_res REAL NOT NULL);)"s
-        
-        //        R"(CREATE TABLE IF NOT EXISTS BELT (index INTEGER PRIMARY KEY AUTOINCREMENT, num_y_samples integer,num_x_samples integer,belt_length real,x_start real,x_end real,z_min real, z_max real ))"s,
-        //        R"(CREATE TABLE IF NOT EXISTS GUI (anomaly_ID integer not null primary key, visible integer ))"s,
-        //        R"(CREATE TABLE IF NOT EXISTS A_TRACKING (anomaly_ID integer not null primary key, start real, length real, x_lower real, x_upper real, z_depth real, area real,volume real, time text, epoch integer, contour_x real, contour_theta real, category text, danger integer,comment text))"s
     };
+
+    int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);
 
     if (err == SQLITE_OK)
     {
@@ -57,20 +59,27 @@ namespace cads
         err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
         if (err == SQLITE_OK)
         {
-
           err = sqlite3_step(stmt);
-          r = true;
+          if (err != SQLITE_OK)
+          {
+            r &= false;
+            dblog.error("create_db:sqlite3_step Error Code:{}", err);
+          }
         }
-        
-        if (stmt != nullptr)
-          sqlite3_finalize(stmt);
+        else
+        {
+          dblog.error("create_db:sqlite3_prepare_v2 Error Code:{}", err);
+        }
+
+        sqlite3_finalize(stmt);
       }
-
-
+    }
+    else
+    {
+      dblog.error("create_db:sqlite3_open_v2 Error Code:{}", err);
     }
 
-    if (db != nullptr)
-      sqlite3_close(db);
+    sqlite3_close(db);
 
     return r;
   }
@@ -178,7 +187,7 @@ namespace cads
     }
     else
     {
-      rtn = {1.0, 1.0, 1.0, 1.0,1.0};
+      rtn = {1.0, 1.0, 1.0, 1.0, 1.0};
     }
 
     if (stmt != nullptr)
