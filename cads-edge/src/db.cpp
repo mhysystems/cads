@@ -60,7 +60,7 @@ namespace cads
         if (err == SQLITE_OK)
         {
           err = sqlite3_step(stmt);
-          if (err != SQLITE_OK)
+          if (err != SQLITE_DONE)
           {
             r &= false;
             dblog.error("create_db:sqlite3_step Error Code:{}", err);

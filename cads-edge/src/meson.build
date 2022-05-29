@@ -10,7 +10,6 @@ cadsSrc += files(
   'global_variables.cpp',
   'sqlite_gocator_reader.cpp',
   'gocator_reader_base.cpp',
-  'generator.cpp',
   'filters.cpp',
   'edge_detection.cpp',
   'profile.cpp',

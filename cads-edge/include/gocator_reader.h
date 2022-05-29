@@ -37,8 +37,8 @@ public:
   void RunForever();
 	void Start();
 	void Stop();
-	GocatorReader(moodycamel::BlockingReaderWriterQueue<cads::profile>&);
-  GocatorReader(moodycamel::BlockingReaderWriterQueue<cads::profile>&, bool);
+	GocatorReader(moodycamel::BlockingReaderWriterQueue<cads::msg>&);
+  GocatorReader(moodycamel::BlockingReaderWriterQueue<cads::msg>&, bool);
 	~GocatorReader();
 };
 

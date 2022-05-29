@@ -74,7 +74,7 @@ double search_for_fiducial(cv::Mat belt, cv::Mat fiducial, double z_threshold) {
 	cv::Mat black_belt;
 	cv::threshold(belt.colRange(0,fiducial.cols*2),black_belt,z_threshold,1.0,cv::THRESH_BINARY);
 
-	cv::Mat out(black_belt.rows - fiducial.rows + 1,black_belt.cols - fiducial.cols + 1, CV_32F);
+	cv::Mat out(black_belt.rows - fiducial.rows + 1,black_belt.cols - fiducial.cols + 1, CV_32F,cv::Scalar::all(0.0f));
 	cv::matchTemplate(black_belt,fiducial,out,cv::TM_SQDIFF_NORMED);
 
 	double minVal;

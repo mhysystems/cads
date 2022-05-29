@@ -30,7 +30,7 @@ public:
   void RunForever();
 	void Start();
 	void Stop();
-	SqliteGocatorReader(moodycamel::BlockingReaderWriterQueue<profile>&);
+	SqliteGocatorReader(moodycamel::BlockingReaderWriterQueue<msg>&);
 	~SqliteGocatorReader();
 };
 

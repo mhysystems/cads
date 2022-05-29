@@ -2,6 +2,7 @@
 
 #include <readerwriterqueue.h>
 #include <profile.h>
+#include <msg.h>
 
 #include <condition_variable>
 #include <atomic>
@@ -21,7 +22,7 @@ class GocatorReaderBase
 	GocatorReaderBase& operator=(GocatorReaderBase&&) = delete;
 
 protected:
-	moodycamel::BlockingReaderWriterQueue<profile>& m_gocatorFifo;
+	moodycamel::BlockingReaderWriterQueue<msg>& m_gocatorFifo;
   double m_yResolution = 1.0;
   double m_xResolution = 1.0;
   double m_zResolution = 1.0;
@@ -37,8 +38,8 @@ public:
   virtual void RunForever() = 0;
 	virtual void Start() = 0;
 	virtual void Stop() = 0;
-	GocatorReaderBase(moodycamel::BlockingReaderWriterQueue<profile>&);
-  virtual std::tuple<double,double,double,double,double> get_gocator_constants();
+	GocatorReaderBase(moodycamel::BlockingReaderWriterQueue<msg>&);
+  virtual resolutions_t get_gocator_constants();
 
 };
 

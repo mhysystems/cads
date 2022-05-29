@@ -42,7 +42,7 @@ namespace cads
     }
   }
 
-  SqliteGocatorReader::SqliteGocatorReader(moodycamel::BlockingReaderWriterQueue<profile> &gocatorFifo) : GocatorReaderBase(gocatorFifo)
+  SqliteGocatorReader::SqliteGocatorReader(moodycamel::BlockingReaderWriterQueue<msg> &gocatorFifo) : GocatorReaderBase(gocatorFifo)
   {
   }
 
@@ -58,7 +58,8 @@ namespace cads
   {
     auto data_src = global_config["data_source"].get<std::string>();
     auto [yResolution, xResolution, zResolution, zOffset, encoderResolution] = fetch_profile_parameters(data_src);
-
+    m_gocatorFifo.enqueue({msgid::resolutions,fetch_profile_parameters(data_src)});
+    
     m_yResolution = yResolution;
     m_xResolution = xResolution;
     m_zResolution = zResolution;
@@ -83,7 +84,7 @@ namespace cads
     {
       ++cnt;
       err = sqlite3_step(stmt);
-      cads::profile profile;
+
       decltype(profile::y) y;
       if (err == SQLITE_ROW)
       {
@@ -99,11 +100,12 @@ namespace cads
         double x_off = sqlite3_column_double(stmt, 1);
         z_element *z = (z_element *)sqlite3_column_blob(stmt, 2);
         int len = sqlite3_column_bytes(stmt, 2) / sizeof(*z);
-        m_gocatorFifo.enqueue({y, x_off, {z, z + len}});
+        
+        m_gocatorFifo.enqueue({msgid::scan,profile{y, x_off, {z, z + len}}});
       }
       else
       {
-        m_gocatorFifo.enqueue({std::numeric_limits<decltype(y)>::max(), NAN, {}});
+        m_gocatorFifo.enqueue({msgid::finished,0});
         m_loop = false;
       }
     }
@@ -112,10 +114,8 @@ namespace cads
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     spdlog::info("CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, (double)cnt / duration);
 
-    if (stmt != nullptr)
-      sqlite3_finalize(stmt);
-    if (db != nullptr)
-      sqlite3_close(db);
+    sqlite3_finalize(stmt);
+    sqlite3_close(db);
   }
 
 }

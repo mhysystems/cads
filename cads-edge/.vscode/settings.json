@@ -84,7 +84,8 @@
     "charconv": "cpp",
     "scoped_allocator": "cpp",
     "gohealth.h": "c",
-    "*.inc": "cpp"
+    "*.inc": "cpp",
+    "*.ipp": "cpp"
   },
   "cmake.configureOnOpen": false
 }

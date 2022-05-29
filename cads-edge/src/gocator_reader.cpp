@@ -88,7 +88,7 @@ void GocatorReader::Stop()
 }
 
 
-GocatorReader::GocatorReader(moodycamel::BlockingReaderWriterQueue<profile>& gocatorFifo) : 
+GocatorReader::GocatorReader(moodycamel::BlockingReaderWriterQueue<msg>& gocatorFifo) : 
 	GocatorReaderBase(gocatorFifo)
 {
 	m_assembly = CreateGoSdk();
@@ -152,7 +152,7 @@ GocatorReader::GocatorReader(moodycamel::BlockingReaderWriterQueue<profile>& goc
 
 }
 
-GocatorReader::GocatorReader(moodycamel::BlockingReaderWriterQueue<profile>& gocatorFifo, bool use_encoder ) : GocatorReader(gocatorFifo)
+GocatorReader::GocatorReader(moodycamel::BlockingReaderWriterQueue<msg>& gocatorFifo, bool use_encoder ) : GocatorReader(gocatorFifo)
 {
   m_use_encoder =  use_encoder;
 } 
@@ -261,10 +261,12 @@ kStatus GocatorReader::OnData(GoSensor sensor, GoDataSet dataset)
       m_zResolution = zResolution;
       m_zOffset = zOffset;
       m_yOffset = encoder;
+      m_gocatorFifo.enqueue({msgid::resolutions,resolutions_t{m_yResolution, xResolution, zResolution, zOffset, m_encoder_resolution}});
+      
 		}
 
     if(m_use_encoder) {
-        y = std::abs((encoder - m_yOffset) * m_encoder_resolution);
+      y = std::abs((encoder - m_yOffset) * m_encoder_resolution);
     }else {
       y = frame * m_yResolution;
     }
@@ -279,7 +281,7 @@ kStatus GocatorReader::OnData(GoSensor sensor, GoDataSet dataset)
 
 		auto samples_width = distance(profile,profile_begin);
 
-	  m_gocatorFifo.enqueue({y,xOffset+samples_width*xResolution,{profile_begin,profile_end}});		
+	  m_gocatorFifo.enqueue({msgid::scan,cads::profile{y,xOffset+samples_width*xResolution,{profile_begin,profile_end}}});		
 
     GoDestroy(dataset);
 
