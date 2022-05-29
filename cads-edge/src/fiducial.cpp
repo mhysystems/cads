@@ -72,7 +72,7 @@ bool mat_as_image(Mat m, double z_threshold) {
 double search_for_fiducial(cv::Mat belt, cv::Mat fiducial, double z_threshold) {
 	
 	cv::Mat black_belt;
-	cv::threshold(belt.colRange(0,fiducial.cols*2),black_belt,z_threshold,1.0,cv::THRESH_BINARY);
+	cv::threshold(belt.colRange(0,fiducial.cols*1.5),black_belt,z_threshold,1.0,cv::THRESH_BINARY);
 
 	cv::Mat out(black_belt.rows - fiducial.rows + 1,black_belt.cols - fiducial.cols + 1, CV_32F,cv::Scalar::all(0.0f));
 	cv::matchTemplate(black_belt,fiducial,out,cv::TM_SQDIFF_NORMED);

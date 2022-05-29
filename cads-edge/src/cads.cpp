@@ -307,7 +307,7 @@ namespace cads
       y_type y = profile_buffer.front().y;
       const auto cv_threshhold = left_edge_avg_height(belt, fiducial) - fdepth;
       auto correlation = search_for_fiducial(belt, fiducial, cv_threshhold);
-      correlation += 1.0;
+      //correlation += 1.0;
       lowest_correlation = std::min(lowest_correlation, correlation);
 
       if (correlation < belt_crosscorr_threshold)
