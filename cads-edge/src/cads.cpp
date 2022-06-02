@@ -444,13 +444,15 @@ namespace cads
 
       if (trigger_length != std::numeric_limits<y_type>::min())
       {
-        next_fifo.enqueue({msgid::scan, profile_buffer.front()});
+        //next_fifo.enqueue({msgid::scan, profile_buffer.front()});
       }
 
       profile_fifo.wait_dequeue(m);
 
-      if (std::get<0>(m) != msgid::scan)
-        break;
+      if (std::get<0>(m) != msgid::scan) {
+        std::throw_with_nested(std::runtime_error("window_processing_thread:msgid must be scan"));
+      }
+
       auto profile = get<cads::profile>(get<1>(m));
 
       shift_Mat(belt);
