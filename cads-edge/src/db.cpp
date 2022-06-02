@@ -44,8 +44,7 @@ namespace cads
         R"(DROP TABLE IF EXISTS PROFILE;)"s,
         R"(VACUUM;)"s,
         fmt::format(R"(CREATE TABLE IF NOT EXISTS PROFILE (y {} PRIMARY KEY, x_off REAL NOT NULL, z BLOB NOT NULL);)", ytype),
-        R"(CREATE TABLE IF NOT EXISTS PARAMETERS (row_id INTEGER PRIMARY KEY,  y_res REAL NOT NULL, x_res REAL NOT NULL, z_res REAL NOT NULL, z_off REAL NOT NULL, encoder_res REAL NOT NULL);)"s
-    };
+        R"(CREATE TABLE IF NOT EXISTS PARAMETERS (row_id INTEGER PRIMARY KEY,  y_res REAL NOT NULL, x_res REAL NOT NULL, z_res REAL NOT NULL, z_off REAL NOT NULL, encoder_res REAL NOT NULL);)"s};
 
     int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);
 
@@ -228,6 +227,31 @@ namespace cads
       sqlite3_close(db);
   }
 
+  void prepare_step_query(sqlite3 *db, std::string query)
+  {
+    sqlite3_stmt *stmt = nullptr;
+    auto err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
+
+    if (err != SQLITE_OK)
+    {
+      std::throw_with_nested(std::runtime_error(query));
+    }
+
+    auto attempts = 512;
+
+    while (err != SQLITE_DONE && attempts-- > 0)
+    {
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      err = sqlite3_step(stmt);
+    }
+
+    if (err != SQLITE_DONE)
+    {
+      std::throw_with_nested(std::runtime_error(query));
+    }
+    sqlite3_finalize(stmt);
+  }
+
   void store_profile_thread(BlockingReaderWriterQueue<profile> &db_fifo)
   {
 
@@ -240,23 +264,20 @@ namespace cads
 
     sqlite3_stmt *stmt = nullptr;
     auto query = R"(PRAGMA synchronous=OFF)"s;
-    err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
-    err = sqlite3_step(stmt);
-    query = R"("PRAGMA locking_mode = EXCLUSIVE")"s;
-    err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
-    err = sqlite3_step(stmt);
+    prepare_step_query(db,query);
+
     query = R"("PRAGMA journal_mode = MEMORY")"s;
-    err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
-    err = sqlite3_step(stmt);
+    prepare_step_query(db,query);
+
     query = R"("PRAGMA temp_store = MEMORY")"s;
-    err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
-    err = sqlite3_step(stmt);
+    prepare_step_query(db,query);
+
     query = R"("PRAGMA mmap_size = 10000000")"s;
-    err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
-    err = sqlite3_step(stmt);
+    prepare_step_query(db,query);
+
     query = R"("PRAGMA page_size = 32768")"s;
-    err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
-    err = sqlite3_step(stmt);
+    prepare_step_query(db,query);
+
     query = R"(INSERT OR REPLACE INTO PROFILE (y,x_off,z) VALUES (?,?,?))"s;
     err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
 
@@ -317,29 +338,15 @@ namespace cads
 
     sqlite3_stmt *stmt = nullptr;
     auto query = R"(PRAGMA synchronous=OFF)"s;
-    err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
-    err = sqlite3_step(stmt);
-    query = R"("PRAGMA locking_mode = EXCLUSIVE")"s;
-    err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
-    err = sqlite3_step(stmt);
-    query = R"("PRAGMA journal_mode = MEMORY")"s;
-    err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
-    err = sqlite3_step(stmt);
-    query = R"("PRAGMA temp_store = MEMORY")"s;
-    err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
-    err = sqlite3_step(stmt);
-    query = R"("PRAGMA mmap_size = 10000000")"s;
-    err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
-    err = sqlite3_step(stmt);
-    query = R"("PRAGMA page_size = 32768")"s;
-    err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
-    err = sqlite3_step(stmt);
+    prepare_step_query(db,query);
+
     query = R"(INSERT OR REPLACE INTO PROFILE (y,x_off,z) VALUES (?,?,?))"s;
     err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
 
     while (true)
     {
-
+      log->flush();
+      
       if constexpr (std::is_same_v<y_type, double>)
       {
         err = sqlite3_bind_double(stmt, 1, (double)p.y);

@@ -411,6 +411,7 @@ namespace cads
         if (correlation < belt_crosscorr_threshold)
         {
           cadslog.info("Correlation : {} at y : {}", correlation, y);
+          cadslog.flush();
 
           trigger_length = y_max_length * 0.95;
 
@@ -444,13 +445,13 @@ namespace cads
 
       if (trigger_length != std::numeric_limits<y_type>::min())
       {
-        //next_fifo.enqueue({msgid::scan, profile_buffer.front()});
+        next_fifo.enqueue({msgid::scan, profile_buffer.front()});
       }
 
       profile_fifo.wait_dequeue(m);
 
       if (std::get<0>(m) != msgid::scan) {
-        std::throw_with_nested(std::runtime_error("window_processing_thread:msgid must be scan"));
+        break;
       }
 
       auto profile = get<cads::profile>(get<1>(m));
@@ -506,6 +507,8 @@ namespace cads
   void process_one_revolution()
   {
 
+    create_db(global_config["db_name"].get<std::string>().c_str());
+    
     BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
     BlockingReaderWriterQueue<msg> winFifo(4096 * 1024);
 

@@ -175,7 +175,7 @@ void http_post_thread_bulk(moodycamel::BlockingReaderWriterQueue<y_type> &upload
   
 	const char *db_name = global_config["db_name"].get<std::string>().c_str();
 
-	int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_SHAREDCACHE, nullptr);
+	int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX, nullptr);
 	auto stmt = fetch_profile_statement(db);
 
 	auto log = spdlog::rotating_logger_st("upload", "upload.log", 1024 * 1024 * 5, 1);
