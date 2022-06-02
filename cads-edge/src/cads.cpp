@@ -58,34 +58,118 @@ spdlog::logger cadslog("cads", {std::make_shared<spdlog::sinks::rotating_file_si
 namespace cads
 {
 
-  void save_send_thread(BlockingReaderWriterQueue<profile> &profile_fifo, std::string ts)
+  void save_send_thread(BlockingReaderWriterQueue<msg> &profile_fifo)
   {
-    profile p;
-    profile_fifo.wait_dequeue(p);
+    using namespace date;
+    using namespace chrono;
 
-    if (p.y == std::numeric_limits<y_type>::max())
+    hours trigger_hour;
+    auto sts = global_config["daily_start_time"].get<std::string>();
+    if (sts != "now"s)
+    {
+      std::stringstream st{sts};
+
+      system_clock::duration run_in;
+      st >> parse("%T", run_in);
+
+      trigger_hour = chrono::floor<chrono::hours>(run_in);
+    }
+    else
+    {
+      auto now = current_zone()->to_local(system_clock::now());
+      auto today = chrono::floor<chrono::days>(now);
+      auto daily_time = duration_cast<seconds>(now - today);
+      trigger_hour = chrono::floor<chrono::hours>(daily_time);
+    }
+
+    cads::msg m;
+    profile_fifo.wait_dequeue(m);
+
+    if (get<0>(m) != msgid::scan)
+    {
+      cadslog.error("msg has wrong msgid");
+
+      // Consume all input to avoid buffer overflows
+      do
+      {
+        profile_fifo.wait_dequeue(m);
+      } while (get<0>(m) != msgid::finished);
+
       return;
+    }
+
+    auto p = get<profile>(get<1>(m));
 
     BlockingReaderWriterQueue<y_type> upload_fifo;
 
-    std::jthread upload(http_post_thread_bulk, std::ref(upload_fifo), ts);
+    std::jthread upload(http_post_thread_bulk, std::ref(upload_fifo));
 
     auto store_profile = store_profile_coro(p);
 
-    while (true)
+    enum state
+    {
+      waiting,
+      processing,
+      finished
+    };
+
+    state s = waiting;
+
+    std::chrono::time_point<date::local_t, std::chrono::days> today;
+
+    do
     {
 
-      auto [invalid, y] = store_profile(p);
-      if (!invalid)
-        upload_fifo.enqueue(y);
-
-      if (p.y == std::numeric_limits<y_type>::max())
+      switch (s)
       {
+      case waiting:
+      {
+        auto now = current_zone()->to_local(system_clock::now());
+        today = chrono::floor<chrono::days>(now);
+        auto daily_time = duration_cast<seconds>(now - today);
+        auto current_hour = chrono::floor<chrono::hours>(daily_time);
+
+        if (p.y == 0 && upload_fifo.size_approx() == 0 && current_hour >= trigger_hour)
+        {
+          auto [invalid, y] = store_profile(p);
+          if (!invalid)
+            upload_fifo.enqueue(y);
+          s = processing;
+        }
         break;
       }
+      case processing:
+      {
+        if (p.y == 0)
+        {
+          s == finished;
+          break;
+        }
 
-      profile_fifo.wait_dequeue(p);
-    }
+        auto [invalid, y] = store_profile(p);
+        if (!invalid)
+          upload_fifo.enqueue(y);
+
+        break;
+      }
+      case finished:
+      {
+        auto now = current_zone()->to_local(system_clock::now());
+        if (today != chrono::floor<chrono::days>(now))
+        {
+          s = waiting;
+        }
+      }
+      }
+
+      profile_fifo.wait_dequeue(m);
+
+      if (get<0>(m) == msgid::scan)
+      {
+        p = get<profile>(get<1>(m));
+      }
+    } while (get<0>(m) != msgid::finished);
+
     upload_fifo.enqueue(std::numeric_limits<y_type>::max());
     cadslog.info("Stopping save_send_thread");
   }
@@ -279,7 +363,7 @@ namespace cads
     }
   }
 
-  coro<profile, profile> window_processing_coro(double x_resolution, double y_resolution, double z_resolution)
+  void window_processing_thread(double x_resolution, double y_resolution, double z_resolution, BlockingReaderWriterQueue<msg> &profile_fifo, BlockingReaderWriterQueue<msg> &next_fifo)
   {
 
     auto fiducial = make_fiducial(x_resolution, y_resolution);
@@ -289,10 +373,17 @@ namespace cads
     double lowest_correlation = std::numeric_limits<double>::max();
     const double belt_crosscorr_threshold = global_config["belt_cross_correlation_threshold"].get<double>();
 
-    // delay
+    cads::msg m;
+
+    // Fill buffer
     for (int j = 0; j < fiducial.rows; j++)
     {
-      auto profile = co_yield std::move(null_profile);
+      profile_fifo.wait_dequeue(m);
+
+      if (std::get<0>(m) != msgid::scan)
+        break;
+      auto profile = get<cads::profile>(get<1>(m));
+
       profile_buffer.push_back(profile);
     }
 
@@ -302,34 +393,66 @@ namespace cads
       std::throw_with_nested(std::runtime_error("window_processing:OpenCV matrix must be continuous for row shifting using memcpy"));
     }
 
+    auto y_max_length = global_config["y_max_length"].get<double>();
+    auto trigger_length = std::numeric_limits<y_type>::min();
+    y_type y_offset = 0;
+
     while (true)
     {
+
       y_type y = profile_buffer.front().y;
-      const auto cv_threshhold = left_edge_avg_height(belt, fiducial) - fdepth;
-      auto correlation = search_for_fiducial(belt, fiducial, cv_threshhold);
-      //correlation += 1.0;
-      lowest_correlation = std::min(lowest_correlation, correlation);
-
-      if (correlation < belt_crosscorr_threshold)
+      if (y >= trigger_length)
       {
-        cadslog.info("Correlation : {} at y : {}", correlation, y);
-        fiducial_as_image(belt);
-        // if (!find_first_origin && !loop_forever)
-        //   break;
+        const auto cv_threshhold = left_edge_avg_height(belt, fiducial) - fdepth;
+        auto correlation = search_for_fiducial(belt, fiducial, cv_threshhold);
+        // correlation += 1.0;
+        lowest_correlation = std::min(lowest_correlation, correlation);
 
-        // find_first_origin = false;
-        // frame_offset += profile_buffer.front().y;
- 
-        // Reset buffer y values to origin
-        for (auto off = y; auto &p : profile_buffer)
+        if (correlation < belt_crosscorr_threshold)
         {
-          p.y -= off;
+          cadslog.info("Correlation : {} at y : {}", correlation, y);
+
+          trigger_length = y_max_length * 0.95;
+
+          fiducial_as_image(belt);
+
+          y_offset += y;
+
+          // Reset buffer y values to origin
+          for (auto off = y; auto &p : profile_buffer)
+          {
+            p.y -= off;
+          }
+
+          lowest_correlation = std::numeric_limits<double>::max();
         }
 
-        lowest_correlation = std::numeric_limits<double>::max();
+        if (y > y_max_length)
+        {
+          cadslog.info("Origin not found before Max samples. Lowest Correlation : {}", lowest_correlation);
+          y_offset += y;
+
+          // Reset buffer y values to origin
+          for (auto off = y; auto &p : profile_buffer)
+          {
+            p.y -= off;
+          }
+
+          lowest_correlation = std::numeric_limits<double>::max();
+        }
       }
 
-      auto profile = co_yield std::move(profile_buffer.front());
+      if (trigger_length != std::numeric_limits<y_type>::min())
+      {
+        next_fifo.enqueue({msgid::scan, profile_buffer.front()});
+      }
+
+      profile_fifo.wait_dequeue(m);
+
+      if (std::get<0>(m) != msgid::scan)
+        break;
+      auto profile = get<cads::profile>(get<1>(m));
+
       shift_Mat(belt);
 
       auto m_i = belt.ptr<float>(0);
@@ -348,8 +471,11 @@ namespace cads
       }
 
       profile_buffer.pop_front();
-      profile_buffer.push_back(profile);
+      profile_buffer.push_back({profile.y - y_offset, profile.x_off, profile.z});
     }
+
+    next_fifo.enqueue({msgid::finished, 0});
+    cadslog.info("window_processing_thread");
   }
 
   std::tuple<double, double, double, z_element> preprocessing(BlockingReaderWriterQueue<msg> &gocatorFifo, std::string ts)
@@ -379,31 +505,30 @@ namespace cads
   {
 
     BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
+    BlockingReaderWriterQueue<msg> winFifo(4096 * 1024);
 
     auto gocator = mk_gocator(gocatorFifo);
     gocator->Start();
 
-    BlockingReaderWriterQueue<profile> db_fifo;
+    BlockingReaderWriterQueue<msg> db_fifo;
     auto ts = fmt::format("{:%F-%H-%M}", std::chrono::system_clock::now());
-    std::jthread save_send(save_send_thread, std::ref(db_fifo), ts);
+    std::jthread save_send(save_send_thread, std::ref(db_fifo));
 
     auto [x_resolution, y_resolution, z_resolution, bottom] = preprocessing(gocatorFifo, ts);
 
-    auto y_max_length = global_config["y_max_length"].get<double>();
     const auto z_height_mm = global_config["z_height"].get<double>();
     const int nan_num = global_config["left_edge_nan"].get<int>();
     const int spike_window_size = nan_num / 4;
 
-    auto origin_dectection = window_processing_coro(x_resolution, y_resolution, z_resolution);
+    // auto origin_dectection = window_processing_coro(x_resolution, y_resolution, z_resolution);
+    std::jthread origin_dectection(window_processing_thread, x_resolution, y_resolution, z_resolution, std::ref(winFifo), std::ref(db_fifo));
 
     auto gradient = belt_regression(64, gocatorFifo);
 
     auto iirfilter = mk_iirfilterSoS();
     auto delay = mk_delay(global_config["iirfilter"]["delay"]);
 
-    uint64_t cnt = 0, frame_count = 0;
-    y_type frame_offset = 0;
-    bool find_first_origin = true, loop_forever = global_config["loop_forever"].get<bool>();
+    uint64_t cnt = 0;
 
     double lowest_correlation = std::numeric_limits<double>::max();
 
@@ -413,7 +538,7 @@ namespace cads
 
     do
     {
-     
+
       gocatorFifo.wait_dequeue(m);
       auto m_id = get<0>(m);
 
@@ -447,9 +572,9 @@ namespace cads
 
       auto f = z | views::take(right_edge_index) | views::drop(left_edge_index);
 
-      auto [ig, profile] = origin_dectection({y - frame_offset, x + left_edge_index * x_resolution, {f.begin(), f.end()}});
+      // auto [ig, profile] = origin_dectection({y - frame_offset, x + left_edge_index * x_resolution, {f.begin(), f.end()}});
+      winFifo.enqueue({msgid::scan, cads::profile{y, x + left_edge_index * x_resolution, {f.begin(), f.end()}}});
 
-      
 #if 0      
       if (!find_first_origin)
       {
@@ -479,10 +604,12 @@ namespace cads
 
     } while (std::get<0>(m) != msgid::finished);
 
-    db_fifo.enqueue({std::numeric_limits<y_type>::max(), NAN, {}});
+    winFifo.enqueue({msgid::finished, 0});
+    // db_fifo.enqueue({std::numeric_limits<y_type>::max(), NAN, {}});
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    origin_dectection.join();
     cadslog.info("CADS - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, (double)cnt / duration);
 
     gocator->Stop();

@@ -23,6 +23,8 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 
+#include <fmt/core.h>
+
 using json = nlohmann::json;
 extern json global_config;
 
@@ -163,7 +165,7 @@ void http_post_thread(moodycamel::BlockingReaderWriterQueue<uint64_t> &upload_fi
 }
 
 
-void http_post_thread_bulk(moodycamel::BlockingReaderWriterQueue<y_type> &upload_fifo, std::string ts) {
+void http_post_thread_bulk(moodycamel::BlockingReaderWriterQueue<y_type> &upload_fifo) {
 	using namespace flatbuffers;
 	
 	sqlite3 *db = nullptr;
@@ -171,8 +173,6 @@ void http_post_thread_bulk(moodycamel::BlockingReaderWriterQueue<y_type> &upload
   std::transform(endpoint_url.begin(), endpoint_url.end(), endpoint_url.begin(),[](unsigned char c){ return std::tolower(c); });
   if(endpoint_url == "null") return;
   
-  const cpr::Url endpoint{ReplaceString(global_config["upload_profile_to"].get<std::string>(),"%DATETIME%"s,ts)};
-
 	const char *db_name = global_config["db_name"].get<std::string>().c_str();
 
 	int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_SHAREDCACHE, nullptr);
@@ -184,12 +184,19 @@ void http_post_thread_bulk(moodycamel::BlockingReaderWriterQueue<y_type> &upload
 
   FlatBufferBuilder builder(4096 * 128);
   std::vector<flatbuffers::Offset<cads_flatworld::profile>> profiles_flat;
-
+  auto ts = fmt::format("{:%F-%H-%M}", std::chrono::system_clock::now());
+  cpr::Url endpoint{ReplaceString(global_config["upload_profile_to"].get<std::string>(),"%DATETIME%"s,ts)};
+  
   while (true)
 	{	
 
     y_type y = 0;
 		upload_fifo.wait_dequeue(y);
+    
+    if(y == 0) {
+      ts = fmt::format("{:%F-%H-%M}", std::chrono::system_clock::now());
+      endpoint = {ReplaceString(global_config["upload_profile_to"].get<std::string>(),"%DATETIME%"s,ts)};
+    }
 
     auto p = fetch_profile(stmt,y) ; 
     
@@ -207,9 +214,9 @@ void http_post_thread_bulk(moodycamel::BlockingReaderWriterQueue<y_type> &upload
     }
     
 	}
-
+  
 	close_db(db,stmt);
-
+  spdlog::info("Leaving http_post_thread_bulk");
 }
 
 
