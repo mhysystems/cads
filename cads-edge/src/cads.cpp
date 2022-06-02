@@ -142,7 +142,7 @@ namespace cads
       {
         if (p.y == 0)
         {
-          s == finished;
+          s = finished;
           break;
         }
 
