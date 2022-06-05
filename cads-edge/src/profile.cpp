@@ -61,7 +61,7 @@ vector<tuple<double,z_element>> histogram(const z_type& ps, z_element min, z_ele
   return hist;
 }
 
-tuple<z_element,z_element> barrel_offset(const z_type& win, double z_resolution, double z_height_mm) {
+tuple<z_element,z_element,bool> barrel_offset(const z_type& win, double z_resolution, double z_height_mm) {
 
     
   auto [z_min,z_max] = find_minmax_z(win);
@@ -77,8 +77,11 @@ tuple<z_element,z_element> barrel_offset(const z_type& win, double z_resolution,
   auto f = hist | views::filter([thickness,peak](tuple<double,z_element> a ){ return peak - get<0>(a) > thickness; });
   vector<tuple<double,z_element>> barrel(f.begin(),f.end());
   
-  return {get<0>(barrel[0]),peak};
-
+  if(barrel.size() > 0) {
+    return {get<0>(barrel[0]),peak,false};
+  }else {
+    return {peak - thickness,peak,true};
+  }
 }
 
 } // namespace cads

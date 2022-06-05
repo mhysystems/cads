@@ -496,6 +496,7 @@ namespace cads
     auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution] = get<resolutions_t>(get<1>(m));
     cadslog.info("Gocator contants - y_res:{}, x_res:{}, z_res:{}, z_off:{}, encoder_res:{}", y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution);
     auto [bottom, top] = barrel_offset(1024, z_resolution, gocatorFifo);
+
     store_profile_parameters(y_resolution, x_resolution, z_resolution, -bottom * z_resolution, encoder_resolution);
     std::thread([=]()
                 { http_post_profile_properties(y_resolution, x_resolution, z_resolution, -bottom * z_resolution, ts); })
@@ -559,7 +560,12 @@ namespace cads
       ++cnt;
 
       spike_filter(iz, spike_window_size);
-      auto [bottom_avg, top_avg] = barrel_offset(iz, z_resolution, z_height_mm);
+      auto [bottom_avg, top_avg, invalid] = barrel_offset(iz, z_resolution, z_height_mm);
+      
+      if(invalid) {
+        cadslog.error("Barrel not detected, profile is invalid");
+      }
+      
       auto bottom_filtered = iirfilter(bottom_avg);
 
       auto [delayed, dd] = delay({iy, ix, iz});

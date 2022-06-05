@@ -22,6 +22,7 @@
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/rotating_file_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 
 #include <fmt/core.h>
 
@@ -29,6 +30,9 @@ using json = nlohmann::json;
 extern json global_config;
 
 using namespace std;
+
+spdlog::logger uplog("upload", {std::make_shared<spdlog::sinks::rotating_file_sink_st>("uploads.log", 1024 * 1024 * 5, 1), std::make_shared<spdlog::sinks::stdout_color_sink_st>()});
+
 
 namespace cads 
 {
@@ -65,7 +69,7 @@ void send_flatbuffer_array(
       if(cpr::ErrorCode::OK == r.error.code && cpr::status::HTTP_OK == r.status_code) {
         break;
       }else {
-        log->error("Upload failed with http status code {}", r.status_code);
+        uplog.error("Upload failed with http status code {}", r.status_code);
       }
     }
 
@@ -105,7 +109,7 @@ void http_post_profile_properties(std::string json, std::string ts) {
     if(cpr::ErrorCode::OK == r.error.code && cpr::status::HTTP_OK == r.status_code) {
       break;
     }else {
-      //log->error("First Upload failed with http status code {}", r.status_code);
+      uplog.error("First Upload failed with http status code {}", r.status_code);
     }
   }
 
@@ -123,8 +127,6 @@ void http_post_thread(moodycamel::BlockingReaderWriterQueue<uint64_t> &upload_fi
 	int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_SHAREDCACHE, nullptr);
 	auto stmt = fetch_profile_statement(db);
 
-	auto log = spdlog::rotating_logger_st("upload", "upload.log", 1024 * 1024 * 5, 1);
-	
   auto start = std::chrono::high_resolution_clock::now();
   while (true)
 	{
@@ -151,13 +153,13 @@ void http_post_thread(moodycamel::BlockingReaderWriterQueue<uint64_t> &upload_fi
       if(cpr::ErrorCode::OK == r.error.code && cpr::status::HTTP_OK == r.status_code) {
         break;
       }else {
-        log->error("Upload failed with http status code {}", r.status_code);
+        uplog.error("Upload failed with http status code {}", r.status_code);
       }
     }
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() / 1000.0;
 
-    log->info("SIZE: {}, DUR:{}, RATE(Kb/s):{} ",size, duration, (double)size / duration);
+    uplog.info("SIZE: {}, DUR:{}, RATE(Kb/s):{} ",size, duration, (double)size / duration);
 	}
 
 	close_db(db,stmt);
