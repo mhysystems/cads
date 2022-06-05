@@ -431,6 +431,7 @@ namespace cads
         if (y > y_max_length)
         {
           cadslog.info("Origin not found before Max samples. Lowest Correlation : {}", lowest_correlation);
+          cadslog.flush();
           y_offset += y;
 
           // Reset buffer y values to origin
