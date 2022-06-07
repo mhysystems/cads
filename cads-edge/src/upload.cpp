@@ -208,13 +208,13 @@ void http_post_thread_bulk(moodycamel::BlockingReaderWriterQueue<y_type> &upload
       profiles_flat.push_back(cads_flatworld::CreateprofileDirect(builder,p.y,p.x_off,&p.z));
      
       if(profiles_flat.size() == 128) {
-        uplog.info(fmt::format("Send Array {}", endpoint));
+        uplog.info("Send Array {}", endpoint.str());
         uplog.flush();
         send_flatbuffer_array(builder,profiles_flat,endpoint,log);
       }
     }else {
       if(profiles_flat.size() > 0) {
-        uplog.info(fmt::format("Last Array {}", endpoint));
+        uplog.info("Last Array {}", endpoint.str());
         uplog.flush();
         send_flatbuffer_array(builder,profiles_flat,endpoint,log);
       }
