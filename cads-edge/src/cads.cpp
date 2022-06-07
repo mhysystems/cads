@@ -133,7 +133,7 @@ namespace cads
         {
           auto [invalid, y] = store_profile(p);
           cadslog.info(fmt::format("Enqueuing into upload fifo. Is invalid? {}",invalid));
-
+          cadslog.flush();
           if (!invalid)
             upload_fifo.enqueue(y);
           s = processing;
@@ -145,6 +145,7 @@ namespace cads
         if (p.y == 0)
         {
           cadslog.info("Finished Processing");
+          cadslog.flush();
           s = finished;
           break;
         }
@@ -161,6 +162,7 @@ namespace cads
         if (today != chrono::floor<chrono::days>(now))
         {
           cadslog.info("Switch to waiting");
+          cadslog.flush();
           s = waiting;
         }
       }
