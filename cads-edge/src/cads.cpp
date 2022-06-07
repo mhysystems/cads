@@ -132,6 +132,8 @@ namespace cads
         if (p.y == 0 && upload_fifo.size_approx() == 0 && current_hour >= trigger_hour)
         {
           auto [invalid, y] = store_profile(p);
+          cadslog.info(fmt::format("Enqueuing into upload fifo. Is invalid? {}",invalid));
+
           if (!invalid)
             upload_fifo.enqueue(y);
           s = processing;
@@ -142,6 +144,7 @@ namespace cads
       {
         if (p.y == 0)
         {
+          cadslog.info("Finished Processing");
           s = finished;
           break;
         }
@@ -157,6 +160,7 @@ namespace cads
         auto now = current_zone()->to_local(system_clock::now());
         if (today != chrono::floor<chrono::days>(now))
         {
+          cadslog.info("Switch to waiting");
           s = waiting;
         }
       }
