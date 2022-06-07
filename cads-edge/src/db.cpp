@@ -130,6 +130,14 @@ namespace cads
     }
 
     err = sqlite3_step(stmt);
+    auto attempts = 512;
+
+    while (err != SQLITE_ROW  && attempts-- > 0)
+    {
+      sqlite3_reset(stmt);
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      err = sqlite3_step(stmt);
+    }
 
     if (err == SQLITE_ROW)
     {
@@ -148,12 +156,13 @@ namespace cads
       z_element *z = (z_element *)sqlite3_column_blob(stmt, 2);
       int len = sqlite3_column_bytes(stmt, 2) / sizeof(*z);
       z_type zv{z, z + len};
-      // err = sqlite3_step(stmt);
+
       sqlite3_reset(stmt);
       return {y, x_off, zv};
     }
     else
     {
+      dblog.error("fetch_profile:sqlite3_step Code:{}", err);
       sqlite3_reset(stmt);
       return {std::numeric_limits<y_type>::max(), NAN, {}};
     }
@@ -172,6 +181,15 @@ namespace cads
     err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
 
     err = sqlite3_step(stmt);
+    auto attempts = 512;
+
+    while (err != SQLITE_ROW && attempts-- > 0)
+    {
+      sqlite3_reset(stmt);
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      err = sqlite3_step(stmt);
+    }
+
 
     std::tuple<double, double, double, double, double> rtn;
     if (err == SQLITE_ROW)
@@ -189,10 +207,8 @@ namespace cads
       rtn = {1.0, 1.0, 1.0, 1.0, 1.0};
     }
 
-    if (stmt != nullptr)
-      sqlite3_finalize(stmt);
-    if (db != nullptr)
-      sqlite3_close(db);
+    sqlite3_finalize(stmt);
+    sqlite3_close(db);
 
     return rtn;
   }
@@ -213,18 +229,23 @@ namespace cads
     err = sqlite3_bind_double(stmt, 4, z_off);
     err = sqlite3_bind_double(stmt, 5, encoder_res);
 
-    err = SQLITE_BUSY;
+    err = sqlite3_step(stmt);
+    auto attempts = 512;
 
-    while (err == SQLITE_BUSY)
+    while (err != SQLITE_DONE && attempts-- > 0)
     {
+      sqlite3_reset(stmt);
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
       err = sqlite3_step(stmt);
-      std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
 
-    if (stmt != nullptr)
-      sqlite3_finalize(stmt);
-    if (db != nullptr)
-      sqlite3_close(db);
+    if (err != SQLITE_DONE)
+    {
+      dblog.error("SQLite Error Code:{}", err);
+    }
+
+    sqlite3_finalize(stmt);
+    sqlite3_close(db);
   }
 
   void prepare_step_query(sqlite3 *db, std::string query)
@@ -237,10 +258,12 @@ namespace cads
       std::throw_with_nested(std::runtime_error(query));
     }
 
+    err = sqlite3_step(stmt);
     auto attempts = 512;
 
     while (err != SQLITE_DONE && attempts-- > 0)
     {
+      sqlite3_reset(stmt);
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
       err = sqlite3_step(stmt);
     }
@@ -249,88 +272,13 @@ namespace cads
     {
       std::throw_with_nested(std::runtime_error(query));
     }
+
     sqlite3_finalize(stmt);
-  }
-
-  void store_profile_thread(BlockingReaderWriterQueue<profile> &db_fifo)
-  {
-
-    auto log = spdlog::rotating_logger_st("db", "db.log", 1024 * 1024 * 5, 1);
-
-    sqlite3 *db = nullptr;
-    const char *db_name = global_config["db_name"].get<std::string>().c_str();
-
-    int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_SHAREDCACHE, nullptr);
-
-    sqlite3_stmt *stmt = nullptr;
-    auto query = R"(PRAGMA synchronous=OFF)"s;
-    prepare_step_query(db,query);
-
-    query = R"("PRAGMA journal_mode = MEMORY")"s;
-    prepare_step_query(db,query);
-
-    query = R"("PRAGMA temp_store = MEMORY")"s;
-    prepare_step_query(db,query);
-
-    query = R"("PRAGMA mmap_size = 10000000")"s;
-    prepare_step_query(db,query);
-
-    query = R"("PRAGMA page_size = 32768")"s;
-    prepare_step_query(db,query);
-
-    query = R"(INSERT OR REPLACE INTO PROFILE (y,x_off,z) VALUES (?,?,?))"s;
-    err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
-
-    while (true)
-    {
-
-      log->flush();
-      profile p;
-      db_fifo.wait_dequeue(p);
-
-      if (p.y == std::numeric_limits<y_type>::max())
-        break;
-
-      if constexpr (std::is_same_v<y_type, double>)
-      {
-        err = sqlite3_bind_double(stmt, 1, (double)p.y);
-      }
-      else
-      {
-        err = sqlite3_bind_int64(stmt, 1, (int64_t)p.y);
-      }
-
-      err = sqlite3_bind_double(stmt, 2, p.x_off);
-      err = sqlite3_bind_blob(stmt, 3, p.z.data(), p.z.size() * sizeof(int16_t), SQLITE_STATIC);
-
-      err = sqlite3_step(stmt);
-      auto attempts = 512;
-
-      while (err != SQLITE_DONE && attempts-- > 0)
-      {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        err = sqlite3_step(stmt);
-      }
-
-      if (err != SQLITE_DONE)
-      {
-        log->error("SQLite Error Code:{}", err);
-      }
-
-      sqlite3_reset(stmt);
-    }
-
-    if (stmt != nullptr)
-      sqlite3_finalize(stmt);
-    if (db != nullptr)
-      sqlite3_close(db);
   }
 
   coro<y_type, profile> store_profile_coro(profile p)
   {
 
-    auto log = spdlog::rotating_logger_st("db", "db.log", 1024 * 1024 * 5, 1);
-
     sqlite3 *db = nullptr;
     const char *db_name = global_config["db_name"].get<std::string>().c_str();
 
@@ -338,15 +286,15 @@ namespace cads
 
     sqlite3_stmt *stmt = nullptr;
     auto query = R"(PRAGMA synchronous=OFF)"s;
-    prepare_step_query(db,query);
+    prepare_step_query(db, query);
 
     query = R"(INSERT OR REPLACE INTO PROFILE (y,x_off,z) VALUES (?,?,?))"s;
     err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
 
     while (true)
     {
-      log->flush();
-      
+      dblog.flush();
+
       if constexpr (std::is_same_v<y_type, double>)
       {
         err = sqlite3_bind_double(stmt, 1, (double)p.y);
@@ -363,26 +311,24 @@ namespace cads
 
       while (err != SQLITE_DONE && attempts-- > 0)
       {
+        sqlite3_reset(stmt);
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         err = sqlite3_step(stmt);
       }
 
+      sqlite3_reset(stmt);
       if (err != SQLITE_DONE)
       {
-        log->error("SQLite Error Code:{}", err);
+        dblog.error("SQLite Error Code:{}", err);
       }
-
-      sqlite3_reset(stmt);
 
       p = co_yield p.y;
       if (p.y == std::numeric_limits<decltype(p.y)>::max())
         break;
     }
 
-    if (stmt != nullptr)
-      sqlite3_finalize(stmt);
-    if (db != nullptr)
-      sqlite3_close(db);
+    sqlite3_finalize(stmt);
+    sqlite3_close(db);
 
     co_return std::numeric_limits<decltype(p.y)>::max();
   }
@@ -403,8 +349,19 @@ namespace cads
     err = sqlite3_bind_blob(stmt, 3, p.z.data(), p.z.size() * sizeof(z_element), SQLITE_STATIC);
 
     err = sqlite3_step(stmt);
+    auto attempts = 512;
 
-    sqlite3_reset(stmt);
+    while (err != SQLITE_DONE && attempts-- > 0)
+    {
+      sqlite3_reset(stmt);
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      err = sqlite3_step(stmt);
+    }
+
+    if (err != SQLITE_DONE)
+    {
+      dblog.error("SQLite Error Code:{}", err);
+    }
 
     return err == SQLITE_DONE;
   }
@@ -412,12 +369,9 @@ namespace cads
   void close_db(sqlite3 *db, sqlite3_stmt *stmt, sqlite3_stmt *stmt2)
   {
 
-    if (stmt != nullptr)
-      sqlite3_finalize(stmt);
-    if (stmt2 != nullptr)
-      sqlite3_finalize(stmt2);
-    if (db != nullptr)
-      sqlite3_close(db);
+    sqlite3_finalize(stmt);
+    sqlite3_finalize(stmt2);
+    sqlite3_close(db);
   }
 
 }
