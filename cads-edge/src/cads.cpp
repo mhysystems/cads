@@ -505,9 +505,9 @@ namespace cads
     auto [bottom, top] = barrel_offset(1024, z_resolution, gocatorFifo);
 
     store_profile_parameters(y_resolution, x_resolution, z_resolution, -bottom * z_resolution, encoder_resolution);
-    std::thread([=]()
-                { http_post_profile_properties(y_resolution, x_resolution, z_resolution, -bottom * z_resolution, ts); })
-        .detach();
+    // std::thread([=]()
+    //             { http_post_profile_properties(y_resolution, x_resolution, z_resolution, -bottom * z_resolution, ts); })
+    //     .detach();
 
     return {x_resolution, y_resolution, z_resolution, bottom};
   }

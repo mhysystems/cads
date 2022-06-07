@@ -198,6 +198,8 @@ void http_post_thread_bulk(moodycamel::BlockingReaderWriterQueue<y_type> &upload
     if(y == 0) {
       ts = fmt::format("{:%F-%H-%M}", std::chrono::system_clock::now());
       endpoint = {ReplaceString(global_config["upload_profile_to"].get<std::string>(),"%DATETIME%"s,ts)};
+      auto [y_resolution, x_resolution, z_resolution, z_offset, encoderResolution] = fetch_profile_parameters(db_name);
+      http_post_profile_properties(y_resolution,x_resolution,z_resolution,z_offset,ts);
     }
 
     auto p = fetch_profile(stmt,y) ; 
