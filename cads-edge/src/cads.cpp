@@ -53,8 +53,7 @@ using json = nlohmann::json;
 using namespace std::chrono;
 using CadsMat = cv::UMat; // cv::cuda::GpuMat
 
-auto dup_filter = std::make_shared<spdlog::sinks::dup_filter_sink_st>();
-spdlog::logger cadslog("cads", {dup_filter, std::make_shared<spdlog::sinks::stdout_color_sink_st>()});
+spdlog::logger cadslog("cads", {std::make_shared<spdlog::sinks::rotating_file_sink_st>("cads.log", 1024 * 1024 * 5, 1), std::make_shared<spdlog::sinks::stdout_color_sink_st>()});
 
 namespace cads
 {
@@ -519,7 +518,6 @@ namespace cads
 
   void process_one_revolution()
   {
-    dup_filter->add_sink(std::make_shared<spdlog::sinks::rotating_file_sink_st>("cads.log", 1024 * 1024 * 5, 1));
     create_db(global_config["db_name"].get<std::string>().c_str());
 
     BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
@@ -576,7 +574,7 @@ namespace cads
 
       if (invalid)
       {
-        cadslog.error("Barrel not detected, profile is invalid");
+        //cadslog.error("Barrel not detected, profile is invalid");
       }
 
       auto bottom_filtered = iirfilter(bottom_avg);
