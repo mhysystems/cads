@@ -15,7 +15,7 @@ namespace cads
     {
       R value_out;
       pass_value() = default;
-      pass_value(R &a) : value_out(a) {}
+      pass_value(R a) : value_out(a) {}
       constexpr bool await_ready() const noexcept { return false; }
 
       constexpr void await_suspend(handle_type) const noexcept {}

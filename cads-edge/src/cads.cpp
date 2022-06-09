@@ -5,8 +5,8 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/sinks/dup_filter_sink.h>
 
-#include <csv.hpp>
 #include <cads.h>
 #include <regression.h>
 #include <nlohmann/json.hpp>
@@ -29,12 +29,12 @@
 #include <vector>
 #include <tuple>
 #include <algorithm>
-#include <deque>
 #include <thread>
 #include <memory>
 #include <ranges>
 #include <chrono>
 #include <sstream>
+#include <future>
 
 #include <filters.h>
 #include <edge_detection.h>
@@ -53,7 +53,8 @@ using json = nlohmann::json;
 using namespace std::chrono;
 using CadsMat = cv::UMat; // cv::cuda::GpuMat
 
-spdlog::logger cadslog("cads", {std::make_shared<spdlog::sinks::rotating_file_sink_st>("cads.log", 1024 * 1024 * 5, 1), std::make_shared<spdlog::sinks::stdout_color_sink_st>()});
+auto dup_filter = std::make_shared<spdlog::sinks::dup_filter_sink_st>();
+spdlog::logger cadslog("cads", {dup_filter, std::make_shared<spdlog::sinks::stdout_color_sink_st>()});
 
 namespace cads
 {
@@ -100,23 +101,20 @@ namespace cads
 
     auto p = get<profile>(get<1>(m));
 
-    BlockingReaderWriterQueue<y_type> upload_fifo;
-
-    std::jthread upload(http_post_thread_bulk, std::ref(upload_fifo));
-
     auto store_profile = store_profile_coro(p);
 
     enum state
     {
       waiting,
       processing,
+      waitthread,
       finished
     };
 
     state s = waiting;
 
     std::chrono::time_point<date::local_t, std::chrono::days> today;
-
+    std::future<int> fut;
     do
     {
 
@@ -129,14 +127,11 @@ namespace cads
         auto daily_time = duration_cast<seconds>(now - today);
         auto current_hour = chrono::floor<chrono::hours>(daily_time);
 
-        if (p.y == 0 && upload_fifo.size_approx() == 0 && current_hour >= trigger_hour)
+        if (p.y == 0 && current_hour >= trigger_hour)
         {
           auto [invalid, y] = store_profile(p);
-          cadslog.info(fmt::format("Enqueuing into upload fifo. Is invalid? {}",invalid));
-          cadslog.flush();
           if (!invalid)
-            upload_fifo.enqueue(y);
-          s = processing;
+            s = processing;
         }
         break;
       }
@@ -144,18 +139,25 @@ namespace cads
       {
         if (p.y == 0)
         {
+          fut = std::async(http_post_whole_belt);
           cadslog.info("Finished Processing");
           cadslog.flush();
-          s = finished;
+          s = waitthread;
           break;
         }
 
         auto [invalid, y] = store_profile(p);
-        if (!invalid)
-          upload_fifo.enqueue(y);
+        if (invalid)
+          s = waiting;
 
         break;
       }
+      case waitthread:
+        if (fut.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+          fut.get();
+          s = finished;
+        }
+        break;
       case finished:
       {
         auto now = current_zone()->to_local(system_clock::now());
@@ -176,7 +178,8 @@ namespace cads
       }
     } while (get<0>(m) != msgid::finished);
 
-    upload_fifo.enqueue(std::numeric_limits<y_type>::max());
+    cadslog.info("Final Upload");
+    http_post_whole_belt();
     cadslog.info("Stopping save_send_thread");
   }
 
@@ -313,7 +316,7 @@ namespace cads
 
   void store_profile_only()
   {
-
+#if 0
     auto db_name = global_config["db_name"].get<std::string>();
     create_db(db_name);
 
@@ -359,6 +362,7 @@ namespace cads
 
     gocator->Stop();
     close_db(db, stmt);
+#endif
   }
 
   void shift_Mat(cv::Mat &m)
@@ -457,7 +461,8 @@ namespace cads
 
       profile_fifo.wait_dequeue(m);
 
-      if (std::get<0>(m) != msgid::scan) {
+      if (std::get<0>(m) != msgid::scan)
+      {
         break;
       }
 
@@ -514,9 +519,9 @@ namespace cads
 
   void process_one_revolution()
   {
-
+    dup_filter->add_sink(std::make_shared<spdlog::sinks::rotating_file_sink_st>("cads.log", 1024 * 1024 * 5, 1));
     create_db(global_config["db_name"].get<std::string>().c_str());
-    
+
     BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
     BlockingReaderWriterQueue<msg> winFifo(4096 * 1024);
 
@@ -568,11 +573,12 @@ namespace cads
 
       spike_filter(iz, spike_window_size);
       auto [bottom_avg, top_avg, invalid] = barrel_offset(iz, z_resolution, z_height_mm);
-      
-      if(invalid) {
+
+      if (invalid)
+      {
         cadslog.error("Barrel not detected, profile is invalid");
       }
-      
+
       auto bottom_filtered = iirfilter(bottom_avg);
 
       auto [delayed, dd] = delay({iy, ix, iz});

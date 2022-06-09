@@ -38,6 +38,7 @@ TEST(cads, find_profile_edges_nans_outer)
 
 TEST(cads, search_for_fiducial)
 {
+#if 0
   const auto max_y = 169888; 
   auto y_res = 5.5758;
   auto x_res = 0.795;
@@ -70,11 +71,13 @@ TEST(cads, search_for_fiducial)
   
   close_db(db,ignore);
   ASSERT_EQ(b,0.0) << yy << '\n';
+#endif
 }
 
 
 TEST(cads, search_for_fiducial16bitCorr)
 {
+#if 0
   const auto max_y = 169888; 
   auto y_res = 5.5758;
   auto x_res = 0.795;
@@ -108,6 +111,7 @@ TEST(cads, search_for_fiducial16bitCorr)
   
   close_db(db,ignore);
   ASSERT_EQ(b,0.0) << yy << '\n';
+#endif
 }
 
 TEST(cads, spike_filter)
