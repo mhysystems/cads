@@ -187,7 +187,7 @@ namespace cads
 
       if constexpr (std::is_same_v<y_type, double>)
       {
-        err = sqlite3_bind_double(stmt, 1, (double)p.y);
+        err = sqlite3_bind_double(stmt, 1, (double)std::round(p.y));
       }
       else
       {
