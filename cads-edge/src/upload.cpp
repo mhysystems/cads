@@ -129,7 +129,7 @@ namespace cads
   {
     using namespace flatbuffers;
 
-    const char *db_name = global_config["db_name"].get<std::string>().c_str();
+    auto db_name = global_config["db_name"].get<std::string>();
     auto endpoint_url = global_config["upload_profile_to"].get<std::string>();
     std::transform(endpoint_url.begin(), endpoint_url.end(), endpoint_url.begin(), [](unsigned char c)
                    { return std::tolower(c); });
