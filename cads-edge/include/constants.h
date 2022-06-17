@@ -1,14 +1,19 @@
 #pragma once
+
 #include <cstdint>
-#include <profile.h>
 #include <cmath>
 
+#include <nlohmann/json.hpp>
+#include <GoSdk/GoSdkDef.h>
+
+extern nlohmann::json global_config;
+
 namespace cads {
-  constexpr int16_t InvalidRange16Bit = 0x8000;
+
   template<typename T> struct NaN;
 
-  template<> struct NaN<int16_t> {
-    static constexpr int16_t value = InvalidRange16Bit;
+  template<> struct NaN<k16s> {
+    static constexpr k16s value = k16S_NULL;
   };
 
   template<> struct NaN<float> {

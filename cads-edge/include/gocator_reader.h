@@ -1,5 +1,4 @@
-#ifndef CADS_RECORDER_CSV_RECORDER_H
-#define CADS_RECORDER_CSV_RECORDER_H
+#pragma once
 
 #include <GoSdk/GoSensor.h>
 #include <GoSdk/GoSystem.h>
@@ -47,4 +46,4 @@ public:
 
 }
 
-#endif
+

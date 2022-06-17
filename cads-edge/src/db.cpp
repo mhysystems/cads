@@ -1,22 +1,19 @@
 #include "db.h"
-#include <nlohmann/json.hpp>
 
 #include <vector>
 #include <string>
 #include <iostream>
 
-#include <readerwriterqueue.h>
+#include <fmt/core.h>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
-#include <fmt/core.h>
+#include <readerwriterqueue.h>
+#include <constants.h>
+
 
 using namespace moodycamel;
-using json = nlohmann::json;
-extern json global_config;
-
-spdlog::logger dblog("db", {std::make_shared<spdlog::sinks::rotating_file_sink_st>("db.log", 1024 * 1024 * 5, 1), std::make_shared<spdlog::sinks::stdout_color_sink_st>()});
 
 namespace cads
 {
@@ -77,12 +74,12 @@ namespace cads
           if (err != SQLITE_DONE)
           {
             r &= false;
-            dblog.error("create_db:sqlite3_step Error Code:{}", err);
+            spdlog::get("db")->error("create_db:sqlite3_step Error Code:{}", err);
           }
         }
         else
         {
-          dblog.error("create_db:sqlite3_prepare_v2 Error Code:{}", err);
+          spdlog::get("db")->error("create_db:sqlite3_prepare_v2 Error Code:{}", err);
         }
 
         sqlite3_finalize(stmt);
@@ -90,23 +87,13 @@ namespace cads
     }
     else
     {
-      dblog.error("create_db:sqlite3_open_v2 Error Code:{}", err);
+      spdlog::get("db")->error("create_db:sqlite3_open_v2 Error Code:{}", err);
     }
 
     sqlite3_close(db);
 
     return r;
   }
-
-  /*
-    sqlite3_stmt *fetch_profile_statement(sqlite3 *db)
-    {
-      auto query = R"(SELECT * FROM PROFILE WHERE y=?)"s;
-      sqlite3_stmt *stmt = nullptr;
-      auto err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
-      return stmt;
-    }
-  */
 
   int store_profile_parameters(double y_res, double x_res, double z_res, double z_off, double encoder_res)
   {
@@ -131,7 +118,7 @@ namespace cads
 
     if (err != SQLITE_DONE)
     {
-      dblog.error("SQLite Error Code:{}", err);
+      spdlog::get("db")->error("SQLite Error Code:{}", err);
     }
 
     return err;
@@ -183,7 +170,6 @@ namespace cads
 
     while (true)
     {
-      dblog.flush();
 
       if constexpr (std::is_same_v<y_type, double>)
       {
@@ -194,14 +180,14 @@ namespace cads
         err = sqlite3_bind_int64(stmt, 1, (int64_t)p.y);
       }
       err = sqlite3_bind_double(stmt, 2, p.x_off);
-      err = sqlite3_bind_blob(stmt, 3, p.z.data(), p.z.size() * sizeof(int16_t), SQLITE_STATIC);
+      err = sqlite3_bind_blob(stmt, 3, p.z.data(), p.z.size() * sizeof(z_element), SQLITE_STATIC);
 
       err = db_step(stmt);
       sqlite3_reset(stmt);
       
       if (err != SQLITE_DONE)
       {
-        dblog.error("SQLite Error Code:{}", err);
+        spdlog::get("db")->error("SQLite Error Code:{}", err);
         break;
       }
 
@@ -303,7 +289,7 @@ namespace cads
       }
       else
       {
-        dblog.error("fetch_profile:sqlite3_step Code:{}", err);
+        spdlog::get("db")->error("fetch_profile:sqlite3_step Code:{}", err);
         break;
       }
       
@@ -313,41 +299,5 @@ namespace cads
     sqlite3_finalize(stmt);
     sqlite3_close(db);
   }
-
-  /*
-    bool store_profile(sqlite3_stmt *stmt, const profile &p)
-    {
-      int err;
-      if constexpr (std::is_same_v<decltype(p.y), double>)
-      {
-        err = sqlite3_bind_double(stmt, 1, (double)p.y);
-      }
-      else
-      {
-        err = sqlite3_bind_int64(stmt, 1, (int64_t)p.y);
-      }
-
-      err = sqlite3_bind_double(stmt, 2, p.x_off);
-      err = sqlite3_bind_blob(stmt, 3, p.z.data(), p.z.size() * sizeof(z_element), SQLITE_STATIC);
-
-      err = sqlite3_step(stmt);
-      auto attempts = 512;
-
-      while (err != SQLITE_DONE && attempts-- > 0)
-      {
-        sqlite3_reset(stmt);
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        err = sqlite3_step(stmt);
-      }
-
-      if (err != SQLITE_DONE)
-      {
-        dblog.error("SQLite Error Code:{}", err);
-      }
-
-      return err == SQLITE_DONE;
-    }
-
-  */
 
 }

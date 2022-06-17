@@ -2,6 +2,7 @@
 
 #include <coroutine>
 #include <tuple>
+#include <exception>
 
 namespace cads
 {

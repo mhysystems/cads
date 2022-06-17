@@ -61,15 +61,7 @@ namespace cads
     m_gocatorFifo.enqueue({msgid::resolutions,std::tuple<double, double, double, double, double>{yResolution, xResolution, zResolution, zOffset, encoderResolution}});
     
     m_yResolution = yResolution;
-    m_xResolution = xResolution;
-    m_zResolution = zResolution;
-    m_zOffset = zOffset;
     m_encoder_resolution = encoderResolution;
-
-    {
-      unique_lock<mutex> lock(m_mutex);
-      m_condition.notify_all();
-    }
 
     sqlite3 *db = nullptr;
     sqlite3_stmt *stmt = nullptr;
@@ -78,11 +70,9 @@ namespace cads
     auto query = R"(SELECT * FROM PROFILE ORDER BY Y)"s;
     err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
 
-    auto start = std::chrono::high_resolution_clock::now();
-    uint64_t cnt = 0;
     while (m_loop)
     {
-      ++cnt;
+
       err = sqlite3_step(stmt);
 
       decltype(profile::y) y;
@@ -109,10 +99,6 @@ namespace cads
         m_loop = false;
       }
     }
-
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    spdlog::info("CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, (double)cnt / duration);
 
     sqlite3_finalize(stmt);
     sqlite3_close(db);

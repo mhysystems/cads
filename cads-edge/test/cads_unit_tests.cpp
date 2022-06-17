@@ -10,6 +10,8 @@
 #include <filters.h>
 #include <constants.h>
 
+#include <dynamic_processing.h>
+
 using namespace cads;
 
 TEST(cads, make_fiducial)
@@ -35,6 +37,15 @@ TEST(cads, find_profile_edges_nans_outer)
   std::tuple<int,int> b{7,12};
   ASSERT_EQ(a,b);
 }
+
+TEST(cads, dynamic_processing)
+{
+  profile p;
+  auto proc = lua_processing_coro();
+  auto [e,a] = proc(p);
+  ASSERT_EQ(a,9);
+}
+
 
 TEST(cads, search_for_fiducial)
 {

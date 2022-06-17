@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <ranges>
 #include <window.hpp>
-#include <global_config.h>
 #include <ranges>
 
 #include <Iir.h>

@@ -1,6 +1,4 @@
 #include "gocator_reader.h"
-#include <z_data_generated.h>
-
 
 #include <GoSdk/GoSdk.h>
 
@@ -256,13 +254,8 @@ kStatus GocatorReader::OnData(GoSensor sensor, GoDataSet dataset)
 
 		if(m_first_frame) {
       m_first_frame = false;
-			spdlog::info("First frame recieved from gocator");
-      m_xResolution = xResolution;
-      m_zResolution = zResolution;
-      m_zOffset = zOffset;
-      m_yOffset = encoder;
-      m_gocatorFifo.enqueue({msgid::resolutions,resolutions_t{m_yResolution, xResolution, zResolution, zOffset, m_encoder_resolution}});
-      
+			spdlog::get("gocator")->info("First frame recieved from gocator");
+      m_gocatorFifo.enqueue({msgid::resolutions,resolutions_t{m_yResolution, xResolution, zResolution, zOffset, m_encoder_resolution}});  
 		}
 
     if(m_use_encoder) {
@@ -280,14 +273,18 @@ kStatus GocatorReader::OnData(GoSensor sensor, GoDataSet dataset)
 		for (; profile_begin < profile_end && *profile_begin == InvalidRange16Bit ;++profile_begin){}
 
 		auto samples_width = distance(profile,profile_begin);
-
-	  m_gocatorFifo.enqueue({msgid::scan,cads::profile{y,xOffset+samples_width*xResolution,{profile_begin,profile_end}}});		
+    
+	  m_gocatorFifo.enqueue({msgid::scan,cads::profile{y,xOffset+samples_width*xResolution,GocatorReaderBase::k16sToFloat(profile_begin,profile_end,zResolution,zOffset)}});		
 
     GoDestroy(dataset);
 
 		{
 			unique_lock<mutex> lock(m_mutex);
 			m_condition.notify_all();
+    }
+
+    if(m_gocatorFifo.size_approx() > 2) {
+      spdlog::get("gocator")->error("Cads Showing signs of not being able to keep up with data source");
     }
 
     return kOK;

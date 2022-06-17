@@ -4,7 +4,7 @@ namespace cads_flatworld;
 table profile{
 	frame : double;
 	x_off : double;
-	z_samples : [short];
+	z_samples : [float];
 }
 
 table profile_array {

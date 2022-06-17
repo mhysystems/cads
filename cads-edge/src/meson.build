@@ -7,12 +7,13 @@ cadsSrc += files(
   'regression.cpp', 
   'nan_removal.cpp',
   'fiducial.cpp',
-  'global_variables.cpp',
   'sqlite_gocator_reader.cpp',
   'gocator_reader_base.cpp',
   'filters.cpp',
   'edge_detection.cpp',
   'profile.cpp',
-  'window.cpp'
+  'constants.cpp',
+  'window.cpp',
+  'dynamic_processing.cpp'
 
 )

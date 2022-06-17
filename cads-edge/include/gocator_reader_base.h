@@ -1,13 +1,17 @@
 #pragma once
 
-#include <readerwriterqueue.h>
-#include <profile.h>
-#include <msg.h>
-
 #include <condition_variable>
 #include <atomic>
 #include <mutex>
 #include <tuple>
+
+#include <GoSdk/GoSdkDef.h>
+
+#include <readerwriterqueue.h>
+#include <msg.h>
+#include <profile.h>
+#include <constants.h>
+
 
 namespace cads
 {
@@ -24,14 +28,13 @@ class GocatorReaderBase
 protected:
 	moodycamel::BlockingReaderWriterQueue<msg>& m_gocatorFifo;
   double m_yResolution = 1.0;
-  double m_xResolution = 1.0;
-  double m_zResolution = 1.0;
-  double m_zOffset = 1.0;
   double m_encoder_resolution = 1.0;
   std::condition_variable m_condition;
   std::mutex m_mutex;
   std::atomic<bool> m_loop;
   std::atomic<bool> m_first_frame = true;
+  
+  z_type k16sToFloat(k16s*, k16s*, double, double);
 
 public:
 
@@ -39,7 +42,6 @@ public:
 	virtual void Start() = 0;
 	virtual void Stop() = 0;
 	GocatorReaderBase(moodycamel::BlockingReaderWriterQueue<msg>&);
-  virtual resolutions_t get_gocator_constants();
 
 };
 

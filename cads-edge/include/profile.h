@@ -5,10 +5,11 @@
 #include <cstdint>
 #include <deque>
 #include <limits>
+#include <cmath>
 
 namespace cads
 {
-  using z_element = int16_t;
+  using z_element = float; //int16_t;
   using y_type = double;
   using z_type = std::vector<z_element>;
   using profile = struct profile{y_type y; double x_off; z_type z;}; 
