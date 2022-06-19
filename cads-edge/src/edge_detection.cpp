@@ -33,7 +33,7 @@ template<typename T> int edge(T s, T e,int len) {
   }
   else{
     auto window_len = s + len > e ? sr::distance(s,e) : len;
-    auto nan_count = (double)sr::count(s,s + window_len, NaN<z_type::value_type>::value);
+    auto nan_count = (double)sr::count_if(s,s + window_len, [](z_element e) {return NaN<z_element>::isnan(e);});
     if(nan_count / window_len > 0.9) return 0;
     else return d + belt(r,e,len);
   }
