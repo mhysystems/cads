@@ -4,7 +4,6 @@ project('cads', ['c','cpp'],
 
 add_project_arguments('-w',language : 'cpp')
 
-
 thread = dependency('threads')
 boost = dependency('boost', modules : ['program_options','math_tr1f'])
 sqlite = dependency('sqlite3')

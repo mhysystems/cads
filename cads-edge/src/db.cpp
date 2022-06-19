@@ -54,8 +54,8 @@ namespace cads
     vector<string> tables{
         R"(DROP TABLE IF EXISTS PROFILE;)"s,
         R"(VACUUM;)"s,
-        fmt::format(R"(CREATE TABLE IF NOT EXISTS PROFILE (y {} PRIMARY KEY, x_off REAL NOT NULL, z BLOB NOT NULL);)", ytype),
-        R"(CREATE TABLE IF NOT EXISTS PARAMETERS (row_id INTEGER PRIMARY KEY,  y_res REAL NOT NULL, x_res REAL NOT NULL, z_res REAL NOT NULL, z_off REAL NOT NULL, encoder_res REAL NOT NULL);)"s
+        fmt::format(R"(CREATE TABLE IF NOT EXISTS PROFILE (revid INTEGER NOT NULL, idx INTEGER NOT NULL,y {} NOT NULL, x_off REAL NOT NULL, z BLOB NOT NULL);)", ytype),
+        R"(CREATE TABLE IF NOT EXISTS PARAMETERS (y_res REAL NOT NULL, x_res REAL NOT NULL, z_res REAL NOT NULL, z_off REAL NOT NULL, encoder_res REAL NOT NULL);)"s
         };
 
     int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);
@@ -103,7 +103,7 @@ namespace cads
     const char *db_name = global_config["db_name"].get<std::string>().c_str();
     int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_SHAREDCACHE, nullptr);
 
-    auto query = R"(INSERT OR REPLACE INTO PARAMETERS (row_id,y_res,x_res,z_res,z_off,encoder_res) VALUES (0,?,?,?,?,?))"s;
+    auto query = R"(INSERT OR REPLACE INTO PARAMETERS (rowid,y_res,x_res,z_res,z_off,encoder_res) VALUES (0,?,?,?,?,?))"s;
     err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
     err = sqlite3_bind_double(stmt, 1, y_res);
     err = sqlite3_bind_double(stmt, 2, x_res);
@@ -122,82 +122,6 @@ namespace cads
     }
 
     return err;
-  }
-
-  void prepare_step_query(sqlite3 *db, std::string query)
-  {
-    sqlite3_stmt *stmt = nullptr;
-    auto err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
-
-    if (err != SQLITE_OK)
-    {
-      std::throw_with_nested(std::runtime_error(query));
-    }
-
-    err = sqlite3_step(stmt);
-    auto attempts = 512;
-
-    while (err != SQLITE_DONE && attempts-- > 0)
-    {
-      sqlite3_reset(stmt);
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      err = sqlite3_step(stmt);
-    }
-
-    if (err != SQLITE_DONE)
-    {
-      std::throw_with_nested(std::runtime_error(query));
-    }
-
-    sqlite3_finalize(stmt);
-  }
-
-  
-  coro<int, profile> store_profile_coro(profile p)
-  {
-
-    sqlite3 *db = nullptr;
-    const char *db_name = global_config["db_name"].get<std::string>().c_str();
-
-    int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX, nullptr);
-
-    sqlite3_stmt *stmt = nullptr;
-    auto query = R"(PRAGMA synchronous=OFF)"s;
-    prepare_step_query(db, query);
-
-    query = R"(INSERT OR REPLACE INTO PROFILE (y,x_off,z) VALUES (?,?,?))"s;
-    err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
-
-    while (true)
-    {
-
-      if constexpr (std::is_same_v<y_type, double>)
-      {
-        err = sqlite3_bind_double(stmt, 1, (double)std::round(p.y));
-      }
-      else
-      {
-        err = sqlite3_bind_int64(stmt, 1, (int64_t)p.y);
-      }
-      err = sqlite3_bind_double(stmt, 2, p.x_off);
-      err = sqlite3_bind_blob(stmt, 3, p.z.data(), p.z.size() * sizeof(z_element), SQLITE_STATIC);
-
-      err = db_step(stmt);
-      sqlite3_reset(stmt);
-      
-      if (err != SQLITE_DONE)
-      {
-        spdlog::get("db")->error("SQLite Error Code:{}", err);
-        break;
-      }
-
-      p = co_yield err;
-      if (p.y == std::numeric_limits<decltype(p.y)>::max())
-        break;
-    }
-
-    sqlite3_finalize(stmt);
-    sqlite3_close(db);
   }
 
   std::tuple<double, double, double, double, double, int> fetch_profile_parameters(std::string name)
@@ -237,7 +161,91 @@ namespace cads
     return rtn;
   }
 
-  coro<std::tuple<profile, int>> fetch_belt_coro()
+  void prepare_step_query(sqlite3 *db, std::string query)
+  {
+    sqlite3_stmt *stmt = nullptr;
+    auto err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
+
+    if (err != SQLITE_OK)
+    {
+      std::throw_with_nested(std::runtime_error(query));
+    }
+
+    err = sqlite3_step(stmt);
+    auto attempts = 512;
+
+    while (err != SQLITE_DONE && attempts-- > 0)
+    {
+      sqlite3_reset(stmt);
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      err = sqlite3_step(stmt);
+    }
+
+    if (err != SQLITE_DONE)
+    {
+      std::throw_with_nested(std::runtime_error(query));
+    }
+
+    sqlite3_finalize(stmt);
+  }
+
+  
+  coro<int, std::tuple<int,int,profile>> store_profile_coro()
+  {
+
+    sqlite3 *db = nullptr;
+    const char *db_name = global_config["db_name"].get<std::string>().c_str();
+
+    int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX, nullptr);
+
+    sqlite3_stmt *stmt = nullptr;
+    auto query = R"(PRAGMA synchronous=OFF)"s;
+    prepare_step_query(db, query);
+
+    query = R"(INSERT OR REPLACE INTO PROFILE (revid,idx,y,x_off,z) VALUES (?,?,?,?,?))"s;
+    err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
+
+    int rev;
+    int idx;
+    profile p;
+
+    while (true)
+    {
+      std::tie(rev,idx,p) = co_yield err;
+      if (p.y == std::numeric_limits<decltype(p.y)>::max())
+        break;
+      
+      err = sqlite3_bind_int(stmt, 1, rev);
+      err = sqlite3_bind_int(stmt, 2, rev);
+
+      if constexpr (std::is_same_v<y_type, double>)
+      {
+        err = sqlite3_bind_double(stmt, 3, (double)std::round(p.y));
+      }
+      else
+      {
+        err = sqlite3_bind_int64(stmt, 3, (int64_t)p.y);
+      }
+      err = sqlite3_bind_double(stmt, 4, p.x_off);
+      err = sqlite3_bind_blob(stmt, 5, p.z.data(), p.z.size() * sizeof(z_element), SQLITE_STATIC);
+
+      err = db_step(stmt);
+      sqlite3_reset(stmt);
+      
+      if (err != SQLITE_DONE)
+      {
+        spdlog::get("db")->error("SQLite Error Code:{}", err);
+        break;
+      }
+
+    }
+
+    sqlite3_finalize(stmt);
+    sqlite3_close(db);
+  }
+
+  
+  coro<std::tuple<int,profile>> fetch_belt_coro(int revid,int last_idx)
   {
 
     sqlite3 *db = nullptr;
@@ -246,42 +254,28 @@ namespace cads
     int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_SHAREDCACHE, nullptr);
 
     sqlite3_stmt *stmt = nullptr;
-    auto query = R"(SELECT * FROM PROFILE ORDER BY Y)"s;
+    auto query =  fmt::format(R"(SELECT (idx,y,x_off,z) FROM PROFILE ORDER BY Y WHERE REVID = {} AND Y >= 0 AND IDX < {})",revid,last_idx);
 
     err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
 
-    if constexpr (std::is_same_v<y_type, double>)
-    {
-      err = sqlite3_bind_double(stmt, 1, (double)0);
-    }
-    else
-    {
-      err = sqlite3_bind_int64(stmt, 1, (int64_t)0);
-    }
-
     while (true)
     {
-      std::tuple<profile,int> p;
+      std::tuple<int,profile> p;
       err = db_step(stmt);
 
       if (err == SQLITE_ROW)
       {
         y_type y;
 
-        if constexpr (std::is_same_v<y_type, double>)
-        {
-          y = (y_type)sqlite3_column_double(stmt, 0);
-        }
-        else
-        {
-          y = (y_type)sqlite3_column_int64(stmt, 0);
-        }
+        auto idx = sqlite3_column_int(stmt, 0);
 
-        double x_off = sqlite3_column_double(stmt, 1);
-        z_element *z = (z_element *)sqlite3_column_blob(stmt, 2);
-        int len = sqlite3_column_bytes(stmt, 2) / sizeof(*z);
+        y = (y_type)sqlite3_column_double(stmt, 1);
 
-        p =  {{y, x_off, {z, z + len}}, 0};
+        double x_off = sqlite3_column_double(stmt, 2);
+        z_element *z = (z_element *)sqlite3_column_blob(stmt, 3);
+        int len = sqlite3_column_bytes(stmt, 3) / sizeof(*z);
+
+        p =  {idx,{y, x_off, {z, z + len}}};
       }
       else if (err == SQLITE_DONE)
       {

@@ -11,7 +11,7 @@
 namespace cads{
 
 void http_post_thread(moodycamel::BlockingReaderWriterQueue<uint64_t> &upload_fifo);
-int http_post_whole_belt();
+int http_post_whole_belt(int,int);
 
 }
 

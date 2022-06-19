@@ -2,7 +2,8 @@
 namespace cads_flatworld;
 
 table profile{
-	frame : double;
+	idx : int;
+  y : double;
 	x_off : double;
 	z_samples : [float];
 }

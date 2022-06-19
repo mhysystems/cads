@@ -1,9 +1,10 @@
 #pragma once
 
 #include <coro.hpp>
+#include <msg.h>
 #include <profile.h>
 
 namespace cads
 {
-  coro<int, profile> lua_processing_coro();
+  coro<double, msg> lua_processing_coro(int width);
 }

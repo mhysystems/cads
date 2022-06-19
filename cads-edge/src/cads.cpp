@@ -41,6 +41,7 @@
 #include <fmt/chrono.h>
 
 #include <coro.hpp>
+#include <dynamic_processing.h>
 
 
 using namespace std;
@@ -51,7 +52,7 @@ using CadsMat = cv::UMat; // cv::cuda::GpuMat
 namespace cads
 {
 
-  void save_send_thread(BlockingReaderWriterQueue<msg> &profile_fifo)
+  void save_send_thread(BlockingReaderWriterQueue<msg> &profile_fifo, int width)
   {
     using namespace date;
     using namespace chrono;
@@ -77,24 +78,6 @@ namespace cads
     }
 
     cads::msg m;
-    profile_fifo.wait_dequeue(m);
-
-    if (get<0>(m) != msgid::scan)
-    {
-      spdlog::get("cads")->error("msg has wrong msgid");
-
-      // Consume all input to avoid buffer overflows
-      do
-      {
-        profile_fifo.wait_dequeue(m);
-      } while (get<0>(m) != msgid::finished);
-
-      return;
-    }
-
-    auto p = get<profile>(get<1>(m));
-
-    auto store_profile = store_profile_coro(p);
 
     enum state
     {
@@ -105,11 +88,25 @@ namespace cads
     };
 
     state s = waiting;
-
+    auto realtime_processing = lua_processing_coro(width);
+    auto store_profile = store_profile_coro();
     std::chrono::time_point<date::local_t, std::chrono::days> today;
     std::future<int> fut;
-    do
+    profile p;
+    int revid = 0, idx = 0;
+
+    while(true)
     {
+      profile_fifo.wait_dequeue(m);
+
+      if (get<0>(m) == msgid::scan)
+      {
+        p = get<profile>(get<1>(m));
+      }else {
+        break;
+      }
+
+      auto [err,rslt] = realtime_processing(m);
 
       switch (s)
       {
@@ -122,9 +119,7 @@ namespace cads
 
         if (p.y == 0 && current_hour >= trigger_hour)
         {
-          auto [invalid, y] = store_profile(p);
-          if (!invalid)
-            s = processing;
+          s = processing;
         }
         break;
       }
@@ -132,22 +127,17 @@ namespace cads
       {
         if (p.y == 0)
         {
-          fut = std::async(http_post_whole_belt);
-          spdlog::get("cads")->info("Finished Processing");
+          fut = std::async(http_post_whole_belt,revid++,idx);
+           spdlog::get("cads")->info("Finished Processing");
           s = waitthread;
-          break;
         }
-
-        auto [invalid, y] = store_profile(p);
-        if (invalid)
-          s = waiting;
-
         break;
       }
       case waitthread:
-        if (fut.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+        if (fut.wait_for(std::chrono::seconds(0)) == std::future_status::ready && p.y == 0.0)
         {
           fut.get();
+          revid = 0;
           s = finished;
         }
         break;
@@ -162,16 +152,13 @@ namespace cads
       }
       }
 
-      profile_fifo.wait_dequeue(m);
+      if(p.y == 0.0) idx = 0;
+      auto [invalid, y] = store_profile({revid,idx++,p});
 
-      if (get<0>(m) == msgid::scan)
-      {
-        p = get<profile>(get<1>(m));
-      }
-    } while (get<0>(m) != msgid::finished);
+    }
 
     spdlog::get("cads")->info("Final Upload");
-    http_post_whole_belt();
+    http_post_whole_belt(revid,idx); // For replay and not having a complete belt, so something is uploaded
     spdlog::get("cads")->info("Stopping save_send_thread");
   }
 
@@ -341,21 +328,12 @@ namespace cads
     auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution] = get<resolutions_t>(get<1>(m));
     store_profile_parameters(y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution);
 
-    gocatorFifo.wait_dequeue(m);
-    m_id = get<0>(m);
-
-    if (m_id != cads::msgid::scan)
-    {
-      std::throw_with_nested(std::runtime_error("Message must be scan"));
-    }
-
-    auto p = get<profile>(get<1>(m));
-
-    auto store_profile = store_profile_coro(p);
+    auto store_profile = store_profile_coro();
 
     auto y_max_length = global_config["y_max_length"].get<double>();
     auto start = std::chrono::high_resolution_clock::now();
     double Y = 0.0;
+    int idx = 0;
 
     do
     {
@@ -369,7 +347,7 @@ namespace cads
       {
         auto p = get<profile>(get<1>(m));
         Y = p.y;
-        store_profile(p);
+        store_profile({0,idx++,p});
         break;
       }
       case cads::msgid::resolutions:
@@ -555,8 +533,6 @@ namespace cads
     auto gocator = mk_gocator(gocatorFifo);
     gocator->Start();
 
-    BlockingReaderWriterQueue<msg> db_fifo;
-    std::jthread save_send(save_send_thread, std::ref(db_fifo));
 
     auto [x_resolution, y_resolution, z_resolution, bottom, width_n] = preprocessing(gocatorFifo);
 
@@ -564,6 +540,8 @@ namespace cads
     const int nan_num = global_config["left_edge_nan"].get<int>();
     const int spike_window_size = nan_num / 4;
 
+    BlockingReaderWriterQueue<msg> db_fifo;
+    std::jthread save_send(save_send_thread, std::ref(db_fifo),width_n);
     std::jthread origin_dectection(window_processing_thread, x_resolution, y_resolution, z_resolution, width_n, std::ref(winFifo), std::ref(db_fifo));
 
     auto gradient = belt_regression(64, gocatorFifo);

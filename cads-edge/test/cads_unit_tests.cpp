@@ -9,8 +9,8 @@
 
 #include <filters.h>
 #include <constants.h>
-
 #include <dynamic_processing.h>
+#include <msg.h>
 
 using namespace cads;
 
@@ -40,10 +40,14 @@ TEST(cads, find_profile_edges_nans_outer)
 
 TEST(cads, dynamic_processing)
 {
-  profile p;
-  auto proc = lua_processing_coro();
-  auto [e,a] = proc(p);
-  ASSERT_EQ(a,9);
+  profile p = {0.0,0.0,z_type(2048,1.0)};
+  auto proc = lua_processing_coro(2048);
+  auto [e,a] = proc({msgid::scan,p});
+  proc({msgid::scan,p});
+  proc({msgid::scan,p});
+  proc({msgid::scan,p});
+  auto [e2,b] = proc({msgid::finished,0});
+  ASSERT_EQ(b,2048 * 18);
 }
 
 

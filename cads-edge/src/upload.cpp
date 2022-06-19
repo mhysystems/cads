@@ -115,7 +115,7 @@ namespace cads
   }
 
 
-  int http_post_whole_belt()
+  int http_post_whole_belt(int revid,int last_idx)
   {
     using namespace flatbuffers;
 
@@ -127,7 +127,7 @@ namespace cads
     if (endpoint_url == "null")
       return 0;
 
-    auto fetch_profile = fetch_belt_coro();
+    auto fetch_profile = fetch_belt_coro(revid,last_idx);
 
     auto start = std::chrono::high_resolution_clock::now();
 
@@ -151,11 +151,11 @@ namespace cads
     while (true)
     {
       auto [co_terminate, cv] = fetch_profile(0);
-      auto [p, err] = cv;
+      auto [idx,p] = cv;
 
-      if (!co_terminate && err == 0)
+      if (!co_terminate)
       {
-        profiles_flat.push_back(cads_flatworld::CreateprofileDirect(builder, p.y, p.x_off, &p.z));
+        profiles_flat.push_back(cads_flatworld::CreateprofileDirect(builder, idx, p.y, p.x_off, &p.z));
 
         if (profiles_flat.size() == 256)
         {
