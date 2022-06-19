@@ -19,7 +19,7 @@ std::tuple<z_element,z_element> find_minmax_z(const z_type& ps) {
   auto z_max = std::numeric_limits<z_element>::lowest();
 
   for(auto z: ps) {
-    if(z != NaN<z_element>::value) {
+    if(!NaN<z_element>::isnan(z)) {
       z_min = std::min(z,z_min);
       z_max = std::max(z,z_max);
     }
@@ -50,7 +50,7 @@ vector<tuple<double,z_element>> histogram(const z_type& ps, z_element min, z_ele
 
 
   for(auto z: ps) {
-    if(z != NaN<z_element>::value) {
+    if(!NaN<z_element>::isnan(z)) {
       int i = (z - min)*dz;
       hist[i] = {(i + 2)*(1/dz)+min,1+get<1>(hist[i])};
     }

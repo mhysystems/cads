@@ -75,7 +75,7 @@ vector<tuple<double,z_element>> histogram(const window& ps, z_element min, z_ele
   for(auto p : ps) {
     auto zs = p.z;
     for(auto z: zs) {
-      if(z != NaN<z_element>::value) {
+      if(!NaN<z_element>::isnan(z)) {
         int i = (z - min)*dz;
         hist[i] = {(i + 2)*(1/dz)+min,1+get<1>(hist[i])};
       }
