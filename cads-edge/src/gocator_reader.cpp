@@ -255,6 +255,7 @@ kStatus GocatorReader::OnData(GoSensor sensor, GoDataSet dataset)
 		if(m_first_frame) {
       m_first_frame = false;
 			spdlog::get("gocator")->info("First frame recieved from gocator");
+      m_yOffset = encoder;
       m_gocatorFifo.enqueue({msgid::resolutions,resolutions_t{m_yResolution, xResolution, zResolution, zOffset, m_encoder_resolution}});  
 		}
 
