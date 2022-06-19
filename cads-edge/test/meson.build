@@ -22,3 +22,4 @@ test('make_fiducial', cads_unit_tests, args : ['--gtest_filter=cads.make_fiducia
 test('search_for_fiducial', cads_unit_tests, args : ['--gtest_filter=cads.search_for_fiducial'])
 test('spike_filter', cads_unit_tests, args : ['--gtest_filter=cads.spike_filter','-c','tconfig.json'])
 test('dynamic_processing', cads_unit_tests, args : ['--gtest_filter=cads.dynamic_processing'])
+test('find_profile_edges_nans_outer', cads_unit_tests, args : ['--gtest_filter=cads.find_profile_edges_nans_outer'])

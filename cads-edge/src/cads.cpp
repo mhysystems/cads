@@ -9,7 +9,6 @@
 #include <upload.h>
 #include <constants.h>
 #include <fiducial.h>
-#include <nan_removal.h>
 #include <window.hpp>
 #include <readerwriterqueue.h>
 #include <gocator_reader.h>

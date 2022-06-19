@@ -11,12 +11,10 @@ namespace cads
 {
   void spike_filter(z_type& z, int window_size) {
 
-    auto z_min = NaN<z_element>::value;
-
     for(int i = 0; i < z.size()-window_size;) {
-      if(z[i] == z_min && z[i+window_size] == z_min) {
+      if(NaN<z_element>::isnan(z[i]) && NaN<z_element>::isnan(z[i+window_size])) {
         for(int j = i+1; j < i + window_size; ++j) {
-          z[j] = z_min;
+          z[j] = NaN<z_element>::value;
         }
         i += window_size;
       }else{
@@ -25,9 +23,9 @@ namespace cads
     }
 
     for(int i = z.size()-window_size; i < z.size()-3;) {
-      if(z[i] == z_min && z[i+3] == z_min) {
+      if(NaN<z_element>::isnan(z[i]) && NaN<z_element>::isnan(z[i+3])) {
         for(int j = i+1; j < i + 3; ++j) {
-          z[j] = z_min;
+          z[j] = NaN<z_element>::value;
         }
         i += 3;
       }else{
@@ -39,26 +37,24 @@ namespace cads
   void nan_filter(z_type& z) {
     namespace sr = std::ranges;
     
-    auto z_min = NaN<z_type::value_type>::value;
-    
-    auto prev_value_it = sr::find_if(z,[z_min](z_element a){ return a != z_min;}); 
-    z_element prev_value = prev_value_it != z.end() ? *prev_value_it : z_min; 
+    auto prev_value_it = sr::find_if(z,[](z_element a){ return !NaN<z_element>::isnan(a);}); 
+    z_element prev_value = prev_value_it != z.end() ? *prev_value_it : NaN<z_element>::value; 
     
     int mid = z.size() / 2;
 
     for(auto&& e : z | sr::views::take(mid)) {
-      if(e != z_min) {
+      if(!NaN<z_element>::isnan(e)) {
         prev_value = e;
       }else {
         e = prev_value;
       }
     }
 
-    auto prev_value_it2 = sr::find_if(z | sr::views::reverse ,[z_min](z_element a){ return a != z_min;}); 
-    prev_value = prev_value_it2 != z.rend() ? *prev_value_it2 : z_min;
+    auto prev_value_it2 = sr::find_if(z | sr::views::reverse ,[](z_element a){ return !NaN<z_element>::isnan(a);}); 
+    prev_value = prev_value_it2 != z.rend() ? *prev_value_it2 : NaN<z_element>::value;
 
-    for(auto&& e : z | sr::views::reverse | sr::views::take(mid) ) {
-      if(e != z_min) {
+    for(auto&& e : z | sr::views::reverse | sr::views::take(mid+1) ) {
+      if(!NaN<z_element>::isnan(e)) {
         prev_value = e;
       }else {
         e = prev_value;

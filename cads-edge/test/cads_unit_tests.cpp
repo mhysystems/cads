@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 
 #include <edge_detection.h>
-#include <nan_removal.h>
 #include <fiducial.h>
 #include <db.h>
 #include <window.hpp>
@@ -24,8 +23,10 @@ TEST(cads, make_fiducial)
 
 TEST(cads, nan_removal)
 {
-  auto a = nan_removal({-1,0,2,2,2,1,-1},0);
-  std::vector<int16_t> b{0,0,2,2,2,1,1};
+  auto n = NaN<z_element>::value;
+  std::vector<z_element> a = {1,n,2,n,2,1,n};
+  nan_filter(a);
+  std::vector<z_element> b{1,1,2,2,2,1,1};
   ASSERT_EQ(a,b);
 }
 
@@ -134,7 +135,8 @@ TEST(cads, spike_filter)
   auto v = NaN<z_type::value_type>::value;
   z_type in{1,v,1,1,v,1};
   spike_filter(in,3);
-  z_type out{1,v,v,v,v,1};
+  nan_filter(in);
+  z_type out{1,1,1,1,1,1};
   ASSERT_EQ(in,out);
 
 }

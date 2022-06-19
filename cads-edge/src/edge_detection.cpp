@@ -13,9 +13,8 @@ template<typename T> int edge(T s, T e,int len);
 template<typename T> int belt(T s, T e,int len) {
 
   namespace sr = std::ranges;
-  auto z_min = NaN<z_type::value_type>::value;
 
-  auto r = sr::find_if(s,e,[z_min](z_element z) {return z == z_min;} );
+  auto r = sr::find_if(s,e,[](z_element z) {return NaN<z_element>::isnan(z);} );
   auto d = sr::distance(s,r);
   if(r == e) return d;
   else return d + edge(r,e,len);
@@ -25,9 +24,8 @@ template<typename T> int belt(T s, T e,int len) {
 template<typename T> int edge(T s, T e,int len) {
 
   namespace sr = std::ranges;
-  auto z_min = NaN<z_type::value_type>::value;
 
-  auto r = sr::find_if(s,e,[z_min](z_element z) {return z != z_min;} );
+  auto r = sr::find_if(s,e,[](z_element z) {return !NaN<z_element>::isnan(z);} );
   auto d = sr::distance(s,r);
 
   if(d >= len || r == e) {
@@ -54,21 +52,19 @@ std::tuple<int,int> find_profile_edges_nans(const z_type& z, int len) {
 
 std::tuple<int,int> find_profile_edges_nans_outer(const z_type& z, int len) {
   
-  auto z_min = NaN<z_type::value_type>::value;
-  
   auto l = belt(z.begin(),z.end(),len) ;
-  auto cl = std::find_if(z.begin()+l,z.end(),[z_min](z_element z) {return z != z_min;});
+  auto cl = std::find_if(z.begin()+l,z.end(),[](z_element z) {return !NaN<z_element>::isnan(z);});
   l = std::distance(z.begin(),cl);
 
-  if(l > z.size() * 0.1) {
+  if(l >= z.size()) {
     l = 0;
   }
 
   auto r = belt(z.rbegin(),z.rend(),len);
-  auto rl = std::find_if(z.rbegin()+r,z.rend(),[z_min](z_element z) {return z != z_min;});
+  auto rl = std::find_if(z.rbegin()+r,z.rend(),[](z_element z) {return !NaN<z_element>::isnan(z);});
   r = z.size() - std::distance(z.rbegin(),rl);
   
-  if(r < z.size() * 0.9) {
+  if(r >= z.size()) {
     r = z.size();
   }
 
