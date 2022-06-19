@@ -428,7 +428,7 @@ namespace cads
     cv::Mat out(m1.rows - fiducial.rows + 1,m1.cols - fiducial.cols + 1, CV_32F,cv::Scalar::all(0.0f));
 
     auto y_max_length = global_config["y_max_length"].get<double>();
-    auto trigger_length = std::numeric_limits<y_type>::min();
+    auto trigger_length = std::numeric_limits<y_type>::lowest();
     y_type y_offset = 0;
 
     while (true)
@@ -477,7 +477,7 @@ namespace cads
         }
       }
 
-      if (trigger_length != std::numeric_limits<y_type>::min())
+      if (trigger_length != std::numeric_limits<y_type>::lowest())
       {
         next_fifo.enqueue({msgid::scan, profile_buffer.front()});
       }

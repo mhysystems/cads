@@ -16,7 +16,7 @@ namespace cads {
 std::tuple<z_element,z_element> find_minmax_z(const z_type& ps) {
   
   auto z_min = std::numeric_limits<z_element>::max();
-  auto z_max = std::numeric_limits<z_element>::min();
+  auto z_max = std::numeric_limits<z_element>::lowest();
 
   for(auto z: ps) {
     if(z != NaN<z_element>::value) {

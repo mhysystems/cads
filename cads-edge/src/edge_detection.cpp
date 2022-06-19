@@ -83,7 +83,7 @@ std::tuple<int,int> find_profile_edges_sobel(const z_type& z, int len, int x_wid
   std::fill(win.rbegin(),win.rbegin()+len,1.0);
 	
   auto min = std::numeric_limits<double>::max();
-	auto max = std::numeric_limits<double>::min();
+	auto max = std::numeric_limits<double>::lowest();
   int left = 0; // Left edge of belt
   int right = 0; // Right edge of belt
 
