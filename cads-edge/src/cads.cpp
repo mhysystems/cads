@@ -448,7 +448,7 @@ namespace cads
 
           trigger_length = y_max_length * 0.95;
 
-          fiducial_as_image(belt);
+          //fiducial_as_image(belt);
 
           y_offset += y;
 
