@@ -216,11 +216,11 @@ namespace cads
         break;
       
       err = sqlite3_bind_int(stmt, 1, rev);
-      err = sqlite3_bind_int(stmt, 2, rev);
+      err = sqlite3_bind_int(stmt, 2, idx);
 
       if constexpr (std::is_same_v<y_type, double>)
       {
-        err = sqlite3_bind_double(stmt, 3, (double)std::round(p.y));
+        err = sqlite3_bind_double(stmt, 3, p.y);
       }
       else
       {
