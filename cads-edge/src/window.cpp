@@ -103,7 +103,7 @@ tuple<z_element,z_element> barrel_offset(const window& win, double z_resolution,
   auto hist = histogram(win,z_min,z_max);
   
   const auto peak = get<0>(hist[0]);
-  const auto thickness = z_height_mm / z_resolution;
+  const auto thickness = z_height_mm;// / z_resolution;
   
   // Remove z values greater than the peak minus approx belt thickness.
   // Assumes the next peak will be the barrel values
