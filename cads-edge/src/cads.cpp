@@ -355,8 +355,10 @@ namespace cads
       }
       }
 
-    } while (get<0>(m) != msgid::finished && Y < y_max_length);
-
+    } while (get<0>(m) != msgid::finished && Y < 2 * y_max_length);
+    
+    store_profile({0,idx++,null_profile});
+    
     gocator->Stop();
   }
 
