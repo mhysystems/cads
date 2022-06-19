@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cmath>
+#include <limits>
 
 #include <nlohmann/json.hpp>
 #include <GoSdk/GoSdkDef.h>
@@ -17,7 +18,7 @@ namespace cads {
   };
 
   template<> struct NaN<float> {
-    static constexpr float value = NAN;
+    static constexpr float value = std::numeric_limits<float>::quiet_NaN();
   };
 }
 
