@@ -53,11 +53,10 @@ cv::Mat window_to_mat(const window& win, double x_res) {
 std::tuple<z_element,z_element> find_minmax_z(const window& ps) {
   auto z_min = std::numeric_limits<z_element>::max();
   auto z_max = std::numeric_limits<z_element>::lowest();
-  auto n = NaN<z_element>::value;
   
   for(auto p : ps) {
     for(auto z: p.z) {
-      if(z != n) {
+      if(!NaN<z_element>::isnan(z)) {
         z_min = std::min(z,z_min);
         z_max = std::max(z,z_max);
       }
