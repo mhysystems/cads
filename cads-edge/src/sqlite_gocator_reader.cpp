@@ -63,45 +63,23 @@ namespace cads
     m_yResolution = yResolution;
     m_encoder_resolution = encoderResolution;
 
-    sqlite3 *db = nullptr;
-    sqlite3_stmt *stmt = nullptr;
-
-    int err = sqlite3_open_v2(data_src.c_str(), &db, SQLITE_OPEN_READONLY, nullptr);
-    auto query = R"(SELECT * FROM PROFILE ORDER BY Y)"s;
-    err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
+    auto fetch_profile = fetch_belt_coro(0,std::numeric_limits<int>::max(),data_src);
 
     while (m_loop)
     {
 
-      err = sqlite3_step(stmt);
+      auto [co_terminate, cv] = fetch_profile(0);
+      auto [idx,p] = cv;
 
-      decltype(profile::y) y;
-      if (err == SQLITE_ROW)
-      {
-
-        if constexpr (std::is_same_v<decltype(y), double>)
-        {
-          y = sqlite3_column_double(stmt, 0);
-        }
-        else
-        {
-          y = (decltype(y))sqlite3_column_int64(stmt, 0);
-        }
-        double x_off = sqlite3_column_double(stmt, 1);
-        z_element *z = (z_element *)sqlite3_column_blob(stmt, 2);
-        int len = sqlite3_column_bytes(stmt, 2) / sizeof(*z);
-        
-        m_gocatorFifo.enqueue({msgid::scan,profile{y, x_off, {z, z + len}}});
-      }
-      else
-      {
+      if (co_terminate) {
         m_gocatorFifo.enqueue({msgid::finished,0});
         m_loop = false;
+        break;
       }
-    }
 
-    sqlite3_finalize(stmt);
-    sqlite3_close(db);
+      m_gocatorFifo.enqueue({msgid::scan,p});
+
+    }
   }
 
 }

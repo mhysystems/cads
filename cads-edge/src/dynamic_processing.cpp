@@ -31,9 +31,10 @@ namespace cads
   {
     luaL_Reg fields[]{
         {"__index", array_index},
-        {"__newindex", array_newindex}};
+        {"__newindex", array_newindex},
+        {NULL,NULL}};
 
-    luaL_newmetatable(L, "cads.window");
+    auto e = luaL_newmetatable(L, "cads.window");
     luaL_setfuncs(L, fields, 0);
     lua_pushlightuserdata(L, p);
     luaL_setmetatable(L, "cads.window");
@@ -67,6 +68,7 @@ namespace cads
     lua_State *L = luaL_newstate();
     luaL_openlibs(L);
     inject_global_array(L, window.data());
+    
     const char *s = R"""(function process(width,height) 
       local sum = 0
       for i = 1,width do
@@ -94,7 +96,7 @@ namespace cads
       case msgid::scan:
       {
         auto p = get<profile>(get<1>(m));
-        memmove(window.data() + width * sizeof(z_element), window.data(), width*(height-1)*sizeof(z_element)); // shift 2d array by one row
+        memmove(window.data() + width, window.data(), width*(height-1)*sizeof(z_element)); // shift 2d array by one row
         memcpy(window.data(), p.z.data(), width*sizeof(z_element));
         result = eval_lua_process(L,width,height);
         break;

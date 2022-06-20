@@ -1,5 +1,5 @@
 {
-  "data_source" : "/home/me/dev/cads/profiles/profile-2022-05-18.db", 
+  "data_source" : "/home/me/dev/cads/profiles/profilef-2022-06-20.db", 
   "y_max_length" : 901500,
   "z_height" : 27.0,
   "x_width"  : 1500,
@@ -24,7 +24,7 @@
   },
   "db_name" : "profile.db",
   "belt_cross_correlation_threshold" : 0.3,
-  "upload_profile_to" : "http://localhost:5000/api/whaleback/cv405b-%DATETIME%/bulk",
-  "upload_config_to" : "http://localhost:5000/api/whaleback/cv405b-%DATETIME%/meta",
+  "upload_profile_to" : "null",
+  "upload_config_to" : "null",
   "pipeline" : ["regression"]
 }

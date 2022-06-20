@@ -133,7 +133,7 @@ namespace cads
     const char *db_name = name.c_str();
     int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX, nullptr);
 
-    auto query = R"(SELECT * FROM PARAMETERS)"s;
+    auto query = R"(SELECT * FROM PARAMETERS WHERE ROWID = 0)"s;
     err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
 
     err = db_step(stmt);
@@ -143,11 +143,11 @@ namespace cads
     {
 
       rtn = {
+          sqlite3_column_double(stmt, 0),
           sqlite3_column_double(stmt, 1),
           sqlite3_column_double(stmt, 2),
           sqlite3_column_double(stmt, 3),
           sqlite3_column_double(stmt, 4),
-          sqlite3_column_double(stmt, 5),
           0};
     }
     else
@@ -245,16 +245,16 @@ namespace cads
   }
 
   
-  coro<std::tuple<int,profile>> fetch_belt_coro(int revid,int last_idx)
+  coro<std::tuple<int,profile>> fetch_belt_coro(int revid,int last_idx, std::string name)
   {
 
     sqlite3 *db = nullptr;
-    const char *db_name = global_config["db_name"].get<std::string>().c_str();
+    const char *db_name = name.empty() ? global_config["db_name"].get<std::string>().c_str() : name.c_str();
 
     int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_SHAREDCACHE, nullptr);
 
     sqlite3_stmt *stmt = nullptr;
-    auto query =  fmt::format(R"(SELECT (idx,y,x_off,z) FROM PROFILE ORDER BY Y WHERE REVID = {} AND Y >= 0 AND IDX < {})",revid,last_idx);
+    auto query =  fmt::format(R"(SELECT idx,y,x_off,z FROM PROFILE WHERE REVID = {} AND Y >= 0 AND IDX < {} ORDER BY Y)",revid,last_idx);
 
     err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
 

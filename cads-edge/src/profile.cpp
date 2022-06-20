@@ -61,7 +61,7 @@ vector<tuple<double,z_element>> histogram(const z_type& ps, z_element min, z_ele
   return hist;
 }
 
-tuple<z_element,z_element,bool> barrel_offset(const z_type& win, double z_resolution, double z_height_mm) {
+tuple<z_element,z_element,bool> barrel_offset(const z_type& win,double z_height_mm) {
 
     
   auto [z_min,z_max] = find_minmax_z(win);
@@ -70,7 +70,7 @@ tuple<z_element,z_element,bool> barrel_offset(const z_type& win, double z_resolu
   auto hist = histogram(win,z_min,z_max,100);
   
   const auto peak = get<0>(hist[0]);
-  const auto thickness = z_height_mm / z_resolution;
+  const auto thickness = z_height_mm;
   
   // Remove z values greater than the peak minus approx belt thickness.
   // Assumes the next peak will be the barrel values

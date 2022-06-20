@@ -4,7 +4,7 @@ namespace cads {
 
 void store_profile_only();
 void process();
-void process_experiment();
+void generate_signal();
 void stop_gocator();
 
 }

@@ -50,6 +50,27 @@ cv::Mat window_to_mat(const window& win, double x_res) {
 	return mat;
 }
 
+cv::Mat window_to_mat_fixed(const window& win, int width) {
+
+  if(win.size() < 1) return cv::Mat(0,0,CV_32F);
+
+  cv::Mat mat(win.size(),width,CV_32F,cv::Scalar::all(0.0f));
+	
+  int i = 0;
+  for(auto p : win) {
+
+    auto m = mat.ptr<float>(i++);
+
+    int j = 0;
+    
+    for(auto z : p.z) {
+       m[j++] = (float)z;
+    }
+  }
+
+	return mat;
+}
+
 std::tuple<z_element,z_element> find_minmax_z(const window& ps) {
   auto z_min = std::numeric_limits<z_element>::max();
   auto z_max = std::numeric_limits<z_element>::lowest();
@@ -86,8 +107,8 @@ vector<tuple<double,z_element>> histogram(const window& ps, z_element min, z_ele
 }
 
 double left_edge_avg_height(const cv::Mat& belt, const cv::Mat& fiducial) {
-  double minVal, maxVal;
-  cv::minMaxLoc( belt.colRange(0,fiducial.cols*1.5), &minVal, &maxVal);
+  //double minVal;
+  //cv::minMaxLoc( belt.colRange(0,fiducial.cols*1.5), &minVal);
   cv::Mat mout;
   cv::multiply(belt.colRange(0,fiducial.cols),fiducial,mout);
   auto avg_val = cv::sum(mout)[0] / cv::countNonZero(mout);

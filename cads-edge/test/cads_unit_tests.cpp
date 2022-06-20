@@ -48,7 +48,7 @@ TEST(cads, dynamic_processing)
   proc({msgid::scan,p});
   proc({msgid::scan,p});
   auto [e2,b] = proc({msgid::finished,0});
-  ASSERT_EQ(b,2048 * 18);
+  ASSERT_EQ(b,2048 * 128);
 }
 
 

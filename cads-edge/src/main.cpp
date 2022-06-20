@@ -54,7 +54,7 @@ int main(int argn, char **argv)
     ("savedb,d", po::bool_switch(), "Only save one approx belt")
     ("once,o", po::bool_switch(), "Run once")
     ("stop,s", po::bool_switch(), "Stop Gocator")
-    ("experiment,e", po::bool_switch(), "Test experimental features")
+    ("signal,e", po::bool_switch(), "Generate signal for input into python filter parameter creation")
     ("level,l", po::value<std::string>(), "Logging Level");
 
 	po::variables_map vm;
@@ -106,8 +106,8 @@ int main(int argn, char **argv)
     store_profile_only();
   }else if(vm["once"].as<bool>()) {
     process();
-  }else if(vm["experiment"].as<bool>()) {
-    process_experiment();
+  }else if(vm["signal"].as<bool>()) {
+    generate_signal();
   }else if(vm["stop"].as<bool>()) {
     stop_gocator();
   }else{
