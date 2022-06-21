@@ -1,6 +1,6 @@
 {
   "data_source" : "/home/me/dev/cads/profiles/profilef-2022-06-20.db", 
-  "y_max_length" : 901500,
+  "y_max_length" : 915000,
   "z_height" : 27.0,
   "x_width"  : 1500,
   "left_edge_nan" : 15,
@@ -23,7 +23,7 @@
             [ 1.00000000e+00, -1.99894049e+00,  1.00000000e+00,  1.00000000e+00, -1.99381952e+00,  9.94367640e-01]]
   },
   "db_name" : "profile.db",
-  "belt_cross_correlation_threshold" : 0.3,
+  "belt_cross_correlation_threshold" : 0.4,
   "upload_profile_to" : "null",
   "upload_config_to" : "null",
   "pipeline" : ["regression"]

@@ -11,18 +11,22 @@ def process_belt(db,off,num) :
     cur = conn.cursor()
     m = 99999999999
     rowcnt = 1    
-    ss = np.vectorize(lambda x :x if x != -32768 else -2627 ) 
+    #ss = np.vectorize(lambda x :x if x != -32768 else -2627 ) 
+    ss = np.vectorize(lambda x :x if not np.isnan(x) else -33.0 ) 
     yindex = 0
     while rowcnt > 0:
         rowcnt = 0
         b = []
-        for row in cur.execute(f"SELECT * from PROFILE where y >= ? order by y asc limit ?",(yindex,maxrows)):
+        for row in cur.execute(f"SELECT z from PROFILE where idx >= ? order by idx asc limit ?",(yindex,maxrows)):
             rowcnt = rowcnt + 1
-            z = np.frombuffer(row[2],dtype='i2')
+            #z = np.frombuffer(row[2],dtype='i2')
+            z = np.frombuffer(row[0],dtype='f')
             m = min(m,len(z))
             b.append(ss(z))
         if rowcnt > 0: 
-            i = Image.fromarray(np.array([a[:m] for a in b ]) * 0.2)
+            #i = Image.fromarray(np.array([a[:m] for a in b ]) * 0.2)
+            v = np.array([a[:m] for a in b ]) 
+            i = Image.fromarray(255 * (v - v.min()) / (v.max() - v.min()))
             i.convert("L").save(f"whaleback-{yindex}.png")
             yindex = yindex + maxrows
     conn.close()

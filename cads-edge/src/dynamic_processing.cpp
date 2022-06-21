@@ -62,7 +62,7 @@ namespace cads
 
   coro<double, msg> lua_processing_coro(int width)
   {
-    const int height = 128;
+    const int height = 1;
     auto window = std::vector<z_element>(width * height, 1.0/*NaN<z_element>::value*/);
 
     lua_State *L = luaL_newstate();
@@ -85,6 +85,7 @@ namespace cads
     }
 
     double result = 0.0;
+    uint64_t cnt = 0;
     cads::msg m;
     do
     {
@@ -98,7 +99,11 @@ namespace cads
         auto p = get<profile>(get<1>(m));
         memmove(window.data() + width, window.data(), width*(height-1)*sizeof(z_element)); // shift 2d array by one row
         memcpy(window.data(), p.z.data(), width*sizeof(z_element));
-        result = eval_lua_process(L,width,height);
+        
+        if(cnt++ % height == 0) {
+          result = eval_lua_process(L,width,height);
+        }
+        
         break;
       }
       case msgid::lua:

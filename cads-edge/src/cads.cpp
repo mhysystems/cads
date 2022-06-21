@@ -92,10 +92,14 @@ namespace cads
     std::chrono::time_point<date::local_t, std::chrono::days> today;
     std::future<int> fut;
     profile p;
-    int revid = 0, idx = 0;
+    int revid = 0, idx = 0, buffer_size_warning = 1024;
+
+    auto start = std::chrono::high_resolution_clock::now();
+    uint64_t cnt = 0;
 
     while (true)
     {
+      ++cnt;
       profile_fifo.wait_dequeue(m);
 
       if (get<0>(m) == msgid::scan)
@@ -107,8 +111,8 @@ namespace cads
         break;
       }
 
-      // auto [err,rslt] = realtime_processing(m);
-#if 0
+      auto [err, rslt] = realtime_processing(m);
+
       switch (s)
       {
       case waiting:
@@ -128,8 +132,8 @@ namespace cads
       {
         if (p.y == 0)
         {
-          fut = std::async(http_post_whole_belt,revid++,idx);
-           spdlog::get("cads")->info("Finished Processing");
+          fut = std::async(http_post_whole_belt, revid++, idx);
+          spdlog::get("cads")->info("Finished Processing");
           s = waitthread;
         }
         break;
@@ -152,11 +156,21 @@ namespace cads
         }
       }
       }
-#endif
+
       if (p.y == 0.0)
         idx = 0;
       auto [invalid, y] = store_profile({revid, idx++, p});
+
+
+      if (profile_fifo.size_approx() > buffer_size_warning)
+      {
+        spdlog::get("cads")->error("Cads Dynamic Processing showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
+        buffer_size_warning += buffer_size_warning;
+      }   
     }
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    spdlog::get("cads")->info("DYNAMIC PROCESSING - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, (double)cnt / duration);
 
     spdlog::get("cads")->info("Final Upload");
     http_post_whole_belt(revid, idx); // For replay and not having a complete belt, so something is uploaded
@@ -433,10 +447,13 @@ namespace cads
     auto y_max_length = global_config["y_max_length"].get<double>();
     auto trigger_length = std::numeric_limits<y_type>::lowest();
     y_type y_offset = 0;
+    auto start = std::chrono::high_resolution_clock::now();
+    uint64_t cnt = 0;
+    int buffer_size_warning = 1024;
 
     while (true)
     {
-
+      ++cnt;
       y_type y = profile_buffer.front().y;
       if (y >= trigger_length)
       {
@@ -451,7 +468,7 @@ namespace cads
 
           trigger_length = y_max_length * 0.95;
 
-          // fiducial_as_image(belt);
+          fiducial_as_image(belt);
 
           y_offset += y;
 
@@ -480,11 +497,9 @@ namespace cads
         }
       }
 
-      // if (trigger_length != std::numeric_limits<y_type>::lowest())
-      {
-        next_fifo.enqueue({msgid::scan, profile_buffer.front()});
-      }
-
+      
+      next_fifo.enqueue({msgid::scan, profile_buffer.front()});
+      
       profile_fifo.wait_dequeue(m);
 
       if (std::get<0>(m) != msgid::scan)
@@ -499,8 +514,18 @@ namespace cads
 
       profile_buffer.pop_front();
       profile_buffer.push_back({profile.y - y_offset, profile.x_off, profile.z});
+
+      if (profile_fifo.size_approx() > buffer_size_warning)
+      {
+        spdlog::get("cads")->error("Cads Origin Detection showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
+        buffer_size_warning += buffer_size_warning;
+      }   
     }
 
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    spdlog::get("cads")->info("ORIGIN DETECTION - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, (double)cnt / duration);
+    
     next_fifo.enqueue({msgid::finished, 0});
     spdlog::get("cads")->info("window_processing_thread");
   }
@@ -557,6 +582,8 @@ namespace cads
 
     auto start = std::chrono::high_resolution_clock::now();
 
+    int buffer_size_warning = 1024;
+
     cads::msg m;
 
     do
@@ -597,11 +624,10 @@ namespace cads
       nan_filter(z);
       regression_compensate(z, left_edge_index, right_edge_index, gradient);
       double edge_adjust = right_edge_index - left_edge_index - width_n;
-      left_edge_index += std::floor(edge_adjust / 2.0);
-      right_edge_index -= std::ceil(edge_adjust / 2.0);
+      right_edge_index += -edge_adjust;
 
       std::tie(bottom_avg, top_avg, invalid) = barrel_offset(z, z_height_mm);
-      barrel_height_compensate(z, -bottom_avg - (bottom-bottom_filtered));
+      barrel_height_compensate(z, -bottom_filtered);
 
       auto f = z | views::take(right_edge_index) | views::drop(left_edge_index);
 
