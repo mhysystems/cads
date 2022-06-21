@@ -71,11 +71,6 @@ namespace cads
     
     const char *s = R"""(function process(width,height) 
       local sum = 0
-      for i = 1,width do
-        for j = 0,height-1 do
-          sum = sum + win[j*width + i] 
-        end
-      end
       return sum
     end)""";
 
