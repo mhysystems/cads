@@ -26,5 +26,6 @@
   "belt_cross_correlation_threshold" : 0.3,
   "upload_profile_to" : "http://cads:hMe-%3A%2AZO%23%29dj%7B@cads.mhysystems.com/api/whaleback/cv405b-%DATETIME%/bulk",
   "upload_config_to" : "http://cads:hMe-%3A%2AZO%23%29dj%7B@cads.mhysystems.com/api/whaleback/cv405b-%DATETIME%/meta",
-  "pipeline" : ["regression"]
+  "lua_window_height" : 10,
+  "lua_fn" : "function process(width,height)\nlocal sum = 0\nfor i = 1,width do\nfor j = 0,height-1 do\nsum = sum + (win[j*width + i] < 28 and 1 or 0)\nend\nend\nreturn (sum / (width * height)) > 0.2 and 1 or 0\nend"
 }
