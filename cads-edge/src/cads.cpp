@@ -91,6 +91,7 @@ namespace cads
     auto store_profile = store_profile_coro();
     std::chrono::time_point<date::local_t, std::chrono::days> today;
     std::future<int> fut;
+    auto fut2 = std::async([&]()->std::tuple<bool,double>{return {true,0};});
     profile p;
     int revid = 0, idx = 0, buffer_size_warning = 1024;
 
@@ -101,7 +102,7 @@ namespace cads
     {
       ++cnt;
       profile_fifo.wait_dequeue(m);
-
+      
       if (get<0>(m) == msgid::scan)
       {
         p = get<profile>(get<1>(m));
@@ -111,8 +112,10 @@ namespace cads
         break;
       }
 
-      auto [err, rslt] = realtime_processing(m);
-
+      auto ig = fut2.get();
+      //auto [err, rslt] = realtime_processing(std::move(m));
+      fut2 = std::async([&](){return realtime_processing(m);});
+      
       switch (s)
       {
       case waiting:
@@ -159,7 +162,8 @@ namespace cads
 
       if (p.y == 0.0)
         idx = 0;
-      //auto [invalid, y] = store_profile({revid, idx++, p});
+      auto [invalid, y] = store_profile({revid, idx++, p});
+      //fut2 = std::async([&](){return store_profile({revid, idx++, p});});
 
 
       if (profile_fifo.size_approx() > buffer_size_warning)
