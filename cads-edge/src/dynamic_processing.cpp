@@ -62,24 +62,27 @@ namespace cads
 
   coro<double, msg> lua_processing_coro(int width)
   {
-    const int height = 1;
-    auto window = std::vector<z_element>(width * height, 1.0/*NaN<z_element>::value*/);
+    auto height = global_config["lua_window_height"].get<int>();
+    auto window = std::vector<z_element>(width * height, 33.0/*NaN<z_element>::value*/);
 
     lua_State *L = luaL_newstate();
     luaL_openlibs(L);
     inject_global_array(L, window.data());
     
-    const char *s = R"""(function process(width,height) 
+    auto lua_fn2 = global_config["lua_fn"].get<std::string>();
+    auto lua_fn = std::string(R"""(
+    function process(width,height)
       local sum = 0
       for i = 1,width do
         for j = 0,height-1 do
-          sum = sum + win[j*width + i] 
+          sum = sum + (win[j*width + i] < 28 and 1 or 0)
         end
       end
-      return sum
-    end)""";
+      return (sum / (width * height)) > 0.2 and 1 or 0
+    end
+    )""");
 
-    if (luaL_dostring(L, s) != LUA_OK)
+    if (luaL_dostring(L, lua_fn2.c_str()) != LUA_OK)
     {
       std::throw_with_nested(std::runtime_error("lua_processing_coro:Creating Lua functin failed"));
     }

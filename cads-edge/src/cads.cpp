@@ -111,9 +111,13 @@ namespace cads
       {
         break;
       }
-
-      auto ig = fut2.get();
+      
       //auto [err, rslt] = realtime_processing(std::move(m));
+      auto [err, rslt] = fut2.get();
+      if(rslt > 0) {
+        spdlog::get("cads")->info("Belt damage found around y: {}",p.y);
+      }
+     
       fut2 = std::async([&](){return realtime_processing(m);});
       
       switch (s)
