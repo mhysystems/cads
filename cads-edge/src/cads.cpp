@@ -159,7 +159,7 @@ namespace cads
 
       if (p.y == 0.0)
         idx = 0;
-      auto [invalid, y] = store_profile({revid, idx++, p});
+      //auto [invalid, y] = store_profile({revid, idx++, p});
 
 
       if (profile_fifo.size_approx() > buffer_size_warning)
