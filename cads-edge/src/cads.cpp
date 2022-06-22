@@ -51,6 +51,54 @@ using CadsMat = cv::UMat; // cv::cuda::GpuMat
 namespace cads
 {
 
+  void dynamic_processing_thread(BlockingReaderWriterQueue<msg> &profile_fifo, BlockingReaderWriterQueue<msg> &next_fifo, int width)
+  {
+
+    auto realtime_processing = lua_processing_coro(width);
+    uint64_t cnt = 0;
+    profile p;
+    cads::msg m;
+    int buffer_size_warning = 1024;
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    while (true)
+    {
+      ++cnt;
+      profile_fifo.wait_dequeue(m);
+
+      if (get<0>(m) == msgid::scan)
+      {
+        p = get<profile>(get<1>(m));
+      }
+      else
+      {
+        break;
+      }
+
+      auto [err, rslt] = realtime_processing(m);
+      if (rslt > 0)
+      {
+        spdlog::get("cads")->info("Belt damage found around y: {}", p.y);
+      }
+
+      if (profile_fifo.size_approx() > buffer_size_warning)
+      {
+        spdlog::get("cads")->error("Cads Dynamic Processing showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
+        buffer_size_warning += buffer_size_warning;
+      }
+
+      next_fifo.enqueue(m);
+    }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
+    next_fifo.enqueue({msgid::finished, 0});
+
+    spdlog::get("cads")->info("DYNAMIC PROCESSING - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, (double)cnt / duration);
+  }
+
   void save_send_thread(BlockingReaderWriterQueue<msg> &profile_fifo, int width)
   {
     using namespace date;
@@ -87,11 +135,9 @@ namespace cads
     };
 
     state s = waiting;
-    auto realtime_processing = lua_processing_coro(width);
-    auto store_profile = store_profile_coro();
+
     std::chrono::time_point<date::local_t, std::chrono::days> today;
     std::future<int> fut;
-    auto fut2 = std::async([&]()->std::tuple<bool,double>{return {true,0};});
     profile p;
     int revid = 0, idx = 0, buffer_size_warning = 1024;
 
@@ -102,7 +148,7 @@ namespace cads
     {
       ++cnt;
       profile_fifo.wait_dequeue(m);
-      
+
       if (get<0>(m) == msgid::scan)
       {
         p = get<profile>(get<1>(m));
@@ -111,15 +157,7 @@ namespace cads
       {
         break;
       }
-      
-      //auto [err, rslt] = realtime_processing(std::move(m));
-      auto [err, rslt] = fut2.get();
-      if(rslt > 0) {
-        spdlog::get("cads")->info("Belt damage found around y: {}",p.y);
-      }
-     
-      fut2 = std::async([&](){return realtime_processing(m);});
-      
+
       switch (s)
       {
       case waiting:
@@ -166,19 +204,17 @@ namespace cads
 
       if (p.y == 0.0)
         idx = 0;
-      auto [invalid, y] = store_profile({revid, idx++, p});
-      //fut2 = std::async([&](){return store_profile({revid, idx++, p});});
-
 
       if (profile_fifo.size_approx() > buffer_size_warning)
       {
-        spdlog::get("cads")->error("Cads Dynamic Processing showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
+        spdlog::get("cads")->error("Saving to DB showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
         buffer_size_warning += buffer_size_warning;
-      }   
+      }
     }
+
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    spdlog::get("cads")->info("DYNAMIC PROCESSING - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, (double)cnt / duration);
+    spdlog::get("cads")->info("DB PROCESSING - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, (double)cnt / duration);
 
     spdlog::get("cads")->info("Final Upload");
     http_post_whole_belt(revid, idx); // For replay and not having a complete belt, so something is uploaded
@@ -505,9 +541,8 @@ namespace cads
         }
       }
 
-      
       next_fifo.enqueue({msgid::scan, profile_buffer.front()});
-      
+
       profile_fifo.wait_dequeue(m);
 
       if (std::get<0>(m) != msgid::scan)
@@ -527,13 +562,13 @@ namespace cads
       {
         spdlog::get("cads")->error("Cads Origin Detection showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
         buffer_size_warning += buffer_size_warning;
-      }   
+      }
     }
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     spdlog::get("cads")->info("ORIGIN DETECTION - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, (double)cnt / duration);
-    
+
     next_fifo.enqueue({msgid::finished, 0});
     spdlog::get("cads")->info("window_processing_thread");
   }
@@ -554,7 +589,7 @@ namespace cads
     spdlog::get("cads")->info("Gocator contants - y_res:{}, x_res:{}, z_res:{}, z_off:{}, encoder_res:{}", y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution);
     auto [bottom, top] = barrel_offset(1024, z_resolution, gocatorFifo);
     auto width_n = belt_width_n(1024, gocatorFifo);
-    spdlog::get("cads")->info("Belt properties - botton:{}, top:{}, height(mm):{}, width:{}, width_n:{}",bottom,top, top - bottom,width_n*x_resolution,width_n);
+    spdlog::get("cads")->info("Belt properties - botton:{}, top:{}, height(mm):{}, width:{}, width_n:{}", bottom, top, top - bottom, width_n * x_resolution, width_n);
     store_profile_parameters(y_resolution, x_resolution, z_resolution, -bottom * z_resolution, encoder_resolution);
 
     return {x_resolution, y_resolution, z_resolution, bottom, width_n};
@@ -577,8 +612,10 @@ namespace cads
     const int spike_window_size = nan_num / 4;
 
     BlockingReaderWriterQueue<msg> db_fifo;
+    BlockingReaderWriterQueue<msg> dynamic_processing_fifo;
     std::jthread save_send(save_send_thread, std::ref(db_fifo), width_n);
-    std::jthread origin_dectection(window_processing_thread, x_resolution, y_resolution, z_resolution, width_n, std::ref(winFifo), std::ref(db_fifo));
+    std::jthread dynamic_processing(dynamic_processing_thread, std::ref(dynamic_processing_fifo),std::ref(db_fifo), width_n);
+    std::jthread origin_dectection(window_processing_thread, x_resolution, y_resolution, z_resolution, width_n, std::ref(winFifo), std::ref(dynamic_processing_fifo));
 
     auto gradient = belt_regression(64, gocatorFifo);
 
