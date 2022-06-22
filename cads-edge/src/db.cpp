@@ -103,7 +103,7 @@ namespace cads
     const char *db_name = global_config["db_name"].get<std::string>().c_str();
     int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_SHAREDCACHE, nullptr);
 
-    auto query = R"(INSERT OR REPLACE INTO PARAMETERS (rowid,y_res,x_res,z_res,z_off,encoder_res) VALUES (0,?,?,?,?,?))"s;
+    auto query = R"(INSERT OR REPLACE INTO PARAMETERS (rowid,y_res,x_res,z_res,z_off,encoder_res) VALUES (1,?,?,?,?,?))"s;
     err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
     err = sqlite3_bind_double(stmt, 1, y_res);
     err = sqlite3_bind_double(stmt, 2, x_res);
