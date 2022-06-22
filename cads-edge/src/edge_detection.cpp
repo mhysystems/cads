@@ -56,7 +56,7 @@ std::tuple<int,int> find_profile_edges_nans_outer(const z_type& z, int len) {
   auto cl = std::find_if(z.begin()+l,z.end(),[](z_element z) {return !NaN<z_element>::isnan(z);});
   l = std::distance(z.begin(),cl);
 
-  if(l >= z.size()) {
+  if(l >= z.size() / 2) {
     l = 0;
   }
 

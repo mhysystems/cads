@@ -554,6 +554,7 @@ namespace cads
     spdlog::get("cads")->info("Gocator contants - y_res:{}, x_res:{}, z_res:{}, z_off:{}, encoder_res:{}", y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution);
     auto [bottom, top] = barrel_offset(1024, z_resolution, gocatorFifo);
     auto width_n = belt_width_n(1024, gocatorFifo);
+    spdlog::get("cads")->info("Belt properties - botton:{}, top:{}, height(mm):{}, width:{}, width_n:{}",bottom,top, top - bottom,width_n*x_resolution,width_n);
     store_profile_parameters(y_resolution, x_resolution, z_resolution, -bottom * z_resolution, encoder_resolution);
 
     return {x_resolution, y_resolution, z_resolution, bottom, width_n};

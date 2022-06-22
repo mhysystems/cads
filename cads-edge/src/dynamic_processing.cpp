@@ -103,6 +103,7 @@ namespace cads
         memmove(window.data() + width, window.data(), width*(height-1)*sizeof(z_element)); // shift 2d array by one row
         memcpy(window.data(), p.z.data(), width*sizeof(z_element));
         
+        result = 0.0;
         if(cnt++ % height == 0) {
           result = eval_lua_process(L,width,height);
         }

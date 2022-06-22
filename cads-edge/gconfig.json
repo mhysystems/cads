@@ -1,6 +1,6 @@
 {
   "data_source" : "gocator", 
-  "y_max_length" : 905000,
+  "y_max_length" : 915000,
   "z_height" : 27.0,
   "x_width"  : 1500,
   "left_edge_nan" : 10,
@@ -9,9 +9,8 @@
   "fiducial_x" : 50,
   "fiducial_y" : 67,
   "fiducial_gap" : 78,
-  "daily_upload_limit" : 3000000000,
   "daily_start_time" : "now",
-  "loop_forever" : false,
+
   "iirfilter" : {
     "delay" : 228,
     "a" : [ -0.86107405, 7.8784571, -32.0386356, 76.00434398, -115.91300053,117.85542254,-79.88969597,34.81461284,-8.85043031,1.0],
@@ -23,7 +22,7 @@
             [ 1.00000000e+00, -1.99894049e+00,  1.00000000e+00,  1.00000000e+00, -1.99381952e+00,  9.94367640e-01]]
   },
   "db_name" : "profile.db",
-  "belt_cross_correlation_threshold" : 0.3,
+  "belt_cross_correlation_threshold" : 0.4,
   "upload_profile_to" : "http://cads:hMe-%3A%2AZO%23%29dj%7B@cads.mhysystems.com/api/whaleback/cv405b-%DATETIME%/bulk",
   "upload_config_to" : "http://cads:hMe-%3A%2AZO%23%29dj%7B@cads.mhysystems.com/api/whaleback/cv405b-%DATETIME%/meta",
   "lua_window_height" : 10,
