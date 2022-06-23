@@ -205,13 +205,10 @@ namespace cads
     query = R"(INSERT OR REPLACE INTO PROFILE (revid,idx,y,x_off,z) VALUES (?,?,?,?,?))"s;
     err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
 
-    int rev;
-    int idx;
-    profile p;
-
     while (true)
     {
-      std::tie(rev,idx,p) = co_yield err;
+      auto [rev,idx,p] = co_yield err;
+      
       if (p.y == std::numeric_limits<decltype(p.y)>::max())
         break;
       
