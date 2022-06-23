@@ -59,6 +59,7 @@ namespace cads
     profile p;
     cads::msg m;
     int buffer_size_warning = 1024;
+    int buffer_size_lower_bounds = buffer_size_warning - 1024;
 
     auto start = std::chrono::high_resolution_clock::now();
 
@@ -84,8 +85,16 @@ namespace cads
 
       if (profile_fifo.size_approx() > buffer_size_warning)
       {
-        spdlog::get("cads")->error("Cads Dynamic Processing showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
+        spdlog::get("cads")->warn("Cads Dynamic Processing showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
         buffer_size_warning += 1024;
+        buffer_size_lower_bounds = buffer_size_warning - 1024;
+      }
+
+      if (profile_fifo.size_approx() < buffer_size_lower_bounds)
+      {
+        spdlog::get("cads")->warn("Cads Dynamic Processing showing signs of catching up with data source. Size {}", buffer_size_warning);
+        buffer_size_warning -= 1024;
+        buffer_size_lower_bounds = buffer_size_warning - 1024;
       }
 
       next_fifo.enqueue(m);
@@ -140,6 +149,7 @@ namespace cads
     std::future<int> fut;
     profile p;
     int revid = 0, idx = 0, buffer_size_warning = 1024;
+    int buffer_size_lower_bounds = buffer_size_warning - 1024;
 
     auto start = std::chrono::high_resolution_clock::now();
     uint64_t cnt = 0;
@@ -209,8 +219,16 @@ namespace cads
 
       if (profile_fifo.size_approx() > buffer_size_warning)
       {
-        spdlog::get("cads")->error("Saving to DB showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
+        spdlog::get("cads")->warn("Saving to DB showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
         buffer_size_warning += 1024;
+        buffer_size_lower_bounds = buffer_size_warning - 1024;
+      }
+
+      if (profile_fifo.size_approx() < buffer_size_lower_bounds)
+      {
+        spdlog::get("cads")->warn("Saving to DB showing signs of catching up with data source. Size {}", buffer_size_warning);
+        buffer_size_warning -= 1024;
+        buffer_size_lower_bounds = buffer_size_warning - 1024;
       }
     }
 
@@ -496,6 +514,7 @@ namespace cads
     auto start = std::chrono::high_resolution_clock::now();
     uint64_t cnt = 0;
     int buffer_size_warning = 1024;
+    int buffer_size_lower_bounds = buffer_size_warning - 1024;
 
     while (true)
     {
@@ -562,8 +581,16 @@ namespace cads
 
       if (profile_fifo.size_approx() > buffer_size_warning)
       {
-        spdlog::get("cads")->error("Cads Origin Detection showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
+        spdlog::get("cads")->warn("Cads Origin Detection showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
         buffer_size_warning += 1024;
+        buffer_size_lower_bounds = buffer_size_warning - 1024;
+      }
+
+      if (profile_fifo.size_approx() < buffer_size_lower_bounds)
+      {
+        spdlog::get("cads")->warn("Cads Origin Detection showing signs of catching up with data source. Size {}", buffer_size_warning);
+        buffer_size_warning -= 1024;
+        buffer_size_lower_bounds = buffer_size_warning - 1024;
       }
     }
 
