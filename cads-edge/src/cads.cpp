@@ -85,7 +85,7 @@ namespace cads
       if (profile_fifo.size_approx() > buffer_size_warning)
       {
         spdlog::get("cads")->error("Cads Dynamic Processing showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
-        buffer_size_warning += buffer_size_warning;
+        buffer_size_warning += 1024;
       }
 
       next_fifo.enqueue(m);
@@ -210,7 +210,7 @@ namespace cads
       if (profile_fifo.size_approx() > buffer_size_warning)
       {
         spdlog::get("cads")->error("Saving to DB showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
-        buffer_size_warning += buffer_size_warning;
+        buffer_size_warning += 1024;
       }
     }
 
@@ -563,7 +563,7 @@ namespace cads
       if (profile_fifo.size_approx() > buffer_size_warning)
       {
         spdlog::get("cads")->error("Cads Origin Detection showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
-        buffer_size_warning += buffer_size_warning;
+        buffer_size_warning += 1024;
       }
     }
 
