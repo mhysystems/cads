@@ -135,7 +135,7 @@ namespace cads
     };
 
     state s = waiting;
-
+    auto store_profile = store_profile_coro();
     std::chrono::time_point<date::local_t, std::chrono::days> today;
     std::future<int> fut;
     profile p;
@@ -204,6 +204,8 @@ namespace cads
 
       if (p.y == 0.0)
         idx = 0;
+      
+      auto [invalid, dberr] = store_profile({revid, idx++, p});
 
       if (profile_fifo.size_approx() > buffer_size_warning)
       {
