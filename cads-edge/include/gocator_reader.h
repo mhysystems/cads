@@ -39,7 +39,7 @@ public:
 	void Stop();
 	GocatorReader(moodycamel::BlockingReaderWriterQueue<cads::msg>&);
   GocatorReader(moodycamel::BlockingReaderWriterQueue<cads::msg>&, bool);
-	~GocatorReader();
+	virtual ~GocatorReader();
 };
 
 

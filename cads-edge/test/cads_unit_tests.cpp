@@ -21,7 +21,7 @@ TEST(cads, make_fiducial)
 
 }
 
-TEST(cads, nan_removal)
+TEST(cads, nan_filter)
 {
   auto n = NaN<z_element>::value;
   std::vector<z_element> a = {1,n,2,n,2,1,n};
@@ -137,6 +137,10 @@ TEST(cads, spike_filter)
   spike_filter(in,3);
   nan_filter(in);
   z_type out{1,1,1,1,1,1};
+  ASSERT_EQ(in,out);
+  
+  in = {};
+  spike_filter(in,3);
   ASSERT_EQ(in,out);
 
 }

@@ -171,15 +171,7 @@ namespace cads
       std::throw_with_nested(std::runtime_error(query));
     }
 
-    err = sqlite3_step(stmt);
-    auto attempts = 512;
-
-    while (err != SQLITE_DONE && attempts-- > 0)
-    {
-      sqlite3_reset(stmt);
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      err = sqlite3_step(stmt);
-    }
+    err = db_step(stmt);
 
     if (err != SQLITE_DONE)
     {
@@ -202,8 +194,12 @@ namespace cads
     auto query = R"(PRAGMA synchronous=OFF)"s;
     prepare_step_query(db, query);
 
+    query = R"(pragma cache_size = 1)"s;
+    prepare_step_query(db, query);
+
     query = R"(INSERT OR REPLACE INTO PROFILE (revid,idx,y,x_off,z) VALUES (?,?,?,?,?))"s;
     err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
+
 
     while (true)
     {
@@ -227,6 +223,7 @@ namespace cads
       err = sqlite3_bind_blob(stmt, 5, p.z.data(), p.z.size() * sizeof(z_element), SQLITE_STATIC);
 
       err = db_step(stmt);
+
       sqlite3_reset(stmt);
       
       if (err != SQLITE_DONE)
@@ -269,7 +266,7 @@ namespace cads
         y = (y_type)sqlite3_column_double(stmt, 1);
 
         double x_off = sqlite3_column_double(stmt, 2);
-        z_element *z = (z_element *)sqlite3_column_blob(stmt, 3);
+        z_element *z = (z_element *)sqlite3_column_blob(stmt, 3); //Freed on next call to sqlite3_step
         int len = sqlite3_column_bytes(stmt, 3) / sizeof(*z);
 
         p =  {idx,{y, x_off, {z, z + len}}};

@@ -25,11 +25,11 @@
 			"miDebuggerPath": "/usr/bin/gdb"
 		},
     {
-			"name": "(gdb) Experiment",
+			"name": "(gdb) Dump",
 			"type": "cppdbg",
 			"request": "launch",
 			"program": "${workspaceFolder}/debug/cads",
-			"args": ["-e","-c", "${workspaceFolder}/config.json"],
+			"args": ["-d","-c", "${workspaceFolder}/config.json"],
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}/debug",
 			"environment": [],

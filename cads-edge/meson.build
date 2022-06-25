@@ -2,7 +2,9 @@ project('cads', ['c','cpp'],
   version : '1.0',
   default_options : ['warning_level=3'])
 
-add_project_arguments('-w',language : 'cpp')
+add_project_arguments('-Wextra',language : 'cpp')
+#add_project_arguments('-w',language : 'cpp')
+
 
 thread = dependency('threads')
 boost = dependency('boost', modules : ['program_options','math_tr1f'])

@@ -29,7 +29,7 @@ namespace cads
     if (!m_loop)
     {
       m_loop = true;
-      m_thread = std::thread{&SqliteGocatorReader::OnData, this};
+      m_thread = std::jthread{&SqliteGocatorReader::OnData, this};
     }
   }
 
@@ -46,10 +46,6 @@ namespace cads
   {
   }
 
-  SqliteGocatorReader::~SqliteGocatorReader()
-  {
-  }
-
   void SqliteGocatorReader::RunForever()
   {
   }
@@ -58,12 +54,13 @@ namespace cads
   {
     auto data_src = global_config["data_source"].get<std::string>();
     auto [yResolution, xResolution, zResolution, zOffset, encoderResolution,err2] = fetch_profile_parameters(data_src);
+  
     m_gocatorFifo.enqueue({msgid::resolutions,std::tuple<double, double, double, double, double>{yResolution, xResolution, zResolution, zOffset, encoderResolution}});
     
     m_yResolution = yResolution;
     m_encoder_resolution = encoderResolution;
 
-    auto fetch_profile = fetch_belt_coro(0,std::numeric_limits<int>::max(),data_src);
+   auto fetch_profile = fetch_belt_coro(0,std::numeric_limits<short>::max(),data_src);
 
     while (m_loop)
     {

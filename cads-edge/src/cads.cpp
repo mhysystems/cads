@@ -92,7 +92,7 @@ namespace cads
 
       if (profile_fifo.size_approx() < buffer_size_lower_bounds)
       {
-        spdlog::get("cads")->warn("Cads Dynamic Processing showing signs of catching up with data source. Size {}", buffer_size_warning);
+        spdlog::get("cads")->warn("Cads Dynamic Processing showing signs of catching up with data source. Size {}", buffer_size_lower_bounds);
         buffer_size_warning -= 1024;
         buffer_size_lower_bounds = buffer_size_warning - 1024;
       }
@@ -226,7 +226,7 @@ namespace cads
 
       if (profile_fifo.size_approx() < buffer_size_lower_bounds)
       {
-        spdlog::get("cads")->warn("Saving to DB showing signs of catching up with data source. Size {}", buffer_size_warning);
+        spdlog::get("cads")->warn("Saving to DB showing signs of catching up with data source. Size {}", buffer_size_lower_bounds);
         buffer_size_warning -= 1024;
         buffer_size_lower_bounds = buffer_size_warning - 1024;
       }
@@ -387,7 +387,6 @@ namespace cads
     auto db_name = global_config["db_name"].get<std::string>();
     create_db(db_name);
 
-    auto data_src = global_config["data_source"].get<std::string>();
     BlockingReaderWriterQueue<msg> gocatorFifo;
 
     auto gocator = mk_gocator(gocatorFifo);
@@ -410,7 +409,6 @@ namespace cads
     auto store_profile = store_profile_coro();
 
     auto y_max_length = global_config["y_max_length"].get<double>();
-    auto start = std::chrono::high_resolution_clock::now();
     double Y = 0.0;
     int idx = 0;
 
@@ -438,8 +436,9 @@ namespace cads
     } while (get<0>(m) != msgid::finished && Y < 2 * y_max_length);
 
     store_profile({0, idx++, null_profile});
-
+    
     gocator->Stop();
+
   }
 
   void shift_Mat(cv::Mat &m)
@@ -588,7 +587,7 @@ namespace cads
 
       if (profile_fifo.size_approx() < buffer_size_lower_bounds)
       {
-        spdlog::get("cads")->warn("Cads Origin Detection showing signs of catching up with data source. Size {}", buffer_size_warning);
+        spdlog::get("cads")->warn("Cads Origin Detection showing signs of catching up with data source. Size {}", buffer_size_lower_bounds);
         buffer_size_warning -= 1024;
         buffer_size_lower_bounds = buffer_size_warning - 1024;
       }
@@ -636,6 +635,7 @@ namespace cads
 
     auto [x_resolution, y_resolution, z_resolution, bottom, width_n] = preprocessing(gocatorFifo);
 
+    const auto x_width = global_config["x_width"].get<int>();
     const auto z_height_mm = global_config["z_height"].get<double>();
     const int nan_num = global_config["left_edge_nan"].get<int>();
     const int spike_window_size = nan_num / 4;
@@ -676,6 +676,13 @@ namespace cads
       auto iy = p.y;
       auto ix = p.x_off;
       auto iz = p.z;
+
+      if(p.z.size() < x_width * 0.75) {
+        spdlog::get("cads")->error("Gocator sending profiles with widths less than 0.75 of expected width");
+        continue;
+      }
+
+
       ++cnt;
 
       spike_filter(iz, spike_window_size);

@@ -44,6 +44,7 @@ std::string slurpfile(const std::string_view path, bool binaryMode = true)
 
 int main(int argn, char **argv)
 {
+
 	using namespace cads;
 
 	po::options_description desc("Allowed options");

@@ -41,8 +41,9 @@ public:
   virtual void RunForever() = 0;
 	virtual void Start() = 0;
 	virtual void Stop() = 0;
-	GocatorReaderBase(moodycamel::BlockingReaderWriterQueue<msg>&);
 
+	GocatorReaderBase(moodycamel::BlockingReaderWriterQueue<msg>&);
+  virtual ~GocatorReaderBase() = default;
 };
 
 

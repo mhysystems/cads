@@ -10,6 +10,8 @@
 namespace cads 
 {
   void spike_filter(z_type& z, int window_size) {
+    
+    if(z.size() > window_size ) return;
 
     for(int i = 0; i < z.size()-window_size;) {
       if(NaN<z_element>::isnan(z[i]) && NaN<z_element>::isnan(z[i+window_size])) {

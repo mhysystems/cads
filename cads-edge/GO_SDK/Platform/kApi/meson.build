@@ -68,9 +68,10 @@ kApiSrc = [
 	'kApi/kObject.cpp'
 ]
 
+#At the moment I don't believe meson respects these
 ccpp = meson.get_compiler('cpp')
 ccpp_args = ccpp.get_supported_arguments([
-	'-Wno-unused-variable',
+  '-Wno-unused-variable',
 	'-Wno-unused-parameter',
 	'-Wno-unused-value',
 	'-Wno-missing-braces',
@@ -94,7 +95,8 @@ kApiInc = include_directories('.')
 kApiLib = library(
 	'kApi',
   kApiSrc,
-	cpp_args: ccpp_args,
+#	cpp_args: ccpp_args,
+  override_options : ['warning_level=0'],
 	dependencies:ccpp_dep,
   install : true
 )
