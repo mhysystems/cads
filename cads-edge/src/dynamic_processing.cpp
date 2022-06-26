@@ -2,6 +2,7 @@
 #include <cstring>
 
 #include <lua.hpp>
+
 #include <spdlog/spdlog.h>
 
 #include <dynamic_processing.h>
@@ -14,7 +15,7 @@ namespace cads
   static int array_index(lua_State *L)
   {
     auto *p = (z_element *)lua_topointer(L, 1);
-    int index = lua_tointeger(L, 2);
+    auto index = lua_tointeger(L, 2);
     lua_pushnumber(L, *(p + index - 1));
     return 1;
   }
@@ -22,7 +23,7 @@ namespace cads
   static int array_newindex(lua_State *L)
   {
     auto *p = (z_element *)lua_topointer(L, 1);
-    int index = lua_tointeger(L, 2);
+    auto index = lua_tointeger(L, 2);
     auto value = lua_tonumber(L, 3);
     *(p + index - 1) = (z_element)value;
     return 0;
@@ -35,7 +36,7 @@ namespace cads
         {"__newindex", array_newindex},
         {NULL,NULL}};
 
-    auto e = luaL_newmetatable(L, "cads.window");
+    luaL_newmetatable(L, "cads.window");
     luaL_setfuncs(L, fields, 0);
     lua_pushlightuserdata(L, p);
     luaL_setmetatable(L, "cads.window");
@@ -64,7 +65,12 @@ namespace cads
   coro<double, msg> lua_processing_coro(int width)
   {
     auto height = global_config["lua_window_height"].get<int>();
-    auto window = std::vector<z_element>(width * height, 33.0/*NaN<z_element>::value*/);
+    
+    if(width < 1 || height < 1) {
+      std::throw_with_nested(std::runtime_error("lua_processing_coro: Width or height less than one"));
+    }
+    
+    auto window = std::vector<z_element>(size_t(width * height), 33.0/*NaN<z_element>::value*/);
 
     lua_State *L = luaL_newstate();
     luaL_openlibs(L);
@@ -95,7 +101,7 @@ namespace cads
       case msgid::scan:
       {
         auto p = get<profile>(get<1>(m));
-        memmove(window.data() + width, window.data(), width*(height-1)*sizeof(z_element)); // shift 2d array by one row
+        memmove(window.data() + width, window.data(), size_t(width*(height-1))*sizeof(z_element)); // shift 2d array by one row
         memcpy(window.data(), p.z.data(), size_t(width)*sizeof(z_element));
         
         result = 0.0;

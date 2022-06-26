@@ -13,9 +13,9 @@ namespace cads
     
     if(z.size() > window_size ) return;
 
-    for(int i = 0; i < z.size()-window_size;) {
+    for(auto i = 0; i < z.size()-window_size;) {
       if(NaN<z_element>::isnan(z[i]) && NaN<z_element>::isnan(z[i+window_size])) {
-        for(int j = i+1; j < i + window_size; ++j) {
+        for(auto j = i+1; j < i + window_size; ++j) {
           z[j] = NaN<z_element>::value;
         }
         i += window_size;
@@ -24,9 +24,9 @@ namespace cads
       }
     }
 
-    for(int i = z.size()-window_size; i < z.size()-3;) {
+    for(auto i = z.size()-window_size; i < z.size()-3;) {
       if(NaN<z_element>::isnan(z[i]) && NaN<z_element>::isnan(z[i+3])) {
-        for(int j = i+1; j < i + 3; ++j) {
+        for(auto j = i+1; j < i + 3; ++j) {
           z[j] = NaN<z_element>::value;
         }
         i += 3;
@@ -70,33 +70,7 @@ namespace cads
     }
   }
 
-  std::function<double(double)> mk_iirfilter(const std::vector<double> as, const std::vector<double> bs, z_element init) {
-    
-    std::vector<double>  xs(bs.size()-1,init);
-    std::vector<double>  ys(as.size()-1,init);
-
-    return [=](z_element xn) mutable {
-
-      double yn = xs[0]*bs[0] - ys[0]*as[0];
-      
-      const auto M = xs.size();
-
-      for(int i = 1; i < M; ++i) {
-        yn += xs[i]*bs[i] - ys[i]*as[i];
-        xs[i-1] = xs[i];
-        ys[i-1] = ys[i];
-
-      }
-
-      yn += xn * bs.back();
-      yn *= 1 / as.back();
-      xs.back() = xn;
-      ys.back() = yn;
-
-      return yn;     
-    };
-  }
-
+ 
   std::function<double(double)> mk_iirfilterSoS() {
     auto coeff = global_config["iirfilter"]["sos"].get<std::vector<std::vector<double>>>();
     auto r = coeff | std::ranges::views::join;

@@ -14,5 +14,4 @@ cadsSrc += files(
   'constants.cpp',
   'window.cpp',
   'dynamic_processing.cpp'
-
 )

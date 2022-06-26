@@ -181,7 +181,7 @@ namespace cads
   }
 
   
-  coro<int, std::tuple<int,int,profile>> store_profile_coro()
+coro<int, std::tuple<int,int,profile>> store_profile_coro()
   {
 
     sqlite3 *db = nullptr;
@@ -240,6 +240,7 @@ namespace cads
     sqlite3_finalize(stmt);
     sqlite3_close(db);
     spdlog::get("db")->info("store_profile_coro finished");
+    co_return err;
   }
 
   

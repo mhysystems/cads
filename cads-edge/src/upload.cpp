@@ -6,6 +6,14 @@
 #include <unordered_map>
 #include <random>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuseless-cast" 
+#pragma GCC diagnostic ignored "-Wshadow" 
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wconversion"
+#pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
+#pragma GCC diagnostic ignored "-Wreorder"
+
 #include <date/date.h>
 #include <date/tz.h>
 #include <fmt/core.h>
@@ -13,8 +21,9 @@
 #include <spdlog/spdlog.h>
 #include <cpr/cpr.h>
 #include <nlohmann/json.hpp>
-
 #include <z_data_generated.h>
+
+#pragma GCC diagnostic pop
 
 #include <constants.h>
 #include <db.h>
@@ -37,7 +46,7 @@ namespace cads
     return subject;
   }
 
-  void send_flatbuffer_array(
+  auto send_flatbuffer_array(
       flatbuffers::FlatBufferBuilder &builder,
       std::vector<flatbuffers::Offset<cads_flatworld::profile>> &profiles_flat,
       const cpr::Url &endpoint)
@@ -47,7 +56,6 @@ namespace cads
 
     auto buf = builder.GetBufferPointer();
     auto size = builder.GetSize();
-    auto start = std::chrono::high_resolution_clock::now();
 
     while (true)
     {
@@ -67,10 +75,9 @@ namespace cads
 
     builder.Clear();
     profiles_flat.clear();
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() / 1000.0;
 
-    spdlog::get("upload")->info("SIZE: {}, DUR:{}, RATE(Kb/s):{} ", size, duration, (double)size / duration);
+    return size;
+
   }
 
   void http_post_profile_properties(std::string json, std::string ts)
@@ -129,8 +136,6 @@ namespace cads
 
     auto fetch_profile = fetch_belt_coro(revid,last_idx);
 
-    auto start = std::chrono::high_resolution_clock::now();
-
     FlatBufferBuilder builder(4096 * 128);
     std::vector<flatbuffers::Offset<cads_flatworld::profile>> profiles_flat;
 
@@ -148,6 +153,9 @@ namespace cads
       return 0;
     }
 
+    auto start = std::chrono::high_resolution_clock::now();
+    int64_t size = 0;
+
     while (true)
     {
       auto [co_terminate, cv] = fetch_profile.resume(0);
@@ -159,21 +167,22 @@ namespace cads
 
         if (profiles_flat.size() == 256)
         {
-          spdlog::get("upload")->info("Send Array {}", endpoint.str());
-          send_flatbuffer_array(builder, profiles_flat, endpoint);
+          size += send_flatbuffer_array(builder, profiles_flat, endpoint);
         }
       }
       else
       {
         if (profiles_flat.size() > 0)
         {
-          spdlog::get("upload")->info("Last Array {}", endpoint.str());
-          send_flatbuffer_array(builder, profiles_flat, endpoint);
+          size += send_flatbuffer_array(builder, profiles_flat, endpoint);
         }
         break;
       }
     }
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
 
+    spdlog::get("upload")->info("SIZE: {}, DUR:{}, RATE(Kb/s):{} ", size, duration, size / (1000*duration));
     spdlog::get("upload")->info("Leaving http_post_thread_bulk");
     return 0;
   }

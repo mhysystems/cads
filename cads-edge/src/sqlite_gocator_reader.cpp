@@ -1,6 +1,4 @@
 #include <sqlite_gocator_reader.h>
-#include <z_data_generated.h>
-#include <p_config_generated.h>
 
 #include <algorithm>
 #include <ios>
