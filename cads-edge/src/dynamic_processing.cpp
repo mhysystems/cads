@@ -2,6 +2,7 @@
 #include <cstring>
 
 #include <lua.hpp>
+#include <spdlog/spdlog.h>
 
 #include <dynamic_processing.h>
 #include <constants.h>
@@ -69,30 +70,24 @@ namespace cads
     luaL_openlibs(L);
     inject_global_array(L, window.data());
     
-    auto lua_fn2 = global_config["lua_fn"].get<std::string>();
-    auto lua_fn = std::string(R"""(
-    function process(width,height)
-      local sum = 0
-      for i = 1,width do
-        for j = 0,height-1 do
-          sum = sum + (win[j*width + i] < 28 and 1 or 0)
-        end
-      end
-      return (sum / (width * height)) > 0.2 and 1 or 0
-    end
-    )""");
+    auto lua_fn = global_config["lua_fn"].get<std::string>();
 
-    if (luaL_dostring(L, lua_fn2.c_str()) != LUA_OK)
+   if (luaL_dostring(L, lua_fn.c_str()) != LUA_OK)
     {
       std::throw_with_nested(std::runtime_error("lua_processing_coro:Creating Lua functin failed"));
     }
 
     double result = 0.0;
-    uint64_t cnt = 0;
+    int64_t cnt = 0;
     cads::msg m;
+    bool terminate = false;
+
     do
     {
-      m = co_yield result;
+      std::tie(m,terminate) = co_yield result;
+
+      if(terminate) break;
+      
       switch (get<0>(m))
       {
       case msgid::finished:
@@ -101,24 +96,24 @@ namespace cads
       {
         auto p = get<profile>(get<1>(m));
         memmove(window.data() + width, window.data(), width*(height-1)*sizeof(z_element)); // shift 2d array by one row
-        memcpy(window.data(), p.z.data(), width*sizeof(z_element));
+        memcpy(window.data(), p.z.data(), size_t(width)*sizeof(z_element));
         
         result = 0.0;
-        if(cnt++ % height == 0) {
+        if(cnt++ % (int64_t)height == 0) {
           result = eval_lua_process(L,width,height);
         }
         
         break;
       }
-      case msgid::lua:
-        break; // TODO update lua function
       default:
         std::throw_with_nested(std::runtime_error("lua_processing_coro:Unknown msg id"));
       }
 
-    } while (get<0>(m) != msgid::finished);
+    } while (get<0>(m) != msgid::finished || !terminate);
 
     lua_close(L);
-    co_return result;
+    spdlog::get("cads")->info("lua_processing_coro finished");
   }
+
+
 }

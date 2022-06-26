@@ -20,12 +20,12 @@ class GocatorReader : public GocatorReaderBase
 
 protected:
 	
-	GoSystem m_system;
-	kAssembly m_assembly;
-	GoSensor m_sensor;
+	void* m_system;
+	void* m_assembly;
+	void* m_sensor;
   bool m_use_encoder = true;
   std::atomic<k64s> m_yOffset = 0;
-  std::atomic<int> m_buffer_size_warning = 1024;
+  std::atomic<size_t> m_buffer_size_warning = 4096;
   
 	static kStatus OnData(kPointer context, GoSensor sensor, GoDataSet dataset);
   static kStatus OnSystem(kPointer context, GoSystem system, GoDataSet data);
@@ -41,9 +41,6 @@ public:
   GocatorReader(moodycamel::BlockingReaderWriterQueue<cads::msg>&, bool);
 	virtual ~GocatorReader();
 };
-
-
-
 
 }
 

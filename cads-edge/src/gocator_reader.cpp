@@ -209,6 +209,8 @@ kStatus GocatorReader::OnSystem(GoSystem system, GoDataSet dataset)
 
 kStatus GocatorReader::OnData(GoSensor sensor, GoDataSet dataset)
 {
+    (void)sensor;
+    
     k64u frame = 0;
     k64s encoder = 0;
     double y = 0.0;
@@ -286,7 +288,7 @@ kStatus GocatorReader::OnData(GoSensor sensor, GoDataSet dataset)
 
     if(m_gocatorFifo.size_approx() > m_buffer_size_warning) {
       spdlog::get("gocator")->error("Cads Showing signs of not being able to keep up with data source. Size {}",m_buffer_size_warning);
-      m_buffer_size_warning += m_buffer_size_warning;
+      m_buffer_size_warning += 4096;
     }
 
     return kOK;

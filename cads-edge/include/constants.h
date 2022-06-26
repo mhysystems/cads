@@ -13,7 +13,7 @@ namespace cads {
 
   template<typename T> struct NaN;
 
-  template<> struct NaN<k16s> {
+  template<> struct NaN<int16_t> {
     static constexpr k16s value = k16S_NULL;
     static bool isnan(k16s a) {
       return a == value;

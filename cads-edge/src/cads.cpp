@@ -14,9 +14,6 @@
 #include <gocator_reader.h>
 #include <sqlite_gocator_reader.h>
 
-#include <z_data_generated.h>
-#include <p_config_generated.h>
-
 #include <exception>
 #include <limits>
 #include <string>
@@ -33,13 +30,18 @@
 
 #include <spdlog/spdlog.h>
 
-#include <filters.h>
-#include <edge_detection.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuseless-cast" 
+
 #include <date/date.h>
 #include <date/tz.h>
 #include <fmt/core.h>
 #include <fmt/chrono.h>
 
+#pragma GCC diagnostic pop
+
+#include <filters.h>
+#include <edge_detection.h>
 #include <coro.hpp>
 #include <dynamic_processing.h>
 
@@ -48,6 +50,8 @@ using namespace moodycamel;
 using namespace std::chrono;
 using CadsMat = cv::UMat; // cv::cuda::GpuMat
 
+constexpr size_t buffer_warning_increment = 4092;
+
 namespace cads
 {
 
@@ -55,11 +59,10 @@ namespace cads
   {
 
     auto realtime_processing = lua_processing_coro(width);
-    uint64_t cnt = 0;
+    int64_t cnt = 0;
     profile p;
     cads::msg m;
-    int buffer_size_warning = 1024;
-    int buffer_size_lower_bounds = buffer_size_warning - 1024;
+    auto buffer_size_warning = buffer_warning_increment;
 
     auto start = std::chrono::high_resolution_clock::now();
 
@@ -77,7 +80,12 @@ namespace cads
         break;
       }
 
-      auto [err, rslt] = realtime_processing(m);
+      auto [err, rslt] = realtime_processing.resume(m);
+      
+      if(err) {
+        spdlog::get("cads")->error("dynamic_processing_thread: realtime_processing");
+      }
+      
       if (rslt > 0)
       {
         spdlog::get("cads")->info("Belt damage found around y: {}", p.y);
@@ -86,15 +94,7 @@ namespace cads
       if (profile_fifo.size_approx() > buffer_size_warning)
       {
         spdlog::get("cads")->warn("Cads Dynamic Processing showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
-        buffer_size_warning += 1024;
-        buffer_size_lower_bounds = buffer_size_warning - 1024;
-      }
-
-      if (profile_fifo.size_approx() < buffer_size_lower_bounds)
-      {
-        spdlog::get("cads")->warn("Cads Dynamic Processing showing signs of catching up with data source. Size {}", buffer_size_lower_bounds);
-        buffer_size_warning -= 1024;
-        buffer_size_lower_bounds = buffer_size_warning - 1024;
+        buffer_size_warning += buffer_warning_increment;
       }
 
       next_fifo.enqueue(m);
@@ -104,11 +104,13 @@ namespace cads
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 
     next_fifo.enqueue({msgid::finished, 0});
+    realtime_processing.terminate();
 
-    spdlog::get("cads")->info("DYNAMIC PROCESSING - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, (double)cnt / duration);
+    spdlog::get("cads")->info("DYNAMIC PROCESSING - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, cnt / duration);
   }
 
-  void save_send_thread(BlockingReaderWriterQueue<msg> &profile_fifo, int width)
+
+  void save_send_thread(BlockingReaderWriterQueue<msg> &profile_fifo)
   {
     using namespace date;
     using namespace chrono;
@@ -148,11 +150,11 @@ namespace cads
     std::chrono::time_point<date::local_t, std::chrono::days> today;
     std::future<int> fut;
     profile p;
-    int revid = 0, idx = 0, buffer_size_warning = 1024;
-    int buffer_size_lower_bounds = buffer_size_warning - 1024;
+    int revid = 0, idx = 0;
+    auto buffer_size_warning = buffer_warning_increment;
 
     auto start = std::chrono::high_resolution_clock::now();
-    uint64_t cnt = 0;
+    int64_t cnt = 0;
 
     while (true)
     {
@@ -214,34 +216,29 @@ namespace cads
 
       if (p.y == 0.0)
         idx = 0;
-      
-      auto [invalid, dberr] = store_profile({revid, idx++, p});
+
+
+      store_profile.resume({revid, idx++, p});
 
       if (profile_fifo.size_approx() > buffer_size_warning)
       {
         spdlog::get("cads")->warn("Saving to DB showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
-        buffer_size_warning += 1024;
-        buffer_size_lower_bounds = buffer_size_warning - 1024;
+        buffer_size_warning += buffer_warning_increment;
       }
 
-      if (profile_fifo.size_approx() < buffer_size_lower_bounds)
-      {
-        spdlog::get("cads")->warn("Saving to DB showing signs of catching up with data source. Size {}", buffer_size_lower_bounds);
-        buffer_size_warning -= 1024;
-        buffer_size_lower_bounds = buffer_size_warning - 1024;
-      }
     }
 
+    store_profile.terminate();
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    spdlog::get("cads")->info("DB PROCESSING - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, (double)cnt / duration);
+    spdlog::get("cads")->info("DB PROCESSING - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, cnt / duration);
 
     spdlog::get("cads")->info("Final Upload");
     http_post_whole_belt(revid, idx); // For replay and not having a complete belt, so something is uploaded
     spdlog::get("cads")->info("Stopping save_send_thread");
   }
 
-  tuple<z_element, z_element> barrel_offset(int cnt, double z_resolution, BlockingReaderWriterQueue<msg> &ps)
+  tuple<z_element, z_element> barrel_offset(int cnt, BlockingReaderWriterQueue<msg> &ps)
   {
 
     window win;
@@ -275,7 +272,7 @@ namespace cads
     auto hist = histogram(win, z_min, z_max);
 
     const auto peak = get<0>(hist[0]);
-    const auto thickness = z_height_mm; // / z_resolution;
+    const auto thickness = z_height_mm;
 
     // Remove z values greater than the peak minus approx belt thickness.
     // Assumes the next peak will be the barrel values
@@ -290,10 +287,9 @@ namespace cads
   {
 
     const int nan_num = global_config["left_edge_nan"].get<int>();
-    const auto z_height_mm = global_config["z_height"].get<double>();
     const int spike_window_size = nan_num / 3;
     int width = 0;
-    const double n = cnt - 1;
+    const int n = cnt - 1;
     cads::msg m;
 
     do
@@ -329,7 +325,7 @@ namespace cads
   {
 
     const int nan_num = global_config["left_edge_nan"].get<int>();
-    const auto z_height_mm = global_config["z_height"].get<double>();
+
     const int spike_window_size = nan_num / 3;
     double gradient = 0.0, intercept = 0.0;
     const double n = cnt - 1;
@@ -396,9 +392,8 @@ namespace cads
     cads::msg m;
 
     gocatorFifo.wait_dequeue(m);
-    auto m_id = get<0>(m);
 
-    if (m_id != cads::msgid::resolutions)
+    if (get<0>(m) != cads::msgid::resolutions)
     {
       std::throw_with_nested(std::runtime_error("First message must be resolutions"));
     }
@@ -424,18 +419,23 @@ namespace cads
       {
         auto p = get<profile>(get<1>(m));
         Y = p.y;
-        store_profile({0, idx++, p});
+        store_profile.resume({0, idx++, p});
         break;
       }
       case cads::msgid::resolutions:
       {
         break;
       }
+
+      case cads::msgid::finished:
+      {
+        continue;
+      }
       }
 
     } while (get<0>(m) != msgid::finished && Y < 2 * y_max_length);
 
-    store_profile({0, idx++, null_profile});
+    store_profile.terminate();
     
     gocator->Stop();
 
@@ -445,7 +445,7 @@ namespace cads
   {
     for (int i = m.rows - 1; i > 0; --i)
     {
-      memcpy(m.ptr<float>(i), m.ptr<float>(i - 1), m.cols * sizeof(float));
+      memcpy(m.ptr<float>(i), m.ptr<float>(i - 1), (size_t)m.cols * sizeof(float));
     }
   }
 
@@ -453,7 +453,7 @@ namespace cads
   {
     if constexpr (std::is_same_v<z_element, float>)
     {
-      memcpy(m.ptr<float>(0), z.data(), m.cols * sizeof(float));
+      memcpy(m.ptr<float>(0), z.data(), (size_t)m.cols * sizeof(float));
     }
     else
     {
@@ -474,13 +474,13 @@ namespace cads
     }
   }
 
-  void window_processing_thread(double x_resolution, double y_resolution, double z_resolution, int width_n, BlockingReaderWriterQueue<msg> &profile_fifo, BlockingReaderWriterQueue<msg> &next_fifo)
+  void window_processing_thread(double x_resolution, double y_resolution, int width_n, BlockingReaderWriterQueue<msg> &profile_fifo, BlockingReaderWriterQueue<msg> &next_fifo)
   {
 
     auto fiducial = make_fiducial(x_resolution, y_resolution);
     window profile_buffer;
 
-    auto fdepth = global_config["fiducial_depth"].get<double>(); // / z_resolution;
+    auto fdepth = global_config["fiducial_depth"].get<double>();
     double lowest_correlation = std::numeric_limits<double>::max();
     const double belt_crosscorr_threshold = global_config["belt_cross_correlation_threshold"].get<double>();
 
@@ -493,9 +493,9 @@ namespace cads
 
       if (std::get<0>(m) != msgid::scan)
         break;
-      auto profile = get<cads::profile>(get<1>(m));
+      auto p = get<cads::profile>(get<1>(m));
 
-      profile_buffer.push_back(profile);
+      profile_buffer.push_back(p);
     }
 
     cv::Mat belt = window_to_mat_fixed(profile_buffer, width_n);
@@ -504,16 +504,15 @@ namespace cads
       std::throw_with_nested(std::runtime_error("window_processing:OpenCV matrix must be continuous for row shifting using memcpy"));
     }
 
-    cv::Mat m1(fiducial.rows, fiducial.cols * 1.5, CV_32F, cv::Scalar::all(0.0f));
+    cv::Mat m1(fiducial.rows, int(fiducial.cols * 1.5), CV_32F, cv::Scalar::all(0.0f));
     cv::Mat out(m1.rows - fiducial.rows + 1, m1.cols - fiducial.cols + 1, CV_32F, cv::Scalar::all(0.0f));
 
     auto y_max_length = global_config["y_max_length"].get<double>();
     auto trigger_length = std::numeric_limits<y_type>::lowest();
     y_type y_offset = 0;
     auto start = std::chrono::high_resolution_clock::now();
-    uint64_t cnt = 0;
-    int buffer_size_warning = 1024;
-    int buffer_size_lower_bounds = buffer_size_warning - 1024;
+    int64_t cnt = 0;
+    auto buffer_size_warning = buffer_warning_increment;
 
     while (true)
     {
@@ -570,32 +569,25 @@ namespace cads
         break;
       }
 
-      auto profile = get<cads::profile>(get<1>(m));
+      auto p = get<cads::profile>(get<1>(m));
 
       shift_Mat(belt);
-      prepend_Mat(belt, profile.z);
+      prepend_Mat(belt, p.z);
 
       profile_buffer.pop_front();
-      profile_buffer.push_back({profile.y - y_offset, profile.x_off, profile.z});
+      profile_buffer.push_back({p.y - y_offset, p.x_off, p.z});
 
       if (profile_fifo.size_approx() > buffer_size_warning)
       {
         spdlog::get("cads")->warn("Cads Origin Detection showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
-        buffer_size_warning += 1024;
-        buffer_size_lower_bounds = buffer_size_warning - 1024;
+        buffer_size_warning += buffer_warning_increment;
       }
 
-      if (profile_fifo.size_approx() < buffer_size_lower_bounds)
-      {
-        spdlog::get("cads")->warn("Cads Origin Detection showing signs of catching up with data source. Size {}", buffer_size_lower_bounds);
-        buffer_size_warning -= 1024;
-        buffer_size_lower_bounds = buffer_size_warning - 1024;
-      }
     }
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    spdlog::get("cads")->info("ORIGIN DETECTION - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, (double)cnt / duration);
+    spdlog::get("cads")->info("ORIGIN DETECTION - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, cnt / duration);
 
     next_fifo.enqueue({msgid::finished, 0});
     spdlog::get("cads")->info("window_processing_thread");
@@ -615,10 +607,10 @@ namespace cads
 
     auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution] = get<resolutions_t>(get<1>(m));
     spdlog::get("cads")->info("Gocator contants - y_res:{}, x_res:{}, z_res:{}, z_off:{}, encoder_res:{}", y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution);
-    auto [bottom, top] = barrel_offset(1024, z_resolution, gocatorFifo);
+    auto [bottom, top] = barrel_offset(1024, gocatorFifo);
     auto width_n = belt_width_n(1024, gocatorFifo);
     spdlog::get("cads")->info("Belt properties - botton:{}, top:{}, height(mm):{}, width:{}, width_n:{}", bottom, top, top - bottom, width_n * x_resolution, width_n);
-    store_profile_parameters(y_resolution, x_resolution, z_resolution, -bottom * z_resolution, encoder_resolution);
+    store_profile_parameters(y_resolution, x_resolution, z_resolution, -(double)bottom * z_resolution, encoder_resolution);
 
     return {x_resolution, y_resolution, z_resolution, bottom, width_n};
   }
@@ -642,22 +634,19 @@ namespace cads
 
     BlockingReaderWriterQueue<msg> db_fifo;
     BlockingReaderWriterQueue<msg> dynamic_processing_fifo;
-    std::jthread save_send(save_send_thread, std::ref(db_fifo), width_n);
+    std::jthread save_send(save_send_thread, std::ref(db_fifo));
     std::jthread dynamic_processing(dynamic_processing_thread, std::ref(dynamic_processing_fifo),std::ref(db_fifo), width_n);
-    std::jthread origin_dectection(window_processing_thread, x_resolution, y_resolution, z_resolution, width_n, std::ref(winFifo), std::ref(dynamic_processing_fifo));
+    std::jthread origin_dectection(window_processing_thread, x_resolution, y_resolution, width_n, std::ref(winFifo), std::ref(dynamic_processing_fifo));
 
     auto gradient = belt_regression(64, gocatorFifo);
 
     auto iirfilter = mk_iirfilterSoS();
     auto delay = mk_delay(global_config["iirfilter"]["delay"]);
 
-    uint64_t cnt = 0;
+    int64_t cnt = 0;
 
-    double lowest_correlation = std::numeric_limits<double>::max();
 
     auto start = std::chrono::high_resolution_clock::now();
-
-    int buffer_size_warning = 1024;
 
     cads::msg m;
 
@@ -677,7 +666,7 @@ namespace cads
       auto ix = p.x_off;
       auto iz = p.z;
 
-      if(p.z.size() < x_width * 0.75) {
+      if(p.z.size() < size_t(x_width * 0.75)) {
         spdlog::get("cads")->error("Gocator sending profiles with widths less than 0.75 of expected width");
         continue;
       }
@@ -693,7 +682,7 @@ namespace cads
         // spdlog::get("cads")->error("Barrel not detected, profile is invalid");
       }
 
-      auto bottom_filtered = iirfilter(bottom_avg);
+      auto bottom_filtered = (z_element)iirfilter(bottom_avg);
 
       auto [delayed, dd] = delay({iy, ix, iz});
       if (!delayed)
@@ -705,7 +694,7 @@ namespace cads
 
       nan_filter(z);
       regression_compensate(z, left_edge_index, right_edge_index, gradient);
-      double edge_adjust = right_edge_index - left_edge_index - width_n;
+      int edge_adjust = right_edge_index - left_edge_index - width_n;
       right_edge_index += -edge_adjust;
 
       std::tie(bottom_avg, top_avg, invalid) = barrel_offset(z, z_height_mm);
@@ -722,7 +711,7 @@ namespace cads
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     origin_dectection.join();
-    spdlog::get("cads")->info("CADS - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, (double)cnt / duration);
+    spdlog::get("cads")->info("CADS - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, cnt / duration);
 
     gocator->Stop();
     spdlog::get("cads")->info("Gocator Stopped");

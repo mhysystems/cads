@@ -2,7 +2,6 @@
 
 #include <coro.hpp>
 #include <msg.h>
-#include <profile.h>
 
 namespace cads
 {

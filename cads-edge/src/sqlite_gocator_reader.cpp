@@ -65,7 +65,7 @@ namespace cads
     while (m_loop)
     {
 
-      auto [co_terminate, cv] = fetch_profile(0);
+      auto [co_terminate, cv] = fetch_profile.resume(0);
       auto [idx,p] = cv;
 
       if (co_terminate) {

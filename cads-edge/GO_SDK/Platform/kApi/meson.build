@@ -68,7 +68,6 @@ kApiSrc = [
 	'kApi/kObject.cpp'
 ]
 
-#At the moment I don't believe meson respects these
 ccpp = meson.get_compiler('cpp')
 ccpp_args = ccpp.get_supported_arguments([
   '-Wno-unused-variable',
@@ -76,7 +75,13 @@ ccpp_args = ccpp.get_supported_arguments([
 	'-Wno-unused-value',
 	'-Wno-missing-braces',
 	'-Wno-missing-field-initializers',
-	'-Wno-cast-function-type'
+	'-Wno-cast-function-type',
+  '-Wno-useless-cast',
+  '-Wno-null-dereference',
+	'-Wno-sign-conversion',
+  '-Wno-conversion',
+  '-Wno-shadow',
+  '-Wno-logical-op'
 ]) + ['-DK_EMIT', '-DK_PLUGIN']
 
 ccpp_dep = [
@@ -90,13 +95,12 @@ if get_option('debug')
 	ccpp_args += ['-DK_DEBUG']
 endif
 
-kApiInc = include_directories('.')
+kApiInc = include_directories('.',is_system : true)
 
 kApiLib = library(
 	'kApi',
   kApiSrc,
-#	cpp_args: ccpp_args,
-  override_options : ['warning_level=0'],
+	cpp_args: ccpp_args,
 	dependencies:ccpp_dep,
   install : true
 )

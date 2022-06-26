@@ -6,8 +6,6 @@
 
 #include <fmt/core.h>
 #include <spdlog/spdlog.h>
-#include <spdlog/sinks/rotating_file_sink.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
 
 #include <readerwriterqueue.h>
 #include <constants.h>
@@ -100,7 +98,8 @@ namespace cads
     sqlite3 *db = nullptr;
     sqlite3_stmt *stmt = nullptr;
 
-    const char *db_name = global_config["db_name"].get<std::string>().c_str();
+    auto db_config_name = global_config["db_name"].get<std::string>();
+    const char *db_name = db_config_name.c_str();
     int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_SHAREDCACHE, nullptr);
 
     auto query = R"(INSERT OR REPLACE INTO PARAMETERS (rowid,y_res,x_res,z_res,z_off,encoder_res) VALUES (1,?,?,?,?,?))"s;
@@ -186,7 +185,8 @@ namespace cads
   {
 
     sqlite3 *db = nullptr;
-    const char *db_name = global_config["db_name"].get<std::string>().c_str();
+    auto db_config_name = global_config["db_name"].get<std::string>();
+    const char *db_name = db_config_name.c_str();
 
     int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX, nullptr);
 
@@ -200,11 +200,14 @@ namespace cads
     query = R"(INSERT OR REPLACE INTO PROFILE (revid,idx,y,x_off,z) VALUES (?,?,?,?,?))"s;
     err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
 
-
     while (true)
     {
-      auto [rev,idx,p] = co_yield err;
-      
+      auto [data,terminate] = co_yield err;
+
+      if(terminate) break;
+
+      auto [rev,idx,p] = data;
+
       if (p.y == std::numeric_limits<decltype(p.y)>::max())
         break;
       
@@ -236,6 +239,7 @@ namespace cads
 
     sqlite3_finalize(stmt);
     sqlite3_close(db);
+    spdlog::get("db")->info("store_profile_coro finished");
   }
 
   
@@ -281,7 +285,9 @@ namespace cads
         break;
       }
       
-      co_yield p;
+      auto[ignore,terminate] = co_yield p;
+
+      if(terminate) break;
     }
 
     sqlite3_finalize(stmt);

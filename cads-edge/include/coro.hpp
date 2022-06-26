@@ -6,51 +6,66 @@
 
 namespace cads
 {
-  template <typename T, typename R = int>
+  template <typename FC, typename TC = int>
   struct coro
   {
     struct promise_type;
     using handle_type = std::coroutine_handle<promise_type>;
 
-    struct pass_value
+    // Class passed to co_wait or co_yield ie. co_await promise.yield_value(expr)
+    struct awaitable
     {
-      R value_out;
-      pass_value() = default;
-      pass_value(R a) : value_out(a) {}
+      TC& to_coro;
+      bool& terminate;
+      awaitable() = default;
+      awaitable(TC& a, bool& t) : to_coro(a),terminate(t) {}
+      
       constexpr bool await_ready() const noexcept { return false; }
 
+      // Called when coroutine suspends
+      // Can return the next coroutine if this class has a reference to one 
       constexpr void await_suspend(handle_type) const noexcept {}
 
-      R await_resume() const noexcept
+      // Called when coroutine is resumed
+      std::tuple<TC,bool> await_resume() const noexcept
       {
-        return value_out;
+        return {to_coro,terminate};
       }
     };
 
     struct promise_type
     {
-      T value_in;
-      R value_out;
+      FC from_coro;
+      TC to_coro;
+      bool terminate_coro = false;
+
       std::exception_ptr exception_;
 
+      // Called when coroutine give back control
       coro get_return_object()
       {
         return coro(handle_type::from_promise(*this));
       }
 
-      std::suspend_always initial_suspend() noexcept { return {}; }
-      std::suspend_always final_suspend() noexcept { return {}; }
+      // Inserted before the coroutine body is called.
+      std::suspend_never initial_suspend() noexcept { return {}; }
+      
+      // Inserted after the coroutine body is finished. Using suspend_never cause memleak detector to complain
+      std::suspend_always final_suspend() noexcept { return {}; } 
+      
+      // try catch inserted around coroutine body, called if exception is not caught in coroutine.
       void unhandled_exception() { exception_ = std::current_exception(); }
 
-      pass_value yield_value(T from)
+      // Called by co_yield
+      awaitable yield_value(FC from)
       {
-        value_in = from;
-        return {value_out};
+        from_coro = from;
+        return {to_coro,terminate_coro};
       }
 
-      void return_value(T from)
+      void return_value(FC from)
       {
-        value_in = from;
+        from_coro = from;
       }
 
     };
@@ -58,14 +73,30 @@ namespace cads
     handle_type coro_hnd;
 
     coro(handle_type h) : coro_hnd(h) {}
-    ~coro() { coro_hnd.destroy(); }
+    coro(const coro&) = delete;
+    coro(coro&& c) = delete;
+    ~coro() { 
+      if (!coro_hnd.done()) {
+        terminate();
+      }
+      coro_hnd.destroy(); 
+    }
 
-    std::tuple<bool, T> operator()(R a)
+    std::tuple<bool, FC> resume(TC a)
     {
-      coro_hnd.promise().value_out = a;
+      coro_hnd.promise().to_coro = a;
+      
       if (!coro_hnd.done())
-        coro_hnd.resume();
-      return {coro_hnd.done(), coro_hnd.promise().value_in};
+        coro_hnd.resume(); // Eventually calls await_resume
+      
+      return {coro_hnd.done(), coro_hnd.promise().from_coro};
+    }
+
+    void terminate()
+    {
+      coro_hnd.promise().terminate_coro = true;
+      if (!coro_hnd.done())
+        coro_hnd.resume(); // Eventually calls await_resume
     }
   };
 } // namespace cads
