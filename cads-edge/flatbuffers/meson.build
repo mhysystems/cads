@@ -1,3 +1,8 @@
+# Source is shared with gui project, hence copied as it seems non trivial to build
+# progjects in extrnal directories for build systems used in cads
+copy = find_program('cp')
+run_command(copy,join_paths(meson.source_root(),'..','flatbuffers','z_data.fbs'),join_paths(meson.source_root(),'flatbuffers','z_data.fbs'))
+
 z_data = custom_target(
     'z_data',
     input : 'z_data.fbs',
@@ -5,26 +10,5 @@ z_data = custom_target(
     command : [flatc,'-o','@OUTDIR@','--cpp', '@INPUT@'],
 )
 
-z_data_csharp = custom_target(
-    'z_data_csharp',
-    input : 'z_data.fbs',
-		output : 'z_data_generated.cs',
-    command : [flatc,'-o','@OUTDIR@','--csharp', '@INPUT@'],
-)
-
-csharpGen = generator(
-  flatc,
-  output : '@BASENAME@.cs',
-  arguments : ['-o','@OUTDIR@','--csharp','--csharp', '@INPUT@']
-)
-
-p_config = custom_target(
-		'p_config',
-    input : 'p_config.fbs',
-		output : 'p_config_generated.h',
-    command : [flatc,'-o','@OUTDIR@','--cpp', '@INPUT@'],
-)
-
-csharpGen.process('z_data.fbs')
-cadsSrc += [p_config,z_data]
+cadsSrc += [z_data]
 

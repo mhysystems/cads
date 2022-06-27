@@ -47,7 +47,7 @@ cadsSrc = []
 subdir('src')
 subdir('test')
 
-# Returns z_config and p_config
+# Returns z_config 
 # Represents header files
 subdir('flatbuffers')
 
