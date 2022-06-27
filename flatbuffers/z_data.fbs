@@ -1,11 +1,11 @@
-// profile Z data from gocator
-namespace cads_flatworld;
+// profile data sent to server
+namespace CadsFlatbuffers;
 
 table profile{
-	idx : int;
+//	idx : int;
   y : double;
 	x_off : double;
-	z_samples : [float];
+	z_samples : [short];
 }
 
 table profile_array {

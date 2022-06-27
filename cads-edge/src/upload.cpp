@@ -5,6 +5,7 @@
 #include <queue>
 #include <unordered_map>
 #include <random>
+#include <ranges>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wuseless-cast" 
@@ -48,11 +49,11 @@ namespace cads
 
   auto send_flatbuffer_array(
       flatbuffers::FlatBufferBuilder &builder,
-      std::vector<flatbuffers::Offset<cads_flatworld::profile>> &profiles_flat,
+      std::vector<flatbuffers::Offset<CadsFlatbuffers::profile>> &profiles_flat,
       const cpr::Url &endpoint)
   {
 
-    builder.Finish(cads_flatworld::Createprofile_array(builder, profiles_flat.size(), builder.CreateVector(profiles_flat)));
+    builder.Finish(CadsFlatbuffers::Createprofile_array(builder, profiles_flat.size(), builder.CreateVector(profiles_flat)));
 
     auto buf = builder.GetBufferPointer();
     auto size = builder.GetSize();
@@ -137,7 +138,7 @@ namespace cads
     auto fetch_profile = fetch_belt_coro(revid,last_idx);
 
     FlatBufferBuilder builder(4096 * 128);
-    std::vector<flatbuffers::Offset<cads_flatworld::profile>> profiles_flat;
+    std::vector<flatbuffers::Offset<CadsFlatbuffers::profile>> profiles_flat;
 
     auto ts = fmt::format("{:%F-%H-%M}", std::chrono::system_clock::now());
     cpr::Url endpoint = {ReplaceString(global_config["upload_profile_to"].get<std::string>(), "%DATETIME%"s, ts)};
@@ -163,7 +164,12 @@ namespace cads
 
       if (!co_terminate)
       {
-        profiles_flat.push_back(cads_flatworld::CreateprofileDirect(builder, idx, p.y, p.x_off, &p.z));
+        namespace sr = std::ranges;
+       
+        auto tmp_z = p.z | sr::views::transform([=](float e) -> int16_t { return int16_t(((double)e - z_offset) / z_resolution);});
+        std::vector<short int> short_z{tmp_z.begin(),tmp_z.end()};
+        
+        profiles_flat.push_back(CadsFlatbuffers::CreateprofileDirect(builder, p.y, p.x_off, &short_z));
 
         if (profiles_flat.size() == 256)
         {
