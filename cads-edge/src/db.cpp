@@ -232,8 +232,7 @@ coro<int, std::tuple<int,int,profile>> store_profile_coro()
       
       if (err != SQLITE_DONE)
       {
-        spdlog::get("db")->error("SQLite Error Code:{}", err);
-        break;
+        spdlog::get("db")->error("SQLite Error Code:{}, revid:{}, idx:{}", err,rev,idx);
       }
 
     }
