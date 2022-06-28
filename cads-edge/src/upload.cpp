@@ -186,7 +186,7 @@ namespace cads
       }
     }
     auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
+    auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start).count() + 1; // Add one second to avoid divide by zero
 
     spdlog::get("upload")->info("SIZE: {}, DUR:{}, RATE(Kb/s):{} ", size, duration, size / (1000*duration));
     spdlog::get("upload")->info("Leaving http_post_thread_bulk");

@@ -185,6 +185,7 @@ namespace cads
         }
         break;
       }
+
       case processing:
       {
         if (p.y == 0)
@@ -217,7 +218,6 @@ namespace cads
       if (p.y == 0.0)
         idx = 0;
 
-
       store_profile.resume({revid, idx++, p});
 
       if (profile_fifo.size_approx() > buffer_size_warning)
@@ -233,8 +233,8 @@ namespace cads
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     spdlog::get("cads")->info("DB PROCESSING - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, cnt / duration);
 
-    spdlog::get("cads")->info("Final Upload");
-    http_post_whole_belt(revid, idx); // For replay and not having a complete belt, so something is uploaded
+    //spdlog::get("cads")->info("Final Upload");
+    //http_post_whole_belt(revid, idx); // For replay and not having a complete belt, so something is uploaded
     spdlog::get("cads")->info("Stopping save_send_thread");
   }
 
@@ -522,7 +522,7 @@ namespace cads
       {
         const auto cv_threshhold = left_edge_avg_height(belt, fiducial) - fdepth;
         auto correlation = search_for_fiducial(belt, fiducial, m1, out, cv_threshhold);
-        // correlation += 1.0;
+        
         lowest_correlation = std::min(lowest_correlation, correlation);
 
         if (correlation < belt_crosscorr_threshold)
@@ -645,7 +645,6 @@ namespace cads
 
     int64_t cnt = 0;
 
-
     auto start = std::chrono::high_resolution_clock::now();
 
     cads::msg m;
@@ -694,6 +693,8 @@ namespace cads
 
       nan_filter(z);
       regression_compensate(z, left_edge_index, right_edge_index, gradient);
+      
+      //Adjust right edge for now as origin dector is not comparing this side
       int edge_adjust = right_edge_index - left_edge_index - width_n;
       right_edge_index += -edge_adjust;
 

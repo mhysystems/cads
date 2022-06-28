@@ -25,6 +25,7 @@ namespace cads
 
     while (err != SQLITE_ROW && err != SQLITE_DONE && attempts-- > 0)
     {
+      sqlite3_reset(stmt);
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
       err = sqlite3_step(stmt);
     }
@@ -100,7 +101,7 @@ namespace cads
 
     auto db_config_name = global_config["db_name"].get<std::string>();
     const char *db_name = db_config_name.c_str();
-    int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_SHAREDCACHE, nullptr);
+    int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX, nullptr);
 
     auto query = R"(INSERT OR REPLACE INTO PARAMETERS (rowid,y_res,x_res,z_res,z_off,encoder_res) VALUES (1,?,?,?,?,?))"s;
     err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
@@ -250,7 +251,7 @@ coro<int, std::tuple<int,int,profile>> store_profile_coro()
     sqlite3 *db = nullptr;
     const char *db_name = name.empty() ? global_config["db_name"].get<std::string>().c_str() : name.c_str();
 
-    int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_SHAREDCACHE, nullptr);
+    int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX, nullptr);
 
     sqlite3_stmt *stmt = nullptr;
     auto query =  fmt::format(R"(SELECT idx,y,x_off,z FROM PROFILE WHERE REVID = {} AND Y >= 0 AND IDX < {} ORDER BY Y)",revid,last_idx);
@@ -283,7 +284,6 @@ coro<int, std::tuple<int,int,profile>> store_profile_coro()
       else
       {
         spdlog::get("db")->error("fetch_profile:sqlite3_step Code:{}", err);
-        break;
       }
       
       auto[ignore,terminate] = co_yield p;
