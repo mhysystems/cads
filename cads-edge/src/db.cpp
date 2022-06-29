@@ -248,7 +248,7 @@ coro<int, std::tuple<int,int,profile>> store_profile_coro()
     sqlite3 *db = nullptr;
     const char *db_name = name.empty() ? global_config["db_name"].get<std::string>().c_str() : name.c_str();
 
-    int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX, nullptr);
+    int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READONLY| SQLITE_OPEN_NOMUTEX, nullptr);
     sqlite3_extended_result_codes(db, 1);
 
     sqlite3_stmt *stmt = nullptr;

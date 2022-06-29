@@ -167,7 +167,7 @@ namespace cads
         namespace sr = std::ranges;
        
         auto tmp_z = p.z | sr::views::transform([=](float e) -> int16_t { return int16_t(((double)e - z_offset) / z_resolution);});
-        std::vector<short int> short_z{tmp_z.begin(),tmp_z.end()};
+        std::vector<int16_t> short_z{tmp_z.begin(),tmp_z.end()};
         
         profiles_flat.push_back(CadsFlatbuffers::CreateprofileDirect(builder, p.y, p.x_off, &short_z));
 
