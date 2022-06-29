@@ -25,7 +25,6 @@ namespace cads
 
     while (err != SQLITE_ROW && err != SQLITE_DONE && attempts-- > 0)
     {
-      sqlite3_reset(stmt);
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
       err = sqlite3_step(stmt);
     }
@@ -51,6 +50,7 @@ namespace cads
     }
 
     vector<string> tables{
+        R"(PRAGMA journal_mode=WAL)"s,
         R"(DROP TABLE IF EXISTS PROFILE;)"s,
         R"(VACUUM;)"s,
         fmt::format(R"(CREATE TABLE IF NOT EXISTS PROFILE (revid INTEGER NOT NULL, idx INTEGER NOT NULL,y {} NOT NULL, x_off REAL NOT NULL, z BLOB NOT NULL, PRIMARY KEY (revid,idx));)", ytype),
@@ -70,7 +70,7 @@ namespace cads
         if (err == SQLITE_OK)
         {
           err = sqlite3_step(stmt);
-          if (err != SQLITE_DONE)
+          if (err != SQLITE_DONE && err != SQLITE_ROW)
           {
             r &= false;
             spdlog::get("db")->error("create_db:sqlite3_step Error Code:{}", err);
@@ -195,9 +195,6 @@ coro<int, std::tuple<int,int,profile>> store_profile_coro()
     auto query = R"(PRAGMA synchronous=OFF)"s;
     prepare_step_query(db, query);
 
-    query = R"(pragma cache_size = 1)"s;
-    prepare_step_query(db, query);
-
     query = R"(INSERT OR REPLACE INTO PROFILE (revid,idx,y,x_off,z) VALUES (?,?,?,?,?))"s;
     err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
 
@@ -226,7 +223,8 @@ coro<int, std::tuple<int,int,profile>> store_profile_coro()
       err = sqlite3_bind_double(stmt, 4, p.x_off);
       err = sqlite3_bind_blob(stmt, 5, p.z.data(), p.z.size() * sizeof(z_element), SQLITE_STATIC);
 
-      err = db_step(stmt);
+      // Run once, retrying not effective, too slow and causes buffers to fill
+      err = sqlite3_step(stmt);
 
       sqlite3_reset(stmt);
       
@@ -250,7 +248,8 @@ coro<int, std::tuple<int,int,profile>> store_profile_coro()
     sqlite3 *db = nullptr;
     const char *db_name = name.empty() ? global_config["db_name"].get<std::string>().c_str() : name.c_str();
 
-    int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX, nullptr);
+    int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX, nullptr);
+    sqlite3_extended_result_codes(db, 1);
 
     sqlite3_stmt *stmt = nullptr;
     auto query =  fmt::format(R"(SELECT idx,y,x_off,z FROM PROFILE WHERE REVID = {} AND Y >= 0 AND IDX < {} ORDER BY Y)",revid,last_idx);
@@ -260,7 +259,9 @@ coro<int, std::tuple<int,int,profile>> store_profile_coro()
     while (true)
     {
       std::tuple<int,profile> p;
-      err = db_step(stmt);
+      
+      // Run once, retrying not effective, too slow and causes buffers to fill
+      err = sqlite3_step(stmt);
 
       if (err == SQLITE_ROW)
       {
