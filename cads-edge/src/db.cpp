@@ -242,53 +242,81 @@ coro<int, std::tuple<int,int,profile>> store_profile_coro()
   }
 
   
-  coro<std::tuple<int,profile>> fetch_belt_coro(int revid,int last_idx, std::string name)
+
+
+
+std::deque<std::tuple<int,profile>> fetch_belt_coro_step(sqlite3_stmt* stmt, int idx_begin, int idx_end)
+{
+ 
+  std::deque<std::tuple<int,profile>> rtn;
+  auto err = sqlite3_bind_int(stmt, 1, idx_begin);
+  err = sqlite3_bind_int(stmt, 2, idx_end);
+  
+  while (true)
+  {
+    // Run once, retrying not effective, too slow and causes buffers to fill
+    err = sqlite3_step(stmt);
+
+    if (err == SQLITE_ROW)
+    {
+      y_type y;
+
+      auto idx = sqlite3_column_int(stmt, 0);
+
+      y = (y_type)sqlite3_column_double(stmt, 1);
+
+      double x_off = sqlite3_column_double(stmt, 2);
+      z_element *z = (z_element *)sqlite3_column_blob(stmt, 3); //Freed on next call to sqlite3_step
+      int len = sqlite3_column_bytes(stmt, 3) / sizeof(*z);
+
+      rtn.push_back({idx,{y, x_off, {z, z + len}}});
+    }
+    else if (err == SQLITE_DONE)
+    {
+      break;
+    }
+    else
+    {
+      spdlog::get("db")->error("fetch_belt_coro_step:sqlite3_step Code:{}", err);
+      break;
+    }
+    
+  }
+
+  sqlite3_reset(stmt);
+  
+  return rtn;
+}
+
+
+
+  coro<std::tuple<int,profile>> fetch_belt_coro(int revid,int last_idx, std::string name, int size)
   {
 
     sqlite3 *db = nullptr;
     const char *db_name = name.empty() ? global_config["db_name"].get<std::string>().c_str() : name.c_str();
 
     int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READONLY| SQLITE_OPEN_NOMUTEX, nullptr);
-    sqlite3_extended_result_codes(db, 1);
 
     sqlite3_stmt *stmt = nullptr;
-    auto query =  fmt::format(R"(SELECT idx,y,x_off,z FROM PROFILE WHERE REVID = {} AND Y >= 0 AND IDX < {} ORDER BY Y)",revid,last_idx);
+    auto query =  fmt::format(R"(SELECT idx,y,x_off,z FROM PROFILE WHERE REVID = {} AND IDX >= ? AND IDX < ? ORDER BY Y)",revid);
 
     err = sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
-
-    while (true)
+    
+    for (int i = 0; i < last_idx; i+=size)
     {
-      std::tuple<int,profile> p;
-      
-      // Run once, retrying not effective, too slow and causes buffers to fill
-      err = sqlite3_step(stmt);
+      auto p = fetch_belt_coro_step(stmt,i,i+size);
 
-      if (err == SQLITE_ROW)
-      {
-        y_type y;
+      if(p.empty()) break;
 
-        auto idx = sqlite3_column_int(stmt, 0);
-
-        y = (y_type)sqlite3_column_double(stmt, 1);
-
-        double x_off = sqlite3_column_double(stmt, 2);
-        z_element *z = (z_element *)sqlite3_column_blob(stmt, 3); //Freed on next call to sqlite3_step
-        int len = sqlite3_column_bytes(stmt, 3) / sizeof(*z);
-
-        p =  {idx,{y, x_off, {z, z + len}}};
+      while(!p.empty() ) {
+        auto[ignore,terminate] = co_yield p.front();
+        p.pop_front();
+        if(terminate) { 
+          i = last_idx;
+        }
       }
-      else if (err == SQLITE_DONE)
-      {
-        break;
-      }
-      else
-      {
-        spdlog::get("db")->error("fetch_profile:sqlite3_step Code:{}", err);
-      }
-      
-      auto[ignore,terminate] = co_yield p;
 
-      if(terminate) break;
     }
 
     sqlite3_finalize(stmt);

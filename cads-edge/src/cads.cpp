@@ -181,7 +181,7 @@ namespace cads
 
         if (p.y == 0 && current_hour >= trigger_hour)
         {
-          store_profile.resume({revid, idx++, p});
+          //store_profile.resume({revid, idx++, p}); REMOVEME
           s = processing;
         }
         break;
@@ -195,7 +195,7 @@ namespace cads
           spdlog::get("cads")->info("Finished Processing");
           s = waitthread;
         }else {
-          store_profile.resume({revid, idx++, p});
+          //store_profile.resume({revid, idx++, p}); REMOVEME
         }
         break;
       }
@@ -221,7 +221,7 @@ namespace cads
       if (p.y == 0.0)
         idx = 0;
 
-      //store_profile.resume({revid, idx++, p}); FIXME
+      store_profile.resume({revid, idx++, p});
 
       if (profile_fifo.size_approx() > buffer_size_warning)
       {
