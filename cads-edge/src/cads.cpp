@@ -517,6 +517,8 @@ namespace cads
     int64_t cnt = 0;
     auto buffer_size_warning = buffer_warning_increment;
 
+    int64_t found_origin_sequence_cnt = 0;
+
     while (true)
     {
       ++cnt;
@@ -531,7 +533,8 @@ namespace cads
         if (correlation < belt_crosscorr_threshold)
         {
           spdlog::get("cads")->info("Correlation : {} at y : {}", correlation, y);
-
+          
+          found_origin_sequence_cnt++;
           trigger_length = y_max_length * 0.95;
 
           fiducial_as_image(belt);
@@ -551,6 +554,7 @@ namespace cads
         {
           spdlog::get("cads")->info("Origin not found before Max samples. Lowest Correlation : {}", lowest_correlation);
 
+          found_origin_sequence_cnt = 0;
           y_offset += y;
 
           // Reset buffer y values to origin
@@ -563,7 +567,9 @@ namespace cads
         }
       }
 
-      next_fifo.enqueue({msgid::scan, profile_buffer.front()});
+      if(found_origin_sequence_cnt > 1) {
+        next_fifo.enqueue({msgid::scan, profile_buffer.front()});
+      }
 
       profile_fifo.wait_dequeue(m);
 
