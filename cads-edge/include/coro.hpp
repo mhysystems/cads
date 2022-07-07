@@ -3,10 +3,11 @@
 #include <coroutine>
 #include <tuple>
 #include <exception>
+#include <type_traits>
 
 namespace cads
 {
-  template <typename FC, typename TC = int>
+  template <typename FC, typename TC = int, int dir = 0>
   struct coro
   {
     struct promise_type;
@@ -48,7 +49,7 @@ namespace cads
       }
 
       // Inserted before the coroutine body is called.
-      std::suspend_never initial_suspend() noexcept { return {}; }
+      std::conditional<dir == 0,std::suspend_always,std::suspend_never>::type initial_suspend() noexcept { return {}; }
       
       // Inserted after the coroutine body is finished. Using suspend_never cause memleak detector to complain
       std::suspend_always final_suspend() noexcept { return {}; } 

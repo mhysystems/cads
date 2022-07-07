@@ -17,11 +17,28 @@
 namespace po = boost::program_options;
 
 void init_globals() {
-  std::vector<spdlog::sink_ptr> ms{std::make_shared<spdlog::sinks::rotating_file_sink_mt>("cads.log", 1024 * 1024 * 5, 1), std::make_shared<spdlog::sinks::stdout_color_sink_mt>()};
-  spdlog::register_logger(std::make_shared<spdlog::logger>("cads", ms.begin(),ms.end()));
-  spdlog::register_logger(std::make_shared<spdlog::logger>("gocator", ms.begin(),ms.end()));
-  spdlog::register_logger(std::make_shared<spdlog::logger>("db", ms.begin(),ms.end()));
-  spdlog::register_logger(std::make_shared<spdlog::logger>("upload", ms.begin(),ms.end()));
+  using namespace std;
+
+  array<shared_ptr<spdlog::sinks::dup_filter_sink_mt>,2> dup_filter {
+    std::make_shared<spdlog::sinks::dup_filter_sink_mt>(std::chrono::seconds(5)),
+    std::make_shared<spdlog::sinks::dup_filter_sink_mt>(std::chrono::seconds(5))
+  };
+
+  dup_filter[0]->add_sink(std::make_shared<spdlog::sinks::rotating_file_sink_mt>("cads.log", 1024 * 1024 * 5, 1));
+  dup_filter[1]->add_sink(std::make_shared<spdlog::sinks::stdout_color_sink_mt>());
+  
+  array<spdlog::sink_ptr,2> ms{dup_filter[0],dup_filter[1]};
+  
+  array<shared_ptr<spdlog::logger>,4> log_sections {
+    make_shared<spdlog::logger>("cads", ms.begin(),ms.end()),
+    make_shared<spdlog::logger>("gocator", ms.begin(),ms.end()),
+    make_shared<spdlog::logger>("db", ms.begin(),ms.end()),  
+    make_shared<spdlog::logger>("upload", ms.begin(),ms.end())
+  };
+  
+  for(auto ls : log_sections) {
+    spdlog::register_logger(ls);
+  }
   
   spdlog::flush_every(std::chrono::seconds(60));
 }

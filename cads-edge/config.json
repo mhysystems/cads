@@ -13,8 +13,6 @@
 
   "iirfilter" : {
     "delay" : 228,
-    "a" : [ -0.86107405, 7.8784571, -32.0386356, 76.00434398, -115.91300053,117.85542254,-79.88969597,34.81461284,-8.85043031,1.0],
-    "b" : [ 0.00013433, -0.00093849, 0.00267746,-0.00374478, 0.00187148, 0.00187148, -0.00374478, 0.00267746, -0.00093849, 0.00013433],
     "sos" :[[ 1.34332391e-04,  1.34332391e-04,  0.00000000e+00,  1.00000000e+00, -9.66764048e-01, 0.00000000e+00],
             [ 1.00000000e+00, -1.99123270e+00,  1.00000000e+00,  1.00000000e+00, -1.94435600e+00,  9.45338989e-01],
             [ 1.00000000e+00, -1.99751391e+00,  1.00000000e+00,  1.00000000e+00, -1.96437007e+00,  9.65139091e-01],
@@ -23,8 +21,10 @@
   },
   "db_name" : "profile.db",
   "belt_cross_correlation_threshold" : 0.4,
-  "upload_profile_to" : "http://localhost:5000/api/whaleback/cv405b-%DATETIME%/bulk",
-  "upload_config_to" : "http://localhost:5000/api/whaleback/cv405b-%DATETIME%/meta",
+  "site" : "whaleback",
+  "conveyor" : "cv405", 
+  "upload_profile_to" : "http://localhost:5000/api/whaleback/cv405/%DATETIME%/bulk",
+  "upload_config_to" : "http://localhost:5000/api/meta",
   "lua_window_height" : 10,
   "lua_fn" : "function process(width,height)\nlocal sum = 0\nfor i = 1,width do\nfor j = 0,height-1 do\nsum = sum + (win[j*width + i] < 28 and 1 or 0)\nend\nend\nreturn (sum / (width * height)) > 0.2 and 1 or 0\nend"
 }

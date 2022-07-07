@@ -49,11 +49,13 @@ namespace cads
 
   auto send_flatbuffer_array(
       flatbuffers::FlatBufferBuilder &builder,
+      double z_res,
+      double z_off,
       std::vector<flatbuffers::Offset<CadsFlatbuffers::profile>> &profiles_flat,
       const cpr::Url &endpoint)
   {
 
-    builder.Finish(CadsFlatbuffers::Createprofile_array(builder, profiles_flat.size(), builder.CreateVector(profiles_flat)));
+    builder.Finish(CadsFlatbuffers::Createprofile_array(builder, z_res, z_off, profiles_flat.size(), builder.CreateVector(profiles_flat)));
 
     auto buf = builder.GetBufferPointer();
     auto size = builder.GetSize();
@@ -81,17 +83,20 @@ namespace cads
 
   }
 
-  void http_post_profile_properties(std::string json, std::string ts)
+  void http_post_profile_properties_json(std::string json)
   {
 
-    auto endpoint_url = global_config["upload_profile_to"].get<std::string>();
+    auto endpoint_url = global_config["upload_config_to"].get<std::string>();
     std::transform(endpoint_url.begin(), endpoint_url.end(), endpoint_url.begin(), [](unsigned char c)
                    { return std::tolower(c); });
-    if (endpoint_url == "null")
+    
+    if (endpoint_url == "null") {
+      spdlog::get("upload")->info("upload_config_to set to null. Config not uploaded");
       return;
+    }
 
     cpr::Response r;
-    const cpr::Url endpoint{ReplaceString(global_config["upload_config_to"].get<std::string>(), "%DATETIME%"s, ts)};
+    const cpr::Url endpoint{endpoint_url};
 
     while (true)
     {
@@ -110,16 +115,26 @@ namespace cads
     }
   }
 
-  void http_post_profile_properties(double y_resolution, double x_resolution, double z_resolution, double z_offset, std::string ts)
+  std::tuple<double,double,int>  http_post_profile_properties(std::string chrono)
   {
     nlohmann::json resolution;
+    auto db_name = global_config["db_name"].get<std::string>();
+    auto [y_resolution, x_resolution, z_resolution, z_offset, encoderResolution, z_max, z_min, err] = fetch_profile_parameters(db_name);
+    
+    if(err != 0) return {z_resolution,z_offset,err};
 
-    resolution["y"] = y_resolution;
-    resolution["x"] = x_resolution;
-    resolution["z"] = z_resolution;
+    resolution["site"] = global_config["site"].get<std::string>();
+    resolution["conveyor"] = global_config["conveyor"].get<std::string>();
+    resolution["chrono"] = chrono;
+    resolution["y_res"] = y_resolution;
+    resolution["x_res"] = x_resolution;
+    resolution["z_res"] = z_resolution;
     resolution["z_off"] = z_offset;
+    resolution["z_max"] = z_max;
+    resolution["z_min"] = z_min;
 
-    http_post_profile_properties(resolution.dump(), ts);
+    http_post_profile_properties_json(resolution.dump());
+    return {z_resolution,z_offset,0};
   }
 
 
@@ -142,13 +157,10 @@ namespace cads
 
     auto ts = fmt::format("{:%F-%H-%M}", std::chrono::system_clock::now());
     cpr::Url endpoint = {ReplaceString(global_config["upload_profile_to"].get<std::string>(), "%DATETIME%"s, ts)};
-    auto [y_resolution, x_resolution, z_resolution, z_offset, encoderResolution, err] = fetch_profile_parameters(db_name);
     
-    if (err == 0)
-    {
-      http_post_profile_properties(y_resolution, x_resolution, z_resolution, z_offset, ts);
-    }
-    else
+    auto [z_resolution,z_offset,err] = http_post_profile_properties(ts);
+    
+    if (err != 0)
     {
       spdlog::get("upload")->error("Unable to fetch profile parameters from DB");
       return 0;
@@ -169,18 +181,18 @@ namespace cads
         auto tmp_z = p.z | sr::views::transform([=](float e) -> int16_t { return int16_t(((double)e - z_offset) / z_resolution);});
         std::vector<int16_t> short_z{tmp_z.begin(),tmp_z.end()};
         
-        profiles_flat.push_back(CadsFlatbuffers::CreateprofileDirect(builder, p.y, p.x_off, &short_z));
+        profiles_flat.push_back(CadsFlatbuffers::CreateprofileDirect(builder,p.y, p.x_off, &short_z));
 
         if (profiles_flat.size() == 256)
         {
-          size += send_flatbuffer_array(builder, profiles_flat, endpoint);
+          size += send_flatbuffer_array(builder, z_resolution, z_offset,profiles_flat, endpoint);
         }
       }
       else
       {
         if (profiles_flat.size() > 0)
         {
-          size += send_flatbuffer_array(builder, profiles_flat, endpoint);
+          size += send_flatbuffer_array(builder, z_resolution, z_offset, profiles_flat, endpoint);
         }
         break;
       }

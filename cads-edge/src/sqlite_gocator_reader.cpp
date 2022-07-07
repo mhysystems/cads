@@ -51,7 +51,7 @@ namespace cads
   void SqliteGocatorReader::OnData()
   {
     auto data_src = global_config["data_source"].get<std::string>();
-    auto [yResolution, xResolution, zResolution, zOffset, encoderResolution,err2] = fetch_profile_parameters(data_src);
+    auto [yResolution, xResolution, zResolution, zOffset, encoderResolution, z_max, z_min, err2] = fetch_profile_parameters(data_src);
   
     m_gocatorFifo.enqueue({msgid::resolutions,std::tuple<double, double, double, double, double>{yResolution, xResolution, zResolution, zOffset, encoderResolution}});
     

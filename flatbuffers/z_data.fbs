@@ -2,13 +2,14 @@
 namespace CadsFlatbuffers;
 
 table profile{
-//	idx : int;
   y : double;
 	x_off : double;
 	z_samples : [short];
 }
 
 table profile_array {
+  z_res : double;
+  z_off : double;
   count : ulong;
   profiles : [profile];
 }
