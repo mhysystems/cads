@@ -291,6 +291,11 @@ kStatus GocatorReader::OnData(GoSensor sensor, GoDataSet dataset)
       m_buffer_size_warning += 4096;
     }
 
+    if(terminate) {
+      m_gocatorFifo.enqueue({msgid::finished,0});
+      Stop();
+    }
+
     return kOK;
 }
 

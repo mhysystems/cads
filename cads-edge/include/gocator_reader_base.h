@@ -33,8 +33,10 @@ protected:
   std::mutex m_mutex;
   std::atomic<bool> m_loop;
   std::atomic<bool> m_first_frame = true;
+  static std::atomic<bool> terminate;
   
   z_type k16sToFloat(k16s*, k16s*, double, double);
+  static void sigint_handler(int s);
 
 public:
 

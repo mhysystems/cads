@@ -52,28 +52,34 @@ namespace cads
   {
     auto data_src = global_config["data_source"].get<std::string>();
     auto [yResolution, xResolution, zResolution, zOffset, encoderResolution, z_max, z_min, err2] = fetch_profile_parameters(data_src);
-  
-    m_gocatorFifo.enqueue({msgid::resolutions,std::tuple<double, double, double, double, double>{yResolution, xResolution, zResolution, zOffset, encoderResolution}});
-    
+
+    m_gocatorFifo.enqueue({msgid::resolutions, std::tuple<double, double, double, double, double>{yResolution, xResolution, zResolution, zOffset, encoderResolution}});
+
     m_yResolution = yResolution;
     m_encoder_resolution = encoderResolution;
 
-   auto fetch_profile = fetch_belt_coro(0,std::numeric_limits<int>::max(),data_src);
+    auto fetch_profile = fetch_belt_coro(0, std::numeric_limits<int>::max(), data_src);
 
     while (m_loop)
     {
 
       auto [co_terminate, cv] = fetch_profile.resume(0);
-      auto [idx,p] = cv;
+      auto [idx, p] = cv;
 
-      if (co_terminate) {
-        m_gocatorFifo.enqueue({msgid::finished,0});
+      if (co_terminate)
+      {
+        m_gocatorFifo.enqueue({msgid::finished, 0});
         m_loop = false;
         break;
       }
 
-      m_gocatorFifo.enqueue({msgid::scan,p});
-
+      m_gocatorFifo.enqueue({msgid::scan, p});
+      
+      if (terminate)
+      {
+        m_gocatorFifo.enqueue({msgid::finished, 0});
+        m_loop = false;
+      }
     }
   }
 
