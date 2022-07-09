@@ -16,7 +16,7 @@
 
 namespace po = boost::program_options;
 
-void init_globals() {
+void init_globals(size_t log_len,size_t flush) {
   using namespace std;
 
   array<shared_ptr<spdlog::sinks::dup_filter_sink_mt>,2> dup_filter {
@@ -24,7 +24,7 @@ void init_globals() {
     std::make_shared<spdlog::sinks::dup_filter_sink_mt>(std::chrono::seconds(5))
   };
 
-  dup_filter[0]->add_sink(std::make_shared<spdlog::sinks::rotating_file_sink_mt>("cads.log", 1024 * 1024 * 5, 1));
+  dup_filter[0]->add_sink(std::make_shared<spdlog::sinks::rotating_file_sink_mt>("cads.log", log_len, 1));
   dup_filter[1]->add_sink(std::make_shared<spdlog::sinks::stdout_color_sink_mt>());
   
   array<spdlog::sink_ptr,2> ms{dup_filter[0],dup_filter[1]};
@@ -40,7 +40,7 @@ void init_globals() {
     spdlog::register_logger(ls);
   }
   
-  spdlog::flush_every(std::chrono::seconds(60));
+  spdlog::flush_every(std::chrono::seconds(flush));
 }
 
 std::string slurpfile(const std::string_view path, bool binaryMode = true)
@@ -91,6 +91,14 @@ int main(int argn, char **argv)
 		return EXIT_FAILURE;
 	}
 
+
+  if(vm["stop"].as<bool>()) {
+    using namespace std;
+    cout << "Only stopping gocator" << endl;
+    stop_gocator();
+    return 0;
+  }
+
 	if (vm.count("config") > 0)
 	{
 		auto f = vm["config"].as<std::string>();
@@ -105,7 +113,11 @@ int main(int argn, char **argv)
 		return EXIT_FAILURE;
 	}
 
-  init_globals();
+  if(global_config.find("log_lengthMiB") != global_config.end()) {
+    init_globals(global_config["log_lengthMiB"].get<size_t>() * 1024 * 1024,60);
+  }else {
+    init_globals(5 * 1024 * 1024,60);
+  }
 
   if(vm.count("level") > 0) {
     std::string l = vm["level"].as<std::string>();
@@ -119,15 +131,12 @@ int main(int argn, char **argv)
 
   }
 
-  
   if(vm["savedb"].as<bool>()) {
     store_profile_only();
   }else if(vm["once"].as<bool>()) {
     process();
   }else if(vm["signal"].as<bool>()) {
     generate_signal();
-  }else if(vm["stop"].as<bool>()) {
-    stop_gocator();
   }else{
 	  process();
   }
