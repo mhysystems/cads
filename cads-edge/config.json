@@ -10,7 +10,7 @@
   "fiducial_y" : 70,
   "fiducial_gap" : 78,
   "daily_start_time" : "now",
-
+  "log_lengthMiB" : 128, 
   "iirfilter" : {
     "delay" : 228,
     "sos" :[[ 1.34332391e-04,  1.34332391e-04,  0.00000000e+00,  1.00000000e+00, -9.66764048e-01, 0.00000000e+00],
@@ -23,7 +23,7 @@
   "belt_cross_correlation_threshold" : 0.4,
   "site" : "whaleback",
   "conveyor" : "cv405", 
-  "upload_profile_to" : "http://localhost:5000/api/whaleback/cv405/%DATETIME%/bulk",
+  "upload_profile_to" : "http://localhost:5000/api/belt",
   "upload_config_to" : "http://localhost:5000/api/meta",
   "lua_window_height" : 10,
   "lua_fn" : "function process(width,height)\nlocal sum = 0\nfor i = 1,width do\nfor j = 0,height-1 do\nsum = sum + (win[j*width + i] < 28 and 1 or 0)\nend\nend\nreturn (sum / (width * height)) > 0.2 and 1 or 0\nend"

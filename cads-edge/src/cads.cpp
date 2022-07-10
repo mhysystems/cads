@@ -6,7 +6,7 @@
 #include <regression.h>
 
 #include <db.h>
-#include <upload.h>
+#include <coms.h>
 #include <constants.h>
 #include <fiducial.h>
 #include <window.hpp>
@@ -148,7 +148,7 @@ namespace cads
     state s = waiting;
     auto store_profile = store_profile_coro();
     std::chrono::time_point<date::local_t, std::chrono::days> today;
-    std::future<int> fut;
+    std::future<std::string> fut;
     profile p;
     int revid = 0, idx = 0;
     auto buffer_size_warning = buffer_warning_increment;

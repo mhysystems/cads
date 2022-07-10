@@ -14,6 +14,7 @@ namespace cads
   using z_type = std::vector<z_element>;
   struct profile{y_type y; double x_off; z_type z;}; 
   using profile_window = std::deque<profile>;
+  bool operator==(const profile&, const profile&);
 
   const cads::profile null_profile{std::numeric_limits<cads::y_type>::max(),std::numeric_limits<double>::max(),{}};
 

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cmath>
 #include <limits>
+#include <string>
 
 #include <nlohmann/json.hpp>
 #include <GoSdk/GoSdkDef.h>
@@ -26,5 +27,8 @@ namespace cads {
       return std::isnan(a);
     }
   };
+
+  void init_config(std::string f);
+  void drop_config();
 }
 

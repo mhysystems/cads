@@ -1,8 +1,7 @@
 cadsSrc += files(
-  'main.cpp',
   'cads.cpp',
   'db.cpp',
-  'upload.cpp',
+  'coms.cpp',
   'gocator_reader.cpp',
   'regression.cpp', 
   'fiducial.cpp',
@@ -13,5 +12,8 @@ cadsSrc += files(
   'profile.cpp',
   'constants.cpp',
   'window.cpp',
-  'dynamic_processing.cpp'
+  'dynamic_processing.cpp',
+  'init.cpp'
 )
+
+cadsEntry += files('main.cpp')

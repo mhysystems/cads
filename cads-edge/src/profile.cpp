@@ -84,4 +84,11 @@ tuple<z_element,z_element,bool> barrel_offset(const z_type& win,double z_height_
   }
 }
 
+  bool operator==(const profile& a, const profile& b) {
+    auto tx = a.x_off == b.x_off;
+    auto ty = a.y == b.y;
+    auto tz = std::ranges::equal(a.z,b.z);
+    return tx && ty && tz;
+  }
+
 } // namespace cads

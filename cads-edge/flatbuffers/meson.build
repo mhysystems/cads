@@ -10,5 +10,12 @@ z_data = custom_target(
     command : [flatc,'-o','@OUTDIR@','--cpp', '@INPUT@'],
 )
 
-cadsSrc += [z_data]
+plot_data = custom_target(
+    'plot_data',
+    input : 'plot_data.fbs',
+		output : 'plot_data_generated.h',
+    command : [flatc,'-o','@OUTDIR@','--cpp', '@INPUT@'],
+)
+
+cadsSrc += [z_data,plot_data]
 

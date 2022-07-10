@@ -35,7 +35,8 @@ namespace cads
   {
     sqlite3 *db = nullptr;
     bool r = true;
-    const char *db_name = name.c_str();
+    auto db_name_string = name.empty() ? global_config["db_name"].get<std::string>() : name;
+    const char *db_name = db_name_string.c_str();
 
     string ytype;
 
@@ -85,12 +86,12 @@ namespace cads
     return r;
   }
 
-  int store_profile_parameters(double y_res, double x_res, double z_res, double z_off, double encoder_res, double z_max, double z_min)
+  int store_profile_parameters(double y_res, double x_res, double z_res, double z_off, double encoder_res, double z_max, double z_min, std::string name)
   {
     sqlite3 *db = nullptr;
     sqlite3_stmt *stmt = nullptr;
 
-    auto db_config_name = global_config["db_name"].get<std::string>();
+    auto db_config_name = name.empty() ? global_config["db_name"].get<std::string>() : name;
     const char *db_name = db_config_name.c_str();
     int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX, nullptr);
 
@@ -164,11 +165,11 @@ namespace cads
     return rtn;
   }
 
-  coro<int, std::tuple<int, int, profile>, 1> store_profile_coro()
+  coro<int, std::tuple<int, int, profile>, 1> store_profile_coro(std::string name)
   {
 
     sqlite3 *db = nullptr;
-    auto db_config_name = global_config["db_name"].get<std::string>();
+    auto db_config_name =  name.empty() ? global_config["db_name"].get<std::string>() : name;
     const char *db_name = db_config_name.c_str();
 
     int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX, nullptr);

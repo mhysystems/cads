@@ -44,18 +44,23 @@ subdir('GO_SDK/Gocator/GoSdk')
 
 cadsInc = include_directories('include')
 cadsSrc = []
-subdir('src')
-subdir('test')
+cadsEntry = []
 
+libdep = [opencv, tbb, thread, boost, sqlite, http_stuff,log_stuff, flatbuffers, fmt_dep, nlohmann_json_dep,date_dep,tz_dep,iir1_dep,lua_dep]
 # Returns z_config 
 # Represents header files
 subdir('flatbuffers')
 
+subdir('src')
+subdir('test')
+
+
+
 cads = executable(
 	'cads', 
-	cadsSrc,
+	cadsSrc + cadsEntry,
 	include_directories : [GoSdkInc,kApiInc,cadsInc],
-	dependencies:[opencv, tbb, thread, boost, sqlite, http_stuff,log_stuff, flatbuffers, fmt_dep, nlohmann_json_dep,date_dep,tz_dep,iir1_dep,lua_dep],
+	dependencies:libdep,
   link_with : [GoSdkLib,kApiLib],
 #  link_args : ['-fsanitize=address'],
 	cpp_args : ['-std=c++20','-fcoroutines'] #,'-fsanitize=address']
