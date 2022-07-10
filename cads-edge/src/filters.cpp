@@ -10,9 +10,11 @@ namespace cads
 {
   void spike_filter(z_type& z, int window_size) {
     
-    if(window_size > z.size()) return;
+    int z_size = (int)z.size();
 
-    for(auto i = 0; i < z.size()-window_size;) {
+    if(window_size > z_size) return;
+
+    for(auto i = 0; i < z_size-window_size;) {
       if(NaN<z_element>::isnan(z[i]) && NaN<z_element>::isnan(z[i+window_size])) {
         for(auto j = i+1; j < i + window_size; ++j) {
           z[j] = NaN<z_element>::value;
@@ -23,7 +25,7 @@ namespace cads
       }
     }
 
-    for(auto i = z.size()-window_size; i < z.size()-3;) {
+    for(auto i = z_size-window_size; i < z_size-3;) {
       if(NaN<z_element>::isnan(z[i]) && NaN<z_element>::isnan(z[i+3])) {
         for(auto j = i+1; j < i + 3; ++j) {
           z[j] = NaN<z_element>::value;
@@ -41,7 +43,7 @@ namespace cads
     auto prev_value_it = sr::find_if(z,[](z_element a){ return !NaN<z_element>::isnan(a);}); 
     z_element prev_value = prev_value_it != z.end() ? *prev_value_it : NaN<z_element>::value; 
     
-    int mid = z.size() / 2;
+    auto mid = z.size() / 2;
 
     for(auto&& e : z | sr::views::take(mid)) {
       if(!NaN<z_element>::isnan(e)) {
@@ -66,6 +68,7 @@ namespace cads
   void barrel_height_compensate(z_type& z, z_element z_off) {
     for(auto &e : z) {
       e += z_off;
+      if(e < 0) e = 0;
     }
   }
 
