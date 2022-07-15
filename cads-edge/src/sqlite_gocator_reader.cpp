@@ -58,7 +58,7 @@ namespace cads
     m_yResolution = yResolution;
     m_encoder_resolution = encoderResolution;
 
-    auto fetch_profile = fetch_belt_coro(0, std::numeric_limits<int>::max(), data_src);
+    auto fetch_profile = fetch_belt_coro(0, std::numeric_limits<int>::max(), 256, data_src);
 
     while (m_loop)
     {

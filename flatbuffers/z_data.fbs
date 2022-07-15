@@ -10,6 +10,7 @@ table profile{
 table profile_array {
   z_res : double;
   z_off : double;
+  idx   : ulong;
   count : ulong;
   profiles : [profile];
 }

@@ -148,7 +148,7 @@ namespace cads
     state s = waiting;
     auto store_profile = store_profile_coro();
     std::chrono::time_point<date::local_t, std::chrono::days> today;
-    std::future<std::string> fut;
+    std::future<date::utc_clock::time_point> fut;
     profile p;
     int revid = 0, idx = 0;
     auto buffer_size_warning = buffer_warning_increment;

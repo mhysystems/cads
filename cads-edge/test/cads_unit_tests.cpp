@@ -86,23 +86,42 @@ TEST_F(CadsTest, upload_belt)
   using namespace std;
 
   ASSERT_EQ(create_db(), true);
-  store_profile_parameters(1, 1, 1, 1, 1, 1, 0);
+  store_profile_parameters(0.5, 0.5, 0.5, 0.5, 0.5, 30, 0);
   auto store_profile = store_profile_coro();
 
   profile p;
 
-  p = {0, 0, {1, 2, 3}};
+  p = {0, -2, {30, 30, 30, 30, 30}};
   store_profile.resume({0, 0, p});
 
-  p = {1, 0, {4, 5, 6}};
+  p = {0.5, -2, {30, 27, 27, 27, 30}};
   store_profile.resume({0, 1, p});
 
-  auto ts = http_post_whole_belt(0, 2);
-  auto rst = http_get_frame(0, 2, ts);
+  p = {1, -2, {30, 27, 25, 27, 30}};
+  store_profile.resume({0, 2, p});
 
-  p = {0, 0, {1, 2, 3}};
+  p = {1.5, -2, {30, 27, 27, 27, 30}};
+  store_profile.resume({0, 3, p});
+
+  p = {2, -2, {30, 30, 30, 30, 30}};
+  store_profile.resume({0, 4, p});
+
+
+  auto ts = http_post_whole_belt(0, 5);
+  auto rst = http_get_frame(0, 5, ts);
+
+  p = {0, -2, {30, 30, 30, 30, 30}};
   ASSERT_EQ(rst[0], p);
 
-  p = {1, 0, {4, 5, 6}};
+  p = {0.5, -2, {30, 27, 27, 27, 30}};
   ASSERT_EQ(rst[1], p);
+
+  p = {1, -2, {30, 27, 25, 27, 30}};
+  ASSERT_EQ(rst[2], p);
+
+  p = {1.5, -2, {30, 27, 27, 27, 30}};
+  ASSERT_EQ(rst[3], p);
+
+  p = {2, -2, {30, 30, 30, 30, 30}};
+  ASSERT_EQ(rst[4], p);
 }
