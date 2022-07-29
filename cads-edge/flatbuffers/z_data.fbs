@@ -1,0 +1,18 @@
+// profile data sent to server
+namespace CadsFlatbuffers;
+
+table profile{
+  y : double;
+	x_off : double;
+	z_samples : [short];
+}
+
+table profile_array {
+  z_res : double;
+  z_off : double;
+  idx   : ulong;
+  count : ulong;
+  profiles : [profile];
+}
+
+root_type profile;
