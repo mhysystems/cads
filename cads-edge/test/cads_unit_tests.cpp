@@ -86,7 +86,7 @@ TEST_F(CadsTest, upload_belt)
   using namespace std;
 
   ASSERT_EQ(create_db(), true);
-  store_profile_parameters(0.5, 0.5, 0.5, 0.5, 0.5, 30, 0);
+  store_profile_parameters({0.5, 0.5, 0.5, 0.5, 0.5, 30});
   auto store_profile = store_profile_coro();
 
   profile p;

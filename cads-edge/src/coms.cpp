@@ -1,11 +1,6 @@
-#include <iostream>
 #include <chrono>
-#include <thread>
-#include <limits>
-#include <queue>
-#include <unordered_map>
-#include <random>
 #include <ranges>
+#include <algorithm>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wuseless-cast"
@@ -25,7 +20,6 @@
 
 #include <coms.h>
 #pragma GCC diagnostic pop
-
 
 #include <constants.h>
 #include <db.h>
@@ -47,28 +41,34 @@ namespace cads
     return subject;
   }
 
-  std::string mk_post_profile_url(std::string ts) {
+  std::string mk_post_profile_url(std::string ts)
+  {
     auto endpoint_url = global_config["upload_profile_to"].get<std::string>();
-    std::transform(endpoint_url.begin(), endpoint_url.end(), endpoint_url.begin(), [](unsigned char c){ return std::tolower(c); });
-    
-    if(endpoint_url == "null") return endpoint_url;
-    
+    std::transform(endpoint_url.begin(), endpoint_url.end(), endpoint_url.begin(), [](unsigned char c)
+                   { return std::tolower(c); });
+
+    if (endpoint_url == "null")
+      return endpoint_url;
+
     auto site = global_config["site"].get<std::string>();
-    auto conveyor =  global_config["conveyor"].get<std::string>();
+    auto conveyor = global_config["conveyor"].get<std::string>();
 
     return endpoint_url + '/' + site + '/' + conveyor + '/' + ts;
   }
 
-  std::string mk_get_profile_url(double y, int len, std::string ts) {
+  std::string mk_get_profile_url(double y, int len, std::string ts)
+  {
     auto endpoint_url = global_config["upload_profile_to"].get<std::string>();
-    std::transform(endpoint_url.begin(), endpoint_url.end(), endpoint_url.begin(), [](unsigned char c){ return std::tolower(c); });
-    
-    if(endpoint_url == "null") return endpoint_url;
-    
-    auto site = global_config["site"].get<std::string>();
-    auto conveyor =  global_config["conveyor"].get<std::string>();
+    std::transform(endpoint_url.begin(), endpoint_url.end(), endpoint_url.begin(), [](unsigned char c)
+                   { return std::tolower(c); });
 
-    return fmt::format("{}/{}-{}-{}/{}/{}",endpoint_url,site,conveyor,ts,y,len);
+    if (endpoint_url == "null")
+      return endpoint_url;
+
+    auto site = global_config["site"].get<std::string>();
+    auto conveyor = global_config["conveyor"].get<std::string>();
+
+    return fmt::format("{}/{}-{}-{}/{}/{}", endpoint_url, site, conveyor, ts, y, len);
   }
 
   auto send_flatbuffer_array(
@@ -142,31 +142,30 @@ namespace cads
 
   std::tuple<double, double, int> http_post_profile_properties(std::string chrono)
   {
-    nlohmann::json resolution;
+    nlohmann::json params_json;
     auto db_name = global_config["db_name"].get<std::string>();
-    auto [y_resolution, x_resolution, z_resolution, z_offset, encoderResolution, z_max, z_min, err] = fetch_profile_parameters(db_name);
+    auto [params, err] = fetch_profile_parameters(db_name);
 
     if (err != 0)
-      return {z_resolution, z_offset, err};
+      return {params.z_res, params.z_off, err};
 
-    resolution["site"] = global_config["site"].get<std::string>();
-    resolution["conveyor"] = global_config["conveyor"].get<std::string>();
-    resolution["chrono"] = chrono;
-    resolution["y_res"] = y_resolution;
-    resolution["x_res"] = x_resolution;
-    resolution["z_res"] = z_resolution;
-    resolution["z_off"] = z_offset;
-    resolution["z_max"] = z_max;
-    resolution["z_min"] = z_min;
+    params_json["site"] = global_config["site"].get<std::string>();
+    params_json["conveyor"] = global_config["conveyor"].get<std::string>();
+    params_json["chrono"] = chrono;
+    params_json["y_res"] = params.y_res;
+    params_json["x_res"] = params.x_res;
+    params_json["z_res"] = params.z_res;
+    params_json["z_off"] = params.z_off;
+    params_json["z_max"] = params.z_max;
 
-    http_post_profile_properties_json(resolution.dump());
-    return {z_resolution, z_offset, 0};
+    http_post_profile_properties_json(params_json.dump());
+    return {params.z_res, params.z_off, 0};
   }
 
   date::utc_clock::time_point http_post_whole_belt(int revid, int last_idx)
   {
     using namespace flatbuffers;
-    
+
     auto now = date::utc_clock::now();
     auto db_name = global_config["db_name"].get<std::string>();
     auto endpoint_url = global_config["upload_profile_to"].get<std::string>();
@@ -183,7 +182,7 @@ namespace cads
 
     FlatBufferBuilder builder(4096 * 128);
     std::vector<flatbuffers::Offset<CadsFlatbuffers::profile>> profiles_flat;
-    
+
     auto ts = date::format("%FT%TZ", now);
     cpr::Url endpoint{mk_post_profile_url(ts)};
 
@@ -198,20 +197,28 @@ namespace cads
     auto start = std::chrono::high_resolution_clock::now();
     int64_t size = 0;
     int64_t frame_idx = -1;
+    double belt_z_max = 0; 
 
     while (true)
     {
       auto [co_terminate, cv] = fetch_profile.resume(0);
       auto [idx, p] = cv;
 
-      if(frame_idx < 0) frame_idx = (int64_t)idx;
+      if (frame_idx < 0)
+        frame_idx = (int64_t)idx;
 
       if (!co_terminate)
       {
         namespace sr = std::ranges;
 
+        auto max_iter = max_element(p.z.begin(), p.z.end());
+        
+        if(max_iter != p.z.end()) {
+          belt_z_max = max(belt_z_max, (double)*max_iter);
+        }
+
         auto tmp_z = p.z | sr::views::transform([=](float e) -> int16_t
-                                                { return  NaN<float>::isnan(e) ? NaN<int16_t>::value : int16_t(((double)e - z_offset) / z_resolution); });
+                                                { return NaN<float>::isnan(e) ? NaN<int16_t>::value : int16_t(((double)e - z_offset) / z_resolution); });
         std::vector<int16_t> short_z{tmp_z.begin(), tmp_z.end()};
 
         profiles_flat.push_back(CadsFlatbuffers::CreateprofileDirect(builder, p.y, p.x_off, &short_z));
@@ -234,7 +241,7 @@ namespace cads
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start).count() + 1; // Add one second to avoid divide by zero
 
-    spdlog::get("upload")->info("SIZE: {}, DUR:{}, RATE(Kb/s):{} ", size, duration, size / (1000 * duration));
+    spdlog::get("upload")->info("ZMAX: {}, SIZE: {}, DUR:{}, RATE(Kb/s):{} ", belt_z_max, size, duration, size / (1000 * duration));
     spdlog::get("upload")->info("Leaving http_post_thread_bulk");
     return now;
   }
@@ -243,18 +250,19 @@ namespace cads
   {
     using namespace flatbuffers;
 
-    auto ts = date::format("%Y-%m-%d", chrono);
-    cpr::Url endpoint{mk_get_profile_url(y,len,ts)};
+    auto ts = date::format("%Y-%m-%d-%H%M%OS", chrono);
+    cpr::Url endpoint{mk_get_profile_url(y, len, ts)};
     cpr::Response r = cpr::Get(endpoint);
-    
+
     auto pd = CadsFlatbuffers::Getplot_data(r.text.c_str());
     auto stride = pd->z_samples()->size() / pd->y_samples()->size();
     std::vector<profile> rtn;
-    
-    for(auto i = 0; auto e : *pd->y_samples()) {
+
+    for (auto i = 0; auto e : *pd->y_samples())
+    {
 
       auto z = pd->z_samples();
-      rtn.push_back({e,pd->x_off(),{z->begin() + stride*i,z->begin() + stride*(1 + i++)}});
+      rtn.push_back({e, pd->x_off(), {z->begin() + stride * i, z->begin() + stride * (1 + i++)}});
     }
 
     return rtn;

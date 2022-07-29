@@ -51,12 +51,12 @@ namespace cads
   void SqliteGocatorReader::OnData()
   {
     auto data_src = global_config["data_source"].get<std::string>();
-    auto [yResolution, xResolution, zResolution, zOffset, encoderResolution, z_max, z_min, err2] = fetch_profile_parameters(data_src);
+    auto [params, err2] = fetch_profile_parameters(data_src);
 
-    m_gocatorFifo.enqueue({msgid::resolutions, std::tuple<double, double, double, double, double>{yResolution, xResolution, zResolution, zOffset, encoderResolution}});
+    m_gocatorFifo.enqueue({msgid::resolutions, std::tuple<double, double, double, double, double>{params.y_res, params.x_res, params.z_res, params.z_off, params.encoder_res}});
 
-    m_yResolution = yResolution;
-    m_encoder_resolution = encoderResolution;
+    m_yResolution = params.y_res;
+    m_encoder_resolution = params.encoder_res;
 
     auto fetch_profile = fetch_belt_coro(0, std::numeric_limits<int>::max(), 256, data_src);
 

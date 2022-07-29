@@ -55,7 +55,7 @@ namespace cads
         R"(DROP TABLE IF EXISTS PARAMETERS;)"s,
         R"(VACUUM;)"s,
         fmt::format(R"(CREATE TABLE IF NOT EXISTS PROFILE (revid INTEGER NOT NULL, idx INTEGER NOT NULL,y {} NOT NULL, x_off REAL NOT NULL, z BLOB NOT NULL, PRIMARY KEY (revid,idx));)", ytype),
-        R"(CREATE TABLE IF NOT EXISTS PARAMETERS (y_res REAL NOT NULL, x_res REAL NOT NULL, z_res REAL NOT NULL, z_off REAL NOT NULL, encoder_res REAL NOT NULL, z_max REAL NOT NULL, z_min REAL NOT NULL))"s};
+        R"(CREATE TABLE IF NOT EXISTS PARAMETERS (y_res REAL NOT NULL, x_res REAL NOT NULL, z_res REAL NOT NULL, z_off REAL NOT NULL, encoder_res REAL NOT NULL, z_max REAL NOT NULL))"s};
 
     int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);
 
@@ -86,7 +86,7 @@ namespace cads
     return r;
   }
 
-  int store_profile_parameters(double y_res, double x_res, double z_res, double z_off, double encoder_res, double z_max, double z_min, std::string name)
+  int store_profile_parameters(profile_params params, std::string name)
   {
     sqlite3 *db = nullptr;
     sqlite3_stmt *stmt = nullptr;
@@ -99,15 +99,14 @@ namespace cads
       std::throw_with_nested(std::runtime_error("store_profile_parameters:sqlite3_open_v2"));
     }
 
-    auto query = R"(INSERT OR REPLACE INTO PARAMETERS (rowid,y_res,x_res,z_res,z_off,encoder_res,z_max,z_min) VALUES (1,?,?,?,?,?,?,?))"s;
+    auto query = R"(INSERT OR REPLACE INTO PARAMETERS (rowid,y_res,x_res,z_res,z_off,encoder_res,z_max) VALUES (1,?,?,?,?,?,?))"s;
     err = sqlite3_prepare_v2(db, query.c_str(), (int)query.size(), &stmt, NULL);
-    err = sqlite3_bind_double(stmt, 1, y_res);
-    err = sqlite3_bind_double(stmt, 2, x_res);
-    err = sqlite3_bind_double(stmt, 3, z_res);
-    err = sqlite3_bind_double(stmt, 4, z_off);
-    err = sqlite3_bind_double(stmt, 5, encoder_res);
-    err = sqlite3_bind_double(stmt, 6, z_max);
-    err = sqlite3_bind_double(stmt, 7, z_min);
+    err = sqlite3_bind_double(stmt, 1, params.y_res);
+    err = sqlite3_bind_double(stmt, 2, params.x_res);
+    err = sqlite3_bind_double(stmt, 3, params.z_res);
+    err = sqlite3_bind_double(stmt, 4, params.z_off);
+    err = sqlite3_bind_double(stmt, 5, params.encoder_res);
+    err = sqlite3_bind_double(stmt, 6, params.z_max);
 
     err = db_step(stmt);
 
@@ -116,13 +115,13 @@ namespace cads
 
     if (err != SQLITE_DONE)
     {
-      spdlog::get("db")->error("SQLite Error Code:{}", err);
+      spdlog::get("db")->error("store_profile_parameters: SQLite Error Code:{}", err);
     }
 
     return err;
   }
 
-  std::tuple<double, double, double, double, double, double, double, int> fetch_profile_parameters(std::string name)
+   std::tuple<profile_params, int> fetch_profile_parameters(std::string name)
   {
 
     sqlite3 *db = nullptr;
@@ -140,23 +139,22 @@ namespace cads
 
     err = db_step(stmt);
 
-    std::tuple<double, double, double, double, double, double, double, int> rtn;
+    std::tuple<profile_params, int> rtn;
     if (err == SQLITE_ROW)
     {
 
       rtn = {
-          sqlite3_column_double(stmt, 0),
+          {sqlite3_column_double(stmt, 0),
           sqlite3_column_double(stmt, 1),
           sqlite3_column_double(stmt, 2),
           sqlite3_column_double(stmt, 3),
           sqlite3_column_double(stmt, 4),
-          sqlite3_column_double(stmt, 5),
-          sqlite3_column_double(stmt, 6),
+          sqlite3_column_double(stmt, 5)},
           0};
     }
     else
     {
-      rtn = {1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, -1};
+      rtn = {{1.0, 1.0, 1.0, 0.0, 1.0, 1.0}, -1};
     }
 
     sqlite3_finalize(stmt);
@@ -165,6 +163,7 @@ namespace cads
     return rtn;
   }
 
+  
   coro<int, std::tuple<int, int, profile>, 1> store_profile_coro(std::string name)
   {
 

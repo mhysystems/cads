@@ -402,7 +402,7 @@ namespace cads
     }
 
     auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution] = get<resolutions_t>(get<1>(m));
-    store_profile_parameters(y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution, global_config["z_height"].get<double>());
+    store_profile_parameters({y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution, global_config["z_height"].get<double>()});
 
     auto store_profile = store_profile_coro();
 
@@ -537,7 +537,7 @@ namespace cads
           found_origin_sequence_cnt++;
           trigger_length = y_max_length * 0.95;
 
-          fiducial_as_image(belt);
+          //fiducial_as_image(belt);
 
           y_offset += y;
 
@@ -619,7 +619,7 @@ namespace cads
     auto [bottom, top] = barrel_offset(1024, gocatorFifo);
     auto width_n = belt_width_n(1024, gocatorFifo);
     spdlog::get("cads")->info("Belt properties - botton:{}, top:{}, height(mm):{}, width:{}, width_n:{}", bottom, top, top - bottom, width_n * x_resolution, width_n);
-    store_profile_parameters(y_resolution, x_resolution, z_resolution, -(double)bottom, encoder_resolution, top - bottom);
+    store_profile_parameters({y_resolution, x_resolution, z_resolution, -(double)bottom, encoder_resolution, top - bottom});
 
     return {x_resolution, y_resolution, z_resolution, bottom, width_n};
   }
