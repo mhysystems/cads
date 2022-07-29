@@ -2,6 +2,7 @@
 # progjects in extrnal directories for build systems used in cads
 copy = find_program('cp')
 run_command(copy,join_paths(meson.source_root(),'..','flatbuffers','z_data.fbs'),join_paths(meson.source_root(),'flatbuffers','z_data.fbs'))
+run_command(copy,join_paths(meson.source_root(),'..','flatbuffers','plot_data.fbs'),join_paths(meson.source_root(),'flatbuffers','plot_data.fbs'))
 
 z_data = custom_target(
     'z_data',

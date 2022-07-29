@@ -1,0 +1,9 @@
+namespace CadsFlatbuffers;
+
+table plot_data {
+	x_off : double;
+	y_samples : [double];
+	z_samples : [float];
+}
+
+root_type plot_data;
