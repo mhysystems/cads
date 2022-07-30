@@ -44,8 +44,6 @@ namespace cads
   std::string mk_post_profile_url(std::string ts)
   {
     auto endpoint_url = global_config["upload_profile_to"].get<std::string>();
-    std::transform(endpoint_url.begin(), endpoint_url.end(), endpoint_url.begin(), [](unsigned char c)
-                   { return std::tolower(c); });
 
     if (endpoint_url == "null")
       return endpoint_url;
@@ -59,8 +57,6 @@ namespace cads
   std::string mk_get_profile_url(double y, int len, std::string ts)
   {
     auto endpoint_url = global_config["upload_profile_to"].get<std::string>();
-    std::transform(endpoint_url.begin(), endpoint_url.end(), endpoint_url.begin(), [](unsigned char c)
-                   { return std::tolower(c); });
 
     if (endpoint_url == "null")
       return endpoint_url;
@@ -111,8 +107,6 @@ namespace cads
   {
 
     auto endpoint_url = global_config["upload_config_to"].get<std::string>();
-    std::transform(endpoint_url.begin(), endpoint_url.end(), endpoint_url.begin(), [](unsigned char c)
-                   { return std::tolower(c); });
 
     if (endpoint_url == "null")
     {
@@ -169,8 +163,6 @@ namespace cads
     auto now = date::utc_clock::now();
     auto db_name = global_config["db_name"].get<std::string>();
     auto endpoint_url = global_config["upload_profile_to"].get<std::string>();
-    std::transform(endpoint_url.begin(), endpoint_url.end(), endpoint_url.begin(), [](unsigned char c)
-                   { return std::tolower(c); });
 
     if (endpoint_url == "null")
     {
