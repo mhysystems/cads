@@ -9,7 +9,7 @@
   "fiducial_x" : 50,
   "fiducial_y" : 67,
   "fiducial_gap" : 78,
-  "daily_start_time" : "now",
+  "daily_start_time" : "06:00",
 
   "iirfilter" : {
     "delay" : 228,
