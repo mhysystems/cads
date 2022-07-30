@@ -43,7 +43,7 @@ namespace cads
     auto prev_value_it = sr::find_if(z,[](z_element a){ return !NaN<z_element>::isnan(a);}); 
     z_element prev_value = prev_value_it != z.end() ? *prev_value_it : NaN<z_element>::value; 
     
-    auto mid = z.size() / 2;
+    int mid = z.size() / 2;
 
     for(auto&& e : z | sr::views::take(mid)) {
       if(!NaN<z_element>::isnan(e)) {
@@ -56,7 +56,7 @@ namespace cads
     auto prev_value_it2 = sr::find_if(z | sr::views::reverse ,[](z_element a){ return !NaN<z_element>::isnan(a);}); 
     prev_value = prev_value_it2 != z.rend() ? *prev_value_it2 : NaN<z_element>::value;
 
-    for(auto&& e : (z | sr::views::reverse | sr::views::take(mid+1))) {
+    for(auto&& e : z | sr::views::reverse | sr::views::take(mid+1)) {
       if(!NaN<z_element>::isnan(e)) {
         prev_value = e;
       }else {
