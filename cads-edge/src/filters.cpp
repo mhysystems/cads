@@ -65,10 +65,11 @@ namespace cads
     }
   }
 
-  void barrel_height_compensate(z_type& z, z_element z_off) {
+  void barrel_height_compensate(z_type& z, z_element z_off, z_element z_max) {
     for(auto &e : z) {
       e += z_off;
       if(e < 0) e = 0;
+      if(e > z_max) e = z_max;
     }
   }
 

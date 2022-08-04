@@ -2,6 +2,7 @@
   "data_source" : "../../profiles/profilef-2022-06-20.db", 
   "y_max_length" : 915000,
   "z_height" : 27.0,
+  "z_max" : 32.0,
   "x_width"  : 1500,
   "left_edge_nan" : 15,
   "right_egde_nan" : 10,

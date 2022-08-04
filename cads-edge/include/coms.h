@@ -3,8 +3,15 @@
 #include <string>
 #include <vector>
 
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuseless-cast"
+
 #include <date/date.h>
 #include <date/tz.h>
+
+#pragma GCC diagnostic pop
+
 
 #include <profile.h>
 

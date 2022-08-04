@@ -643,6 +643,7 @@ namespace cads
 
     const auto x_width = global_config["x_width"].get<int>();
     const auto z_height_mm = global_config["z_height"].get<double>();
+    const auto z_max = global_config["z_max"].get<float>();
     const int nan_num = global_config["left_edge_nan"].get<int>();
     const int spike_window_size = nan_num / 4;
 
@@ -713,7 +714,7 @@ namespace cads
       right_edge_index += -edge_adjust;
 
       std::tie(bottom_avg, top_avg, invalid) = barrel_offset(z, z_height_mm);
-      barrel_height_compensate(z, -bottom_filtered);
+      barrel_height_compensate(z, -bottom_filtered, z_max);
 
       auto f = z | views::take(right_edge_index) | views::drop(left_edge_index);
 
