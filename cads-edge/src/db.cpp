@@ -121,7 +121,7 @@ namespace cads
     return err;
   }
 
-   std::tuple<profile_params, int> fetch_profile_parameters(std::string name)
+  std::tuple<profile_params, int> fetch_profile_parameters(std::string name)
   {
 
     sqlite3 *db = nullptr;
@@ -163,6 +163,51 @@ namespace cads
     return rtn;
   }
 
+std::tuple<double,double,double,int> fetch_belt_dimensions(int revid, std::string name)
+  {
+
+    sqlite3 *db = nullptr;
+    sqlite3_stmt *stmt = nullptr;
+
+    const char *db_name = name.c_str();
+    int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX, nullptr);
+
+    if(err != SQLITE_OK) {
+      std::throw_with_nested(std::runtime_error("fetch_belt_dimensions:sqlite3_open_v2"));
+    }
+
+    auto query = R"(SELECT MIN(Y),MAX(Y),COUNT(Y),LENGTH(Z) FROM PROFILE WHERE REVID = ? LIMIT 1)"s;
+    err = sqlite3_prepare_v2(db, query.c_str(), (int)query.size(), &stmt, NULL);
+    err = sqlite3_bind_int(stmt, 1, revid);
+
+    err = db_step(stmt);
+    
+
+    
+    std::tuple<double,double,double,int> rtn;
+    if (err == SQLITE_ROW)
+    {
+      
+      if(sqlite3_column_double(stmt, 0) != 0.0) {
+        spdlog::get("db")->error("Sanity check failed. Minimum Y is not 0 but {}", sqlite3_column_double(stmt, 0));
+      }
+      
+      rtn = {
+          sqlite3_column_double(stmt, 1),
+          sqlite3_column_double(stmt, 2) - 1, // Sqlite indexes from 1 not 0
+          sqlite3_column_double(stmt, 3) / sizeof(cads::z_element),
+          0};
+    }
+    else
+    {
+      rtn = {0.0, 0.0, 0.0, -1};
+    }
+
+    sqlite3_finalize(stmt);
+    sqlite3_close(db);
+
+    return rtn;
+  }
   
   coro<int, std::tuple<int, int, profile>, 1> store_profile_coro(std::string name)
   {

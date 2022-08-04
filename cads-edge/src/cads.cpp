@@ -123,7 +123,7 @@ namespace cads
       std::stringstream st{sts};
 
       system_clock::duration run_in;
-      st >> parse("%T", run_in);
+      st >> parse("%R", run_in);
 
       trigger_hour = chrono::floor<chrono::hours>(run_in);
     }
@@ -378,6 +378,11 @@ namespace cads
       spdlog::get("cads")->debug("Using sqlite as data source");
       return make_unique<SqliteGocatorReader>(gocatorFifo);
     }
+  }
+
+  void upload_profile_only()
+  {     
+    http_post_whole_belt(0,std::numeric_limits<int>::max());
   }
 
   void store_profile_only()

@@ -26,6 +26,7 @@ int main(int argn, char **argv)
     ("savedb,d", po::bool_switch(), "Only save one approx belt")
     ("once,o", po::bool_switch(), "Run once")
     ("stop,s", po::bool_switch(), "Stop Gocator")
+    ("upload,u", po::bool_switch(), "Upload Profile Only")
     ("signal,e", po::bool_switch(), "Generate signal for input into python filter parameter creation")
     ("level,l", po::value<std::string>(), "Logging Level");
 
@@ -83,8 +84,10 @@ int main(int argn, char **argv)
     }
 
   }
-
-  if(vm["savedb"].as<bool>()) {
+  
+  if(vm["upload"].as<bool>()) {
+    upload_profile_only();
+  }else if(vm["savedb"].as<bool>()) {
     store_profile_only();
   }else if(vm["once"].as<bool>()) {
     process();

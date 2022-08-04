@@ -134,7 +134,7 @@ namespace cads
     }
   }
 
-  std::tuple<double, double, int> http_post_profile_properties(std::string chrono)
+  std::tuple<double, double, int> http_post_profile_properties(int revid, std::string chrono)
   {
     nlohmann::json params_json;
     auto db_name = global_config["db_name"].get<std::string>();
@@ -142,6 +142,8 @@ namespace cads
 
     if (err != 0)
       return {params.z_res, params.z_off, err};
+
+    auto [Ymax,YmaxN,WidthN,err2] = fetch_belt_dimensions(revid,db_name);
 
     params_json["site"] = global_config["site"].get<std::string>();
     params_json["conveyor"] = global_config["conveyor"].get<std::string>();
@@ -151,6 +153,9 @@ namespace cads
     params_json["z_res"] = params.z_res;
     params_json["z_off"] = params.z_off;
     params_json["z_max"] = params.z_max;
+    params_json["Ymax"] = Ymax;
+    params_json["YmaxN"] = YmaxN;
+    params_json["WidthN"] = WidthN;
 
     http_post_profile_properties_json(params_json.dump());
     return {params.z_res, params.z_off, 0};
@@ -160,7 +165,7 @@ namespace cads
   {
     using namespace flatbuffers;
 
-    auto now = date::utc_clock::now();
+    auto now = chrono::floor<chrono::seconds>(date::utc_clock::now()); // Default sends to much decimal precision for asp.net core
     auto db_name = global_config["db_name"].get<std::string>();
     auto endpoint_url = global_config["upload_profile_to"].get<std::string>();
 
@@ -178,7 +183,7 @@ namespace cads
     auto ts = date::format("%FT%TZ", now);
     cpr::Url endpoint{mk_post_profile_url(ts)};
 
-    auto [z_resolution, z_offset, err] = http_post_profile_properties(ts);
+    auto [z_resolution, z_offset, err] = http_post_profile_properties(revid,ts);
 
     if (err != 0)
     {
