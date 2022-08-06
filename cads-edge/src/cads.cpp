@@ -179,7 +179,7 @@ namespace cads
         auto daily_time = duration_cast<seconds>(now - today);
         auto current_hour = chrono::floor<chrono::hours>(daily_time);
 
-        if (p.y == 0 && current_hour >= trigger_hour)
+        if (p.y == 0 && current_hour == trigger_hour )
         {
           //store_profile.resume({revid, idx++, p}); REMOVEME
           s = processing;
@@ -713,7 +713,7 @@ namespace cads
       right_edge_index += -edge_adjust;
 
       std::tie(bottom_avg, top_avg, invalid) = barrel_offset(z, z_height_mm);
-      barrel_height_compensate(z, -bottom_filtered, z_height_mm * 1.06);
+      barrel_height_compensate(z, -bottom_filtered, (float)z_height_mm * 1.06f);
 
       auto f = z | views::take(right_edge_index) | views::drop(left_edge_index);
 
