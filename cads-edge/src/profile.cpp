@@ -5,7 +5,6 @@
 #include <tuple>
 #include <algorithm>
 #include <numeric>
-#include <execution>
 
 #include <profile.h>
 #include <constants.h>
@@ -80,8 +79,7 @@ tuple<z_element,z_element,z_element,bool> barrel_offset(const z_type& win,double
   auto f = hist | views::filter([z_height_mm,peak](tuple<double,z_element> a ){ return peak - get<0>(a) > z_height_mm; });
   auto c = hist | views::filter([max_clip_count](tuple<double,z_element> a ){ return get<1>(a) > max_clip_count; });
  
-  auto clipat = std::reduce(
-    std::execution::seq,
+  auto clipat = std::accumulate(
     c.begin(),
     c.end(),
     hist[0],
