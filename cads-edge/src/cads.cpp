@@ -179,7 +179,7 @@ namespace cads
         auto daily_time = duration_cast<seconds>(now - today);
         auto current_hour = chrono::floor<chrono::hours>(daily_time);
 
-        if (p.y == 0 && current_hour == trigger_hour )
+        if (p.y == 0 && current_hour >= trigger_hour )
         {
           //store_profile.resume({revid, idx++, p}); REMOVEME
           s = processing;
