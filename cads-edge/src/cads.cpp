@@ -179,7 +179,7 @@ namespace cads
         auto daily_time = duration_cast<seconds>(now - today);
         auto current_hour = chrono::floor<chrono::hours>(daily_time);
 
-        if (p.y == 0 && current_hour >= trigger_hour )
+        if (p.y == 0 && current_hour == trigger_hour )
         {
           //store_profile.resume({revid, idx++, p}); REMOVEME
           s = processing;
@@ -658,6 +658,7 @@ namespace cads
     auto delay = mk_delay(global_config["iirfilter"]["delay"]);
 
     int64_t cnt = 0;
+    z_element clip_height = std::numeric_limits<z_element>::lowest();
 
     auto start = std::chrono::high_resolution_clock::now();
 
@@ -688,7 +689,7 @@ namespace cads
       ++cnt;
 
       spike_filter(iz, spike_window_size);
-      auto [bottom_avg, top_avg, invalid] = barrel_offset(iz, z_height_mm);
+      auto [bottom_avg, top_avg, cclip, invalid] = barrel_offset(iz, z_height_mm);
 
       if (invalid)
       {
@@ -712,8 +713,9 @@ namespace cads
       int edge_adjust = right_edge_index - left_edge_index - width_n;
       right_edge_index += -edge_adjust;
 
-      std::tie(bottom_avg, top_avg, invalid) = barrel_offset(z, z_height_mm);
-      barrel_height_compensate(z, -bottom_filtered, (float)z_height_mm * 1.06f);
+      std::tie(bottom_avg, top_avg, cclip, invalid) = barrel_offset(z, z_height_mm);
+      clip_height = std::max(cclip,clip_height);
+      barrel_height_compensate(z, -bottom_filtered, clip_height);
 
       auto f = z | views::take(right_edge_index) | views::drop(left_edge_index);
 
@@ -769,7 +771,7 @@ namespace cads
         auto iz = p.z;
 
         spike_filter(iz, spike_window_size);
-        auto [bottom_avg, top_avg, invalid] = barrel_offset(iz, z_height_mm);
+        auto [bottom_avg, top_avg, cclip, invalid] = barrel_offset(iz, z_height_mm);
 
         auto bottom_filtered = iirfilter(bottom_avg);
 

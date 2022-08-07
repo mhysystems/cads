@@ -85,7 +85,8 @@
     "scoped_allocator": "cpp",
     "gohealth.h": "c",
     "*.inc": "cpp",
-    "*.ipp": "cpp"
+    "*.ipp": "cpp",
+    "hash_set": "cpp"
   },
   "cmake.configureOnOpen": false
 }
