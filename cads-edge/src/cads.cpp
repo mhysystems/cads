@@ -714,7 +714,7 @@ namespace cads
       right_edge_index += -edge_adjust;
 
       std::tie(bottom_avg, top_avg, cclip, invalid) = barrel_offset(z, z_height_mm);
-      clip_height = std::max(cclip,clip_height);
+      clip_height = cclip; //std::max(cclip,clip_height);
       barrel_height_compensate(z, -bottom_filtered, clip_height);
 
       auto f = z | views::take(right_edge_index) | views::drop(left_edge_index);
