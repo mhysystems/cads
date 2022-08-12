@@ -194,12 +194,14 @@ namespace cads
         {
           if(drop_uploads == 0) {
             fut = std::async(http_post_whole_belt, revid++, idx);
+            s = waitthread;
+            spdlog::get("cads")->info("Finished processing a belt");
           }else {
             --drop_uploads;
             spdlog::get("cads")->info("Dropped upload. Drops remaining:{}", drop_uploads);
+            s = finished;
           }
-          spdlog::get("cads")->info("Finished Processing");
-          s = waitthread;
+          
         }else {
           //store_profile.resume({revid, idx++, p}); REMOVEME
         }
