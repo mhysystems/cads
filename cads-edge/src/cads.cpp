@@ -117,6 +117,7 @@ namespace cads
 
     hours trigger_hour;
     auto sts = global_config["daily_start_time"].get<std::string>();
+    auto drop_uploads = global_config["drop_uploads"].get<int>();
 
     if (sts != "now"s)
     {
@@ -191,7 +192,12 @@ namespace cads
       {
         if (p.y == 0)
         {
-          fut = std::async(http_post_whole_belt, revid++, idx);
+          if(drop_uploads == 0) {
+            fut = std::async(http_post_whole_belt, revid++, idx);
+          }else {
+            --drop_uploads;
+            spdlog::get("cads")->info("Dropped upload. Drops remaining:{}", drop_uploads);
+          }
           spdlog::get("cads")->info("Finished Processing");
           s = waitthread;
         }else {
@@ -533,11 +539,6 @@ namespace cads
         const auto cv_threshhold = left_edge_avg_height(belt, fiducial) - fdepth;
         auto correlation = search_for_fiducial(belt, fiducial, m1, out, cv_threshhold);
         
-        if(y > 148250 )  {
-          mat_as_image(belt,cv_threshhold);
-          fiducial_as_image(belt);
-        }
-
         lowest_correlation = std::min(lowest_correlation, correlation);
         
         if (correlation < belt_crosscorr_threshold)
@@ -626,6 +627,11 @@ namespace cads
 
     auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution] = get<resolutions_t>(get<1>(m));
     spdlog::get("cads")->info("Gocator contants - y_res:{}, x_res:{}, z_res:{}, z_off:{}, encoder_res:{}", y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution);
+    
+    if(std::floor(y_resolution/encoder_resolution) != (y_resolution/encoder_resolution)) {
+      spdlog::get("cads")->error("Danger! Y resolution not Integer multiple of Encoder Resolution");
+    }
+    
     auto [bottom, top] = barrel_offset(1024, gocatorFifo);
     auto width_n = belt_width_n(1024, gocatorFifo);
     spdlog::get("cads")->info("Belt properties - botton:{}, top:{}, height(mm):{}, width:{}, width_n:{}", bottom, top, top - bottom, width_n * x_resolution, width_n);
