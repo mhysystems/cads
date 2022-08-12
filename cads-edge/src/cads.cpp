@@ -533,8 +533,13 @@ namespace cads
         const auto cv_threshhold = left_edge_avg_height(belt, fiducial) - fdepth;
         auto correlation = search_for_fiducial(belt, fiducial, m1, out, cv_threshhold);
         
-        lowest_correlation = std::min(lowest_correlation, correlation);
+        if(y > 148250 )  {
+          mat_as_image(belt,cv_threshhold);
+          fiducial_as_image(belt);
+        }
 
+        lowest_correlation = std::min(lowest_correlation, correlation);
+        
         if (correlation < belt_crosscorr_threshold)
         {
           spdlog::get("cads")->info("Correlation : {} at y : {}", correlation, y);
@@ -542,7 +547,7 @@ namespace cads
           found_origin_sequence_cnt++;
           trigger_length = y_max_length * 0.95;
 
-          fiducial_as_image(belt);
+          //fiducial_as_image(belt);
 
           y_offset += y;
 

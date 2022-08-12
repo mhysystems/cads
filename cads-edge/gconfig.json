@@ -20,7 +20,7 @@
             [ 1.00000000e+00, -1.99894049e+00,  1.00000000e+00,  1.00000000e+00, -1.99381952e+00,  9.94367640e-01]]
   },
   "db_name" : "profile.db",
-  "belt_cross_correlation_threshold" : 0.8,
+  "belt_cross_correlation_threshold" : 0.4,
   "site" : "whaleback",
   "conveyor" : "cv405", 
   "upload_profile_to" : "https://cads:hMe-%3A%2AZO%23%29dj%7B@dev.mhysystems.com/api/belt",

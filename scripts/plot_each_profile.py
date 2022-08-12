@@ -28,6 +28,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     for z in pg.process_profile(args.db,args.y):
-        plt.hist(z[ z != -32768] ,bins=100)
+        plt.plot(z[~np.isnan(z)])
+        #plt.hist(z[ z != -32768] ,bins=100)
         plt.show()
         #input()
