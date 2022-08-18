@@ -557,7 +557,7 @@ hacky:
           //fiducial_as_image(belt);
 
           y_offset += y;
-          barrel_rotation_offset += barrel_rotation_cnt;
+          barrel_rotation_offset = barrel_rotation_cnt;
 
           // Reset buffer y values to origin
           for (auto off = y; auto &p : profile_buffer)
@@ -731,9 +731,9 @@ wait:
 
       if(std::signbit(dbottom1) == false && std::signbit(dbottom0) == true) {
         auto now = std::chrono::high_resolution_clock::now();
-        auto hz = std::chrono::duration_cast<std::chrono::seconds>(now - barrel_origin_time).count();
+        auto hz = std::chrono::duration_cast<std::chrono::milliseconds>(now - barrel_origin_time).count();
         if(barrel_cnt % 50 == 0) {
-          spdlog::get("cads")->info("Barrel Frequency(Hz): {}, Count: {}", hz, barrel_cnt);
+          spdlog::get("cads")->info("Barrel Frequency(Hz): {}, Count: {}", hz / 1000, barrel_cnt);
         }
         winFifo.enqueue({msgid::barrel_rotation_cnt, barrel_cnt});
         barrel_cnt++;
