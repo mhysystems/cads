@@ -505,7 +505,10 @@ namespace cads
     // Fill buffer
     for (int j = 0; j < fiducial.rows; j++)
     {
+hacky:
       profile_fifo.wait_dequeue(m);
+
+      if(std::get<0>(m) == msgid::barrel_rotation_cnt) goto hacky;
 
       if (std::get<0>(m) != msgid::scan)
         break;
@@ -531,6 +534,8 @@ namespace cads
     auto buffer_size_warning = buffer_warning_increment;
 
     int64_t found_origin_sequence_cnt = 0;
+    long barrel_rotation_cnt = 0;
+    long barrel_rotation_offset = 0;
 
     while (true)
     {
@@ -545,14 +550,14 @@ namespace cads
         
         if (correlation < belt_crosscorr_threshold)
         {
-          spdlog::get("cads")->info("Correlation : {} at y : {}", correlation, y);
-          
+          spdlog::get("cads")->info("Correlation : {} at y : {} with barrel rotation count : {}", correlation, y, barrel_rotation_cnt - barrel_rotation_offset);
           found_origin_sequence_cnt++;
           trigger_length = y_max_length * 0.95;
 
           //fiducial_as_image(belt);
 
           y_offset += y;
+          barrel_rotation_offset += barrel_rotation_cnt;
 
           // Reset buffer y values to origin
           for (auto off = y; auto &p : profile_buffer)
@@ -584,7 +589,13 @@ namespace cads
         next_fifo.enqueue({msgid::scan, profile_buffer.front()});
       }
 
+wait:
       profile_fifo.wait_dequeue(m);
+
+      if(std::get<0>(m) == msgid::barrel_rotation_cnt) {
+        barrel_rotation_cnt = get<long>(get<1>(m));
+        goto wait;
+      }
 
       if (std::get<0>(m) != msgid::scan)
       {
@@ -674,8 +685,13 @@ namespace cads
     z_element clip_height = std::numeric_limits<z_element>::lowest();
 
     auto start = std::chrono::high_resolution_clock::now();
+    auto barrel_origin_time = std::chrono::high_resolution_clock::now();
 
     cads::msg m;
+    cads::z_element bottom_filtered0 = bottom; // For differential calculation
+    cads::z_element dbottom0 = bottom; 
+    long barrel_cnt = 0;
+
 
     do
     {
@@ -710,6 +726,23 @@ namespace cads
       }
 
       auto bottom_filtered = (z_element)iirfilter(bottom_avg);
+      
+      auto dbottom1 = bottom_filtered - bottom_filtered0;
+
+      if(std::signbit(dbottom1) == false && std::signbit(dbottom0) == true) {
+        auto now = std::chrono::high_resolution_clock::now();
+        auto hz = std::chrono::duration_cast<std::chrono::milliseconds>(now - barrel_origin_time).count();
+        if(barrel_cnt % 50 == 0) {
+          spdlog::get("cads")->info("Barrel Frequency(Hz): {}", hz);
+        }
+        winFifo.enqueue({msgid::barrel_rotation_cnt, barrel_cnt});
+        barrel_cnt++;
+        barrel_origin_time = now;
+      }
+
+      
+      bottom_filtered0 = bottom_filtered;
+      dbottom0 = dbottom1;
 
       auto [delayed, dd] = delay({iy, ix, iz});
       if (!delayed)
@@ -730,6 +763,7 @@ namespace cads
       clip_height = cclip; //std::max(cclip,clip_height);
       barrel_height_compensate(z, -bottom_filtered, clip_height);
 
+      
       auto f = z | views::take(right_edge_index) | views::drop(left_edge_index);
 
       winFifo.enqueue({msgid::scan, cads::profile{y, x + left_edge_index * x_resolution, {f.begin(), f.end()}}});
