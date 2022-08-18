@@ -550,7 +550,7 @@ hacky:
         
         if (correlation < belt_crosscorr_threshold)
         {
-          spdlog::get("cads")->info("Correlation : {} at y : {} with barrel rotation count : {}", correlation, y, barrel_rotation_cnt - barrel_rotation_offset);
+          spdlog::get("cads")->info("Correlation : {} at y : {} with barrel rotation count : {} Estimated Belt Length: {}", correlation, y, barrel_rotation_cnt - barrel_rotation_offset,2.6138*(barrel_rotation_cnt - barrel_rotation_offset));
           found_origin_sequence_cnt++;
           trigger_length = y_max_length * 0.95;
 
@@ -691,6 +691,8 @@ wait:
     cads::z_element bottom_filtered0 = bottom; // For differential calculation
     cads::z_element dbottom0 = bottom; 
     long barrel_cnt = 0;
+    auto schmitt_trigger = mk_schmitt_trigger(0.001f);
+    z_element schmitt1 = 1.0, schmitt0 = -1.0;
 
 
     do
@@ -728,12 +730,13 @@ wait:
       auto bottom_filtered = (z_element)iirfilter(bottom_avg);
       
       auto dbottom1 = bottom_filtered - bottom_filtered0;
+      schmitt1 = schmitt_trigger(dbottom1);
 
-      if(std::signbit(dbottom1) == false && std::signbit(dbottom0) == true) {
+      if(std::signbit(schmitt1) == false && std::signbit(schmitt0) == true) {
         auto now = std::chrono::high_resolution_clock::now();
         auto hz = std::chrono::duration_cast<std::chrono::milliseconds>(now - barrel_origin_time).count();
         if(barrel_cnt % 50 == 0) {
-          spdlog::get("cads")->info("Barrel Frequency(Hz): {}, Count: {}", hz / 1000, barrel_cnt);
+          spdlog::get("cads")->info("Barrel Frequency(Hz): {}", (double)1000 / hz);
         }
         winFifo.enqueue({msgid::barrel_rotation_cnt, barrel_cnt});
         barrel_cnt++;
@@ -743,6 +746,7 @@ wait:
       
       bottom_filtered0 = bottom_filtered;
       dbottom0 = dbottom1;
+      schmitt0 = schmitt1;
 
       auto [delayed, dd] = delay({iy, ix, iz});
       if (!delayed)

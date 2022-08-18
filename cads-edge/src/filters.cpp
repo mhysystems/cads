@@ -106,6 +106,17 @@ namespace cads
     
   }
 
+  std::function<cads::z_element(cads::z_element)> mk_schmitt_trigger(const cads::z_element ref) {
 
+    auto level = true;    
+    
+    return [=](cads::z_element x) mutable {
+      auto high = x > ref;
+      auto low  = x < -ref;
+      level = high || (level && !low);
+      return level ? cads::z_element(1) : cads::z_element(-1);
+    };
+
+  }
 
 } // namespace cads
