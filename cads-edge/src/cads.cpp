@@ -626,7 +626,7 @@ wait:
     spdlog::get("cads")->info("window_processing_thread");
   }
 
-  std::tuple<double, double, double, z_element, int> preprocessing(BlockingReaderWriterQueue<msg> &gocatorFifo)
+  std::tuple<double, double, double, z_element, z_element, int> preprocessing(BlockingReaderWriterQueue<msg> &gocatorFifo)
   {
     cads::msg m;
 
@@ -650,7 +650,7 @@ wait:
     spdlog::get("cads")->info("Belt properties - botton:{}, top:{}, height(mm):{}, width:{}, width_n:{}", bottom, top, top - bottom, width_n * x_resolution, width_n);
     store_profile_parameters({y_resolution, x_resolution, z_resolution, -(double)bottom, encoder_resolution, top - bottom});
 
-    return {x_resolution, y_resolution, z_resolution, bottom, width_n};
+    return {x_resolution, y_resolution, z_resolution, bottom, top, width_n};
   }
 
   void process()
@@ -663,11 +663,12 @@ wait:
     auto gocator = mk_gocator(gocatorFifo);
     gocator->Start();
 
-    auto [x_resolution, y_resolution, z_resolution, bottom, width_n] = preprocessing(gocatorFifo);
+    auto [x_resolution, y_resolution, z_resolution, bottom, belt_top, width_n] = preprocessing(gocatorFifo);
+    auto fiducial_x = make_fiducial(x_resolution,y_resolution).cols*1.5;
 
     const auto x_width = global_config["x_width"].get<int>();
     const auto z_height_mm = global_config["z_height"].get<double>();
-     const int nan_num = global_config["left_edge_nan"].get<int>();
+    const int nan_num = global_config["left_edge_nan"].get<int>();
     const int spike_window_size = nan_num / 4;
 
     BlockingReaderWriterQueue<msg> db_fifo;
@@ -682,7 +683,7 @@ wait:
     auto delay = mk_delay(global_config["iirfilter"]["delay"]);
 
     int64_t cnt = 0;
-    z_element clip_height = std::numeric_limits<z_element>::lowest();
+    z_element clip_height = belt_top + 3.0f;
 
     auto start = std::chrono::high_resolution_clock::now();
     auto barrel_origin_time = std::chrono::high_resolution_clock::now();
@@ -716,11 +717,10 @@ wait:
         continue;
       }
 
-
       ++cnt;
 
       spike_filter(iz, spike_window_size);
-      auto [bottom_avg, top_avg, cclip, invalid] = barrel_offset(iz, z_height_mm);
+      auto [bottom_avg, top_avg, invalid] = barrel_offset(iz, z_height_mm);
 
       if (invalid)
       {
@@ -763,11 +763,13 @@ wait:
       int edge_adjust = right_edge_index - left_edge_index - width_n;
       right_edge_index += -edge_adjust;
 
-      std::tie(bottom_avg, top_avg, cclip, invalid) = barrel_offset(z, z_height_mm);
-      clip_height = cclip; //std::max(cclip,clip_height);
-      barrel_height_compensate(z, -bottom_filtered, clip_height);
+      std::tie(bottom_avg, top_avg, invalid) = barrel_offset(z, z_height_mm);
 
-      
+      auto avg = z | views::take(left_edge_index + fiducial_x) | views::drop(left_edge_index);
+      auto avg2 = std::accumulate(avg.begin(), avg.end(), 0.0) / fiducial_x;
+      clip_height =  (clip_height + avg2) / 2;
+      barrel_height_compensate(z, -bottom_filtered, clip_height+3.0f);
+
       auto f = z | views::take(right_edge_index) | views::drop(left_edge_index);
 
       winFifo.enqueue({msgid::scan, cads::profile{y, x + left_edge_index * x_resolution, {f.begin(), f.end()}}});
@@ -822,7 +824,7 @@ wait:
         auto iz = p.z;
 
         spike_filter(iz, spike_window_size);
-        auto [bottom_avg, top_avg, cclip, invalid] = barrel_offset(iz, z_height_mm);
+        auto [bottom_avg, top_avg, invalid] = barrel_offset(iz, z_height_mm);
 
         auto bottom_filtered = iirfilter(bottom_avg);
 

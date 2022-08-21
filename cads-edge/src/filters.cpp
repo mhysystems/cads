@@ -71,7 +71,7 @@ namespace cads
     for(auto &e : z) {
       e += z_off;
       if(e < 0) e = 0;
-      //if(e > z_max_compendated) e = z_max_compendated;
+      if(e > z_max_compendated) e = z_max_compendated;
     }
   }
 

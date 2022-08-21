@@ -63,11 +63,10 @@ vector<tuple<double,z_element>> histogram(const z_type& ps, z_element min, z_ele
   return hist;
 }
 
-tuple<z_element,z_element,z_element,bool> barrel_offset(const z_type& win,double z_height_mm) {
+tuple<z_element,z_element,bool> barrel_offset(const z_type& win,double z_height_mm) {
 
     
   auto [z_min,z_max] = find_minmax_z(win);
-  const float max_clip_count = (float)std::floor((double)win.size() * 0.10);
   
   // Histogram, first is z value, second is count 
   auto hist = histogram(win,z_min,z_max,100);
@@ -77,25 +76,11 @@ tuple<z_element,z_element,z_element,bool> barrel_offset(const z_type& win,double
   // Remove z values greater than the peak minus approx belt thickness.
   // Assumes the next peak will be the barrel values
   auto f = hist | views::filter([z_height_mm,peak](tuple<double,z_element> a ){ return peak - get<0>(a) > z_height_mm; });
-  auto c = hist | views::filter([max_clip_count](tuple<double,z_element> a ){ return get<1>(a) > max_clip_count; });
- 
-  auto clipat = std::accumulate(
-    c.begin(),
-    c.end(),
-    hist[0],
-    [](tuple<double,z_element> a, tuple<double,z_element> b){
-      if(get<0>(a) > get<0>(b)) {
-        return a;
-      }else {
-        return b;
-      }
-    }
-  );
-  
+
   if(f.begin() != f.end()) {
-    return {get<0>(*f.begin()),peak,get<0>(clipat),false};
+    return {get<0>(*f.begin()),peak,false};
   }else {
-    return {peak - z_height_mm,peak,get<0>(clipat),true};
+    return {peak - z_height_mm,peak,true};
   }
 }
 
