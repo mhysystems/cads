@@ -712,9 +712,14 @@ wait:
       auto ix = p.x_off;
       auto iz = p.z;
 
-      if(p.z.size() < size_t(x_width * 0.75)) {
+      if(iz.size() < size_t(x_width * 0.75)) {
         spdlog::get("cads")->error("Gocator sending profiles with widths less than 0.75 of expected width");
         continue;
+      }
+
+      if(iz.size() < width_n) {
+        spdlog::get("cads")->error("Gocator sending profiles with sample number {} less than {}",iz.size(),width_n);
+        iz.insert(iz.end(),width_n - iz.size(),bottom);
       }
 
       ++cnt;
@@ -761,7 +766,17 @@ wait:
       
       //Adjust right edge for now as origin dector is not comparing this side
       int edge_adjust = right_edge_index - left_edge_index - width_n;
-      right_edge_index += -edge_adjust;
+      if(right_edge_index - edge_adjust < z.size()) {
+        right_edge_index += -edge_adjust;
+      }else{
+        if(left_edge_index - edge_adjust >= 0) {
+          left_edge_index += -edge_adjust;
+        }else {
+          spdlog::get("cads")->error("Profile edges not found");
+          left_edge_index = 0;
+          right_edge_index = width_n;
+        }
+      }
 
       std::tie(bottom_avg, top_avg, invalid) = barrel_offset(z, z_height_mm);
 
