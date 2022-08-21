@@ -664,7 +664,7 @@ wait:
     gocator->Start();
 
     auto [x_resolution, y_resolution, z_resolution, bottom, belt_top, width_n] = preprocessing(gocatorFifo);
-    auto fiducial_x = make_fiducial(x_resolution,y_resolution).cols*1.5;
+    int fiducial_x = (int)make_fiducial(x_resolution,y_resolution).cols*1.5;
 
     const auto x_width = global_config["x_width"].get<int>();
     const auto z_height_mm = global_config["z_height"].get<double>();
