@@ -14,28 +14,15 @@ namespace cads
 
     if(window_size > z_size) return;
 
-    for(auto i = 0; i < z_size-window_size;) {
+    for(auto i = 0; i < z_size-window_size;i++) {
       if(NaN<z_element>::isnan(z[i]) && NaN<z_element>::isnan(z[i+window_size])) {
         for(auto j = i+1; j < i + window_size; ++j) {
           z[j] = NaN<z_element>::value;
         }
-        i += window_size;
-      }else{
-        ++i;
-      }
-    }
-
-    for(auto i = z_size-window_size; i < z_size-3;) {
-      if(NaN<z_element>::isnan(z[i]) && NaN<z_element>::isnan(z[i+3])) {
-        for(auto j = i+1; j < i + 3; ++j) {
-          z[j] = NaN<z_element>::value;
-        }
-        i += 3;
-      }else{
-        ++i;
       }
     }
   }
+
 
   void nan_filter(z_type& z) {
     namespace sr = std::ranges;

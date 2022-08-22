@@ -294,12 +294,12 @@ namespace cads
     return {get<0>(barrel[0]), peak};
   }
 
-  int belt_width_n(int cnt, BlockingReaderWriterQueue<msg> &ps)
+  auto belt_width_n(int cnt, BlockingReaderWriterQueue<msg> &ps)
   {
 
     const int nan_num = global_config["left_edge_nan"].get<int>();
-    const int spike_window_size = nan_num / 3;
-    int width = 0;
+    const int spike_window_size = nan_num;
+    int width = 0, left_edge = 0;
     const int n = cnt - 1;
     cads::msg m;
 
@@ -314,6 +314,7 @@ namespace cads
         spike_filter(p.z, spike_window_size);
         auto [left_edge_index, right_edge_index] = find_profile_edges_nans_outer(p.z, nan_num);
         width += right_edge_index - left_edge_index;
+        left_edge += left_edge_index;
       }
       else
       {
@@ -329,7 +330,8 @@ namespace cads
 
     width /= n;
     width += (width & 1);
-    return width;
+    left_edge /= n;
+    return std::tuple{left_edge,width};
   }
 
   double belt_regression(int cnt, BlockingReaderWriterQueue<msg> &ps)
@@ -626,7 +628,7 @@ wait:
     spdlog::get("cads")->info("window_processing_thread");
   }
 
-  std::tuple<double, double, double, z_element, z_element, int> preprocessing(BlockingReaderWriterQueue<msg> &gocatorFifo)
+  auto preprocessing(BlockingReaderWriterQueue<msg> &gocatorFifo)
   {
     cads::msg m;
 
@@ -646,11 +648,11 @@ wait:
     }
     
     auto [bottom, top] = barrel_offset(1024, gocatorFifo);
-    auto width_n = belt_width_n(1024, gocatorFifo);
+    auto [left_edge_index,width_n] = belt_width_n(1024, gocatorFifo);
     spdlog::get("cads")->info("Belt properties - botton:{}, top:{}, height(mm):{}, width:{}, width_n:{}", bottom, top, top - bottom, width_n * x_resolution, width_n);
     store_profile_parameters({y_resolution, x_resolution, z_resolution, -(double)bottom, encoder_resolution, top - bottom});
 
-    return {x_resolution, y_resolution, z_resolution, bottom, top, width_n};
+    return std::tuple{x_resolution, y_resolution, z_resolution, bottom, top, width_n,left_edge_index};
   }
 
   void process()
@@ -663,13 +665,13 @@ wait:
     auto gocator = mk_gocator(gocatorFifo);
     gocator->Start();
 
-    auto [x_resolution, y_resolution, z_resolution, bottom, belt_top, width_n] = preprocessing(gocatorFifo);
+    auto [x_resolution, y_resolution, z_resolution, bottom, belt_top, width_n,left_edge_index_init] = preprocessing(gocatorFifo);
     int fiducial_x = (int)make_fiducial(x_resolution,y_resolution).cols*1.5;
 
     const auto x_width = global_config["x_width"].get<int>();
     const auto z_height_mm = global_config["z_height"].get<double>();
     const int nan_num = global_config["left_edge_nan"].get<int>();
-    const int spike_window_size = nan_num / 4;
+    const int spike_window_size = nan_num;
 
     BlockingReaderWriterQueue<msg> db_fifo;
     BlockingReaderWriterQueue<msg> dynamic_processing_fifo;
@@ -693,6 +695,7 @@ wait:
     cads::z_element dbottom0 = bottom; 
     long barrel_cnt = 0;
     auto schmitt_trigger = mk_schmitt_trigger(0.001f);
+    auto edge_adjust = mk_edge_adjust(left_edge_index_init,width_n);
     z_element schmitt1 = 1.0, schmitt0 = -1.0;
 
 
@@ -763,20 +766,8 @@ wait:
 
       nan_filter(z);
       regression_compensate(z, left_edge_index, right_edge_index, gradient);
-      
-      //Adjust right edge for now as origin dector is not comparing this side
-      int edge_adjust = right_edge_index - left_edge_index - width_n;
-      if(right_edge_index - edge_adjust < z.size()) {
-        right_edge_index += -edge_adjust;
-      }else{
-        if(left_edge_index - edge_adjust >= 0) {
-          left_edge_index += -edge_adjust;
-        }else {
-          spdlog::get("cads")->error("Profile edges not found");
-          left_edge_index = 0;
-          right_edge_index = width_n;
-        }
-      }
+
+      left_edge_index = edge_adjust(left_edge_index,right_edge_index);
 
       std::tie(bottom_avg, top_avg, invalid) = barrel_offset(z, z_height_mm);
 
@@ -785,7 +776,7 @@ wait:
       clip_height =  (clip_height + avg2) / 2;
       barrel_height_compensate(z, -bottom_filtered, clip_height+3.0f);
 
-      auto f = z | views::take(right_edge_index) | views::drop(left_edge_index);
+      auto f = z | views::take(left_edge_index+width_n) | views::drop(left_edge_index);
 
       winFifo.enqueue({msgid::scan, cads::profile{y, x + left_edge_index * x_resolution, {f.begin(), f.end()}}});
 

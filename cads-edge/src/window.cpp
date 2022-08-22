@@ -31,7 +31,7 @@ cv::Mat window_to_mat(const window& win, double x_res) {
 	auto [x_min,x_max] = x_minmax(win,x_res);
 
 	const int n_cols = (int)ceil((x_max-x_min) / x_res);
-  const auto n_rows = win.size();
+  const int n_rows = (int)win.size();
 	
   cv::Mat mat(n_rows,n_cols,CV_32F,cv::Scalar::all(0.0f));
 	

@@ -6,6 +6,7 @@
 #include <deque>
 #include <limits>
 #include <cmath>
+#include <functional>
 
 namespace cads
 {
@@ -23,5 +24,6 @@ namespace cads
   bool compare_samples(const profile& a, const profile& b, int threshold); 
   std::tuple<z_element,z_element> find_minmax_z(const profile& ps);
   std::tuple<z_element,z_element,bool>  barrel_offset(const z_type& win,double z_height_mm);
+  std::function<int(int,int)> mk_edge_adjust(int left_edge_index_previous, int width_n);
   
 }

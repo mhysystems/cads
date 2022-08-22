@@ -1,9 +1,13 @@
 #pragma once
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+
 #include <GoSdk/GoSensor.h>
 #include <GoSdk/GoSystem.h>
 #include <kApi/kApiDef.h>
 
+#pragma GCC diagnostic pop
 #include "gocator_reader_base.h"
 
 namespace cads
