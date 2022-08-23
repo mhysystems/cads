@@ -83,18 +83,20 @@ TEST(cads, spike_filter)
 
 TEST_F(CadsTest, spike_filter2)
 {
-  auto fetch_profile = fetch_belt_coro(0, std::numeric_limits<int>::max(), 256, "test/protrusion.db");
+  auto fetch_profile = fetch_belt_coro(0, std::numeric_limits<int>::max(), 256, "test/demo.db");
   const int nan_num = global_config["left_edge_nan"].get<int>();
-  const int spike_window_size = nan_num;
-  create_db("spike_filter.db");
-  auto store_profile = store_profile_coro("spike_filter.db");
+  const int spike_window_size = 25;
+  create_db("spike_filter2.db");
+  auto store_profile = store_profile_coro("spike_filter2.db");
   
   while (true)
   {
 
     auto [co_terminate, cv] = fetch_profile.resume(0);
     auto [idx, p] = cv;
-    spike_filter(p.z, spike_window_size);
+    //spike_filter(p.z, nan_num/4);
+    spike_filter(p.z, 25);
+    //spike_filter(p.z, spike_window_size);
     store_profile.resume({0, idx, p});
 
     if (co_terminate)

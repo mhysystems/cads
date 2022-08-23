@@ -8,17 +8,26 @@
 
 namespace cads 
 {
+  void spike_filter2(z_element* z, int window_size) {
+    
+    for(auto i = 0; i < window_size;i++) {
+      if(NaN<z_element>::isnan(z[i]) && NaN<z_element>::isnan(z[i+window_size])) {
+        for(auto j = i+1; j < i + window_size; ++j) {
+          z[j] = NaN<z_element>::value;
+        }
+      }
+    }
+  }
+
   void spike_filter(z_type& z, int window_size) {
     
     int z_size = (int)z.size();
 
     if(window_size > z_size) return;
 
-    for(auto i = 0; i < z_size-window_size;i++) {
-      if(NaN<z_element>::isnan(z[i]) && NaN<z_element>::isnan(z[i+window_size])) {
-        for(auto j = i+1; j < i + window_size; ++j) {
-          z[j] = NaN<z_element>::value;
-        }
+    for(auto i = 0; i < z_size-window_size;i+=window_size) {
+       for(auto j = 3; j < window_size; j++) {
+        spike_filter2(&z[i],j);
       }
     }
   }

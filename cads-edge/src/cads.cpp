@@ -298,7 +298,7 @@ namespace cads
   {
 
     const int nan_num = global_config["left_edge_nan"].get<int>();
-    const int spike_window_size = nan_num;
+    const int spike_window_size = nan_num * 2;
     int width = 0, left_edge = 0;
     const int n = cnt - 1;
     cads::msg m;
@@ -339,7 +339,7 @@ namespace cads
 
     const int nan_num = global_config["left_edge_nan"].get<int>();
 
-    const int spike_window_size = nan_num / 3;
+    const int spike_window_size = nan_num * 2;
     double gradient = 0.0, intercept = 0.0;
     const double n = cnt - 1;
     cads::msg m;
@@ -671,7 +671,7 @@ wait:
     const auto x_width = global_config["x_width"].get<int>();
     const auto z_height_mm = global_config["z_height"].get<double>();
     const int nan_num = global_config["left_edge_nan"].get<int>();
-    const int spike_window_size = nan_num;
+    const int spike_window_size = nan_num * 2;
 
     BlockingReaderWriterQueue<msg> db_fifo;
     BlockingReaderWriterQueue<msg> dynamic_processing_fifo;
@@ -806,7 +806,7 @@ wait:
 
     const auto z_height_mm = global_config["z_height"].get<double>();
     const int nan_num = global_config["left_edge_nan"].get<int>();
-    const int spike_window_size = nan_num / 4;
+    const int spike_window_size = nan_num * 2;
 
     auto iirfilter = mk_iirfilterSoS();
     auto delay = mk_delay(global_config["iirfilter"]["delay"]);
