@@ -4,6 +4,30 @@
 	// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
 	"version": "0.2.0",
 	"configurations": [
+    {
+      "name": "Launch Debugger with valgrind",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/debug/cads",
+      "preLaunchTask": "valgrind-debug",
+      "args": ["-c", "${workspaceFolder}/config.json"],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "externalConsole": true,
+      "MIMode": "gdb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Connect to valgrind",
+          "text": "target remote | vgdb",
+          "ignoreFailures": true
+        }
+      ]
+    },
 		{
 			"name": "(gdb) Playback",
 			"type": "cppdbg",

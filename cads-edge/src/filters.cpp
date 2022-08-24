@@ -8,14 +8,12 @@
 
 namespace cads 
 {
-  void spike_filter2(z_element* z, int window_size) {
+  void spike_fill(z_element* z, int window_size) {
     
-    for(auto i = 0; i < window_size;i++) {
-      if(NaN<z_element>::isnan(z[i]) && NaN<z_element>::isnan(z[i+window_size])) {
-        for(auto j = i+1; j < i + window_size; ++j) {
-          z[j] = NaN<z_element>::value;
+    if(NaN<z_element>::isnan(z[0]) && NaN<z_element>::isnan(z[window_size])) {
+        for(auto k = 1; k < window_size; ++k) {
+          z[k] = NaN<z_element>::value;
         }
-      }
     }
   }
 
@@ -27,9 +25,19 @@ namespace cads
 
     for(auto i = 0; i < z_size-window_size;i+=window_size) {
        for(auto j = 3; j < window_size; j++) {
-        spike_filter2(&z[i],j);
+        spike_fill(&z[i],j);
       }
     }
+
+    auto r = z_size % window_size;
+
+    for(auto i = z_size - r; i < z_size; i+=r) {
+       for(auto j = 3; j < r; j++) {
+        spike_fill(&z[i],j);
+      }
+    }
+
+
   }
 
 
