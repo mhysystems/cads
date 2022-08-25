@@ -31,7 +31,7 @@
 #include <spdlog/spdlog.h>
 
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wuseless-cast" 
+#pragma GCC diagnostic ignored "-Wuseless-cast"
 
 #include <date/date.h>
 #include <date/tz.h>
@@ -81,11 +81,12 @@ namespace cads
       }
 
       auto [err, rslt] = realtime_processing.resume(m);
-      
-      if(err) {
+
+      if (err)
+      {
         spdlog::get("cads")->error("dynamic_processing_thread: realtime_processing");
       }
-      
+
       if (rslt > 0)
       {
         spdlog::get("cads")->info("Belt damage found around y: {}", p.y);
@@ -108,7 +109,6 @@ namespace cads
 
     spdlog::get("cads")->info("DYNAMIC PROCESSING - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, cnt / duration);
   }
-
 
   void save_send_thread(BlockingReaderWriterQueue<msg> &profile_fifo)
   {
@@ -180,9 +180,9 @@ namespace cads
         auto daily_time = duration_cast<seconds>(now - today);
         auto current_hour = chrono::floor<chrono::hours>(daily_time);
 
-        if (p.y == 0 && current_hour >= trigger_hour )
+        if (p.y == 0 && current_hour >= trigger_hour)
         {
-          //store_profile.resume({revid, idx++, p}); REMOVEME
+          // store_profile.resume({revid, idx++, p}); REMOVEME
           s = processing;
         }
         break;
@@ -192,18 +192,22 @@ namespace cads
       {
         if (p.y == 0)
         {
-          if(drop_uploads == 0) {
+          if (drop_uploads == 0)
+          {
             fut = std::async(http_post_whole_belt, revid++, idx);
             s = waitthread;
             spdlog::get("cads")->info("Finished processing a belt");
-          }else {
+          }
+          else
+          {
             --drop_uploads;
             spdlog::get("cads")->info("Dropped upload. Drops remaining:{}", drop_uploads);
             s = finished;
           }
-          
-        }else {
-          //store_profile.resume({revid, idx++, p}); REMOVEME
+        }
+        else
+        {
+          // store_profile.resume({revid, idx++, p}); REMOVEME
         }
         break;
       }
@@ -236,7 +240,6 @@ namespace cads
         spdlog::get("cads")->warn("Saving to DB showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
         buffer_size_warning += buffer_warning_increment;
       }
-
     }
 
     store_profile.terminate();
@@ -244,8 +247,8 @@ namespace cads
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     spdlog::get("cads")->info("DB PROCESSING - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, cnt / duration);
 
-    //spdlog::get("cads")->info("Final Upload");
-    //http_post_whole_belt(revid, idx); // For replay and not having a complete belt, so something is uploaded
+    // spdlog::get("cads")->info("Final Upload");
+    // http_post_whole_belt(revid, idx); // For replay and not having a complete belt, so something is uploaded
     spdlog::get("cads")->info("Stopping save_send_thread");
   }
 
@@ -313,6 +316,12 @@ namespace cads
         auto p = get<profile>(get<1>(m));
         spike_filter(p.z, spike_window_size);
         auto [left_edge_index, right_edge_index] = find_profile_edges_nans_outer(p.z, nan_num);
+
+        if (right_edge_index <= left_edge_index)
+        {
+          std::throw_with_nested(std::runtime_error("Right edge index less than left edge index"));
+        }
+
         width += right_edge_index - left_edge_index;
         left_edge += left_edge_index;
       }
@@ -331,7 +340,7 @@ namespace cads
     width /= n;
     width += (width & 1);
     left_edge /= n;
-    return std::tuple{left_edge,width};
+    return std::tuple{left_edge, width};
   }
 
   double belt_regression(int cnt, BlockingReaderWriterQueue<msg> &ps)
@@ -391,8 +400,8 @@ namespace cads
   }
 
   void upload_profile_only()
-  {     
-    http_post_whole_belt(0,std::numeric_limits<int>::max());
+  {
+    http_post_whole_belt(0, std::numeric_limits<int>::max());
   }
 
   void store_profile_only()
@@ -454,9 +463,8 @@ namespace cads
     } while (get<0>(m) != msgid::finished && Y < 2 * y_max_length);
 
     store_profile.terminate();
-    
-    gocator->Stop();
 
+    gocator->Stop();
   }
 
   void shift_Mat(cv::Mat &m)
@@ -507,10 +515,11 @@ namespace cads
     // Fill buffer
     for (int j = 0; j < fiducial.rows; j++)
     {
-hacky:
+    hacky:
       profile_fifo.wait_dequeue(m);
 
-      if(std::get<0>(m) == msgid::barrel_rotation_cnt) goto hacky;
+      if (std::get<0>(m) == msgid::barrel_rotation_cnt)
+        goto hacky;
 
       if (std::get<0>(m) != msgid::scan)
         break;
@@ -547,16 +556,16 @@ hacky:
       {
         const auto cv_threshhold = left_edge_avg_height(belt, fiducial) - fdepth;
         auto correlation = search_for_fiducial(belt, fiducial, m1, out, cv_threshhold);
-        
+
         lowest_correlation = std::min(lowest_correlation, correlation);
-        
+
         if (correlation < belt_crosscorr_threshold)
         {
-          spdlog::get("cads")->info("Correlation : {} at y : {} with barrel rotation count : {} Estimated Belt Length: {}", correlation, y, barrel_rotation_cnt - barrel_rotation_offset,2.6138*(barrel_rotation_cnt - barrel_rotation_offset));
+          spdlog::get("cads")->info("Correlation : {} at y : {} with barrel rotation count : {} Estimated Belt Length: {}", correlation, y, barrel_rotation_cnt - barrel_rotation_offset, 2.6138 * (barrel_rotation_cnt - barrel_rotation_offset));
           found_origin_sequence_cnt++;
           trigger_length = y_max_length * 0.95;
 
-          //fiducial_as_image(belt);
+          // fiducial_as_image(belt);
 
           y_offset += y;
           barrel_rotation_offset = barrel_rotation_cnt;
@@ -587,14 +596,16 @@ hacky:
         }
       }
 
-      if(found_origin_sequence_cnt > 0 /*FIXME change to 1 for release */) {
+      if (found_origin_sequence_cnt > 0 /*FIXME change to 1 for release */)
+      {
         next_fifo.enqueue({msgid::scan, profile_buffer.front()});
       }
 
-wait:
+    wait:
       profile_fifo.wait_dequeue(m);
 
-      if(std::get<0>(m) == msgid::barrel_rotation_cnt) {
+      if (std::get<0>(m) == msgid::barrel_rotation_cnt)
+      {
         barrel_rotation_cnt = get<long>(get<1>(m));
         goto wait;
       }
@@ -617,7 +628,6 @@ wait:
         spdlog::get("cads")->warn("Cads Origin Detection showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
         buffer_size_warning += buffer_warning_increment;
       }
-
     }
 
     auto end = std::chrono::high_resolution_clock::now();
@@ -642,17 +652,18 @@ wait:
 
     auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution] = get<resolutions_t>(get<1>(m));
     spdlog::get("cads")->info("Gocator contants - y_res:{}, x_res:{}, z_res:{}, z_off:{}, encoder_res:{}", y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution);
-    
-    if(std::floor(y_resolution/encoder_resolution) != (y_resolution/encoder_resolution)) {
+
+    if (std::floor(y_resolution / encoder_resolution) != (y_resolution / encoder_resolution))
+    {
       spdlog::get("cads")->error("Danger! Y resolution not Integer multiple of Encoder Resolution");
     }
-    
+
     auto [bottom, top] = barrel_offset(1024, gocatorFifo);
-    auto [left_edge_index,width_n] = belt_width_n(1024, gocatorFifo);
+    auto [left_edge_index, width_n] = belt_width_n(1024, gocatorFifo);
     spdlog::get("cads")->info("Belt properties - botton:{}, top:{}, height(mm):{}, width:{}, width_n:{}", bottom, top, top - bottom, width_n * x_resolution, width_n);
     store_profile_parameters({y_resolution, x_resolution, z_resolution, -(double)bottom, encoder_resolution, top - bottom});
 
-    return std::tuple{x_resolution, y_resolution, z_resolution, bottom, top, width_n,left_edge_index};
+    return std::tuple{x_resolution, y_resolution, z_resolution, bottom, top, width_n, left_edge_index};
   }
 
   void process()
@@ -665,8 +676,8 @@ wait:
     auto gocator = mk_gocator(gocatorFifo);
     gocator->Start();
 
-    auto [x_resolution, y_resolution, z_resolution, bottom, belt_top, width_n,left_edge_index_init] = preprocessing(gocatorFifo);
-    int fiducial_x = (int)make_fiducial(x_resolution,y_resolution).cols*1.5;
+    auto [x_resolution, y_resolution, z_resolution, bottom, belt_top, width_n, left_edge_index_init] = preprocessing(gocatorFifo);
+    int fiducial_x = (int)make_fiducial(x_resolution, y_resolution).cols * 1.5;
 
     const auto x_width = global_config["x_width"].get<int>();
     const auto z_height_mm = global_config["z_height"].get<double>();
@@ -676,7 +687,7 @@ wait:
     BlockingReaderWriterQueue<msg> db_fifo;
     BlockingReaderWriterQueue<msg> dynamic_processing_fifo;
     std::jthread save_send(save_send_thread, std::ref(db_fifo));
-    std::jthread dynamic_processing(dynamic_processing_thread, std::ref(dynamic_processing_fifo),std::ref(db_fifo), width_n);
+    std::jthread dynamic_processing(dynamic_processing_thread, std::ref(dynamic_processing_fifo), std::ref(db_fifo), width_n);
     std::jthread origin_dectection(window_processing_thread, x_resolution, y_resolution, width_n, std::ref(winFifo), std::ref(dynamic_processing_fifo));
 
     auto gradient = belt_regression(64, gocatorFifo);
@@ -692,12 +703,11 @@ wait:
 
     cads::msg m;
     cads::z_element bottom_filtered0 = bottom; // For differential calculation
-    cads::z_element dbottom0 = bottom; 
+    cads::z_element dbottom0 = bottom;
     long barrel_cnt = 0;
     auto schmitt_trigger = mk_schmitt_trigger(0.001f);
-    auto edge_adjust = mk_edge_adjust(left_edge_index_init,width_n);
+    auto edge_adjust = mk_edge_adjust(left_edge_index_init, width_n);
     z_element schmitt1 = 1.0, schmitt0 = -1.0;
-
 
     do
     {
@@ -715,14 +725,16 @@ wait:
       auto ix = p.x_off;
       auto iz = p.z;
 
-      if(iz.size() < size_t(x_width * 0.75)) {
+      if (iz.size() < size_t(x_width * 0.75))
+      {
         spdlog::get("cads")->error("Gocator sending profiles with widths less than 0.75 of expected width");
         continue;
       }
 
-      if(iz.size() < width_n) {
-        spdlog::get("cads")->error("Gocator sending profiles with sample number {} less than {}",iz.size(),width_n);
-        iz.insert(iz.end(),width_n - iz.size(),bottom);
+      if (iz.size() < width_n)
+      {
+        spdlog::get("cads")->error("Gocator sending profiles with sample number {} less than {}", iz.size(), width_n);
+        iz.insert(iz.end(), width_n - iz.size(), bottom);
       }
 
       ++cnt;
@@ -736,14 +748,16 @@ wait:
       }
 
       auto bottom_filtered = (z_element)iirfilter(bottom_avg);
-      
+
       auto dbottom1 = bottom_filtered - bottom_filtered0;
       schmitt1 = schmitt_trigger(dbottom1);
 
-      if(std::signbit(schmitt1) == false && std::signbit(schmitt0) == true) {
+      if (std::signbit(schmitt1) == false && std::signbit(schmitt0) == true)
+      {
         auto now = std::chrono::high_resolution_clock::now();
         auto hz = std::chrono::duration_cast<std::chrono::milliseconds>(now - barrel_origin_time).count();
-        if(barrel_cnt % 50 == 0) {
+        if (barrel_cnt % 50 == 0)
+        {
           spdlog::get("cads")->info("Barrel Frequency(Hz): {}", (double)1000 / hz);
         }
         winFifo.enqueue({msgid::barrel_rotation_cnt, barrel_cnt});
@@ -751,7 +765,6 @@ wait:
         barrel_origin_time = now;
       }
 
-      
       bottom_filtered0 = bottom_filtered;
       dbottom0 = dbottom1;
       schmitt0 = schmitt1;
@@ -767,16 +780,16 @@ wait:
       nan_filter(z);
       regression_compensate(z, left_edge_index, right_edge_index, gradient);
 
-      left_edge_index = edge_adjust(left_edge_index,right_edge_index);
+      left_edge_index = edge_adjust(left_edge_index, right_edge_index);
 
       std::tie(bottom_avg, top_avg, invalid) = barrel_offset(z, z_height_mm);
 
       auto avg = z | views::take(left_edge_index + fiducial_x) | views::drop(left_edge_index);
       auto avg2 = std::accumulate(avg.begin(), avg.end(), 0.0) / fiducial_x;
-      clip_height =  (clip_height + avg2) / 2;
-      barrel_height_compensate(z, -bottom_filtered, clip_height+3.0f);
+      clip_height = (clip_height + avg2) / 2;
+      barrel_height_compensate(z, -bottom_filtered, clip_height + 3.0f);
 
-      auto f = z | views::take(left_edge_index+width_n) | views::drop(left_edge_index);
+      auto f = z | views::take(left_edge_index + width_n) | views::drop(left_edge_index);
 
       winFifo.enqueue({msgid::scan, cads::profile{y, x + left_edge_index * x_resolution, {f.begin(), f.end()}}});
 

@@ -54,9 +54,9 @@ TEST(cads, find_profile_edges_nans_outer)
 TEST(cads, spike_filter)
 {
   auto v = NaN<z_type::value_type>::value;
-  z_type in{1, v, 1, v, 1, 1, 1, 1, v, 1, v, 1};
-  spike_filter(in, 2);
-  z_type out{1, v, v, v, 1, 1, 1, 1, v, v, v, 1};
+  z_type in{1, v, 1, v, 1, 1, 1, v, 1, 1, 1, 1, v, 1, v, 1};
+  spike_filter(in, 5);
+  z_type out{1, v, v, v, v, v, v, v, 1, 1, 1, 1, v, v, v, 1};
 
   ASSERT_EQ(in.size(), out.size());
 

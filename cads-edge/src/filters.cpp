@@ -6,121 +6,136 @@
 
 #include <Iir.h>
 
-namespace cads 
+namespace cads
 {
-  void spike_fill(z_element* z, int window_size) {
-    
-    if(NaN<z_element>::isnan(z[0]) && NaN<z_element>::isnan(z[window_size])) {
-        for(auto k = 1; k < window_size; ++k) {
-          z[k] = NaN<z_element>::value;
-        }
-    }
-  }
+  void spike_filter(z_type &z, int max_window_size)
+  {
 
-  void spike_filter(z_type& z, int window_size) {
-    
     int z_size = (int)z.size();
 
-    if(window_size > z_size) return;
+    if (max_window_size > z_size)
+      return;
 
-    for(auto i = 0; i < z_size-window_size;i+=window_size) {
-       for(auto j = 3; j < window_size; j++) {
-        spike_fill(&z[i],j);
+    for (auto i = 0; i < z_size - 3; i++)
+    {
+
+      if (!NaN<z_element>::isnan(z[i]))
+        continue;
+
+      for (auto j = 3; j <= std::min(z_size - i,max_window_size); j++)
+      {
+        if (NaN<z_element>::isnan(z[i + j - 1]))
+        {
+          for (auto k = i + 1; k < i + j; ++k)
+          {
+            z[k] = NaN<z_element>::value;
+          }
+          i += j - 1 - 1; // Extra -1 is due to for(...,i++)
+          break;
+        }
       }
     }
-
-    auto r = z_size % window_size;
-
-    for(auto i = z_size - r; i < z_size; i+=r) {
-       for(auto j = 3; j < r; j++) {
-        spike_fill(&z[i],j);
-      }
-    }
-
 
   }
 
-
-  void nan_filter(z_type& z) {
+  void nan_filter(z_type &z)
+  {
     namespace sr = std::ranges;
-    
-    auto prev_value_it = sr::find_if(z,[](z_element a){ return !NaN<z_element>::isnan(a);}); 
-    z_element prev_value = prev_value_it != z.end() ? *prev_value_it : NaN<z_element>::value; 
-    
+
+    auto prev_value_it = sr::find_if(z, [](z_element a)
+                                     { return !NaN<z_element>::isnan(a); });
+    z_element prev_value = prev_value_it != z.end() ? *prev_value_it : NaN<z_element>::value;
+
     int mid = (int)(z.size() / 2);
 
-    for(auto&& e : z | sr::views::take(mid)) {
-      if(!NaN<z_element>::isnan(e)) {
+    for (auto &&e : z | sr::views::take(mid))
+    {
+      if (!NaN<z_element>::isnan(e))
+      {
         prev_value = e;
-      }else {
+      }
+      else
+      {
         e = prev_value;
       }
     }
 
-    auto prev_value_it2 = sr::find_if(z | sr::views::reverse ,[](z_element a){ return !NaN<z_element>::isnan(a);}); 
+    auto prev_value_it2 = sr::find_if(z | sr::views::reverse, [](z_element a)
+                                      { return !NaN<z_element>::isnan(a); });
     prev_value = prev_value_it2 != z.rend() ? *prev_value_it2 : NaN<z_element>::value;
 
-    for(auto&& e : z | sr::views::reverse | sr::views::take(mid+1)) {
-      if(!NaN<z_element>::isnan(e)) {
+    for (auto &&e : z | sr::views::reverse | sr::views::take(mid + 1))
+    {
+      if (!NaN<z_element>::isnan(e))
+      {
         prev_value = e;
-      }else {
+      }
+      else
+      {
         e = prev_value;
       }
     }
   }
 
-  void barrel_height_compensate(z_type& z, z_element z_off, z_element z_max) {
+  void barrel_height_compensate(z_type &z, z_element z_off, z_element z_max)
+  {
     const auto z_max_compendated = z_max + z_off;
 
-    for(auto &e : z) {
+    for (auto &e : z)
+    {
       e += z_off;
-      if(e < 0) e = 0;
-      if(e > z_max_compendated) e = z_max_compendated;
+      if (e < 0)
+        e = 0;
+      if (e > z_max_compendated)
+        e = z_max_compendated;
     }
   }
 
- 
-  std::function<double(double)> mk_iirfilterSoS() {
+  std::function<double(double)> mk_iirfilterSoS()
+  {
     auto coeff = global_config["iirfilter"]["sos"].get<std::vector<std::vector<double>>>();
     auto r = coeff | std::ranges::views::join;
-    std::vector<double> in(r.begin(),r.end());
-    Iir::Custom::SOSCascade<5> a(*(double (*)[5][6])in.data());
+    std::vector<double> in(r.begin(), r.end());
+    Iir::Custom::SOSCascade<5> a(*(double(*)[5][6])in.data());
 
-     return [=](z_element xn) mutable {
-       return a.filter(xn);
-     };
+    return [=](z_element xn) mutable
+    {
+      return a.filter(xn);
+    };
   }
 
-  std::function<std::tuple<bool,std::tuple<y_type,double,z_type>>(std::tuple<y_type,double,z_type>)> mk_delay(size_t len) {
-    
-    std::deque<std::tuple<y_type,double,z_type>> delay;
-    return [=](std::tuple<y_type,double,z_type> p) mutable {
+  std::function<std::tuple<bool, std::tuple<y_type, double, z_type>>(std::tuple<y_type, double, z_type>)> mk_delay(size_t len)
+  {
+
+    std::deque<std::tuple<y_type, double, z_type>> delay;
+    return [=](std::tuple<y_type, double, z_type> p) mutable
+    {
       delay.push_back(p);
-      
-      if(delay.size() < len) {
-        return std::tuple{false,std::tuple<y_type,double,z_type>()};
+
+      if (delay.size() < len)
+      {
+        return std::tuple{false, std::tuple<y_type, double, z_type>()};
       }
 
       auto rn = delay.front();
       delay.pop_front();
 
-      return std::tuple{true,rn};
-
+      return std::tuple{true, rn};
     };
-    
   }
 
-  std::function<cads::z_element(cads::z_element)> mk_schmitt_trigger(const cads::z_element ref) {
+  std::function<cads::z_element(cads::z_element)> mk_schmitt_trigger(const cads::z_element ref)
+  {
 
-    auto level = true;    
-    
-    return [=](cads::z_element x) mutable {
+    auto level = true;
+
+    return [=](cads::z_element x) mutable
+    {
       auto high = x > ref;
-      auto low  = x < -ref;
+      auto low = x < -ref;
       level = high || (level && !low);
       return level ? cads::z_element(1) : cads::z_element(-1);
     };
-
   }
 
 } // namespace cads
