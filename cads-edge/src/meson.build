@@ -13,7 +13,8 @@ cadsSrc += files(
   'constants.cpp',
   'window.cpp',
   'dynamic_processing.cpp',
-  'init.cpp'
+  'init.cpp',
+  'save_send_thread.cpp'
 )
 
 cadsEntry += files('main.cpp')

@@ -25,7 +25,6 @@
 #include <ranges>
 #include <chrono>
 #include <sstream>
-#include <future>
 #include <fstream>
 
 #include <spdlog/spdlog.h>
@@ -44,6 +43,7 @@
 #include <edge_detection.h>
 #include <coro.hpp>
 #include <dynamic_processing.h>
+#include <save_send_thread.h>
 
 using namespace std;
 using namespace moodycamel;
@@ -54,203 +54,6 @@ constexpr size_t buffer_warning_increment = 4092;
 
 namespace cads
 {
-
-  void dynamic_processing_thread(BlockingReaderWriterQueue<msg> &profile_fifo, BlockingReaderWriterQueue<msg> &next_fifo, int width)
-  {
-
-    auto realtime_processing = lua_processing_coro(width);
-    int64_t cnt = 0;
-    profile p;
-    cads::msg m;
-    auto buffer_size_warning = buffer_warning_increment;
-
-    auto start = std::chrono::high_resolution_clock::now();
-
-    while (true)
-    {
-      ++cnt;
-      profile_fifo.wait_dequeue(m);
-
-      if (get<0>(m) == msgid::scan)
-      {
-        p = get<profile>(get<1>(m));
-      }
-      else
-      {
-        break;
-      }
-
-      auto [err, rslt] = realtime_processing.resume(m);
-
-      if (err)
-      {
-        spdlog::get("cads")->error("dynamic_processing_thread: realtime_processing");
-      }
-
-      if (rslt > 0)
-      {
-        spdlog::get("cads")->info("Belt damage found around y: {}", p.y);
-      }
-
-      if (profile_fifo.size_approx() > buffer_size_warning)
-      {
-        spdlog::get("cads")->warn("Cads Dynamic Processing showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
-        buffer_size_warning += buffer_warning_increment;
-      }
-
-      next_fifo.enqueue(m);
-    }
-
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-
-    next_fifo.enqueue({msgid::finished, 0});
-    realtime_processing.terminate();
-
-    spdlog::get("cads")->info("DYNAMIC PROCESSING - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, cnt / duration);
-  }
-
-  void save_send_thread(BlockingReaderWriterQueue<msg> &profile_fifo)
-  {
-    using namespace date;
-    using namespace chrono;
-
-    hours trigger_hour;
-    auto sts = global_config["daily_start_time"].get<std::string>();
-    auto drop_uploads = global_config["drop_uploads"].get<int>();
-
-    if (sts != "now"s)
-    {
-      std::stringstream st{sts};
-
-      system_clock::duration run_in;
-      st >> parse("%R", run_in);
-
-      trigger_hour = chrono::floor<chrono::hours>(run_in);
-    }
-    else
-    {
-      auto now = current_zone()->to_local(system_clock::now());
-      auto today = chrono::floor<chrono::days>(now);
-      auto daily_time = duration_cast<seconds>(now - today);
-      trigger_hour = chrono::floor<chrono::hours>(daily_time);
-    }
-
-    cads::msg m;
-
-    enum state
-    {
-      waiting,
-      processing,
-      waitthread,
-      finished
-    };
-
-    state s = waiting;
-    auto store_profile = store_profile_coro();
-    std::chrono::time_point<date::local_t, std::chrono::days> today;
-    std::future<date::utc_clock::time_point> fut;
-    profile p;
-    int revid = 0, idx = 0;
-    auto buffer_size_warning = buffer_warning_increment;
-
-    auto start = std::chrono::high_resolution_clock::now();
-    int64_t cnt = 0;
-
-    while (true)
-    {
-      ++cnt;
-      profile_fifo.wait_dequeue(m);
-
-      if (get<0>(m) == msgid::scan)
-      {
-        p = get<profile>(get<1>(m));
-      }
-      else
-      {
-        break;
-      }
-
-      switch (s)
-      {
-      case waiting:
-      {
-        auto now = current_zone()->to_local(system_clock::now());
-        today = chrono::floor<chrono::days>(now);
-        auto daily_time = duration_cast<seconds>(now - today);
-        auto current_hour = chrono::floor<chrono::hours>(daily_time);
-
-        if (p.y == 0 && current_hour >= trigger_hour)
-        {
-          // store_profile.resume({revid, idx++, p}); REMOVEME
-          s = processing;
-        }
-        break;
-      }
-
-      case processing:
-      {
-        if (p.y == 0)
-        {
-          if (drop_uploads == 0)
-          {
-            fut = std::async(http_post_whole_belt, revid++, idx);
-            s = waitthread;
-            spdlog::get("cads")->info("Finished processing a belt");
-          }
-          else
-          {
-            --drop_uploads;
-            spdlog::get("cads")->info("Dropped upload. Drops remaining:{}", drop_uploads);
-            s = finished;
-          }
-        }
-        else
-        {
-          // store_profile.resume({revid, idx++, p}); REMOVEME
-        }
-        break;
-      }
-      case waitthread:
-        if (fut.wait_for(std::chrono::seconds(0)) == std::future_status::ready && p.y == 0.0)
-        {
-          fut.get();
-          revid = 0;
-          s = finished;
-        }
-        break;
-      case finished:
-      {
-        auto now = current_zone()->to_local(system_clock::now());
-        if (today != chrono::floor<chrono::days>(now))
-        {
-          spdlog::get("cads")->info("Switch to waiting");
-          s = waiting;
-        }
-      }
-      }
-
-      if (p.y == 0.0)
-        idx = 0;
-
-      store_profile.resume({revid, idx++, p});
-
-      if (profile_fifo.size_approx() > buffer_size_warning)
-      {
-        spdlog::get("cads")->warn("Saving to DB showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
-        buffer_size_warning += buffer_warning_increment;
-      }
-    }
-
-    store_profile.terminate();
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    spdlog::get("cads")->info("DB PROCESSING - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, cnt / duration);
-
-    // spdlog::get("cads")->info("Final Upload");
-    // http_post_whole_belt(revid, idx); // For replay and not having a complete belt, so something is uploaded
-    spdlog::get("cads")->info("Stopping save_send_thread");
-  }
 
   tuple<z_element, z_element> barrel_offset(int cnt, BlockingReaderWriterQueue<msg> &ps)
   {
@@ -561,7 +364,7 @@ namespace cads
 
         if (correlation < belt_crosscorr_threshold)
         {
-          spdlog::get("cads")->info("Correlation : {} at y : {} with barrel rotation count : {} Estimated Belt Length: {}", correlation, y, barrel_rotation_cnt - barrel_rotation_offset, 2.6138 * (barrel_rotation_cnt - barrel_rotation_offset));
+          spdlog::get("cads")->info("Correlation : {} at y : {} with barrel rotation count : {} Estimated Belt Length: {}", correlation, y, barrel_rotation_cnt - barrel_rotation_offset, 2.6138 * double(barrel_rotation_cnt - barrel_rotation_offset));
           found_origin_sequence_cnt++;
           trigger_length = y_max_length * 0.95;
 
@@ -677,7 +480,7 @@ namespace cads
     gocator->Start();
 
     auto [x_resolution, y_resolution, z_resolution, bottom, belt_top, width_n, left_edge_index_init] = preprocessing(gocatorFifo);
-    int fiducial_x = (int)make_fiducial(x_resolution, y_resolution).cols * 1.5;
+    int fiducial_x = (int) double(make_fiducial(x_resolution, y_resolution).cols) * 1.5;
 
     const auto x_width = global_config["x_width"].get<int>();
     const auto z_height_mm = global_config["z_height"].get<double>();
@@ -731,7 +534,7 @@ namespace cads
         continue;
       }
 
-      if (iz.size() < width_n)
+      if (iz.size() < (size_t)width_n)
       {
         spdlog::get("cads")->error("Gocator sending profiles with sample number {} less than {}", iz.size(), width_n);
         iz.insert(iz.end(), width_n - iz.size(), bottom);
@@ -758,7 +561,7 @@ namespace cads
         auto hz = std::chrono::duration_cast<std::chrono::milliseconds>(now - barrel_origin_time).count();
         if (barrel_cnt % 50 == 0)
         {
-          spdlog::get("cads")->info("Barrel Frequency(Hz): {}", (double)1000 / hz);
+          spdlog::get("cads")->info("Barrel Frequency(Hz): {}", 1000.0 / (double)hz);
         }
         winFifo.enqueue({msgid::barrel_rotation_cnt, barrel_cnt});
         barrel_cnt++;
@@ -785,8 +588,8 @@ namespace cads
       std::tie(bottom_avg, top_avg, invalid) = barrel_offset(z, z_height_mm);
 
       auto avg = z | views::take(left_edge_index + fiducial_x) | views::drop(left_edge_index);
-      auto avg2 = std::accumulate(avg.begin(), avg.end(), 0.0) / fiducial_x;
-      clip_height = (clip_height + avg2) / 2;
+      float  avg2 = (float)std::accumulate(avg.begin(), avg.end(), 0.0) / fiducial_x;
+      clip_height = (clip_height + avg2) / 2.0f;
       barrel_height_compensate(z, -bottom_filtered, clip_height + 3.0f);
 
       auto f = z | views::take(left_edge_index + width_n) | views::drop(left_edge_index);

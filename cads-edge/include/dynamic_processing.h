@@ -1,9 +1,9 @@
 #pragma once
 
-#include <coro.hpp>
+#include <readerwriterqueue.h>
 #include <msg.h>
 
 namespace cads
 {
-  coro<double, msg> lua_processing_coro(int width);
+   void dynamic_processing_thread(moodycamel::BlockingReaderWriterQueue<msg> &profile_fifo, moodycamel::BlockingReaderWriterQueue<msg> &next_fifo, int width);
 }

@@ -91,11 +91,14 @@ GocatorReader::GocatorReader(moodycamel::BlockingReaderWriterQueue<msg>& gocator
 {
 	m_assembly = CreateGoSdk();
 	m_system = CreateGoSystem();
+  auto sensor_count = GoSystem_SensorCount(m_system);
 	
-	if (GoSystem_SensorCount(m_system) < 1)
+	if( sensor_count < 1)
 	{
 			throw runtime_error{"GoSystem_SensorCount: No sensor found"};
-	}
+	} else {
+    spdlog::get("gocator")->info("Number of Camera's found: {}", sensor_count);
+  }
 	
 	m_sensor = GoSystem_SensorAt(m_system, 0);
 	auto status = GoSensor_Connect(m_sensor);

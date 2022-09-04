@@ -1,13 +1,25 @@
 #include <vector>
 #include <cstring>
+#include <chrono>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-overflow="
 #include <lua.hpp>
-
 #include <spdlog/spdlog.h>
+
+#pragma GCC diagnostic pop
+
 
 #include <dynamic_processing.h>
 #include <constants.h>
 #include <msg.h>
+#include <coro.hpp>
+
+using namespace std;
+using namespace moodycamel;
+using namespace std::chrono;
+
+constexpr size_t buffer_warning_increment = 4092;
 
 namespace cads
 {
@@ -121,5 +133,59 @@ namespace cads
     spdlog::get("cads")->info("lua_processing_coro finished");
   }
 
+  void dynamic_processing_thread(moodycamel::BlockingReaderWriterQueue<msg> &profile_fifo, moodycamel::BlockingReaderWriterQueue<msg> &next_fifo, int width)
+  {
+
+    auto realtime_processing = lua_processing_coro(width);
+    int64_t cnt = 0;
+    profile p;
+    cads::msg m;
+    auto buffer_size_warning = buffer_warning_increment;
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    while (true)
+    {
+      ++cnt;
+      profile_fifo.wait_dequeue(m);
+
+      if (get<0>(m) == msgid::scan)
+      {
+        p = get<profile>(get<1>(m));
+      }
+      else
+      {
+        break;
+      }
+
+      auto [err, rslt] = realtime_processing.resume(m);
+
+      if (err)
+      {
+        spdlog::get("cads")->error("dynamic_processing_thread: realtime_processing");
+      }
+
+      if (rslt > 0)
+      {
+        spdlog::get("cads")->info("Belt damage found around y: {}", p.y);
+      }
+
+      if (profile_fifo.size_approx() > buffer_size_warning)
+      {
+        spdlog::get("cads")->warn("Cads Dynamic Processing showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
+        buffer_size_warning += buffer_warning_increment;
+      }
+
+      next_fifo.enqueue(m);
+    }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
+    next_fifo.enqueue({msgid::finished, 0});
+    realtime_processing.terminate();
+
+    spdlog::get("cads")->info("DYNAMIC PROCESSING - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, cnt / duration);
+  }
 
 }
