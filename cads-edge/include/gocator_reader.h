@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 
@@ -41,8 +43,8 @@ public:
   void RunForever();
 	void Start();
 	void Stop();
-	GocatorReader(moodycamel::BlockingReaderWriterQueue<cads::msg>&);
-  GocatorReader(moodycamel::BlockingReaderWriterQueue<cads::msg>&, bool);
+	GocatorReader(moodycamel::BlockingReaderWriterQueue<cads::msg>&, std::string ip_add = "");
+  GocatorReader(moodycamel::BlockingReaderWriterQueue<cads::msg>&, bool, std::string ip_add = "");
 	virtual ~GocatorReader();
 };
 

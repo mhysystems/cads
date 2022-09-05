@@ -192,8 +192,9 @@ namespace cads
 
     if (data_src == "gocator"s)
     {
+      bool connect_via_ip = global_config.contains("gocator_ip");
       spdlog::get("cads")->debug("Using gocator as data source");
-      return make_unique<GocatorReader>(gocatorFifo);
+      return connect_via_ip ?  make_unique<GocatorReader>(gocatorFifo,global_config.at("gocator_ip"s).get<std::string>()) : make_unique<GocatorReader>(gocatorFifo);
     }
     else
     {
@@ -215,6 +216,7 @@ namespace cads
 
     BlockingReaderWriterQueue<msg> gocatorFifo;
 
+    
     auto gocator = mk_gocator(gocatorFifo);
 
     gocator->Start();
