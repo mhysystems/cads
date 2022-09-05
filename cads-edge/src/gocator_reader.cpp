@@ -118,16 +118,15 @@ namespace cads
     }
     else
     {
-
       m_sensor = GoSystem_SensorAt(m_system, 0);
-      auto status = GoSensor_Connect(m_sensor);
-      if (kIsError(status))
-      {
-        throw runtime_error{"GoSensor_Connect: "s + to_string(status)};
-      }
     }
 
-    kStatus status;
+    auto status = GoSensor_Connect(m_sensor);
+    
+    if (kIsError(status))
+    {
+      throw runtime_error{"GoSensor_Connect: "s + to_string(status)};
+    }
     if (kIsError(status = GoSensor_Stop(m_sensor)))
     {
       throw runtime_error{"GoSensor_Stop: "s + to_string(status)};
