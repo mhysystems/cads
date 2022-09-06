@@ -23,8 +23,6 @@ using namespace std;
 using namespace moodycamel;
 using namespace std::chrono;
 
-constexpr size_t buffer_warning_increment = 4092;
-
 namespace cads
 {
   void save_send_thread(BlockingReaderWriterQueue<msg> &profile_fifo)

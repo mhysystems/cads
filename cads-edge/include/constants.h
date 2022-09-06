@@ -9,6 +9,7 @@
 #include <GoSdk/GoSdkDef.h>
 
 extern nlohmann::json global_config;
+constexpr size_t buffer_warning_increment = 4092;
 
 namespace cads {
 
