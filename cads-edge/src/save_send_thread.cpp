@@ -53,7 +53,7 @@ namespace cads
 
     cads::msg m;
 
-    enum state
+    enum state_t
     {
       waiting,
       processing,
@@ -61,7 +61,7 @@ namespace cads
       finished
     };
 
-    state s = waiting;
+    state_t state = waiting;
     auto store_profile = store_profile_coro();
     std::chrono::time_point<date::local_t, std::chrono::days> today;
     std::future<date::utc_clock::time_point> fut;
@@ -72,21 +72,25 @@ namespace cads
     auto start = std::chrono::high_resolution_clock::now();
     int64_t cnt = 0;
 
-    while (true)
+    for (auto loop = true;loop;)
     {
       ++cnt;
       profile_fifo.wait_dequeue(m);
 
-      if (get<0>(m) == msgid::scan)
-      {
+      switch(get<0>(m)) {
+        case msgid::scan:
         p = get<profile>(get<1>(m));
-      }
-      else
-      {
         break;
+        case msgid::origin_not_found:
+        state = waiting;
+        break;
+        default:
+          loop = false;
+          continue;
       }
+      
 
-      switch (s)
+      switch (state)
       {
       case waiting:
       {
@@ -98,7 +102,7 @@ namespace cads
         if (p.y == 0 && current_hour >= trigger_hour)
         {
           // store_profile.resume({revid, idx++, p}); REMOVEME
-          s = processing;
+          state = processing;
         }
         break;
       }
@@ -110,14 +114,14 @@ namespace cads
           if (drop_uploads == 0)
           {
             fut = std::async(http_post_whole_belt, revid++, idx);
-            s = waitthread;
+            state = waitthread;
             spdlog::get("cads")->info("Finished processing a belt");
           }
           else
           {
             --drop_uploads;
             spdlog::get("cads")->info("Dropped upload. Drops remaining:{}", drop_uploads);
-            s = finished;
+            state = finished;
           }
         }
         else
@@ -131,7 +135,7 @@ namespace cads
         {
           fut.get();
           revid = 0;
-          s = finished;
+          state = finished;
         }
         break;
       case finished:
@@ -140,7 +144,7 @@ namespace cads
         if (today != chrono::floor<chrono::days>(now))
         {
           spdlog::get("cads")->info("Switch to waiting");
-          s = waiting;
+          state = waiting;
         }
       }
       }

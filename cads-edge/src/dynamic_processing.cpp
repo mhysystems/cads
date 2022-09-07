@@ -142,18 +142,20 @@ namespace cads
 
     auto start = std::chrono::high_resolution_clock::now();
 
-    while (true)
+    for (auto loop = true;loop;)
     {
       ++cnt;
       profile_fifo.wait_dequeue(m);
 
-      if (get<0>(m) == msgid::scan)
-      {
-        p = get<profile>(get<1>(m));
-      }
-      else
-      {
+      switch(get<0>(m)) {
+        case msgid::scan:
+           p = get<profile>(get<1>(m));
         break;
+        case msgid::finished:
+          loop = false;
+        default: // Passthrough
+          next_fifo.enqueue(m);
+          continue;
       }
 
       auto [err, rslt] = realtime_processing.resume(m);

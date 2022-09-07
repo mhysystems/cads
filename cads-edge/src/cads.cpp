@@ -262,6 +262,8 @@ namespace cads
       {
         continue;
       }
+      default:
+        continue;
       }
 
     } while (get<0>(m) != msgid::finished && Y < 2 * y_max_length);
@@ -311,7 +313,7 @@ namespace cads
     gocator->Start();
 
     auto [x_resolution, y_resolution, z_resolution, bottom, belt_top, width_n, left_edge_index_init] = preprocessing(gocatorFifo);
-    int fiducial_x = (int) double(make_fiducial(x_resolution, y_resolution).cols) * 1.5;
+    int fiducial_x = (int) (double(make_fiducial(x_resolution, y_resolution).cols) * 1.5);
 
     const auto x_width = global_config["x_width"].get<int>();
     const auto z_height_mm = global_config["z_height"].get<double>();
@@ -337,7 +339,6 @@ namespace cads
 
     cads::msg m;
     cads::z_element bottom_filtered0 = bottom; // For differential calculation
-    cads::z_element dbottom0 = bottom;
     long barrel_cnt = 0;
     auto schmitt_trigger = mk_schmitt_trigger(0.001f);
     auto edge_adjust = mk_edge_adjust(left_edge_index_init, width_n);
@@ -400,7 +401,6 @@ namespace cads
       }
 
       bottom_filtered0 = bottom_filtered;
-      dbottom0 = dbottom1;
       schmitt0 = schmitt1;
 
       auto [delayed, dd] = delay({iy, ix, iz});
@@ -419,7 +419,7 @@ namespace cads
       std::tie(bottom_avg, top_avg, invalid) = barrel_offset(z, z_height_mm);
 
       auto avg = z | views::take(left_edge_index + fiducial_x) | views::drop(left_edge_index);
-      float  avg2 = (float)std::accumulate(avg.begin(), avg.end(), 0.0) / fiducial_x;
+      float  avg2 = (float)std::accumulate(avg.begin(), avg.end(), 0.0) / (float)fiducial_x;
       clip_height = (clip_height + avg2) / 2.0f;
       barrel_height_compensate(z, -bottom_filtered, clip_height + 3.0f);
 

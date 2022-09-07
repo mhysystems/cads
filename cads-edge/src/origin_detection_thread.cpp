@@ -12,6 +12,7 @@
 #include <window.hpp>
 #include <fiducial.h>
 #include <constants.h>
+#include <coro.hpp>
 
 using namespace moodycamel;
 
@@ -51,12 +52,9 @@ namespace cads
     }
   }
 
-
-
-void window_processing_thread(double x_resolution, double y_resolution, int width_n, BlockingReaderWriterQueue<msg> &profile_fifo, BlockingReaderWriterQueue<msg> &next_fifo)
+  coro<std::tuple<profile,bool>,profile,1> origin_detection_coro(double x_resolution, double y_resolution, int width_n)
   {
-
-    auto fiducial = make_fiducial(x_resolution, y_resolution);
+     auto fiducial = make_fiducial(x_resolution, y_resolution);
     window profile_buffer;
 
     auto fdepth = global_config["fiducial_depth"].get<double>();
@@ -64,22 +62,18 @@ void window_processing_thread(double x_resolution, double y_resolution, int widt
     const double belt_crosscorr_threshold = global_config["belt_cross_correlation_threshold"].get<double>();
 
     cads::msg m;
+    profile p;
+    bool terminate = false;
 
     // Fill buffer
+    std::tie(p,terminate) = co_yield {null_profile,false};
     for (int j = 0; j < fiducial.rows; j++)
     {
-    hacky:
-      profile_fifo.wait_dequeue(m);
-
-      if (std::get<0>(m) == msgid::barrel_rotation_cnt)
-        goto hacky;
-
-      if (std::get<0>(m) != msgid::scan)
-        break;
-      auto p = get<cads::profile>(get<1>(m));
-
+      std::tie(p,terminate) = co_yield {p,false};
       profile_buffer.push_back(p);
     }
+
+
 
     cv::Mat belt = window_to_mat_fixed(profile_buffer, width_n);
     if (!belt.isContinuous())
@@ -93,18 +87,12 @@ void window_processing_thread(double x_resolution, double y_resolution, int widt
     auto y_max_length = global_config["y_max_length"].get<double>();
     auto trigger_length = std::numeric_limits<y_type>::lowest();
     y_type y_offset = 0;
-    auto start = std::chrono::high_resolution_clock::now();
-    int64_t cnt = 0;
-    auto buffer_size_warning = buffer_warning_increment;
-
-    int64_t found_origin_sequence_cnt = 0;
-    long barrel_rotation_cnt = 0;
-    long barrel_rotation_offset = 0;
 
     while (true)
     {
-      ++cnt;
       y_type y = profile_buffer.front().y;
+      auto found = false;
+
       if (y >= trigger_length)
       {
         const auto cv_threshhold = left_edge_avg_height(belt, fiducial) - fdepth;
@@ -114,14 +102,13 @@ void window_processing_thread(double x_resolution, double y_resolution, int widt
 
         if (correlation < belt_crosscorr_threshold)
         {
-          spdlog::get("cads")->info("Correlation : {} at y : {} with barrel rotation count : {} Estimated Belt Length: {}", correlation, y, barrel_rotation_cnt - barrel_rotation_offset, 2.6138 * double(barrel_rotation_cnt - barrel_rotation_offset));
-          found_origin_sequence_cnt++;
+          spdlog::get("cads")->info("Correlation : {} at y : {}", correlation, y);
+
           trigger_length = y_max_length * 0.95;
 
           // fiducial_as_image(belt);
 
           y_offset += y;
-          barrel_rotation_offset = barrel_rotation_cnt;
 
           // Reset buffer y values to origin
           for (auto off = y; auto &p : profile_buffer)
@@ -130,13 +117,13 @@ void window_processing_thread(double x_resolution, double y_resolution, int widt
           }
 
           lowest_correlation = std::numeric_limits<double>::max();
+          found = true;
         }
 
         if (y > y_max_length)
         {
           spdlog::get("cads")->info("Origin not found before Max samples. Lowest Correlation : {}", lowest_correlation);
 
-          found_origin_sequence_cnt = 0;
           y_offset += y;
 
           // Reset buffer y values to origin
@@ -149,32 +136,72 @@ void window_processing_thread(double x_resolution, double y_resolution, int widt
         }
       }
 
-      if (found_origin_sequence_cnt > 0 /*FIXME change to 1 for release */)
-      {
-        next_fifo.enqueue({msgid::scan, profile_buffer.front()});
-      }
+      std::tie(p,terminate) = co_yield {profile_buffer.front(),found};
 
-    wait:
-      profile_fifo.wait_dequeue(m);
-
-      if (std::get<0>(m) == msgid::barrel_rotation_cnt)
-      {
-        barrel_rotation_cnt = get<long>(get<1>(m));
-        goto wait;
-      }
-
-      if (std::get<0>(m) != msgid::scan)
-      {
-        break;
-      }
-
-      auto p = get<cads::profile>(get<1>(m));
+      if(terminate) break;
 
       shift_Mat(belt);
       prepend_Mat(belt, p.z);
 
       profile_buffer.pop_front();
       profile_buffer.push_back({p.y - y_offset, p.x_off, p.z});
+
+    }
+  }
+
+  void window_processing_thread(double x_resolution, double y_resolution, int width_n, BlockingReaderWriterQueue<msg> &profile_fifo, BlockingReaderWriterQueue<msg> &next_fifo)
+  {
+
+    cads::msg m;
+
+    auto start = std::chrono::high_resolution_clock::now();
+    int64_t cnt = 0;
+    auto buffer_size_warning = buffer_warning_increment;
+
+    long barrel_rotation_cnt = 0;
+    long barrel_rotation_offset = 0;
+
+    auto origin_detection = origin_detection_coro(x_resolution,y_resolution,width_n);
+
+    for (auto loop = true;loop;++cnt)
+    {
+      
+      profile_fifo.wait_dequeue(m);
+
+      switch(std::get<0>(m)) {
+        case msgid::barrel_rotation_cnt:
+        barrel_rotation_cnt = get<long>(get<1>(m));
+        break;
+
+        case msgid::scan: {
+          auto p = get<profile>(get<1>(m));
+          auto [coro_end,result] = origin_detection.resume(p);
+          if(!coro_end) {
+            auto [op,found] = result;
+
+            if(op.y == 0 && found) {
+              spdlog::get("cads")->info("Barrel rotation count : {} Estimated Belt Length: {}",barrel_rotation_cnt - barrel_rotation_offset, 2.6138 * double(barrel_rotation_cnt - barrel_rotation_offset));
+            }
+
+            if(op.y == 0) {
+              barrel_rotation_offset = barrel_rotation_cnt;
+            }
+
+            if(op.y == 0 && !found) {
+              next_fifo.enqueue({msgid::origin_not_found,0});            
+            }
+            
+            next_fifo.enqueue({msgid::scan, op});
+ 
+          }else {
+            loop = false;
+            spdlog::get("cads")->error("Origin dectored stopped");
+          }
+          break;
+        }
+        default:
+          loop = false;
+      }
 
       if (profile_fifo.size_approx() > buffer_size_warning)
       {
