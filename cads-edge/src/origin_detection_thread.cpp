@@ -87,25 +87,39 @@ namespace cads
     auto y_max_length = global_config["y_max_length"].get<double>();
     auto trigger_length = std::numeric_limits<y_type>::lowest();
     y_type y_offset = 0;
+    double y_lowest_correlation = 0;
+    double cv_threshold_correleation = 0;
+    cv::Mat matrix_correlation = belt.clone();
+    long sequence_cnt = 0;
+    auto valid = false;
 
     while (true)
     {
       y_type y = profile_buffer.front().y;
-      auto found = false;
+
 
       if (y >= trigger_length)
       {
         const auto cv_threshhold = left_edge_avg_height(belt, fiducial) - fdepth;
         auto correlation = search_for_fiducial(belt, fiducial, m1, out, cv_threshhold);
 
-        lowest_correlation = std::min(lowest_correlation, correlation);
-
+        if(correlation <= lowest_correlation) {
+          lowest_correlation = correlation;
+          y_lowest_correlation = y;
+          cv_threshold_correleation = cv_threshhold;
+          matrix_correlation = belt.clone();
+        }
+        
         if (correlation < belt_crosscorr_threshold)
         {
+          ++sequence_cnt;
           spdlog::get("cads")->info("Correlation : {} at y : {}", correlation, y);
 
+          if(sequence_cnt > 1) {
+            y_max_length =  y * 1.05;
+          }
+          
           trigger_length = y_max_length * 0.95;
-
           // fiducial_as_image(belt);
 
           y_offset += y;
@@ -117,12 +131,14 @@ namespace cads
           }
 
           lowest_correlation = std::numeric_limits<double>::max();
-          found = true;
+          valid = true;
         }
 
         if (y > y_max_length)
         {
-          spdlog::get("cads")->info("Origin not found before Max samples. Lowest Correlation : {}", lowest_correlation);
+          sequence_cnt = 0;
+          spdlog::get("cads")->info("Origin not found before Max samples. Lowest Correlation: {} at Y: {} with threshold: {}", lowest_correlation,y_lowest_correlation,cv_threshold_correleation);
+          fiducial_as_image(matrix_correlation,"best-failed-match");
 
           y_offset += y;
 
@@ -132,11 +148,13 @@ namespace cads
             p.y -= off;
           }
 
+          valid = false;
+          trigger_length = std::numeric_limits<y_type>::lowest();
           lowest_correlation = std::numeric_limits<double>::max();
         }
       }
 
-      std::tie(p,terminate) = co_yield {profile_buffer.front(),found};
+      std::tie(p,terminate) = co_yield {profile_buffer.front(),valid};
 
       if(terminate) break;
 
@@ -163,6 +181,13 @@ namespace cads
 
     auto origin_detection = origin_detection_coro(x_resolution,y_resolution,width_n);
 
+    enum state_t {
+      open_stream,
+      close_stream
+    };
+
+    long origin_sequence_cnt = 0;
+
     for (auto loop = true;loop;++cnt)
     {
       
@@ -176,23 +201,31 @@ namespace cads
         case msgid::scan: {
           auto p = get<profile>(get<1>(m));
           auto [coro_end,result] = origin_detection.resume(p);
+          
           if(!coro_end) {
-            auto [op,found] = result;
+            auto [op,valid] = result;
 
-            if(op.y == 0 && found) {
-              spdlog::get("cads")->info("Barrel rotation count : {} Estimated Belt Length: {}",barrel_rotation_cnt - barrel_rotation_offset, 2.6138 * double(barrel_rotation_cnt - barrel_rotation_offset));
-            }
+            if(valid) {
+              if(op.y == 0) {
+                
+                if(origin_sequence_cnt == 0) {
+                  next_fifo.enqueue({msgid::begin_sequence, origin_sequence_cnt});
+                }
 
-            if(op.y == 0) {
-              barrel_rotation_offset = barrel_rotation_cnt;
-            }
-
-            if(op.y == 0 && !found) {
-              next_fifo.enqueue({msgid::origin_not_found,0});            
+                if(origin_sequence_cnt > 0) {
+                  spdlog::get("cads")->info("Barrel rotation count : {} Estimated Belt Length: {}",barrel_rotation_cnt - barrel_rotation_offset, 2.6138 * double(barrel_rotation_cnt - barrel_rotation_offset));
+                }
+                
+                barrel_rotation_offset = barrel_rotation_cnt;
+                origin_sequence_cnt++;
+              }
+              
+              next_fifo.enqueue({msgid::scan, op});
+            }else{
+              next_fifo.enqueue({msgid::end_sequence, origin_sequence_cnt});
+              origin_sequence_cnt = 0;
             }
             
-            next_fifo.enqueue({msgid::scan, op});
- 
           }else {
             loop = false;
             spdlog::get("cads")->error("Origin dectored stopped");

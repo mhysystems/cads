@@ -1,6 +1,6 @@
 {
   "data_source" : "../../profiles/profilef-2022-06-20.db", 
-  "y_max_length" : 920000,
+  "y_max_length" : 930000,
   "z_height" : 27.0,
    "x_width"  : 1500,
   "left_edge_nan" : 15,

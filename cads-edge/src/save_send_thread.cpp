@@ -5,12 +5,14 @@
 #pragma GCC diagnostic ignored "-Wstringop-overflow="
 #pragma GCC diagnostic ignored "-Wuseless-cast"
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#pragma GCC diagnostic ignored "-Wshadow"
 
 #include <date/date.h>
 #include <date/tz.h>
 #include <fmt/core.h>
 #include <fmt/chrono.h>
 #include <spdlog/spdlog.h>
+#include <boost/sml.hpp>
 
 #pragma GCC diagnostic pop
 
@@ -19,16 +21,17 @@
 #include <coms.h>
 #include <db.h>
 
-using namespace std;
 using namespace moodycamel;
 using namespace std::chrono;
 
 namespace cads
 {
-  void save_send_thread(BlockingReaderWriterQueue<msg> &profile_fifo)
+
+  coro<long, long> daily_upload_coro(long revid, long idx)
   {
+
     using namespace date;
-    using namespace chrono;
+    using namespace std;
 
     hours trigger_hour;
     auto sts = global_config["daily_start_time"].get<std::string>();
@@ -51,117 +54,134 @@ namespace cads
       trigger_hour = chrono::floor<chrono::hours>(daily_time);
     }
 
-    cads::msg m;
-
-    enum state_t
-    {
-      waiting,
-      processing,
-      waitthread,
-      finished
-    };
-
-    state_t state = waiting;
-    auto store_profile = store_profile_coro();
     std::chrono::time_point<date::local_t, std::chrono::days> today;
     std::future<date::utc_clock::time_point> fut;
-    profile p;
-    int revid = 0, idx = 0;
-    auto buffer_size_warning = buffer_warning_increment;
+    bool terminate = false;
 
-    auto start = std::chrono::high_resolution_clock::now();
-    int64_t cnt = 0;
-
-    for (auto loop = true;loop;)
+    for (; !terminate;)
     {
-      ++cnt;
-      profile_fifo.wait_dequeue(m);
-
-      switch(get<0>(m)) {
-        case msgid::scan:
-        p = get<profile>(get<1>(m));
-        break;
-        case msgid::origin_not_found:
-        state = waiting;
-        break;
-        default:
-          loop = false;
-          continue;
-      }
-      
-
-      switch (state)
-      {
-      case waiting:
+      for (; !terminate;)
       {
         auto now = current_zone()->to_local(system_clock::now());
         today = chrono::floor<chrono::days>(now);
         auto daily_time = duration_cast<seconds>(now - today);
         auto current_hour = chrono::floor<chrono::hours>(daily_time);
 
-        if (p.y == 0 && current_hour >= trigger_hour)
-        {
-          // store_profile.resume({revid, idx++, p}); REMOVEME
-          state = processing;
-        }
-        break;
-      }
-
-      case processing:
-      {
-        if (p.y == 0)
+        if (current_hour >= trigger_hour)
         {
           if (drop_uploads == 0)
           {
             fut = std::async(http_post_whole_belt, revid++, idx);
-            state = waitthread;
-            spdlog::get("cads")->info("Finished processing a belt");
+            spdlog::get("cads")->info("Posting a belt");
+            break;
           }
           else
           {
             --drop_uploads;
             spdlog::get("cads")->info("Dropped upload. Drops remaining:{}", drop_uploads);
-            state = finished;
           }
         }
-        else
-        {
-          // store_profile.resume({revid, idx++, p}); REMOVEME
-        }
-        break;
+        std::tie(idx, terminate) = co_yield revid;
       }
-      case waitthread:
-        if (fut.wait_for(std::chrono::seconds(0)) == std::future_status::ready && p.y == 0.0)
+
+      for (; !terminate;)
+      {
+        if (fut.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
         {
           fut.get();
-          revid = 0;
-          state = finished;
+          revid--;
+          break;
         }
-        break;
-      case finished:
+        std::tie(idx, terminate) = co_yield revid;
+      }
+
+      for (; !terminate;)
       {
         auto now = current_zone()->to_local(system_clock::now());
         if (today != chrono::floor<chrono::days>(now))
         {
           spdlog::get("cads")->info("Switch to waiting");
-          state = waiting;
+          break;
         }
+        std::tie(idx, terminate) = co_yield revid;
       }
-      }
+    }
+  }
 
-      if (p.y == 0.0)
-        idx = 0;
+  void save_send_thread(BlockingReaderWriterQueue<msg> &profile_fifo)
+  {
+    namespace sml = boost::sml;
 
-      store_profile.resume({revid, idx++, p});
+    struct global_t
+    {
+      cads::coro<int, std::tuple<int, int, cads::profile>, 1> store_profile = store_profile_coro();
+      coro<long, long> daily_upload = daily_upload_coro(0, 0);
+      long sequence_cnt = 0;
+      long revid = 0;
+      long idx = 0;
+    } global;
 
-      if (profile_fifo.size_approx() > buffer_size_warning)
+    struct transitions
+    {
+
+      auto operator()() const noexcept
       {
-        spdlog::get("cads")->warn("Saving to DB showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
-        buffer_size_warning += buffer_warning_increment;
+        using namespace sml;
+
+        const auto store_action = [](global_t &global, const scan_t &e)
+        {
+          if (e.value.y == 0)
+          {
+            if (global.sequence_cnt++ > 0)
+            {
+              bool terminate = false;
+              std::tie(global.revid, terminate) = global.daily_upload.resume(global.idx);
+            }
+            global.idx = 0;
+          }
+
+          global.store_profile.resume({global.revid, global.idx++, e.value});
+        };
+
+        const auto invalid_action = [](global_t &global)
+        {
+          global.sequence_cnt = 0;
+          global.idx = 0;
+          global.revid = 0;
+        };
+
+        return make_transition_table(
+            *"invalid_data"_s + event<begin_sequence_t> = "valid_data"_s, "valid_data"_s + event<scan_t> / store_action = "valid_data"_s, "valid_data"_s + event<end_sequence_t> / invalid_action = "invalid_data"_s);
+      }
+    };
+
+    cads::msg m;
+    sml::sm<transitions> sm{global};
+    auto start = std::chrono::high_resolution_clock::now();
+    int64_t cnt = 0;
+
+    for (auto loop = true; loop;)
+    {
+      profile_fifo.wait_dequeue(m);
+
+      switch (get<0>(m))
+      {
+      case msgid::scan:
+        sm.process_event(scan_t{get<profile>(get<1>(m))});
+        break;
+      case msgid::begin_sequence:
+        sm.process_event(begin_sequence_t{});
+        break;
+      case msgid::end_sequence:
+        sm.process_event(end_sequence_t{});
+        break;
+      default:
+        loop = false;
+        continue;
       }
     }
 
-    store_profile.terminate();
+    global.store_profile.terminate();
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     spdlog::get("cads")->info("DB PROCESSING - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, cnt / duration);
@@ -170,5 +190,4 @@ namespace cads
     // http_post_whole_belt(revid, idx); // For replay and not having a complete belt, so something is uploaded
     spdlog::get("cads")->info("Stopping save_send_thread");
   }
-
 }

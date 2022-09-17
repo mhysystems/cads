@@ -1,6 +1,7 @@
 #include <vector>
 #include <cstring>
 #include <chrono>
+#include <unordered_set>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstringop-overflow="
@@ -97,6 +98,7 @@ namespace cads
     int64_t cnt = 0;
     cads::msg m;
     bool terminate = false;
+    std::unordered_set<double> anomolies;
 
     do
     {
@@ -115,8 +117,14 @@ namespace cads
         memcpy(window.data(), p.z.data(), size_t(width)*sizeof(z_element));
         
         result = 0.0;
-        if(cnt++ % (int64_t)height == 0) {
+        auto belt_section = cnt++ % (int64_t)height;
+        if(belt_section == 0) {
           result = eval_lua_process(L,width,height);
+          auto location = std::round(p.y / 1000);
+          if(result > 0 && !anomolies.contains(location)) {
+
+            anomolies.insert(location);
+          }
         }
         
         break;
