@@ -113,7 +113,7 @@ namespace cads
         if (correlation < belt_crosscorr_threshold)
         {
           ++sequence_cnt;
-          spdlog::get("cads")->info("Correlation : {} at y : {}", correlation, y);
+          spdlog::get("cads")->info("Correlation : {} at y : {} with threshold: {}", correlation, y, cv_threshhold);
 
           if(sequence_cnt > 1) {
             y_max_length =  y * 1.05;
@@ -125,9 +125,9 @@ namespace cads
           y_offset += y;
 
           // Reset buffer y values to origin
-          for (auto off = y; auto &p : profile_buffer)
+          for (auto off = y; auto &pro : profile_buffer)
           {
-            p.y -= off;
+            pro.y -= off;
           }
 
           lowest_correlation = std::numeric_limits<double>::max();
@@ -143,9 +143,9 @@ namespace cads
           y_offset += y;
 
           // Reset buffer y values to origin
-          for (auto off = y; auto &p : profile_buffer)
+          for (auto off = y; auto &pro : profile_buffer)
           {
-            p.y -= off;
+            pro.y -= off;
           }
 
           valid = false;
@@ -180,11 +180,6 @@ namespace cads
     long barrel_rotation_offset = 0;
 
     auto origin_detection = origin_detection_coro(x_resolution,y_resolution,width_n);
-
-    enum state_t {
-      open_stream,
-      close_stream
-    };
 
     long origin_sequence_cnt = 0;
 
