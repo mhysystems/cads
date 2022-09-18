@@ -103,6 +103,39 @@ namespace cads
     return size;
   }
 
+
+void http_post_realtime(double y_area, double value)
+  {
+    
+    auto now = chrono::floor<chrono::seconds>(date::utc_clock::now()); // Default sends to much decimal precision for asp.net core
+    auto ts = date::format("%FT%TZ", now);
+    
+    nlohmann::json params_json;
+    params_json["Site"] = global_config["site"].get<std::string>();
+    params_json["Conveyor"] = global_config["conveyor"].get<std::string>();
+    params_json["Source"] = global_config["device_id"].get<std::string>();
+    params_json["Time"] = ts;
+    params_json["YArea"] = y_area;
+    params_json["Value"] = value;
+    
+    auto endpoint_url = global_config["base_url"].get<std::string>() + "/api/realtime";
+    
+    cpr::Response r;
+
+    const cpr::Url endpoint{endpoint_url};
+
+      r = cpr::Post(endpoint,
+                    cpr::Body{params_json.dump()},
+                    cpr::Header{{"Content-Type", "application/json"}});
+
+      if (cpr::ErrorCode::OK != r.error.code || cpr::status::HTTP_OK != r.status_code)
+      {
+        spdlog::get("upload")->error("First Upload failed with http status code {}", r.status_code);
+      }
+
+  }
+
+
   void http_post_profile_properties_json(std::string json)
   {
 

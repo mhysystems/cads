@@ -23,9 +23,11 @@
   "belt_cross_correlation_threshold" : 0.4,
   "site" : "whaleback",
   "conveyor" : "cv405",
-  "drop_uploads" : 0, 
+  "device_id" : "cadsw001",
+  "drop_uploads" : 1, 
+  "base_url" : "http://localhost:5000",
   "upload_profile_to" : "http://localhost:5000/api/belt",
   "upload_config_to" : "http://localhost:5000/api/meta",
   "lua_window_height" : 10,
-  "lua_fn" : "function process(width,height)\nlocal sum = 0\nfor i = 1,width do\nfor j = 0,height-1 do\nsum = sum + (win[j*width + i] < 25 and 1 or 0)\nend\nend\nreturn (sum / (width * height)) > 0.2 and 1 or 0\nend"
+  "lua_fn" : "function process(width,height)\nlocal sum = 0\nfor i = 1,width do\nfor j = 0,height-1 do\nsum = sum + (win[j*width + i] < 25 and 1 or 0)\nend\nend\nreturn (sum / (width * height)) > 0.2 and sum or 0\nend"
 }

@@ -2,6 +2,7 @@
 #include <cstring>
 #include <chrono>
 #include <unordered_set>
+#include <future>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstringop-overflow="
@@ -15,6 +16,7 @@
 #include <constants.h>
 #include <msg.h>
 #include <coro.hpp>
+#include <coms.h>
 
 using namespace std;
 using namespace moodycamel;
@@ -120,10 +122,10 @@ namespace cads
         auto belt_section = cnt++ % (int64_t)height;
         if(belt_section == 0) {
           result = eval_lua_process(L,width,height);
-          auto location = std::round(p.y / 1000);
-          if(result > 0 && !anomolies.contains(location)) {
-
-            anomolies.insert(location);
+          auto location = std::round(p.y / 1000) * 1000;
+          if(result > 0 /*&& !anomolies.contains(location)*/) {
+            std::async(http_post_realtime,location, result);
+            //anomolies.insert(location);
           }
         }
         
