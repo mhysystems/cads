@@ -38,6 +38,7 @@ tz_dep = subproject('hinnant-date').get_variable('tz_dep')
 nlohmann_json_dep = subproject('nlohmann_json').get_variable('nlohmann_json_dep')
 iir1_dep = subproject('iir1').get_variable('iir1_dep')
 lua_dep = subproject('lua').get_variable('lua_dep')
+eigen_dep = subproject('eigen').get_variable('eigen_dep')
 
 subdir('GO_SDK/Platform/kApi')
 subdir('GO_SDK/Gocator/GoSdk')
@@ -46,7 +47,7 @@ cadsInc = include_directories('include')
 cadsSrc = []
 cadsEntry = []
 
-libdep = [opencv, tbb, thread, boost, sqlite, http_stuff,log_stuff, flatbuffers, fmt_dep, nlohmann_json_dep,date_dep,tz_dep,iir1_dep,lua_dep]
+libdep = [opencv, tbb, thread, boost, sqlite, http_stuff,log_stuff, flatbuffers, fmt_dep, nlohmann_json_dep,date_dep,tz_dep,iir1_dep,lua_dep,eigen_dep]
 # Returns z_config 
 # Represents header files
 subdir('flatbuffers')

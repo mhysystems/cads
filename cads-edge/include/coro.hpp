@@ -49,6 +49,8 @@ namespace cads
       }
 
       // Inserted before the coroutine body is called.
+      // dir 0 means the first co_yield will yield control on first resume as coroutine starts suspended
+      // dir 1 means the first co_yeild will yield control when the coroutine is constructed.
       std::conditional<dir == 0,std::suspend_always,std::suspend_never>::type initial_suspend() noexcept { return {}; }
       
       // Inserted after the coroutine body is finished. Using suspend_never cause memleak detector to complain

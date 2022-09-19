@@ -1,6 +1,6 @@
 {
   "data_source" : "../../profiles/rawprofile-2022-18-23.db", 
-  "y_max_length" : 920000,
+  "y_max_length" : 930000,
   "z_height" : 27.0,
   "x_width"  : 1500,
   "left_edge_nan" : 10,
@@ -24,7 +24,7 @@
   "site" : "whaleback",
   "conveyor" : "cv405",
   "device_id" : "cadsw001",
-  "drop_uploads" : 1, 
+  "drop_uploads" : 0, 
   "base_url" : "http://localhost:5000",
   "upload_profile_to" : "http://localhost:5000/api/belt",
   "upload_config_to" : "http://localhost:5000/api/meta",

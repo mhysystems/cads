@@ -27,7 +27,7 @@ using namespace std::chrono;
 namespace cads
 {
 
-  coro<long, long> daily_upload_coro(long revid, long idx)
+  coro<long, long,1> daily_upload_coro(long revid)
   {
 
     using namespace date;
@@ -57,11 +57,16 @@ namespace cads
     std::chrono::time_point<date::local_t, std::chrono::days> today;
     std::future<date::utc_clock::time_point> fut;
     bool terminate = false;
+    long idx = 0;
 
     for (; !terminate;)
     {
       for (; !terminate;)
       {
+        std::tie(idx, terminate) = co_yield revid;
+
+        if(terminate) continue;
+        
         auto now = current_zone()->to_local(system_clock::now());
         today = chrono::floor<chrono::days>(now);
         auto daily_time = duration_cast<seconds>(now - today);
@@ -81,7 +86,6 @@ namespace cads
             spdlog::get("cads")->info("Dropped upload. Drops remaining:{}", drop_uploads);
           }
         }
-        std::tie(idx, terminate) = co_yield revid;
       }
 
       for (; !terminate;)
@@ -115,7 +119,7 @@ namespace cads
     struct global_t
     {
       cads::coro<int, std::tuple<int, int, cads::profile>, 1> store_profile = store_profile_coro();
-      coro<long, long> daily_upload = daily_upload_coro(0, 0);
+      coro<long, long,1> daily_upload = daily_upload_coro(0);
       long sequence_cnt = 0;
       long revid = 0;
       long idx = 0;

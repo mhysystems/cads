@@ -343,6 +343,7 @@ namespace cads
     auto schmitt_trigger = mk_schmitt_trigger(0.001f);
     auto edge_adjust = mk_edge_adjust(left_edge_index_init, width_n);
     z_element schmitt1 = 1.0, schmitt0 = -1.0;
+    z_type prev_z;
 
     do
     {
@@ -414,7 +415,15 @@ namespace cads
       nan_filter(z);
       regression_compensate(z, left_edge_index, right_edge_index, gradient);
 
-      left_edge_index = edge_adjust(left_edge_index, right_edge_index);
+      if(prev_z.size() != 0) {
+        auto dbg = correlation_lowest(prev_z, z | views::take(right_edge_index) | views::drop(left_edge_index));
+        left_edge_index -= dbg;
+        auto f = z | views::take(left_edge_index + width_n) | views::drop(left_edge_index);
+        prev_z = {f.begin(), f.end()};
+      }
+
+      //left_edge_index = edge_adjust(left_edge_index, right_edge_index);
+
 
       std::tie(bottom_avg, top_avg, invalid) = barrel_offset(z, z_height_mm);
 
@@ -424,7 +433,7 @@ namespace cads
       barrel_height_compensate(z, -bottom_filtered, clip_height + 3.0f);
 
       auto f = z | views::take(left_edge_index + width_n) | views::drop(left_edge_index);
-
+      
       winFifo.enqueue({msgid::scan, cads::profile{y, x + left_edge_index * x_resolution, {f.begin(), f.end()}}});
 
     } while (std::get<0>(m) != msgid::finished);

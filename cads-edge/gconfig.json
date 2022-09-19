@@ -20,7 +20,7 @@
             [ 1.00000000e+00, -1.99894049e+00,  1.00000000e+00,  1.00000000e+00, -1.99381952e+00,  9.94367640e-01]]
   },
   "db_name" : "profile.db",
-  "belt_cross_correlation_threshold" : 0.4,
+  "belt_cross_correlation_threshold" : 0.7,
   "site" : "whaleback",
   "conveyor" : "cv405", 
   "device_id" : "cadsw001",
@@ -29,5 +29,5 @@
   "upload_profile_to" : "https://cads:hMe-%3A%2AZO%23%29dj%7B@dev.mhysystems.com/api/belt",
   "upload_config_to" : "https://cads:hMe-%3A%2AZO%23%29dj%7B@dev.mhysystems.com/api/meta",
   "lua_window_height" : 10,
-  "lua_fn" : "function process(width,height)\nlocal sum = 0\nfor i = 1,width do\nfor j = 0,height-1 do\nsum = sum + (win[j*width + i] < 25 and 1 or 0)\nend\nend\nreturn (sum / (width * height)) > 0.2 and sum or 0\nend"
+  "lua_fn" : "function process(width,height)\nlocal sum = 0\nfor i = 1,width do\nfor j = 0,height-1 do\nsum = sum + (win[j*width + i] < 20 and 1 or 0)\nend\nend\nreturn (sum / (width * height)) > 0.05 and sum or 0\nend"
 }
