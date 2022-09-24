@@ -7,7 +7,7 @@ sudo apt update && sudo apt upgrade -y
 
 
 1) Install needed libraries and programs
-	sudo apt-get install libsqlite3-dev sqlite3 ninja-build libssl-dev libcurl4 libcurl4-openssl-dev libtbb-dev python3-pip
+	sudo apt-get install libsqlite3-dev sqlite3 ninja-build libssl-dev libcurl4 libcurl4-openssl-dev libtbb-dev python3-pip libprotobuf-c
 
 	## Nano ##
   	Compiles with GPU enabled

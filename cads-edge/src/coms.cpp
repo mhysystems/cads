@@ -17,6 +17,7 @@
 #include <nlohmann/json.hpp>
 #include <z_data_generated.h>
 #include <plot_data_generated.h>
+#include <nats.h>
 
 #include <coms.h>
 #pragma GCC diagnostic pop
@@ -28,6 +29,11 @@ using namespace std;
 
 namespace cads
 {
+
+  void nats_publish() {
+    natsConnection_PublishString(nullptr,nullptr,nullptr);
+  }
+
 
   std::string ReplaceString(std::string subject, const std::string &search,
                             const std::string &replace)
