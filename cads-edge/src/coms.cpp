@@ -22,6 +22,7 @@
 #include <coms.h>
 #pragma GCC diagnostic pop
 
+#include <blockingconcurrentqueue.h>
 #include <constants.h>
 #include <db.h>
 
@@ -29,10 +30,44 @@ using namespace std;
 
 namespace cads
 {
+  moodycamel::BlockingConcurrentQueue<std::string> nats_queue;
 
-  void nats_publish() {
-    natsConnection_PublishString(nullptr,nullptr,nullptr);
+  void realtime_publish_thread() {
+    
+    natsConnection  *conn  = nullptr;
+    natsOptions *opts = nullptr;
+
+    for(;;) {
+      auto status = natsOptions_Create(&opts);
+      if(status != NATS_OK) goto drop_msg;
+      
+      natsOptions_SetAllowReconnect(opts,true);
+
+      status = natsConnection_Connect(&conn, opts);
+      if(status != NATS_OK) goto cleanup_opts;
+      
+      for(auto loop = true;loop;) {
+        std::string msg;
+        nats_queue.wait_dequeue(msg);
+
+        auto s = natsConnection_PublishString(conn,"realtime",msg.c_str());
+        if(s != NATS_OK && status != NATS_SLOW_CONSUMER) {
+          loop = false;
+        }
+      }
+
+      natsConnection_Destroy(conn);
+cleanup_opts:
+      natsOptions_Destroy(opts);
+drop_msg:
+      std::string dropped_msg;
+      nats_queue.wait_dequeue(dropped_msg);
+    }
+
+    nats_Close();
   }
+
+
 
 
   std::string ReplaceString(std::string subject, const std::string &search,
@@ -119,27 +154,26 @@ void http_post_realtime(double y_area, double value)
     nlohmann::json params_json;
     params_json["Site"] = global_config["site"].get<std::string>();
     params_json["Conveyor"] = global_config["conveyor"].get<std::string>();
-    params_json["Source"] = global_config["device_id"].get<std::string>();
     params_json["Time"] = ts;
     params_json["YArea"] = y_area;
     params_json["Value"] = value;
     
-    auto endpoint_url = global_config["base_url"].get<std::string>() + "/api/realtime";
-    
-    cpr::Response r;
-
-    const cpr::Url endpoint{endpoint_url};
-
-      r = cpr::Post(endpoint,
-                    cpr::Body{params_json.dump()},
-                    cpr::Header{{"Content-Type", "application/json"}});
-
-      if (cpr::ErrorCode::OK != r.error.code || cpr::status::HTTP_OK != r.status_code)
-      {
-        spdlog::get("upload")->error("First Upload failed with http status code {}", r.status_code);
-      }
+    nats_queue.enqueue(params_json.dump());
 
   }
+
+  void http_post_meta_realtime(std::string Id, double value)
+  {
+    nlohmann::json params_json;
+    params_json["Site"] = global_config["site"].get<std::string>();
+    params_json["Conveyor"] = global_config["conveyor"].get<std::string>();
+    params_json["Id"] = Id;
+    params_json["Value"] = value;
+    
+    nats_queue.enqueue(params_json.dump());
+
+  }
+
 
 
   void http_post_profile_properties_json(std::string json)
@@ -173,15 +207,11 @@ void http_post_realtime(double y_area, double value)
     }
   }
 
-  std::tuple<double, double, int> http_post_profile_properties(int revid, std::string chrono)
+  void http_post_profile_properties(int revid, std::string chrono)
   {
     nlohmann::json params_json;
     auto db_name = global_config["db_name"].get<std::string>();
     auto [params, err] = fetch_profile_parameters(db_name);
-
-    if (err != 0)
-      return {params.z_res, params.z_off, err};
-
     auto [Ymax,YmaxN,WidthN,err2] = fetch_belt_dimensions(revid,db_name);
 
     params_json["site"] = global_config["site"].get<std::string>();
@@ -196,8 +226,9 @@ void http_post_realtime(double y_area, double value)
     params_json["YmaxN"] = YmaxN;
     params_json["WidthN"] = WidthN;
 
-    http_post_profile_properties_json(params_json.dump());
-    return {params.z_res, params.z_off, 0};
+    if(err == 0 && err2 == 0) {
+      http_post_profile_properties_json(params_json.dump());
+    }
   }
 
   date::utc_clock::time_point http_post_whole_belt(int revid, int last_idx)
@@ -207,6 +238,7 @@ void http_post_realtime(double y_area, double value)
     auto now = chrono::floor<chrono::seconds>(date::utc_clock::now()); // Default sends to much decimal precision for asp.net core
     auto db_name = global_config["db_name"].get<std::string>();
     auto endpoint_url = global_config["upload_profile_to"].get<std::string>();
+    auto y_max_length = global_config["y_max_length"].get<double>();
 
     if (endpoint_url == "null")
     {
@@ -222,11 +254,18 @@ void http_post_realtime(double y_area, double value)
     auto ts = date::format("%FT%TZ", now);
     cpr::Url endpoint{mk_post_profile_url(ts)};
 
-    auto [z_resolution, z_offset, err] = http_post_profile_properties(revid,ts);
-
+    auto [params, err] = fetch_profile_parameters(db_name);
+    
     if (err != 0)
     {
       spdlog::get("upload")->error("Unable to fetch profile parameters from DB");
+      return now;
+    }
+    auto z_resolution = params.z_res;
+    auto z_offset =  params.z_off;
+
+    if(std::floor(y_max_length * 0.75 / params.y_res) > last_idx) {
+      spdlog::get("upload")->error("Ignoring uploading incomplete belt with last idx of {}", last_idx);
       return now;
     }
 
@@ -234,6 +273,7 @@ void http_post_realtime(double y_area, double value)
     int64_t size = 0;
     int64_t frame_idx = -1;
     double belt_z_max = 0; 
+    int final_idx = 0;
 
     while (true)
     {
@@ -271,9 +311,17 @@ void http_post_realtime(double y_area, double value)
         {
           size += send_flatbuffer_array(builder, z_resolution, z_offset, frame_idx, profiles_flat, endpoint);
         }
+        final_idx = idx;
         break;
       }
     }
+
+    if(final_idx == last_idx-1) {
+      http_post_profile_properties(revid,ts);
+    }else{
+      spdlog::get("upload")->error("Number of profiles sent {} not matching idx of {}", final_idx+1,last_idx);
+    }
+
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start).count() + 1; // Add one second to avoid divide by zero
 
