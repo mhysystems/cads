@@ -23,7 +23,7 @@
   "belt_cross_correlation_threshold" : 0.4,
   "site" : "whaleback",
   "conveyor" : "cv405",
-  "device_id" : "cadsw001",
+  "nats_url" : "192.168.2.13",
   "drop_uploads" : 0, 
   "base_url" : "http://localhost:5000",
   "upload_profile_to" : "http://localhost:5000/api/belt",

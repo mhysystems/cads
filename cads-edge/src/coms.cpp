@@ -37,6 +37,8 @@ namespace cads
 
   void realtime_publish_thread(bool& terminate) {
     
+    auto endpoint_url = global_config["nats_url"].get<std::string>();
+    
     natsConnection  *conn  = nullptr;
     natsOptions *opts = nullptr;
 
@@ -45,6 +47,7 @@ namespace cads
       if(status != NATS_OK) goto drop_msg;
       
       natsOptions_SetAllowReconnect(opts,true);
+      natsOptions_SetURL(opts,endpoint_url.c_str());
 
       status = natsConnection_Connect(&conn, opts);
       if(status != NATS_OK) goto cleanup_opts;
