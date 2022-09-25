@@ -330,6 +330,7 @@ void http_post_realtime(double y_area, double value)
     if(final_idx == last_idx-1) {
       http_post_profile_properties(revid,ts);
     }else{
+      http_post_profile_properties(revid,ts);
       spdlog::get("upload")->error("Number of profiles sent {} not matching idx of {}", final_idx+1,last_idx);
     }
 

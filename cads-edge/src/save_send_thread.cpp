@@ -27,7 +27,7 @@ using namespace std::chrono;
 namespace cads
 {
 
-  coro<long, long,1> daily_upload_coro(long revid)
+  coro<long, long, 1> daily_upload_coro(long revid)
   {
 
     using namespace date;
@@ -59,14 +59,26 @@ namespace cads
     bool terminate = false;
     long idx = 0;
 
+    enum state_t
+    {
+      pre_upload,
+      uploading,
+      post_upload
+    };
+
+    auto state = pre_upload;
+
     for (; !terminate;)
     {
-      for (; !terminate;)
-      {
-        std::tie(idx, terminate) = co_yield revid;
+      std::tie(idx, terminate) = co_yield revid;
 
-        if(terminate) continue;
-        
+      if (terminate)
+        continue;
+
+      switch (state)
+      {
+      case pre_upload:
+      {
         auto now = current_zone()->to_local(system_clock::now());
         today = chrono::floor<chrono::days>(now);
         auto daily_time = duration_cast<seconds>(now - today);
@@ -77,8 +89,8 @@ namespace cads
           if (drop_uploads == 0)
           {
             fut = std::async(http_post_whole_belt, revid++, idx);
+            state = uploading;
             spdlog::get("cads")->info("Posting a belt");
-            break;
           }
           else
           {
@@ -86,28 +98,28 @@ namespace cads
             spdlog::get("cads")->info("Dropped upload. Drops remaining:{}", drop_uploads);
           }
         }
+        break;
       }
 
-      for (; !terminate;)
-      {
+      case uploading:
         if (fut.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
         {
           fut.get();
           revid--;
-          break;
+          state = post_upload;
         }
-        std::tie(idx, terminate) = co_yield revid;
-      }
+        break;
 
-      for (; !terminate;)
+      case post_upload:
       {
         auto now = current_zone()->to_local(system_clock::now());
         if (today != chrono::floor<chrono::days>(now))
         {
           spdlog::get("cads")->info("Switch to waiting");
-          break;
+          state = pre_upload;
         }
-        std::tie(idx, terminate) = co_yield revid;
+        break;
+      }
       }
     }
   }
@@ -119,7 +131,7 @@ namespace cads
     struct global_t
     {
       cads::coro<int, std::tuple<int, int, cads::profile>, 1> store_profile = store_profile_coro();
-      coro<long, long,1> daily_upload = daily_upload_coro(0);
+      coro<long, long, 1> daily_upload = daily_upload_coro(0);
       long sequence_cnt = 0;
       long revid = 0;
       long idx = 0;
