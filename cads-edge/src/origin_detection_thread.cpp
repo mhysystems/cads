@@ -13,6 +13,7 @@
 #include <fiducial.h>
 #include <constants.h>
 #include <coro.hpp>
+#include <coms.h>
 
 using namespace moodycamel;
 
@@ -116,6 +117,7 @@ namespace cads
           spdlog::get("cads")->info("Correlation : {} at y : {} with threshold: {}", correlation, y, cv_threshhold);
 
           if(sequence_cnt > 1) {
+            publish_meta_realtime("CurrentLength",y);
             y_max_length =  y * 1.05;
           }
           

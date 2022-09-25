@@ -324,7 +324,8 @@ namespace cads
     BlockingReaderWriterQueue<msg> db_fifo;
     BlockingReaderWriterQueue<msg> dynamic_processing_fifo;
 
-    std::jthread realtime_publish(realtime_publish_thread);
+    bool terminate_publish = false;
+    std::jthread realtime_publish(realtime_publish_thread,std::ref(terminate_publish));
     std::jthread save_send(save_send_thread, std::ref(db_fifo));
     std::jthread dynamic_processing(dynamic_processing_thread, std::ref(dynamic_processing_fifo), std::ref(db_fifo), width_n);
     std::jthread origin_dectection(window_processing_thread, x_resolution, y_resolution, width_n, std::ref(winFifo), std::ref(dynamic_processing_fifo));
@@ -398,6 +399,7 @@ namespace cads
         if (barrel_cnt % 50 == 0)
         {
           spdlog::get("cads")->info("Barrel Frequency(Hz): {}", 1000.0 / (double)hz);
+          publish_meta_realtime("PullyOscillation",1000.0 / (double)hz);
         }
         winFifo.enqueue({msgid::barrel_rotation_cnt, barrel_cnt});
         barrel_cnt++;
@@ -453,6 +455,10 @@ namespace cads
 
     save_send.join();
     spdlog::get("cads")->info("Upload Thread Stopped");
+
+    terminate_publish = true;
+    realtime_publish.join();
+    spdlog::get("cads")->info("Realtime publishing Thread Stopped");
   }
 
   void generate_signal()

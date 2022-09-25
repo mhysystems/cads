@@ -1,6 +1,7 @@
 #include <chrono>
 #include <ranges>
 #include <algorithm>
+#include <tuple>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wuseless-cast"
@@ -9,6 +10,7 @@
 #pragma GCC diagnostic ignored "-Wconversion"
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
 #pragma GCC diagnostic ignored "-Wreorder"
+#pragma GCC diagnostic ignored "-Wuseless-cast"
 
 #include <fmt/core.h>
 #include <fmt/chrono.h>
@@ -18,11 +20,12 @@
 #include <z_data_generated.h>
 #include <plot_data_generated.h>
 #include <nats.h>
-
+#include <blockingconcurrentqueue.h>
 #include <coms.h>
+
 #pragma GCC diagnostic pop
 
-#include <blockingconcurrentqueue.h>
+
 #include <constants.h>
 #include <db.h>
 
@@ -30,14 +33,14 @@ using namespace std;
 
 namespace cads
 {
-  moodycamel::BlockingConcurrentQueue<std::string> nats_queue;
+  moodycamel::BlockingConcurrentQueue<std::tuple<std::string,std::string>> nats_queue;
 
-  void realtime_publish_thread() {
+  void realtime_publish_thread(bool& terminate) {
     
     natsConnection  *conn  = nullptr;
     natsOptions *opts = nullptr;
 
-    for(;;) {
+    for(;!terminate;) {
       auto status = natsOptions_Create(&opts);
       if(status != NATS_OK) goto drop_msg;
       
@@ -46,12 +49,14 @@ namespace cads
       status = natsConnection_Connect(&conn, opts);
       if(status != NATS_OK) goto cleanup_opts;
       
-      for(auto loop = true;loop;) {
-        std::string msg;
-        nats_queue.wait_dequeue(msg);
+      for(auto loop = true;loop && !terminate;) {
+        std::tuple<std::string,std::string> msg;
+        if(!nats_queue.wait_dequeue_timed(msg,std::chrono::milliseconds(1000))) {
+          continue; // graceful thread terminate
+        }
 
-        auto s = natsConnection_PublishString(conn,"realtime",msg.c_str());
-        if(s != NATS_OK && status != NATS_SLOW_CONSUMER) {
+        auto s = natsConnection_PublishString(conn,get<0>(msg).c_str(),get<1>(msg).c_str());
+        if(s == NATS_CONNECTION_CLOSED) {
           loop = false;
         }
       }
@@ -60,8 +65,10 @@ namespace cads
 cleanup_opts:
       natsOptions_Destroy(opts);
 drop_msg:
-      std::string dropped_msg;
-      nats_queue.wait_dequeue(dropped_msg);
+      if(!terminate) {
+        std::tuple<std::string,std::string> dropped_msg;
+        nats_queue.wait_dequeue(dropped_msg);
+      }
     }
 
     nats_Close();
@@ -158,23 +165,24 @@ void http_post_realtime(double y_area, double value)
     params_json["YArea"] = y_area;
     params_json["Value"] = value;
     
-    nats_queue.enqueue(params_json.dump());
+    nats_queue.enqueue({"realtime",params_json.dump()});
 
   }
 
-  void http_post_meta_realtime(std::string Id, double value)
+  void publish_meta_realtime(std::string Id, double value)
   {
+    
+    if(isnan(value) || isinf(value)) return;
+
     nlohmann::json params_json;
     params_json["Site"] = global_config["site"].get<std::string>();
     params_json["Conveyor"] = global_config["conveyor"].get<std::string>();
     params_json["Id"] = Id;
     params_json["Value"] = value;
     
-    nats_queue.enqueue(params_json.dump());
-
+    nats_queue.enqueue({"realtimemeta",params_json.dump()});
+ 
   }
-
-
 
   void http_post_profile_properties_json(std::string json)
   {
