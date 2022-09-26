@@ -168,7 +168,7 @@ void http_post_realtime(double y_area, double value)
     params_json["YArea"] = y_area;
     params_json["Value"] = value;
     
-    nats_queue.enqueue({"realtime",params_json.dump()});
+    nats_queue.enqueue({"/realtime",params_json.dump()});
 
   }
 
@@ -183,7 +183,7 @@ void http_post_realtime(double y_area, double value)
     params_json["Id"] = Id;
     params_json["Value"] = value;
     
-    nats_queue.enqueue({"realtimemeta",params_json.dump()});
+    nats_queue.enqueue({"/realtimemeta",params_json.dump()});
  
   }
 
