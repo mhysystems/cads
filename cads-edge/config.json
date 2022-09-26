@@ -9,6 +9,7 @@
   "fiducial_x" : 50,
   "fiducial_y" : 67,
   "fiducial_gap" : 78,
+  "pully_circumfrence" : 2613.8,
   "daily_start_time" : "now",
   "log_lengthMiB" : 128, 
   "iirfilter" : {

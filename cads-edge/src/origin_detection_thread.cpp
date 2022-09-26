@@ -93,10 +93,17 @@ namespace cads
     cv::Mat matrix_correlation = belt.clone();
     long sequence_cnt = 0;
     auto valid = false;
+    long cnt = 1;
+
+    auto start = std::chrono::high_resolution_clock::now();
 
     while (true)
     {
       y_type y = profile_buffer.front().y;
+      
+      if(sequence_cnt > 0 && (cnt++ % 10000) == 0) {
+        publish_meta_realtime("CadsToOrigin",y);
+      }
 
 
       if (y >= trigger_length)
@@ -115,9 +122,13 @@ namespace cads
         {
           ++sequence_cnt;
           spdlog::get("cads")->info("Correlation : {} at y : {} with threshold: {}", correlation, y, cv_threshhold);
+          auto now = std::chrono::high_resolution_clock::now();
+          auto period = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
+          start = now;
 
           if(sequence_cnt > 1) {
             publish_meta_realtime("CurrentLength",y);
+            publish_meta_realtime("RotationPeriod",period);
             y_max_length =  y * 1.05;
           }
           
@@ -173,7 +184,7 @@ namespace cads
   {
 
     cads::msg m;
-
+    auto pully_circumfrence = global_config["pully_circumfrence"].get<double>() / 1000;
     auto start = std::chrono::high_resolution_clock::now();
     int64_t cnt = 0;
     auto buffer_size_warning = buffer_warning_increment;
@@ -210,7 +221,7 @@ namespace cads
                 }
 
                 if(origin_sequence_cnt > 0) {
-                  spdlog::get("cads")->info("Barrel rotation count : {} Estimated Belt Length: {}",barrel_rotation_cnt - barrel_rotation_offset, 2.6138 * double(barrel_rotation_cnt - barrel_rotation_offset));
+                  spdlog::get("cads")->info("Barrel rotation count : {} Estimated Belt Length: {}",barrel_rotation_cnt - barrel_rotation_offset, pully_circumfrence * double(barrel_rotation_cnt - barrel_rotation_offset));
                 }
                 
                 barrel_rotation_offset = barrel_rotation_cnt;

@@ -22,7 +22,7 @@ namespace cads
       if (!NaN<z_element>::isnan(z[i]))
         continue;
 
-      for (auto j = 3; j <= std::min(z_size - i,max_window_size); j++)
+      for (auto j = 3; j <= std::min(z_size - i, max_window_size); j++)
       {
         if (NaN<z_element>::isnan(z[i + j - 1]))
         {
@@ -35,7 +35,6 @@ namespace cads
         }
       }
     }
-
   }
 
   void nan_filter(z_type &z)
@@ -135,6 +134,30 @@ namespace cads
       auto low = x < -ref;
       level = high || (level && !low);
       return level ? cads::z_element(1) : cads::z_element(-1);
+    };
+  }
+
+  std::function<cads::z_element(cads::z_element,bool)> mk_amplitude_extraction()
+  {
+    cads::z_element min = std::numeric_limits<cads::z_element>::max();
+    cads::z_element max = std::numeric_limits<cads::z_element>::lowest();
+
+    return [=](cads::z_element x, bool reset) mutable
+    {
+      auto r = max - min;
+      if (!reset)
+      {
+        min = std::min(min, x);
+        max = std::max(max, x);
+        r = max - min;
+      }
+      else
+      {
+        min = std::numeric_limits<cads::z_element>::max();
+        max = std::numeric_limits<cads::z_element>::lowest();
+      }
+
+      return r;
     };
   }
 

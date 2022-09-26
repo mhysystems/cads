@@ -12,6 +12,7 @@ namespace cads
   std::function<double(double)> mk_iirfilterSoS();
   std::function<std::tuple<bool,std::tuple<y_type,double,z_type>>(std::tuple<y_type,double,z_type>)> mk_delay(size_t len);
   std::function<cads::z_element(cads::z_element)> mk_schmitt_trigger(cads::z_element ref);
+  std::function<cads::z_element(cads::z_element,bool)> mk_amplitude_extraction();
 
 
 } // namespace cads

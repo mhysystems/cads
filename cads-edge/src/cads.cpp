@@ -320,6 +320,7 @@ namespace cads
     const auto z_height_mm = global_config["z_height"].get<double>();
     const int nan_num = global_config["left_edge_nan"].get<int>();
     const int spike_window_size = nan_num * 2;
+    auto pully_circumfrence = global_config["pully_circumfrence"].get<double>(); // In mm
 
     BlockingReaderWriterQueue<msg> db_fifo;
     BlockingReaderWriterQueue<msg> dynamic_processing_fifo;
@@ -346,6 +347,7 @@ namespace cads
     long barrel_cnt = 0;
     auto schmitt_trigger = mk_schmitt_trigger(0.001f);
     auto edge_adjust = mk_edge_adjust(left_edge_index_init, width_n);
+    auto amplitude_extraction = mk_amplitude_extraction();
     z_element schmitt1 = 1.0, schmitt0 = -1.0;
     z_type prev_z;
 
@@ -391,6 +393,7 @@ namespace cads
 
       auto dbottom1 = bottom_filtered - bottom_filtered0;
       schmitt1 = schmitt_trigger(dbottom1);
+      amplitude_extraction(bottom_filtered,false);
 
       if (std::signbit(schmitt1) == false && std::signbit(schmitt0) == true)
       {
@@ -399,7 +402,8 @@ namespace cads
         if (barrel_cnt % 50 == 0)
         {
           spdlog::get("cads")->info("Barrel Frequency(Hz): {}", 1000.0 / (double)hz);
-          publish_meta_realtime("PullyOscillation",1000.0 / (double)hz);
+          publish_meta_realtime("PullyOscillation",amplitude_extraction(bottom_filtered,true));
+          publish_meta_realtime("SurfaceSpeed",pully_circumfrence * hz);
         }
         winFifo.enqueue({msgid::barrel_rotation_cnt, barrel_cnt});
         barrel_cnt++;
