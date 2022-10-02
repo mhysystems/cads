@@ -1,0 +1,53 @@
+@namespace Cads
+@using cads_gui.Data
+
+@inject IJSRuntime JS
+
+<style>
+
+#container-profile {
+  width:99%;
+  height:100%;
+	margin:0;
+	padding:0;
+
+}
+
+plotly-container-two {
+  position: static;
+  display:block;
+  width:100%;
+  height:100%;
+
+}
+
+
+</style>
+
+<plotly-container-two>
+    <div id="container-profile" @ref="@jsPlot"></div>
+</plotly-container-two>
+
+
+@code {
+
+  [Parameter]
+	public Belt Belt {get; set;}
+  
+  protected IJSObjectReference jsProfilePlot;
+  protected ElementReference jsPlot;  
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender)
+    {
+      var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
+      jsProfilePlot = await module.InvokeAsync<IJSObjectReference>("mk_ProfilePlot",jsPlot,Belt.x_res,Belt.z_min + 12,Belt.z_max);
+    }
+
+  }
+
+   public async Task UpdatePlotAsync(IJSObjectReference plotDataPromise, int y = 1) {
+    await jsProfilePlot.InvokeVoidAsync("updatePlot",plotDataPromise, y);
+  }
+
+}

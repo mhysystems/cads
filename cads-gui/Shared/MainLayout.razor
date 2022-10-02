@@ -1,0 +1,46 @@
+﻿@inherits LayoutComponentBase
+
+<MudThemeProvider Theme="Cads" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+
+<MudLayout>
+  <MudMainContent>
+    @Body
+  </MudMainContent>
+</MudLayout>
+
+@code {
+  MudTheme Cads = new MudTheme()
+  {
+    Palette = new Palette()
+    {
+      Secondary = "#051d4b",
+      SecondaryContrastText = Colors.Shades.White,
+      Primary = Colors.Shades.White,
+      PrimaryContrastText = "#051d4b",
+      
+      AppbarBackground = "#051d4b",
+      AppbarText = Colors.Shades.White,
+      
+      DrawerBackground = "#051d4b", 
+      DrawerText = Colors.Shades.White,
+      DrawerIcon = Colors.Shades.White,
+      
+      Tertiary = Colors.Shades.White,
+      TertiaryContrastText = "#051d4b",
+      TextSecondary = Colors.Shades.White
+    },
+    Typography = new Typography()
+    {
+      Default = new Default()
+      {
+        FontFamily = new Default().FontFamily.Prepend("Century Gothic").ToArray()
+      },
+      Body2 = new Body2() {
+        FontSize = "0.725rem"
+      }
+    }
+  };
+}

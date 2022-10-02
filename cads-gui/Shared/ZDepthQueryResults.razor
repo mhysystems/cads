@@ -1,0 +1,42 @@
+@namespace Cads
+
+
+      <DoughnutPlot belt_length=Belt.Ymax
+        data=@(_ZDepthValues.Select(d => new PlotInfo(d.y,Belt.FrameLength,d.z.z,"")).ToArray()) animate="@_AnimateSearch" Y=@SelectedY
+        SY=0 />
+
+
+@code {
+
+  protected List<ZDepth> _ZDepthValues = new List<ZDepth>();
+  
+
+	public List<ZDepth> ZDepthValues { 
+    get{ return _ZDepthValues;} 
+    set{
+      _ZDepthValues = value;
+      StateHasChanged();
+    }
+  }
+
+  protected bool _AnimateSearch = false;
+  public bool AnimateSearch { 
+    get{ return _AnimateSearch;} 
+    set{ 
+      var tmp = _AnimateSearch;
+      _AnimateSearch = value;
+      if(tmp != value) {StateHasChanged();}
+    } 
+  }
+
+  [Parameter]
+  public Belt Belt { get; set; }
+
+  [Parameter]
+  public EventCallback<ZDepth> SelectedRow { get; set; }
+  
+  [Parameter]
+  public EventCallback<double> SelectedY { get; set; }
+  
+
+}

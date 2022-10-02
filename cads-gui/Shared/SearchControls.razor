@@ -1,0 +1,109 @@
+@inject BeltService Beltservice
+
+
+  <MudToolBar Class="d-flex flex-grow-0 ma-0" Style="width:50%">
+  <MudTooltip Text="Search">
+  <MudButton Class="mud-theme-secondary" StartIcon="@Icons.Filled.ImageSearch" Size="Size.Large" OnClick="@Search" />
+  </MudTooltip>
+  <MudSelect @bind-Value="@selectedZDepthParams" T="SavedZDepthParams" Class="mud-palette-text-secondary mud-theme-secondary ma-0 flex-grow-0" Dense="true" SelectedValuesChanged="@SelectZDepthParams">
+    @if(savedZDepthParams is not null) {
+      @foreach (var param in savedZDepthParams)
+      {
+        <MudSelectItem Class="mud-theme-secondary" T="SavedZDepthParams" Value="@param">@param.Name</MudSelectItem>
+      }
+    }
+  </MudSelect>
+
+
+    <MudTooltip Text="Step Backwards">
+    <MudButton Color="Color.Primary" StartIcon="@Icons.Filled.FastRewind" Size="Size.Large" OnClick="@StepBackAsync" />
+    </MudTooltip>
+    <MudTooltip Text="Jump">
+    <MudNumericField Color="Color.Secondary" HideSpinButtons="true" ValueChanged="@JumpTo" Class="ma-0 flex-grow-0" Variant="Variant.Text" Min="0" Max="@(Belt.Ymax / 1000)" />
+    </MudTooltip>
+    <MudTooltip Text="Step Forward">
+    <MudButton Color="Color.Primary" StartIcon="@Icons.Filled.FastForward" Size="Size.Large" OnClick="@StepForwardAsync" />
+    </MudTooltip>
+
+
+  <MudTextField @bind-Value="TextValue" Label="Todo" Variant="Variant.Text"></MudTextField>
+  <MudTooltip Text="Historical Scans">
+  @if(_scanDate is not null) {
+    <MudDatePicker Class="mud-theme-secondary" AdornmentColor="@Color.Primary" @bind-Date="@scanDate" IsDateDisabledFunc="@IsDateDisabledFunc" />
+  }
+  </MudTooltip>
+  </MudToolBar >
+
+
+@code {
+  public string TextValue { get; set; }
+  protected DateTime? _scanDate = null;
+
+  protected DateTime? scanDate { 
+    get{ return _scanDate;} 
+    set{ 
+      _scanDate = value;
+      DateChanged.InvokeAsync(value).AndForget();
+    } 
+  }
+
+  protected Func<DateTime,bool> IsDateDisabledFunc = (DateTime d) => false;
+
+  protected MudSelect<SavedZDepthParams> mudSelect;
+  protected SavedZDepthParams selectedZDepthParams;
+
+  protected List<SavedZDepthParams> savedZDepthParams;
+
+  [Parameter]
+  public EventCallback<IEnumerable<SavedZDepthParams>> SelectZDepthParams {get; set;}
+
+  [Parameter]
+  public Belt Belt {get; set;}
+  
+  [Parameter]
+  public EventCallback<int> StepBack {get; set;}
+
+  [Parameter]
+  public EventCallback<int> StepForward {get; set;}
+
+  [Parameter]
+  public EventCallback<double> JumpTo {get; set;}
+
+  [Parameter]
+  public EventCallback Search {get; set;}
+  
+  [Parameter]
+  public EventCallback<DateTime?> DateChanged {get; set;}
+
+
+  protected override async Task OnInitializedAsync()
+  {
+    savedZDepthParams = await Task.Run(() => Beltservice.GetSavedZDepthParams(Belt) ?? new List<SavedZDepthParams>());
+    _scanDate = (await Beltservice.GetBeltDatesAsync(Belt)).LastOrDefault(DateTime.Now);
+    
+    if(savedZDepthParams.Any()) {
+        selectedZDepthParams = savedZDepthParams.First(); 
+    }
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender)
+    {
+      await SelectZDepthParams.InvokeAsync(savedZDepthParams);
+    }
+
+    var validDates = await Beltservice.GetBeltDatesAsync(Belt);
+    IsDateDisabledFunc = (DateTime d) => !validDates.Where(e => e.Date == d.Date).Any();
+
+  } 
+
+  private async Task StepBackAsync(MouseEventArgs e) {
+    await StepBack.InvokeAsync(0);
+  }
+
+  private async Task StepForwardAsync(MouseEventArgs e) {
+    await StepForward.InvokeAsync(0);
+  }
+  
+}

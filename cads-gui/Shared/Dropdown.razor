@@ -1,0 +1,15 @@
+<drop-down class="@test" style="@style">
+	@ChildContent
+</drop-down>
+
+@code {
+	[Parameter]
+	public RenderFragment ChildContent { get; set; }
+
+	[Parameter]
+	public string style { get; set; }
+
+	[Parameter]
+	public string test { get; set; }
+
+}

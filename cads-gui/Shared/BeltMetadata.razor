@@ -1,0 +1,104 @@
+@using Microsoft.AspNetCore.SignalR.Client
+@inject NavigationManager NavigationManager
+@implements IAsyncDisposable
+
+<MudContainer Style="display:flex; align-items:center">
+<MudGrid Spacing="1">
+  
+  <MudItem xs="8">
+  <MudText Typo="Typo.h6">Surface Speed (m/s)</MudText>
+  </MudItem>
+  <MudItem xs="4">
+  <MudText Typo="Typo.h6">@SurfaceSpeed.ToString("F2")</MudText>
+  </MudItem>
+  
+  <MudItem xs="8">
+  <MudText Typo="Typo.h6">Current Length (m)</MudText>
+  </MudItem>
+  <MudItem xs="4">
+  <MudText Typo="Typo.h6">@CurrentLength.ToString("F2")</MudText>
+  </MudItem>
+
+  <MudItem xs="8">
+  <MudText Typo="Typo.h6">Rotation period (mm:ss)</MudText>
+  </MudItem>
+  <MudItem xs="4">
+  <MudText Typo="Typo.h6">@RotationPeriod.ToString(@"mm\:ss")</MudText>
+  </MudItem>
+  
+  <MudItem xs="8">
+  <MudText Typo="Typo.h6">CADS to Origin (m)</MudText>
+  </MudItem>
+  <MudItem xs="4">
+  <MudText Typo="Typo.h6">@CadsToOrigin.ToString("F2")</MudText>
+  </MudItem>
+  
+  <MudItem xs="8">
+  <MudText Typo="Typo.h6">Pully Oscillation (mm)</MudText>
+  </MudItem>
+  <MudItem xs="4">
+  <MudText Typo="Typo.h6">@PullyOscillation.ToString("F2")</MudText>
+  </MudItem>
+
+</MudGrid>
+</MudContainer>
+
+@code {
+    [Parameter]
+    public string Site { get; set; } = String.Empty;
+
+    [Parameter]
+    public string Conveyor { get; set; } = String.Empty;
+    private HubConnection? hubConnection;
+    private double SurfaceSpeed = 0.0;
+    private double CurrentLength = 0.0;
+    private TimeSpan RotationPeriod;
+    private double CadsToOrigin = 0.0;
+    private double PullyOscillation = 0.0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/realtime"), options => {options.Headers.Add("authorization","Basic Y2FkczpoTWUtOipaTyMpZGp7");})
+            .Build();
+
+        hubConnection.On<MetaRealtime>("ReceiveMessageMeta", (message) =>
+        {
+            switch(message.Id) {
+              case "SurfaceSpeed":
+                SurfaceSpeed = message.Value;
+              break;
+              case "CurrentLength":
+                CurrentLength = message.Value / 1000;
+              break;
+              case "RotationPeriod":
+                RotationPeriod = TimeSpan.FromMilliseconds(message.Value);
+              break;
+              case "CadsToOrigin":
+                CadsToOrigin = message.Value / 1000;
+              break;
+              case "PullyOscillation":
+                PullyOscillation = message.Value;
+              break;
+              default:
+              break;
+            }
+            InvokeAsync(StateHasChanged);
+        });
+
+        await hubConnection.StartAsync();
+        await hubConnection.InvokeAsync("JoinGroup","/realtimemeta"+Site+Conveyor);
+    }
+
+    public bool IsConnected =>
+        hubConnection?.State == HubConnectionState.Connected;
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+          await hubConnection.InvokeAsync("LeaveGroup","/realtimemeta"+Site+Conveyor);
+          await hubConnection.DisposeAsync();
+        }
+    }
+}

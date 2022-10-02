@@ -1,0 +1,16 @@
+<page-layout>
+	<page-header>
+		@PageHeader
+	</page-header>
+	<page-body>
+		@PageBody
+	</page-body>
+</page-layout>
+
+@code {
+    [Parameter]
+    public RenderFragment PageHeader { get; set; }
+    
+		[Parameter]
+    public RenderFragment PageBody{ get; set; }
+}

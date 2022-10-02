@@ -1,0 +1,284 @@
+@namespace Cads
+@inject IJSRuntime JS
+@implements IDisposable
+
+@using cads_gui.Data
+
+@using Microsoft.Extensions.Logging;
+@using System.Diagnostics;
+@inject ILogger<SurfacePlot> logger;
+
+@inject BeltService Beltservice
+
+
+<surface-plot>
+  <div id="container"  @ref="@jsPlot"></div>
+    <div class="spin-container" loading="@_Loading">
+      <div class="spin"></div>
+    </div>
+    <color-range>
+      <input @onchange="@SliderOnChangeAsync" type="range" id="color-slider" value="@Belt.z_max" step="any" min="@Belt.z_min" max="@Belt.z_max">
+    </color-range>
+</surface-plot>
+
+
+
+@code {
+
+  double sliderLow;
+  private DotNetObjectReference<SurfacePlot>? selfReference;
+  public double ystart = 0.0;
+  public const int num_plot_y_samples = 1024;
+  
+  private int opaque_handle = -1;
+  protected ElementReference jsPlot;
+
+  protected Func<float, bool> isZred = z => false;
+
+  protected bool _Loading = false;
+  
+  public bool Loading  { 
+    get{ return _Loading ;} 
+    set{ 
+      var tmp = _Loading ;
+      _Loading = value;
+      if(tmp != value) {InvokeAsync(() => StateHasChanged());}
+    } 
+  }
+  
+	[Parameter]
+	public Belt Belt {get; set;}
+
+  [Parameter]
+  public EventCallback<double> clevelChanged {get; set;}
+  
+  [Parameter]
+  public EventCallback<int> YIndex {get; set;}
+
+  [Parameter]
+  public double clevel {get; set;} = 0.0;
+
+  (bool use_array, string str, (double,string)[] array) colorscale; 
+  [Parameter]
+  public string colour_query {get; set;} = $"\"area\":0.8,\"sum\":1000,\"num\":320,\"query\":\"z == -999999999\"";
+
+  protected IJSObjectReference jsSurfacePlot;
+ protected IJSObjectReference module;
+
+  protected override async Task OnInitializedAsync()
+  {
+    logger.LogInformation($"Plotting for {Belt.name}");
+    (double,string)[] s = {(0, "hsl(240,100,50)"),(0.002,"hsl(0,0,100)"),(1.0, "hsl(0,0,0)")};
+    colorscale = (true,"Greys",s);
+    sliderLow = Belt.z_max;
+		
+  }
+
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender)
+    {
+      selfReference = DotNetObjectReference.Create(this);
+      module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
+      jsSurfacePlot = await module.InvokeAsync<IJSObjectReference>("mk_SurfacePlot",jsPlot,Belt.x_res,Belt.z_min,Belt.z_max,colorscale.use_array ? colorscale.array.Select(i => i.ToTuple()) : colorscale.str, selfReference);
+    }
+  }  
+
+  async Task InvokeVoidAsync (string identifier, params object[] args) {
+     
+    if(opaque_handle >= 0) {
+        await module.InvokeVoidAsync(identifier, args);
+    }else {
+      logger.LogDebug($"opaque_handle : {opaque_handle}");
+    }
+  }
+    public async Task change_color_range(double c_min) {
+      logger.LogDebug($"change_color_range({c_min})");
+      clevel = c_min;
+      (double,string)[] s = (await Beltservice.get_color_range(colour_query, Belt, c_min)).ToArray();//{(0, "hsl(240,100,50)"),(0.002,"hsl(0,0,100)"),(level,$"hsl(0,0,100)"),(1.0, "hsl(0,0,0)")};
+      await clevelChanged.InvokeAsync(clevel);
+      //await InvokeVoidAsync("update_plot", opaque_handle, ystart,s.Select(i => i.ToTuple()));
+      await InvokeVoidAsync("plot_change_colorscale", opaque_handle, s.Select(i => i.ToTuple()));
+      //Task.Run(() => InvokeVoidAsync("update_plot", opaque_handle, ystart,colorscale.use_array ? colorscale.array.Select(i => i.ToTuple()) : colorscale.str,c_min,c_max ));
+  }
+
+
+  public async Task HighlightSurface(Func<float, bool> fn) {
+    var colorRange = (await GenerateColorRangeAsync(Belt.z_max - sliderLow,fn)).ToArray();
+    await jsSurfacePlot.InvokeVoidAsync("changeColorScale",colorRange.Select(i => i.ToTuple()));
+  }
+
+    /// <summary>
+    /// Generate color map for plotly
+    /// </summary>
+    /// <param name="zStart"> Length(mm) of area in X direction</param>
+    /// <param name="fn"> Length(mm) of area in Y direction</param>
+    /// <returns></returns>
+   public async Task<List<(double, string)>> GenerateColorRangeAsync(double zStart = 0, Func<float, bool> fn = null)
+    {
+    
+      var colour_range = new List<(double, string)>();
+      
+      if(fn is not null) {
+        isZred = fn;
+      }
+      
+
+        float z_max = (float)Belt.z_max;
+        float z_min = 0f;
+        var steps = 1000;
+
+        double red_acc = 25.0;
+        double red_scale = 1.0;
+        Func<float, bool, double> red_colour_range = (float z, bool b) =>
+        {
+          red_acc += red_scale * (b ? 1 : 0);
+          return red_acc;
+        };
+
+        double grey_acc = 0.0;
+        double grey_scale = 1.0;
+        Func<float, bool, double> grey_colour_range = (float z, bool b) =>
+        {
+          if (z >= zStart) grey_acc += grey_scale * (b ? 0 : 1);
+          return grey_acc;
+        };
+
+        double red_acc_tmp = 0.0;
+        double grey_acc_tmp = 0.0;
+        for (int n = 0; n < steps; n++)
+        {
+          var z = (z_max - z_min) * n / steps + z_min;
+          var b = isZred(z);
+          red_acc_tmp = red_colour_range(z, b);
+          grey_acc_tmp = grey_colour_range(z, b);
+        }
+
+        red_acc = 25.0;
+        red_scale = 50 / (red_acc_tmp - red_acc);
+        grey_acc = 0.0;
+        grey_scale = 100 / grey_acc_tmp;
+
+        var r1 = red_colour_range(z_min, isZred(z_min));
+        var g1 = grey_colour_range(z_min, isZred(z_min));
+        bool is_red0 = isZred(z_min);
+        bool is_grey0 = z_min >= zStart;
+        colour_range.Add((0, "hsl(240,100,50)"));
+        colour_range.Add(is_red0 ? (0.002, "hsl(0,100,25)") : (0.002, "hsl(0,0,100)"));
+
+        for (int n = 1; n < steps - 1; n++)
+        {
+          var z = (z_max - z_min) * n / steps + z_min;
+          var c_index = n / (double)steps;
+          var is_red1 = isZred(z);
+          var is_grey1 = z >= zStart;
+          var r = red_colour_range(z, is_red1);
+          var g = grey_colour_range(z, is_red1);
+
+          if (is_red0 != is_red1)
+          {
+            if (is_red1)
+            {
+              colour_range.Add((c_index, $"hsl(0,0,{100 - (int)g})"));
+              colour_range.Add((c_index, $"hsl(0,100,{(int)r})"));
+            }
+            else
+            {
+              colour_range.Add((c_index, $"hsl(0,100,{(int)r})"));
+              colour_range.Add((c_index, $"hsl(0,0,{100 - (int)g})"));
+            }
+
+          }
+
+          if (!is_red1 && is_grey0 != is_grey1)
+          {
+
+            colour_range.Add((c_index, $"hsl(0,0,{100 - (int)g})"));
+
+          }
+
+          is_red0 = is_red1;
+          is_grey0 = is_grey1;
+        }
+
+        is_red0 = isZred(z_max);
+        colour_range.Add(is_red0 ? (1.0, "hsl(0,100,75)") : (1.0, "hsl(0,0,0)"));
+
+
+      return colour_range;
+    }
+
+  public async Task resize_plotly() {
+
+      await InvokeVoidAsync("resize_plot", opaque_handle);
+  }
+
+	public async Task plot_overlay(ZDepth d) {
+
+      await InvokeVoidAsync("plot_overlay", opaque_handle,d.x,d.width,d.y,d.length);
+	}
+
+  private async Task plot_belt_data(double y, int y_len) {
+     logger.LogInformation($"plot_belt_data({y},{y_len})");
+  
+		var (first,last,cnt)= await Beltservice.GetBeltBoundary(Belt.name);
+    var avgYResolution = (last - first) / cnt;
+    var py = y - y_len * avgYResolution / 2;
+    Stopwatch stopWatch = new Stopwatch();
+    stopWatch.Start();
+    y = await jsSurfacePlot.InvokeAsync<double>("updatePlot",Belt.name,py, y_len );
+    stopWatch.Stop();
+     logger.LogInformation($"plotly render time{stopWatch.Elapsed}");
+  }
+
+
+  public async Task step(int dir) {
+
+		  var (first,last,cnt)= await Beltservice.GetBeltBoundary(Belt.name);
+      var avgYResolution = (last - first) / cnt;
+      
+      ystart += dir * avgYResolution * num_plot_y_samples; 
+
+      if(ystart < 0) {
+        ystart += last;
+      } 
+      
+      await plot_belt_data(ystart , num_plot_y_samples) ;
+
+  }
+
+  protected async Task SliderOnChangeAsync(ChangeEventArgs e) {
+    sliderLow = Convert.ToDouble(e.Value); 
+    var colorRange = (await GenerateColorRangeAsync(Belt.z_max - sliderLow)).ToArray();
+    await jsSurfacePlot.InvokeVoidAsync("changeColorScale",colorRange.Select(i => i.ToTuple()));
+  }
+
+  public async Task<double> UpdatePlotAsync(IJSObjectReference plotDataPromise) {
+    Stopwatch stopWatch = new Stopwatch();
+    stopWatch.Start();
+    var y = await jsSurfacePlot.InvokeAsync<double>("updatePlot",plotDataPromise);
+    stopWatch.Stop();
+    logger.LogInformation($"plotly render time{stopWatch.Elapsed}");
+    return y;
+  }
+
+    public async Task jump(double y) {
+      
+      logger.LogDebug($"jump({y})");
+      
+      if(opaque_handle > -1) {
+        ystart = y; 
+  	    await plot_belt_data(ystart, num_plot_y_samples) ;
+      }
+    }
+
+    [JSInvokable]
+    public async Task PlotClicked(int y)
+    {
+      await YIndex.InvokeAsync(y);
+    }
+
+    public void Dispose() => selfReference?.Dispose();
+
+}

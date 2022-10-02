@@ -1,0 +1,63 @@
+@using Microsoft.AspNetCore.SignalR.Client
+@inject NavigationManager NavigationManager
+@implements IAsyncDisposable
+
+<MudContainer Style="height:100%">
+  <MudText Typo="Typo.h5">Real-Time Detection:</MudText>
+  <MudTable Style="height:100%" Class="overflow-scroll" Items="@messages" @ref="@mudTable" Breakpoint="Breakpoint.Sm" T="Realtime">
+    <HeaderContent>
+        <MudTh><MudText Typo="Typo.body2">Time</MudText></MudTh>
+        <MudTh><MudText Typo="Typo.body2">Y</MudText></MudTh>
+        <MudTh><MudText Typo="Typo.body2"> Total </MudText></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+            <MudTd DataLabel="Time" >@(string.Format("{0:d}:{0:t}", @context.Time))</MudTd>
+            <MudTd DataLabel="Y" >@(string.Format("{0}", @context.YArea/1000))</MudTd>
+            <MudTd DataLabel="Total" >@(string.Format("{0}", @context.Value))</MudTd>
+    </RowTemplate>
+  </MudTable>
+
+
+</MudContainer>
+
+@code {
+    [Parameter]
+    public string Site { get; set; } = String.Empty;
+
+    [Parameter]
+    public string Conveyor { get; set; } = String.Empty;
+    
+
+    protected MudTable<Realtime> mudTable;
+    private HubConnection? hubConnection;
+    private List<Realtime> messages = new List<Realtime>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/realtime"), options => {options.Headers.Add("authorization","Basic Y2FkczpoTWUtOipaTyMpZGp7");})
+            .Build();
+
+        
+        hubConnection.On<Realtime>("ReceiveMessageRealtime", (message) =>
+        {
+            messages.Add(message);
+            InvokeAsync(StateHasChanged);
+        });
+
+        await hubConnection.StartAsync();
+        await hubConnection.InvokeAsync("JoinGroup","/realtime"+Site+Conveyor);
+    }
+
+    public bool IsConnected =>
+        hubConnection?.State == HubConnectionState.Connected;
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+          await hubConnection.InvokeAsync("LeaveGroup","/realtime"+Site+Conveyor);
+          await hubConnection.DisposeAsync();
+        }
+    }
+}

@@ -1,0 +1,75 @@
+@page "/"
+
+@using System
+@using cads_gui.Data;
+@using System.Linq;
+
+@inject BeltService Beltservice
+
+<SiteHeader />
+<MudContainer>
+		<MudText Typo="Typo.h3" Align="Align.Center" GutterBottom="true">Conveyor Anomalies Detection Systems</MudText>
+    <MudGrid Spacing="2">
+
+			@foreach (var (displayName, site) in sites)
+			{		
+        <MudItem xs="4">
+          <MudCard>
+            <MudLink Href=@(SiteHasData(site) ? "sites/"+ site +"/" + FirstBelt(site) : "/")>
+              <MudCardMedia Image=@("https://cadswebsite.blob.core.windows.net/wwwroot/" + site + ".png") Style=@(SiteHasData(site) ? "" : "filter: grayscale(1);") />
+            </MudLink>
+            <MudCardContent>
+              <MudText Typo="Typo.h4" Align="Align.Center" GutterBottom="true">@displayName</MudText>
+            </MudCardContent>
+          </MudCard>
+        </MudItem>
+			}
+		
+    </MudGrid>
+
+</MudContainer>
+
+
+
+@code {
+
+  List<(string, string)> SitesWithCads;
+  protected override async Task OnInitializedAsync()
+  {
+    SitesWithCads = await Task.Run(() => Beltservice.GetSites().ToList());
+  }
+
+  public bool SiteHasData(string site)
+  {
+    if (SitesWithCads is not null)
+    {
+      return SitesWithCads.Any(e => e.Item1 == site);
+    }
+    else
+    {
+      return false;
+    }
+  }
+  public string FirstBelt(string site)
+  {
+    var siteEdges = SitesWithCads.Where(e => e.Item1 == site);
+    if (siteEdges.Count() > 0)
+    {
+      return siteEdges.First().Item2;
+    }
+    else
+    {
+      return "";
+    }
+  }
+
+  (string, string)[] sites = {
+("Eastern Ridge","easternridge"),
+("Whaleback","whaleback"),
+("Mining Area C","miningareac"),
+("Jimblebar","jimblebar"),
+("Yandi","yandi"),
+("Port Hedland","porthedland")
+};
+
+}

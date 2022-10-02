@@ -1,0 +1,75 @@
+@namespace Cads
+
+<style>
+  .selected {
+  background-color: #1E88E5 !important;
+}
+
+.selected > td {
+    color: white !important;
+}
+
+.selected > td .mud-input {
+    color: white !important;
+}
+</style>
+
+
+<div id="main-screen">
+  <MudTable Items="@_data" @ref="@mudTable" Hover="true" RowClassFunc="@SelectedRowClassFunc" Breakpoint="Breakpoint.Sm" OnRowClick="@RowClickEventAsync" T="ZDepth">
+    <HeaderContent>
+        <!--<MudTh></MudTh>-->
+        <MudTh><MudText Typo="Typo.body2">X</MudText></MudTh>
+        <MudTh><MudText Typo="Typo.body2">Y</MudText></MudTh>
+        <MudTh><MudText Typo="Typo.body2"> Total </MudText></MudTh>
+        <MudTh><MudText Typo="Typo.body2"> Z-Min </MudText></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+            <!--<MudTd><span class="oi oi-location" @onclick=@(e => row_clicked(context.index))></span></MudTd>-->
+            <MudTd DataLabel="X" >@(string.Format("{0:0.00}", @context.x/1000))</MudTd>
+            <MudTd DataLabel="Y" >@(string.Format("{0:0.00}", @context.y/1000))</MudTd>
+            <MudTd DataLabel="Total" >@(string.Format("{0}", @context.t))</MudTd>
+            <MudTd DataLabel="Z-Min" >@(string.Format("{0:0.00}", @context.z.z))</MudTd>
+    </RowTemplate>
+  </MudTable>
+
+</div
+
+
+
+@code {
+  protected List<ZDepth> _data = new();
+  protected int selectedRowNumber = -1;
+  protected MudTable<ZDepth> mudTable;
+  
+  public List<ZDepth> data {
+  get{ return _data;} 
+    set{
+      _data = value;
+      StateHasChanged();
+    }
+  }
+
+  [Parameter]
+  public EventCallback<double> selectedRow { get; set; }
+
+  protected async Task RowClickEventAsync(TableRowClickEventArgs<ZDepth> tableRowClickEventArgs)
+  {
+    await selectedRow.InvokeAsync(tableRowClickEventArgs.Item.y);
+  }
+
+  protected string SelectedRowClassFunc(ZDepth element, int rowNumber)
+  {
+    if (mudTable.SelectedItem != null && mudTable.SelectedItem == element)
+    {
+        selectedRowNumber = rowNumber;
+        return "selected";
+    }
+    else
+    {
+        return string.Empty;
+    }
+  }
+
+
+}

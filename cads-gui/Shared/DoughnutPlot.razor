@@ -1,0 +1,318 @@
+@namespace Cads
+
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+@using cads_gui.Data
+@using System
+@using Microsoft.Extensions.Logging
+@inject ILogger<DoughnutPlot> logger
+
+<style>
+  .arc {
+    fill: url('#myGradient');
+  }
+
+  .zone0 {
+    stroke: #051d4b;
+    stroke-width: 20;
+    fill: none;
+    fill-opacity: 1.0;
+
+  }
+
+  .zone1 {
+    fill: green;
+
+  }
+
+  .zone2 {
+    fill: #051d4b;
+
+  }
+
+  .zone3 {
+    fill: white;
+    stroke-width: 1px;
+    stroke: #051d4b;
+  }
+
+  .tooltip {
+    position: relative;
+    display: inline-block;
+    border-bottom: 1px dotted black;
+  }
+
+  .tooltip .tooltiptext {
+    visibility: hidden;
+    width: 120px;
+    background-color: black;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px 0;
+
+    /* Position the tooltip */
+    position: absolute;
+    z-index: 1;
+  }
+
+  .tooltip:hover .tooltiptext {
+    visibility: visible;
+  }
+
+  #plot_title {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--wonder-color);
+    color: white;
+    font-family: Arial;
+    padding: 5px;
+  }
+
+  #main {
+    position: relative;
+    aspect-ratio: 1/1;
+    height: 100%;
+    width: auto;
+  }
+
+  #main svg {
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: 0;
+  }
+
+  #scanning {
+    position: absolute;
+    display: block;
+    z-index: 2;
+    width: 100%;
+    aspect-ratio: 1/1;
+    clip-path: url(#chord);
+    animation: rotation 20s linear infinite;
+    background: crimson;
+  }
+
+  #scanning[animate-me] {
+    display: block;
+  }
+
+  #scanning:after {
+    position: absolute;
+    content: '';
+    width: 100%;
+    aspect-ratio: 1/1;
+    border: 10px solid white;
+    border-radius: 50%;
+    filter: blur(2px);
+    animation: scale 1s linear infinite;
+  }
+
+  #scanning:before {
+    position: absolute;
+    content: '';
+    width: 100%;
+    aspect-ratio: 1/1;
+    border: 10px solid white;
+    border-radius: 50%;
+    filter: blur(2px);
+    animation: scale 1s linear infinite 0.5s;
+  }
+
+  @@keyframes rotation {
+    from {
+      transform: rotate(0deg);
+    }
+
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @@keyframes scale {
+    from {
+      transform: scale(0);
+    }
+
+    to {
+      transform: scale(1);
+    }
+  }
+</style>
+
+
+<MudContainer Style="@Style" Class="ma-0 pa-0">
+  <div id="main">
+    @if (_AnimateSearch)
+    {
+      <div id="scanning" animate-me=@_AnimateSearch></div>
+    }
+    <svg @ref="svgElement" @attributes="SvgAttr" viewBox="0 0 600 600">
+      <defs>
+        <linearGradient id="myGradient" gradientTransform="rotate(90)">
+          <stop offset="5%" stop-color="gold" />
+          <stop offset="95%" stop-color="red" />
+        </linearGradient>
+        <clipPath id="chord" clipPathUnits="objectBoundingBox">
+          <path d="M 0.5 0.5 L 1,0.5 A 0.5 0.5 0 0 1 0.97 0.67 z" />
+        </clipPath>
+
+      </defs>
+
+      <line x1="510" y1="300" x2="570" y2="300" stroke="black" stroke-width="2" />
+      <circle cx="@dot.Item1" cy="@dot.Item2" r="4" />
+      <path class="zone0" d="
+        M @(300+r-10),300
+        A @(r-10),@(r-10),0,1,1,20,300
+        A @(r-10),@(r-10),0,1,1,@(300+r-10),300
+        Z " @onclick="@PlotClickedAsync" @onmousemove="@tooltip">
+        <title>Y: @(string.Format("{0:0.000}", toolTipYpos/1000)) </title>
+      </path>
+      }
+      @if (_data is not null)
+      {
+        @foreach (var (start, length, info, title) in _data)
+        {
+          var l = (length) < 2.0 ? 2.0 : (length);
+          var th = l * (2 * Math.PI) / Belt.Ymax;
+          var s = (start) * (2 * Math.PI) / Belt.Ymax;
+          var g = th > Math.PI ? 1 : 0;
+
+          <path class="@category_color(info)" transform="rotate(@(s*180/Math.PI),300,300)" d="
+            M @(300+r),300
+            A @r,@r,0,@(g),1,@(300+r*Math.Cos(@th)),@(300+r*Math.Sin(@th))
+            L @(300+(r-20)*Math.Cos(@th)),@(300+(r-20)*Math.Sin(@th))
+            A @(r-20),@(r-20),0,@(g),0,@(300+r-20),300
+            Z " @onclick="@PlotClickedAsync" @onmousemove="@tooltip">
+            <title>@title | Y: @(string.Format("{0:0.000}", toolTipYpos/1000)) </title>
+          </path>
+        }
+      }
+    </svg>
+    @if (plot_title != "")
+    {
+      <p id="plot_title">@plot_title</p>
+    }
+  </div>
+</MudContainer>
+
+@code {
+  private IJSObjectReference module;
+  private ElementReference svgElement;
+
+  protected Dictionary<string, object> _SvgAttr =
+  new Dictionary<string, object>()
+  {
+{"height","100%"}
+  };
+
+  const double r = 290;
+
+  [Parameter]
+  public Dictionary<string, object> SvgAttr
+  {
+    get { return _SvgAttr; }
+    set { value.ToList().ForEach(x => _SvgAttr[x.Key] = x.Value); }
+  }
+
+  [Parameter]
+  public string Style { get; set; } = String.Empty;
+
+  protected bool _AnimateSearch = false;
+
+  public bool AnimateSearch
+  {
+    get { return _AnimateSearch; }
+    set
+    {
+      var tmp = _AnimateSearch;
+      _AnimateSearch = value;
+      if (tmp != value) { StateHasChanged(); }
+    }
+  }
+
+  [Parameter]
+  public Belt Belt { get; set; }
+
+  protected IEnumerable<PlotInfo> _data = new List<PlotInfo>().AsEnumerable();
+  public IEnumerable<PlotInfo> data
+  {
+    get { return _data; }
+    set
+    {
+      _data = value;
+      StateHasChanged();
+    }
+  }
+
+  [Parameter]
+  public Func<double, string> category_color { get; set; } = (double a) =>
+  {
+    return "zone3";
+  };
+
+  [Parameter]
+  public string plot_title { get; set; } = "";
+
+  [Parameter]
+  public EventCallback<double> Y { get; set; }
+
+  protected double toolTipYpos = 0.0;
+
+  protected (double, double) dot = (570, 300);
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender)
+    {
+      module = await JS.InvokeAsync<IJSObjectReference>("import", "./cads-gui.lib.module.js");
+    }
+  }
+
+  private async Task tooltip(MouseEventArgs e)
+  {
+    if (module is not null)
+    {
+      var g = await module.InvokeAsync<ClientRect>("getBoundingClientRect", svgElement);
+      var midY = (g.bottom - g.y) / 2;
+      var midX = (g.right - g.x) / 2;
+      var theta = Math.Atan2((e.ClientY - midY - g.y), (e.ClientX - midX - g.x));
+      theta = theta < 0.0 ? 2 * Math.PI + theta : theta;
+      toolTipYpos = theta * Belt.Ymax / (2 * Math.PI);
+    }
+
+  }
+
+  private async Task PlotClickedAsync(MouseEventArgs e)
+  {
+    if (module is not null)
+    {
+      var g = await module.InvokeAsync<ClientRect>("getBoundingClientRect", svgElement);
+      var midY = (g.bottom - g.y) / 2;
+      var midX = (g.right - g.x) / 2;
+      var theta = Math.Atan2((e.ClientY - midY - g.y), (e.ClientX - midX - g.x));
+      theta = theta < 0.0 ? 2 * Math.PI + theta : theta;
+      var y = theta * Belt.Ymax / (2 * Math.PI);
+      await Y.InvokeAsync(y);
+    }
+
+  }
+  async ValueTask IAsyncDisposable.DisposeAsync()
+  {
+    try
+    {
+      if (module is not null)
+      {
+        await module.DisposeAsync();
+      }
+    }
+    catch (Microsoft.JSInterop.JSDisconnectedException ex)
+    {
+      // Ignore
+    }
+  }
+}

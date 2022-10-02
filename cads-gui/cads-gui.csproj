@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <RootNamespace>cads_gui</RootNamespace>
+    <!--<Nullable>enable</Nullable>-->
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="3.8.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.sqlite.Core" Version="5.0.2" />
+    <PackageReference Include="SQLitePCLRaw.bundle_winsqlite3" Version="2.0.4" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(OS)' != 'Windows_NT'">
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="6.0.9" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="3.11.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.sqlite" Version="5.0.10" />
+    <PackageReference Include="MudBlazor" Version="6.0.12" />
+    <PackageReference Include="NATS.Client" Version="1.0.1" />
+    <PackageReference Include="System.Reactive" Version="5.0.0" />
+    <!--<PackageReference Include="Microsoft.EntityFrameworkCore.sqlite" Version="6.0.0-preview.3.21201.2" />-->
+  </ItemGroup>
+
+  <Target Name="Flatbuffers" BeforeTargets="BeforeBuild">
+    <ItemGroup>
+      <FlatbufferSchemasCsharp Include="$(MSBuildProjectDirectory)\..\flatbuffers-schema\z_data.fbs $(MSBuildProjectDirectory)\..\flatbuffers-schema\plot_data.fbs" />
+      <FlatbufferSchemasTypescript Include="$(MSBuildProjectDirectory)\..\flatbuffers-schema\plot_data.fbs" />
+    </ItemGroup>
+
+    <Exec Command="flatc --csharp @(FlatbufferSchemasCsharp)" Outputs="CadsFlatbuffers\*.cs">
+      <Output ItemName="FlatbufferGeneratedCsharp" TaskParameter="Outputs" />
+    </Exec>
+
+    <Exec Command="flatc -o flatbuffers-typescript --ts @(FlatbufferSchemasTypescript)" />
+
+    <Exec Command="npm run build" WorkingDirectory="flatbuffers-typescript" />
+    
+    <ItemGroup>
+      <Compile Include="@(FlatbufferGeneratedCsharp)" />
+      <FileWrites Include="@(FlatbufferGeneratedCsharp)" />
+    </ItemGroup>
+
+    <Delete Files="flatbuffers-typescript/plot_data.ts" />
+  </Target>
+
+  <ItemGroup>
+    <ProjectReference Include="..\flatbuffers-csharp-lib\FlatBuffers.csproj" />
+  </ItemGroup>
+  
+</Project>

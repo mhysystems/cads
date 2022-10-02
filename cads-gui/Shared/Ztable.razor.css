@@ -1,0 +1,13 @@
+#main-screen {
+	height: 100%;
+	width: 100%;
+	overflow-y: auto;
+}
+
+.table {
+	width : calc(100% - 2 * 2px);
+}
+.z_depth-row[data-active=True] {
+	border: 2px solid #f77f00;
+}
+
