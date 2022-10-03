@@ -703,6 +703,11 @@ class SurfacePlot {
     return 1;
   }
 
+  static get overlayPlotData() {
+    return 2;
+  }
+
+
   constructor(plotElement, x_res, z_min, z_max, color_scale, blazor) {
     this.plotElement = plotElement;
     this.xRes = x_res;
@@ -789,6 +794,15 @@ class SurfacePlot {
         colorscale: this.colorScale,
         showscale: false,
         type: 'surface'
+      },
+      {
+        x: [],
+        y: [],
+        z: [],
+        colorscale: [[0, "hsl(300,100,50)"], [1, "hsl(300,100,50)"]],
+        type: 'surface',
+        showscale: false,
+        opacity: 0.5
       }
     ];
 
@@ -849,9 +863,41 @@ class SurfacePlot {
     this.plotData[SurfacePlot.floorPlotData].x = x_axis;
     this.plotData[SurfacePlot.floorPlotData].z = bottom_plane;
 
+    this.clearOverlay();
     Plotly.react(this.plotElement, this.plotData, this.layout, this.config);
 
     return y_axis[y_axis.length - 1];
+  }
+
+  clearOverlay() {
+    
+    this.plotData[SurfacePlot.overlayPlotData].y = [];
+    this.plotData[SurfacePlot.overlayPlotData].x = [];
+    this.plotData[SurfacePlot.overlayPlotData].z = [];
+
+  }
+
+  async addRectOverlay(zDepth) {
+    console.debug(`addRectOverlay ${zDepth}`);
+
+    const xLength = this.plotData[SurfacePlot.surfacePlotData].x.length;
+    const xArray = this.plotData[SurfacePlot.surfacePlotData].x;
+    const yLength = this.plotData[SurfacePlot.surfacePlotData].y.length;
+    const yArray = this.plotData[SurfacePlot.surfacePlotData].y;
+    
+    const xyRatio = ((yArray[yLength - 1] - yArray[0]) / yLength) / ((xArray[xLength - 1] - xArray[0]) / xLength);
+    const width = 50; // x axis
+    const length = Math.floor(xyRatio); // y axis
+
+    const yIndex = this.plotData[SurfacePlot.surfacePlotData].y.findIndex( y => zDepth.z.y < y*1000);
+    const xIndex = this.plotData[SurfacePlot.surfacePlotData].x.findIndex( x => zDepth.z.x < x*1000);
+
+    this.plotData[SurfacePlot.overlayPlotData].y = this.plotData[SurfacePlot.surfacePlotData].y.slice(yIndex - length,yIndex + length);
+    this.plotData[SurfacePlot.overlayPlotData].x = this.plotData[SurfacePlot.surfacePlotData].x.slice(xIndex - width,xIndex + width);
+    this.plotData[SurfacePlot.overlayPlotData].z = this.plotData[SurfacePlot.surfacePlotData].z.slice(yIndex - length,yIndex + length).map( x=> x.slice(xIndex - width,xIndex + width)).map(x => x.map( z => z+0.5)); 
+
+    Plotly.react(this.plotElement, this.plotData, this.layout, this.config);
+
   }
 
   changeColorScale(c) {

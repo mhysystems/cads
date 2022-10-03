@@ -52,41 +52,6 @@ namespace cads_gui.Data
       return from row in context.Conveyors where row.Site == site select row;
     }
 
-    public async Task<IObservable<List<LiveAnomaly>>> LiveAnomalyDemo()
-    {
-      
-      
-      return Observable.Create<List<LiveAnomaly>>(async (obs, ct) =>
-      {
-        var now = DateTime.Now;
-        var state = new List<LiveAnomaly>[] {
-              new List<LiveAnomaly> {
-                  new LiveAnomaly(0,"Puncture","Major",now,"Roller 122","Puncture up to 50mm","Reported"),
-                  new LiveAnomaly(1,"Edge Rip","Major",now.AddHours(1.0),"Roller 102","Puncture up to 50mm","Reported")
-              },
-              new List<LiveAnomaly> {
-                  new LiveAnomaly(0,"Puncture","Major",now,"Roller 152","Puncture up to 50mm","Reported"),
-                  new LiveAnomaly(1,"Edge Rip","Major",now.AddHours(1.0),"Roller 122","Puncture up to 50mm","Reported"),
-                  new LiveAnomaly(2,"Edge Rip","Hazardous",now,"Roller 136","Puncture up to 50mm","Reported")
-              },
-              new List<LiveAnomaly> {
-                  new LiveAnomaly(0,"Puncture","Major",now,"Roller 1","Puncture up to 50mm","Reported"),
-                  new LiveAnomaly(1,"Edge Rip","Major",now.AddHours(1.0),"Roller 152","Puncture up to 50mm","Reported"),
-                  new LiveAnomaly(2,"Edge Rip","Hazardous",now,"Roller 140","Puncture up to 50mm","Reported")
-              },
-            };
-
-        var i = 0;
-        while (!ct.IsCancellationRequested)
-        {
-          obs.OnNext(state[i++]);
-          i %= state.Length;
-          await Task.Delay(5000, ct);
-        }
-        obs.OnCompleted();
-      });
-    }
-
     public async Task<(double, double, double)> GetBeltBoundary(string belt)
     {
       return await NoAsp.BeltBoundaryAsync(belt);
@@ -215,44 +180,6 @@ namespace cads_gui.Data
       await context.SaveChangesAsync();
     }
 
-    /*public Task<List<Ranomaly>> GetFrameAnomaly(double y, int y_len, long eps, long minPts)
-    {
-        _logger.LogDebug($"GetFrameAnomaly({y},{y_len},{eps},{minPts})");
-
-        var BeltConstants = (from a in dBContext.CreateDbContext().belt select new BeltConstant(a.one_row, a.num_y_samples, a.num_x_sample, a.belt_length, a.x_start, a.x_end, a.z_min, a.z_max)).First();
-        double yres = (BeltConstants.belt_length / BeltConstants.num_y_samples);
-
-        int o = (int)Math.Floor(y / yres);
-        using (var process = new Process())
-        {
-            process.StartInfo.FileName = @"Rscript"; // relative path. absolute path works too.
-            process.StartInfo.Arguments = $"--vanilla /opt/cads/R/cads.R --db /home/jeff.beu/cads-gui/g.db --eps {eps} --minpts {minPts} --yoff {o} -y {yres * 1000}";
-            _logger.LogDebug($"External Process: {process.StartInfo.FileName} {process.StartInfo.Arguments}");
-            //process.StartInfo.FileName = @"cmd.exe";
-            //process.StartInfo.Arguments = @"/c dir";      // print the current working directory information
-            process.StartInfo.CreateNoWindow = true;
-            process.StartInfo.UseShellExecute = false;
-            process.StartInfo.RedirectStandardOutput = true;
-            process.StartInfo.RedirectStandardError = true;
-
-            string jsons = "";
-            process.OutputDataReceived += (sender, data) =>
-            {
-                jsons += data.Data;
-            };
-            //process.ErrorDataReceived += (sender, data) => Console.WriteLine(data.Data);
-            process.Start();
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
-            process.WaitForExit(1000 * 10);
-            _logger.LogDebug($"stdout: {jsons}");
-            var anomalies = JsonSerializer.Deserialize<List<Ranomaly>>(jsons);
-            return Task.FromResult(anomalies);
-        }
-
-
-
-    }*/
     public async Task<(double, float[])> GetBeltProfileAsync(double o, long num_y_samples, Belt belt)
     {
       var fs = await NoAsp.RetrieveFrameModular(belt.name, o, num_y_samples);
@@ -485,7 +412,7 @@ namespace cads_gui.Data
           for (long i = 0; i < x_max; i++)
           {
             var z = zs[(y + j) * zx + i + x];
-            if (!float.IsNaN(z) && z > cut_y) zmin = zmin.z < z ? zmin : new P3((i + x) * dx + x_start, (j + y) * dy, z);
+            if (!float.IsNaN(z) && z > cut_y) zmin = zmin.z < z ? zmin : new P3((i + x) * dx + x_start, (offset + j + y) * dy, z);
 
             if (!float.IsNaN(z) && z > cut_y && fn(z))
             {

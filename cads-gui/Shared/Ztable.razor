@@ -51,11 +51,11 @@
   }
 
   [Parameter]
-  public EventCallback<double> selectedRow { get; set; }
+  public EventCallback<ZDepth> selectedRow { get; set; }
 
   protected async Task RowClickEventAsync(TableRowClickEventArgs<ZDepth> tableRowClickEventArgs)
   {
-    await selectedRow.InvokeAsync(tableRowClickEventArgs.Item.y);
+    await selectedRow.InvokeAsync(tableRowClickEventArgs.Item);
   }
 
   protected string SelectedRowClassFunc(ZDepth element, int rowNumber)

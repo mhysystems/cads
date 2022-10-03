@@ -93,20 +93,14 @@
       logger.LogDebug($"opaque_handle : {opaque_handle}");
     }
   }
-    public async Task change_color_range(double c_min) {
-      logger.LogDebug($"change_color_range({c_min})");
-      clevel = c_min;
-      (double,string)[] s = (await Beltservice.get_color_range(colour_query, Belt, c_min)).ToArray();//{(0, "hsl(240,100,50)"),(0.002,"hsl(0,0,100)"),(level,$"hsl(0,0,100)"),(1.0, "hsl(0,0,0)")};
-      await clevelChanged.InvokeAsync(clevel);
-      //await InvokeVoidAsync("update_plot", opaque_handle, ystart,s.Select(i => i.ToTuple()));
-      await InvokeVoidAsync("plot_change_colorscale", opaque_handle, s.Select(i => i.ToTuple()));
-      //Task.Run(() => InvokeVoidAsync("update_plot", opaque_handle, ystart,colorscale.use_array ? colorscale.array.Select(i => i.ToTuple()) : colorscale.str,c_min,c_max ));
-  }
-
 
   public async Task HighlightSurface(Func<float, bool> fn) {
     var colorRange = (await GenerateColorRangeAsync(Belt.z_max - sliderLow,fn)).ToArray();
     await jsSurfacePlot.InvokeVoidAsync("changeColorScale",colorRange.Select(i => i.ToTuple()));
+  }
+
+  public async Task AddRectOverlay(ZDepth zd) {
+    await jsSurfacePlot.InvokeVoidAsync("addRectOverlay",zd);
   }
 
     /// <summary>
