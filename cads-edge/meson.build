@@ -43,6 +43,11 @@ lua_dep = subproject('lua').get_variable('lua_dep')
 eigen_dep = subproject('eigen').get_variable('eigen_dep')
 natsc_dep = subproject('nats.c').get_variable('natsc_dep')
 
+flatc_exe = subproject('flatbuffers').get_variable('flatc')
+copy = find_program('cp')
+run_command(copy,flatc_exe.full_path(),join_paths(meson.source_root(),'..','bin','flatc'))
+run_command(copy,join_paths(flatc_exe.path(),'libflatbuffers.so'),join_paths(meson.source_root(),'..','bin','libflatbuffers.so'))
+
 subdir('GO_SDK/Platform/kApi')
 subdir('GO_SDK/Gocator/GoSdk')
 

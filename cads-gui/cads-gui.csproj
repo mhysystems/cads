@@ -22,18 +22,19 @@
     <PackageReference Include="System.Reactive" Version="5.0.0" />
     <!--<PackageReference Include="Microsoft.EntityFrameworkCore.sqlite" Version="6.0.0-preview.3.21201.2" />-->
   </ItemGroup>
+  <ItemGroup>
+    <FlatbufferSchemasCsharp Include="$(MSBuildProjectDirectory)\..\flatbuffers-schema\z_data.fbs $(MSBuildProjectDirectory)\..\flatbuffers-schema\plot_data.fbs" />
+    <FlatbufferSchemasTypescript Include="$(MSBuildProjectDirectory)\..\flatbuffers-schema\plot_data.fbs" />
+  </ItemGroup>
 
-  <Target Name="Flatbuffers" BeforeTargets="BeforeBuild">
-    <ItemGroup>
-      <FlatbufferSchemasCsharp Include="$(MSBuildProjectDirectory)\..\flatbuffers-schema\z_data.fbs $(MSBuildProjectDirectory)\..\flatbuffers-schema\plot_data.fbs" />
-      <FlatbufferSchemasTypescript Include="$(MSBuildProjectDirectory)\..\flatbuffers-schema\plot_data.fbs" />
-    </ItemGroup>
+  <Target Name="Flatbuffers" BeforeTargets="BeforeBuild" Outputs="$(MSBuildProjectDirectory)\CadsFlatbuffers\*.cs" Inputs="@(FlatbufferSchemasCsharp)">
 
-    <Exec Command="flatc --csharp @(FlatbufferSchemasCsharp)" Outputs="CadsFlatbuffers\*.cs">
+
+    <Exec Command="$(MSBuildProjectDirectory)\..\bin\flatc --csharp @(FlatbufferSchemasCsharp)" Outputs="CadsFlatbuffers\*.cs">
       <Output ItemName="FlatbufferGeneratedCsharp" TaskParameter="Outputs" />
     </Exec>
 
-    <Exec Command="flatc -o flatbuffers-typescript --ts @(FlatbufferSchemasTypescript)" />
+    <Exec Command="$(MSBuildProjectDirectory)\..\bin\flatc -o flatbuffers-typescript --ts @(FlatbufferSchemasTypescript)" />
 
     <Exec Command="npm run build" WorkingDirectory="flatbuffers-typescript" />
     
@@ -42,11 +43,11 @@
       <FileWrites Include="@(FlatbufferGeneratedCsharp)" />
     </ItemGroup>
 
-    <Delete Files="flatbuffers-typescript/plot_data.ts" />
+    <Delete Files="flatbuffers-typescript/plot_data_generated.ts" />
   </Target>
 
   <ItemGroup>
-    <ProjectReference Include="..\flatbuffers-csharp-lib\FlatBuffers.csproj" />
+    <ProjectReference Include="..\flatbuffers-csharp-lib\Google.FlatBuffers.csproj" />
   </ItemGroup>
   
 </Project>

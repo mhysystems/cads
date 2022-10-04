@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using System.Linq;
 using Microsoft.AspNetCore.SignalR;
 
-using FlatBuffers;
+using Google.FlatBuffers;
 using CadsFlatbuffers;
 
 namespace cads_gui.Data
