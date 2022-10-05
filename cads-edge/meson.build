@@ -69,7 +69,7 @@ cads = executable(
 	'cads', 
 	cadsSrc + cadsEntry,
 	include_directories : [GoSdkInc,kApiInc,cadsInc],
-	dependencies:libdep,
+	dependencies:'libdep',
   link_with : [GoSdkLib,kApiLib],
 #  link_args : ['-fsanitize=address'],
 	cpp_args : ['-std=c++20','-fcoroutines'] #,'-fsanitize=address']

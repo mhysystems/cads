@@ -27,8 +27,6 @@
   "nats_url" : "10.9.1.1",
   "drop_uploads" : 1, 
   "base_url" : "https://cads:hMe-%3A%2AZO%23%29dj%7B@dev.mhysystems.com",
-  "upload_profile_to" : "https://cads:hMe-%3A%2AZO%23%29dj%7B@dev.mhysystems.com/api/belt",
-  "upload_config_to" : "https://cads:hMe-%3A%2AZO%23%29dj%7B@dev.mhysystems.com/api/meta",
   "lua_window_height" : 10,
   "lua_fn" : "function process(width,height)\nlocal sum = 0\nfor i = 1,width do\nfor j = 0,height-1 do\nsum = sum + (win[j*width + i] < 20 and 1 or 0)\nend\nend\nreturn (sum / (width * height)) > 0.5 and sum or 0\nend"
 }

@@ -323,7 +323,6 @@ namespace cads
     if (terminate)
     {
       m_gocatorFifo.enqueue({msgid::finished, 0});
-      Stop();
     }
 
     return kOK;
