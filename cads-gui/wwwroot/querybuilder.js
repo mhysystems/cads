@@ -5,23 +5,17 @@ var scene, camera, renderer;
 var bX = 1600, bY = 4000, bZ = 100;
 
 export function change() {
-	//const[dx,dy,dz] = [...document.querySelectorAll('input[query-input]')];
 	const[dx,dy,dz] = [...document.querySelectorAll(queryInput)];
 
 	const x = parseInt(dx.value);
 	const y = parseInt(dy.value);
 	const z = parseInt(dz.value);
-	//initMesh(scene,x,y,z)
+
 	initMesh(scene, x, z*3, y)
 }
 
-export function update(x,y,z,p) {
-	const data = [x,y,z,p];
-	
-	//document.querySelectorAll('input[query-input]').forEach((n,i) => n.value = data[i]);
-	document.querySelectorAll(queryInput).forEach((n,i) => n.value = data[i]);
-
-	change();
+export function update(x,y,z) {
+  initMesh(scene, x, z*3, y)
 }
 
 function clearThree(obj) {

@@ -1,6 +1,8 @@
 @namespace Cads
 @implements IAsyncDisposable
+
 @inject IJSRuntime JS
+@inject ILogger<ZDepthQuery> logger
 
 @using cads_gui.Data
 @using System.Collections.Generic
@@ -15,20 +17,20 @@
     <MudItem xs="12" Class="d-flex gap-0 ">
 
         <MudTooltip Text="X">
-        <MudNumericField HideSpinButtons="true" Immediate="true" Class="X queryInput mt-0" T="int"  @bind-value="@X" Min="0" Max="(int)Belt.Xmax" Variant="Variant.Text">
+        <MudNumericField HideSpinButtons="true" Immediate="true" Class="X queryInput mt-0" T="int"  @bind-Value="@X" Min="0" Max="(int)Belt.Xmax" Variant="Variant.Text">
         </MudNumericField>
         </MudTooltip>
 
         <MudTooltip Text="Y">
-        <MudNumericField HideSpinButtons="true" Immediate="true" Class="Y queryInput mt-0" T="int"  @bind-value="@Y" Min="0" Max="(int)Belt.FrameLength" Variant="Variant.Text">
+        <MudNumericField HideSpinButtons="true" Immediate="true" Class="Y queryInput mt-0" T="int"  @bind-Value="@Y" Min="0" Max="(int)Belt.FrameLength" Variant="Variant.Text">
         </MudNumericField>
         </MudTooltip>
         <MudTooltip Text="Z">
-        <MudNumericField HideSpinButtons="true" Immediate="true" Class="Z queryInput mt-0" T="int"  @bind-value="@Z" Min="0" Max="(int)Belt.z_max" Variant="Variant.Text">
+        <MudNumericField HideSpinButtons="true" Immediate="true" Class="Z queryInput mt-0" T="int"  @bind-Value="@Z" Min="0" Max="(int)Belt.z_max" Variant="Variant.Text">
         </MudNumericField>
         </MudTooltip>
         <MudTooltip Text="%">
-        <MudNumericField HideSpinButtons="true" Immediate="true" Class="P mt-0" T="double" @bind-value="@P" Min="0" Max="100" Step="1.0" Variant="Variant.Text">
+        <MudNumericField HideSpinButtons="true" Immediate="true" Class="P mt-0" T="double" @bind-Value="@P" Min="0" Max="100" Step="1.0" Format="F2" Variant="Variant.Text">
         </MudNumericField>
         </MudTooltip>
     </MudItem>
@@ -40,10 +42,7 @@
   protected int Y = 4000;
   protected int Z = 90;
   protected double P = 1;
-  protected string queryZ { get; set; } = "30";
-  protected string queryY = "4000", queryX = "1600", queryP = "0.1";
 
-  protected string damaged = "";
   protected List<SavedZDepthParams> savedZDepthParams = new List<SavedZDepthParams>();
 
   [Parameter]
@@ -73,20 +72,25 @@
     if (firstRender)
     {
       module = await JS.InvokeAsync<IJSObjectReference>("import", "./querybuilder.js");
-      await module.InvokeVoidAsync("initThree",X,Y,Z);
+      await module.InvokeVoidAsync("initThree",Belt.Xmax,Belt.FrameLength,Belt.z_max);
+      await module.InvokeVoidAsync("update", X, Y, Z);
     }
 
   }
 
   protected async Task LoadDamageAsync(SavedZDepthParams d)
   {
-    var queryX = string.Format("{0:F2}", d.Width);
-    var queryY = string.Format("{0:F2}", d.Length);
-    var queryZ = string.Format("{0:F2}", d.Depth);
-    var queryP = string.Format("{0:F2}", (d.Percentage * 100));
+    X = (int)d.Width;
+    Y = (int)d.Length;
+    Z = (int)d.Depth;
+    P = d.Percentage * 100;
+
     if(module is not null) {
-      await module.InvokeVoidAsync("update", queryX, queryY, queryZ, queryP);
+      await module.InvokeVoidAsync("update", X, Y, Z, P);
     }
+
+    StateHasChanged();
+
   }
 
   public Func<float,bool> MakeAreaOfInterest()
@@ -97,9 +101,12 @@
 
   public async Task LoadZDepthParamsAsync(IEnumerable<SavedZDepthParams> xs)
   {
-    foreach (var s in xs)
-    {
-      await LoadDamageAsync(s);
+    if(xs.Count() > 1) {
+      logger.LogError("Expected 1 SavedZDepthParams. Received {}", xs.Count());
+    }
+
+    if(xs.Any()) {
+      await LoadDamageAsync(xs.First());
     }
   }
 

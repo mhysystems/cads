@@ -90,7 +90,9 @@
   {
     if (firstRender)
     {
-      await SelectZDepthParams.InvokeAsync(savedZDepthParams);
+      if(savedZDepthParams.Any()) {
+        await SelectZDepthParams.InvokeAsync(new List<SavedZDepthParams>{savedZDepthParams.First()});
+      }
     }
 
     var validDates = await Beltservice.GetBeltDatesAsync(Belt);
