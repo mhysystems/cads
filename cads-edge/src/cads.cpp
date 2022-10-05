@@ -414,6 +414,7 @@ namespace cads
       schmitt0 = schmitt1;
 
       auto [delayed, dd] = delay({iy, ix, iz});
+      
       if (!delayed)
         continue;
 
