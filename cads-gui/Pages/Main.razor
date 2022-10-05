@@ -22,7 +22,7 @@
           <ZDepthQuery @ref="zDepthQuery" Belt=@Beltservice.GetBelt(site,conveyor) ></ZDepthQuery>
           <MudExpansionPanels  Class="z-30">
              <MudExpansionPanel Class="overflow-auto" Dense="true" MaxHeight="270" Text="Search Results">
-                        <Ztable @ref="@zDepthTabe" selectedRow="@HighlightArea"></Ztable>
+                        <Ztable @ref="@zDepthTabe" selectedRow="@UpdateYAsync"></Ztable>
             </MudExpansionPanel>
 
           </MudExpansionPanels>
@@ -119,10 +119,16 @@
 
   }
 
-  async Task HighlightArea(ZDepth zd) {
-    await UpdateYAsync(zd.y);
-    await surfacePlot.AddRectOverlay(zd);
+  async Task UpdateYAsync(ZDepth zd)
+  {
+    currentY = zd.y;
+    surfacePlot.Loading = true;
+    var plotDataPromise = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData",belt.name,currentY,512,512);
 
+    await surfacePlot.UpdatePlotDataAsync(plotDataPromise);
+    await profilePlot.UpdatePlotAsync(plotDataPromise);
+    await surfacePlot.UpdatePlotWithOverlayAsync(zd);
+    surfacePlot.Loading = false;  
   }
 
   async Task UpdateYAsync(double y)

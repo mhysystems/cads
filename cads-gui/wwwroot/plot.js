@@ -864,7 +864,7 @@ class SurfacePlot {
     this.plotData[SurfacePlot.floorPlotData].z = bottom_plane;
 
     this.clearOverlay();
-    Plotly.react(this.plotElement, this.plotData, this.layout, this.config);
+    
 
     return y_axis[y_axis.length - 1];
   }
@@ -875,6 +875,10 @@ class SurfacePlot {
     this.plotData[SurfacePlot.overlayPlotData].x = [];
     this.plotData[SurfacePlot.overlayPlotData].z = [];
 
+  }
+
+  async generatePlot() {
+    Plotly.react(this.plotElement, this.plotData, this.layout, this.config);
   }
 
   async addRectOverlay(zDepth) {
@@ -895,8 +899,6 @@ class SurfacePlot {
     this.plotData[SurfacePlot.overlayPlotData].y = this.plotData[SurfacePlot.surfacePlotData].y.slice(yIndex - length,yIndex + length);
     this.plotData[SurfacePlot.overlayPlotData].x = this.plotData[SurfacePlot.surfacePlotData].x.slice(xIndex - width,xIndex + width);
     this.plotData[SurfacePlot.overlayPlotData].z = this.plotData[SurfacePlot.surfacePlotData].z.slice(yIndex - length,yIndex + length).map( x=> x.slice(xIndex - width,xIndex + width)).map(x => x.map( z => z+0.5)); 
-
-    Plotly.react(this.plotElement, this.plotData, this.layout, this.config);
 
   }
 

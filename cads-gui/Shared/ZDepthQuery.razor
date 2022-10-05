@@ -15,16 +15,16 @@
     <MudItem xs="12" Class="d-flex gap-0 ">
 
         <MudTooltip Text="X">
-        <MudNumericField HideSpinButtons="true" Immediate="true" Class="X queryInput mt-0" T="int"  @bind-value="@X" Min="0" Max="(int)Belt.Xmax" Variant="Variant.Text">
+        <MudNumericField HideSpinButtons="true" Immediate="true" Class="X queryInput mt-0" T="double"  @bind-value="@X" Min="0" Max="Belt.Xmax" Variant="Variant.Text">
         </MudNumericField>
         </MudTooltip>
 
         <MudTooltip Text="Y">
-        <MudNumericField HideSpinButtons="true" Immediate="true" Class="Y queryInput mt-0" T="int"  @bind-value="@Y" Min="0" Max="(int)Belt.FrameLength" Variant="Variant.Text">
+        <MudNumericField HideSpinButtons="true" Immediate="true" Class="Y queryInput mt-0" T="double"  @bind-value="@Y" Min="0" Max="Belt.FrameLength" Variant="Variant.Text">
         </MudNumericField>
         </MudTooltip>
         <MudTooltip Text="Z">
-        <MudNumericField HideSpinButtons="true" Immediate="true" Class="Z queryInput mt-0" T="double"  @bind-value="@Z" Min="0" Max="(int)Belt.z_max" Variant="Variant.Text">
+        <MudNumericField HideSpinButtons="true" Immediate="true" Class="Z queryInput mt-0" T="double"  @bind-value="@Z" Min="0" Max="Belt.z_max" Variant="Variant.Text">
         </MudNumericField>
         </MudTooltip>
         <MudTooltip Text="%">
@@ -36,8 +36,8 @@
 
 
 @code {
-  protected int X = 1600;
-  protected int Y = 4000;
+  protected double X = 1600;
+  protected double Y = 4000;
   protected double Z = 90;
   protected double P = 1;
   protected string queryZ { get; set; } = "30";
@@ -57,11 +57,15 @@
   protected override async Task OnInitializedAsync()
   {
 
-    Y = (int)Belt.FrameLength;
-    X = (int)Belt.Xmax;
-    Z = (int)Belt.z_max;
+
     savedZDepthParams = await Task.Run(() => Beltservice.GetSavedZDepthParams(Belt).ToList()) ?? new List<SavedZDepthParams>();
 
+  }
+
+  protected override async Task OnParametersSetAsync() {
+    Y = Belt.FrameLength;
+    X = Belt.Xmax;
+    Z = Belt.z_max;
   }
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -97,36 +101,6 @@
     {
       await LoadDamageAsync(s);
     }
-  }
-
-  protected async Task RunQueryAsync()
-  {
-    double x = Double.Parse(queryX);
-    double y = Double.Parse(queryY);
-    double z = Double.Parse(queryZ);
-    double p = Double.Parse(queryP) / 100;
-    //await SearchParametersChanged.InvokeAsync((X, Y, Z, P / 100));
-  }
-
-  protected void AddDamage()
-  {
-
-    if (String.IsNullOrWhiteSpace(damaged)) return;
-
-    double x = Double.Parse(queryX);
-    double y = Double.Parse(queryY);
-    double z = Double.Parse(queryZ);
-    double p = Double.Parse(queryP) / 100;
-    var d = new SavedZDepthParams();
-    d.Name = damaged;
-    d.Width = x;
-    d.Length = y;
-    d.Depth = z;
-    d.Percentage = p;
-
-    Beltservice.AddDamage(d);
-    savedZDepthParams.Add(d);
-    damaged = "";
   }
 
   async ValueTask IAsyncDisposable.DisposeAsync()

@@ -99,8 +99,28 @@
     await jsSurfacePlot.InvokeVoidAsync("changeColorScale",colorRange.Select(i => i.ToTuple()));
   }
 
-  public async Task AddRectOverlay(ZDepth zd) {
+  public async Task UpdatePlotWithOverlayAsync(ZDepth zd) {
     await jsSurfacePlot.InvokeVoidAsync("addRectOverlay",zd);
+    await jsSurfacePlot.InvokeVoidAsync("generatePlot");
+  }
+
+  public async Task<double> UpdatePlotDataAsync(IJSObjectReference plotDataPromise) {
+    Stopwatch stopWatch = new Stopwatch();
+    stopWatch.Start();
+    var y = await jsSurfacePlot.InvokeAsync<double>("updatePlot",plotDataPromise);
+    stopWatch.Stop();
+    logger.LogInformation($"plotly render time{stopWatch.Elapsed}");
+    return y;
+  }
+
+  public async Task<double> UpdatePlotAsync(IJSObjectReference plotDataPromise) {
+    Stopwatch stopWatch = new Stopwatch();
+    stopWatch.Start();
+    var y = await jsSurfacePlot.InvokeAsync<double>("updatePlot",plotDataPromise);
+    await jsSurfacePlot.InvokeVoidAsync("generatePlot");
+    stopWatch.Stop();
+    logger.LogInformation($"plotly render time{stopWatch.Elapsed}");
+    return y;
   }
 
     /// <summary>
@@ -248,14 +268,7 @@
     await jsSurfacePlot.InvokeVoidAsync("changeColorScale",colorRange.Select(i => i.ToTuple()));
   }
 
-  public async Task<double> UpdatePlotAsync(IJSObjectReference plotDataPromise) {
-    Stopwatch stopWatch = new Stopwatch();
-    stopWatch.Start();
-    var y = await jsSurfacePlot.InvokeAsync<double>("updatePlot",plotDataPromise);
-    stopWatch.Stop();
-    logger.LogInformation($"plotly render time{stopWatch.Elapsed}");
-    return y;
-  }
+
 
     public async Task jump(double y) {
       
