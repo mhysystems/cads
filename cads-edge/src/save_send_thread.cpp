@@ -27,7 +27,7 @@ using namespace std::chrono;
 namespace cads
 {
 
-  coro<long, long, 1> daily_upload_coro(long revid)
+  coro<long, std::tuple<long,double>, 1> daily_upload_coro(long revid)
   {
 
     using namespace date;
@@ -58,6 +58,8 @@ namespace cads
     std::future<date::utc_clock::time_point> fut;
     bool terminate = false;
     long idx = 0;
+    double belt_length = 0;
+    std::tuple<long,double> args;
 
     enum state_t
     {
@@ -70,7 +72,8 @@ namespace cads
 
     for (; !terminate;)
     {
-      std::tie(idx, terminate) = co_yield revid;
+      std::tie(args, terminate) = co_yield revid;
+      std::tie(idx,belt_length) = args;
 
       if (terminate)
         continue;
@@ -88,7 +91,7 @@ namespace cads
         {
           if (drop_uploads == 0)
           {
-            fut = std::async(http_post_whole_belt, revid++, idx);
+            fut = std::async(http_post_whole_belt, revid++, idx, belt_length);
             state = uploading;
             spdlog::get("cads")->info("Posting a belt");
           }
@@ -131,10 +134,11 @@ namespace cads
     struct global_t
     {
       cads::coro<int, std::tuple<int, int, cads::profile>, 1> store_profile = store_profile_coro();
-      coro<long, long, 1> daily_upload = daily_upload_coro(0);
+      coro<long, std::tuple<long,double>, 1> daily_upload = daily_upload_coro(0);
       long sequence_cnt = 0;
       long revid = 0;
       long idx = 0;
+      double belt_length = 0;
     } global;
 
     struct transitions
@@ -151,12 +155,17 @@ namespace cads
             if (global.sequence_cnt++ > 0)
             {
               bool terminate = false;
-              std::tie(global.revid, terminate) = global.daily_upload.resume(global.idx);
+              std::tie(global.revid, terminate) = global.daily_upload.resume({global.idx,global.belt_length});
             }
             global.idx = 0;
           }
 
           global.store_profile.resume({global.revid, global.idx++, e.value});
+        };
+
+        const auto update_belt_length = [](global_t &global, const belt_length_t &e)
+        {
+          global.belt_length = e.value;
         };
 
         const auto invalid_action = [](global_t &global)
@@ -167,7 +176,10 @@ namespace cads
         };
 
         return make_transition_table(
-            *"invalid_data"_s + event<begin_sequence_t> = "valid_data"_s, "valid_data"_s + event<scan_t> / store_action = "valid_data"_s, "valid_data"_s + event<end_sequence_t> / invalid_action = "invalid_data"_s);
+            *"invalid_data"_s + event<begin_sequence_t> = "valid_data"_s, 
+            "valid_data"_s + event<scan_t> / store_action = "valid_data"_s, 
+            "valid_data"_s + event<belt_length_t> / update_belt_length = "valid_data"_s, 
+            "valid_data"_s + event<end_sequence_t> / invalid_action = "invalid_data"_s);
       }
     };
 
@@ -190,6 +202,9 @@ namespace cads
         break;
       case msgid::end_sequence:
         sm.process_event(end_sequence_t{});
+        break;
+      case msgid::belt_length:
+        sm.process_event(belt_length_t{get<double>(get<1>(m))});
         break;
       default:
         loop = false;

@@ -94,7 +94,7 @@ drop_msg:
 
   std::string mk_post_profile_url(std::string ts)
   {
-    auto endpoint_url = global_config["upload_profile_to"].get<std::string>();
+    auto endpoint_url = global_config["base_url"].get<std::string>() + "/belt";
 
     if (endpoint_url == "null")
       return endpoint_url;
@@ -107,7 +107,7 @@ drop_msg:
 
   std::string mk_get_profile_url(double y, int len, std::string ts)
   {
-    auto endpoint_url = global_config["upload_profile_to"].get<std::string>();
+    auto endpoint_url = global_config["base_url"].get<std::string>() + "/belt";
 
     if (endpoint_url == "null")
       return endpoint_url;
@@ -190,11 +190,11 @@ void http_post_realtime(double y_area, double value)
   void http_post_profile_properties_json(std::string json)
   {
 
-    auto endpoint_url = global_config["upload_config_to"].get<std::string>();
+    auto endpoint_url = global_config["base_url"].get<std::string>() + "/meta";
 
     if (endpoint_url == "null")
     {
-      spdlog::get("upload")->info("upload_config_to set to null. Config not uploaded");
+      spdlog::get("upload")->info("base_url set to null. Config not uploaded");
       return;
     }
 
@@ -218,12 +218,12 @@ void http_post_realtime(double y_area, double value)
     }
   }
 
-  void http_post_profile_properties(int revid, std::string chrono)
+  void http_post_profile_properties(int revid, std::string chrono, double belt_length)
   {
     nlohmann::json params_json;
     auto db_name = global_config["db_name"].get<std::string>();
     auto [params, err] = fetch_profile_parameters(db_name);
-    auto [Ymax,YmaxN,WidthN,err2] = fetch_belt_dimensions(revid,db_name);
+    auto [Ymin,Ymax,YmaxN,WidthN,err2] = fetch_belt_dimensions(revid,db_name);
 
     params_json["site"] = global_config["site"].get<std::string>();
     params_json["conveyor"] = global_config["conveyor"].get<std::string>();
@@ -233,7 +233,7 @@ void http_post_realtime(double y_area, double value)
     params_json["z_res"] = params.z_res;
     params_json["z_off"] = params.z_off;
     params_json["z_max"] = params.z_max;
-    params_json["Ymax"] = Ymax;
+    params_json["Ymax"] = belt_length;
     params_json["YmaxN"] = YmaxN;
     params_json["WidthN"] = WidthN;
 
@@ -242,13 +242,13 @@ void http_post_realtime(double y_area, double value)
     }
   }
 
-  date::utc_clock::time_point http_post_whole_belt(int revid, int last_idx)
+  date::utc_clock::time_point http_post_whole_belt(int revid, int last_idx, double belt_length)
   {
     using namespace flatbuffers;
 
     auto now = chrono::floor<chrono::seconds>(date::utc_clock::now()); // Default sends to much decimal precision for asp.net core
     auto db_name = global_config["db_name"].get<std::string>();
-    auto endpoint_url = global_config["upload_profile_to"].get<std::string>();
+    auto endpoint_url = global_config["base_url"].get<std::string>();
     auto y_max_length = global_config["y_max_length"].get<double>();
 
     if (endpoint_url == "null")
@@ -266,14 +266,17 @@ void http_post_realtime(double y_area, double value)
     cpr::Url endpoint{mk_post_profile_url(ts)};
 
     auto [params, err] = fetch_profile_parameters(db_name);
+    auto [Ymin,Ymax,YmaxN,WidthN,err2] = fetch_belt_dimensions(revid,db_name);
     
     if (err != 0)
     {
       spdlog::get("upload")->error("Unable to fetch profile parameters from DB");
       return now;
     }
+
     auto z_resolution = params.z_res;
     auto z_offset =  params.z_off;
+    auto y_step = belt_length / YmaxN;
 
     if(std::floor(y_max_length * 0.75 / params.y_res) > last_idx) {
       spdlog::get("upload")->error("Ignoring uploading incomplete belt with last idx of {}", last_idx);
@@ -284,6 +287,7 @@ void http_post_realtime(double y_area, double value)
     int64_t size = 0;
     int64_t frame_idx = -1;
     double belt_z_max = 0; 
+    double y_adjustment = 0.0;
     int final_idx = 0;
 
     while (true)
@@ -297,6 +301,9 @@ void http_post_realtime(double y_area, double value)
       if (!co_terminate)
       {
         namespace sr = std::ranges;
+
+        p.y = y_adjustment;
+        y_adjustment += y_step;
 
         auto max_iter = max_element(p.z.begin(), p.z.end());
         
@@ -328,9 +335,9 @@ void http_post_realtime(double y_area, double value)
     }
 
     if(final_idx == last_idx-1) {
-      http_post_profile_properties(revid,ts);
+      http_post_profile_properties(revid,ts,belt_length);
     }else{
-      http_post_profile_properties(revid,ts);
+      http_post_profile_properties(revid,ts,belt_length);
       spdlog::get("upload")->error("Number of profiles sent {} not matching idx of {}", final_idx+1,last_idx);
     }
 

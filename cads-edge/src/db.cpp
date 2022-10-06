@@ -165,7 +165,7 @@ namespace cads
     return rtn;
   }
 
-std::tuple<double,double,double,int> fetch_belt_dimensions(int revid, std::string name)
+std::tuple<double,double,double,double,int> fetch_belt_dimensions(int revid, std::string name)
   {
 
     sqlite3 *db = nullptr;
@@ -186,7 +186,7 @@ std::tuple<double,double,double,int> fetch_belt_dimensions(int revid, std::strin
     
 
     
-    std::tuple<double,double,double,int> rtn;
+    std::tuple<double,double,double,double,int> rtn;
     if (err == SQLITE_ROW)
     {
       
@@ -195,6 +195,7 @@ std::tuple<double,double,double,int> fetch_belt_dimensions(int revid, std::strin
       }
       
       rtn = {
+          sqlite3_column_double(stmt, 0),
           sqlite3_column_double(stmt, 1),
           sqlite3_column_double(stmt, 2) - 1, // Sqlite indexes from 1 not 0
           sqlite3_column_double(stmt, 3) / sizeof(cads::z_element),
@@ -202,7 +203,7 @@ std::tuple<double,double,double,int> fetch_belt_dimensions(int revid, std::strin
     }
     else
     {
-      rtn = {0.0, 0.0, 0.0, -1};
+      rtn = {0.0, 0.0, 0.0, 0.0, -1};
     }
 
     sqlite3_finalize(stmt);

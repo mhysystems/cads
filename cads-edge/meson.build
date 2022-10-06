@@ -4,16 +4,17 @@ project('cads', ['c','cpp'],
 
 message('Host system type: ' + host_machine.system())
 
-add_project_arguments('-Wextra',
-  '-Wconversion',
+add_project_arguments(
+#  '-Wextra',
+#  '-Wconversion',
 #  '-Wsign-conversion', #too many warnings related to size_t
-  '-Wnull-dereference',
-  '-Wuseless-cast',
-  '-Wdouble-promotion',
-  '-Wshadow',
-  '-Wlogical-op',
-  '-Wduplicated-cond',
-  '-Wduplicated-branches',
+#  '-Wnull-dereference',
+#  '-Wuseless-cast',
+#  '-Wdouble-promotion',
+#  '-Wshadow',
+#  '-Wlogical-op',
+#  '-Wduplicated-cond',
+#  '-Wduplicated-branches',
   language : 'cpp')
 #add_project_arguments('-w',language : 'cpp')
 
@@ -69,7 +70,7 @@ cads = executable(
 	'cads', 
 	cadsSrc + cadsEntry,
 	include_directories : [GoSdkInc,kApiInc,cadsInc],
-	dependencies:'libdep',
+	dependencies:libdep,
   link_with : [GoSdkLib,kApiLib],
 #  link_args : ['-fsanitize=address'],
 	cpp_args : ['-std=c++20','-fcoroutines'] #,'-fsanitize=address']

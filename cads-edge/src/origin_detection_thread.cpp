@@ -127,7 +127,6 @@ namespace cads
           start = now;
 
           if(sequence_cnt > 1) {
-            publish_meta_realtime("CurrentLength",y);
             publish_meta_realtime("RotationPeriod",period);
             y_max_length =  y * 1.05;
           }
@@ -221,7 +220,10 @@ namespace cads
                 }
 
                 if(origin_sequence_cnt > 0) {
-                  spdlog::get("cads")->info("Barrel rotation count : {} Estimated Belt Length: {}",barrel_rotation_cnt - barrel_rotation_offset, pully_circumfrence * double(barrel_rotation_cnt - barrel_rotation_offset));
+                  auto estimated_belt_length = pully_circumfrence * (double(barrel_rotation_cnt - barrel_rotation_offset) / 2.0);
+                  spdlog::get("cads")->info("Barrel rotation count : {} Estimated Belt Length: {}",barrel_rotation_cnt - barrel_rotation_offset, estimated_belt_length);
+                  publish_meta_realtime("CurrentLength",estimated_belt_length*1000);
+                  next_fifo.enqueue({msgid::belt_length, estimated_belt_length});
                 }
                 
                 barrel_rotation_offset = barrel_rotation_cnt;

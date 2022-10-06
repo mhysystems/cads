@@ -205,7 +205,7 @@ namespace cads
 
   void upload_profile_only()
   {
-    http_post_whole_belt(0, std::numeric_limits<int>::max());
+    http_post_whole_belt(0, std::numeric_limits<int>::max(),0);
   }
 
   void store_profile_only()
@@ -395,15 +395,15 @@ namespace cads
       schmitt1 = schmitt_trigger(dbottom1);
       amplitude_extraction(bottom_filtered,false);
 
-      if (std::signbit(schmitt1) == false && std::signbit(schmitt0) == true)
+      if ((std::signbit(schmitt1) == false && std::signbit(schmitt0) == true) || (std::signbit(schmitt1) == true && std::signbit(schmitt0) == false) )
       {
         auto now = std::chrono::high_resolution_clock::now();
         auto period = std::chrono::duration_cast<std::chrono::milliseconds>(now - barrel_origin_time).count();
-        if (barrel_cnt % 50 == 0)
+        if (barrel_cnt % 100 == 0)
         {
-          spdlog::get("cads")->info("Barrel Frequency(Hz): {}", 1000.0 / (double)period);
+          spdlog::get("cads")->info("Barrel Frequency(Hz): {}", 1000.0 / ((double)period) *2 );
           publish_meta_realtime("PullyOscillation",amplitude_extraction(bottom_filtered,true));
-          publish_meta_realtime("SurfaceSpeed",pully_circumfrence / period);
+          publish_meta_realtime("SurfaceSpeed",pully_circumfrence / (2 * period));
         }
         winFifo.enqueue({msgid::barrel_rotation_cnt, barrel_cnt});
         barrel_cnt++;
