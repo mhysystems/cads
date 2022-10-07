@@ -40,6 +40,7 @@ namespace cads_gui.Data
     public class AppSettings
     {
         public string NatsUrl { get; set; } = "127.0.0.1";
+        public string Authorization { get; set; } = "";
     }
 
 		public class Belt {
