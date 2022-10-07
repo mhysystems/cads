@@ -34,10 +34,10 @@
   </MudItem>
   
   <MudItem xs="8">
-  <MudText Typo="Typo.h6">Pully Oscillation (mm)</MudText>
+  <MudText Typo="Typo.h6">Pulley Oscillation (mm)</MudText>
   </MudItem>
   <MudItem xs="4">
-  <MudText Typo="Typo.h6">@PullyOscillation.ToString("F2")</MudText>
+  <MudText Typo="Typo.h6">@PulleyOscillation.ToString("F2")</MudText>
   </MudItem>
 
 </MudGrid>
@@ -77,7 +77,7 @@
               case "CadsToOrigin":
                 CadsToOrigin = message.Value / 1000;
               break;
-              case "PullyOscillation":
+              case "PulleyOscillation":
                 PullyOscillation = message.Value;
               break;
               default:
