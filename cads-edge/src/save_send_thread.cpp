@@ -98,6 +98,7 @@ namespace cads
           else
           {
             --drop_uploads;
+            state = post_upload;
             spdlog::get("cads")->info("Dropped upload. Drops remaining:{}", drop_uploads);
           }
         }
