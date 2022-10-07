@@ -1,2 +1,2 @@
-export * from './plot_data'
+export * from './plot-data'
 export * from 'flatbuffers'
