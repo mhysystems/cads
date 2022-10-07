@@ -1,6 +1,9 @@
 @using Microsoft.AspNetCore.SignalR.Client
+@using Microsoft.Extensions.Options
+
 @inject NavigationManager NavigationManager
-@inject AppSettings _appsettings
+@inject IOptions<AppSettings> _appsettings;
+
 @implements IAsyncDisposable
 
 <MudContainer Style="display:flex; align-items:center">
@@ -59,14 +62,14 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if(string.IsNullOrWhiteSpace(_appsettings.Authorization))
+        if(string.IsNullOrWhiteSpace(_appsettings.Value.Authorization))
         {
           hubConnection = new HubConnectionBuilder()
           .WithUrl(NavigationManager.ToAbsoluteUri("/realtime"))
           .Build();
         } else {
           hubConnection = new HubConnectionBuilder()
-            .WithUrl(NavigationManager.ToAbsoluteUri("/realtime"), options => {options.Headers.Add("authorization",_appsettings.Authorization);})
+            .WithUrl(NavigationManager.ToAbsoluteUri("/realtime"), options => {options.Headers.Add("authorization",_appsettings.Value.Authorization);})
             .Build();
         }
 
