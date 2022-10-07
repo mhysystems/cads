@@ -401,8 +401,8 @@ namespace cads
         auto period = std::chrono::duration_cast<std::chrono::milliseconds>(now - barrel_origin_time).count();
         if (barrel_cnt % 100 == 0)
         {
-          spdlog::get("cads")->info("Barrel Frequency(Hz): {}", 1000.0 / ((double)period) *2 );
-          publish_meta_realtime("PullyOscillation",amplitude_extraction(bottom_filtered,true));
+          spdlog::get("cads")->info("Barrel Frequency(Hz): {}", 1000.0 / ((double)period * 2) );
+          publish_meta_realtime("PulleyOscillation",amplitude_extraction(bottom_filtered,true));
           publish_meta_realtime("SurfaceSpeed",pully_circumfrence / (2 * period));
         }
         winFifo.enqueue({msgid::barrel_rotation_cnt, barrel_cnt});

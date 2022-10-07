@@ -815,7 +815,7 @@ class SurfacePlot {
 
   }
 
-  async updatePlot(plotDataPromise) {
+  async updatePlotData(plotDataPromise) {
 
     const plotData = await plotDataPromise;
     const x_min = plotData.xMin;
@@ -865,7 +865,6 @@ class SurfacePlot {
 
     this.clearOverlay();
     
-
     return y_axis[y_axis.length - 1];
   }
 
@@ -875,6 +874,19 @@ class SurfacePlot {
     this.plotData[SurfacePlot.overlayPlotData].x = [];
     this.plotData[SurfacePlot.overlayPlotData].z = [];
 
+  }
+
+  async updatePlot(plotDataPromise) {
+    const y = await this.updatePlotData(plotDataPromise);
+    await this.generatePlot();
+    return y;
+  }
+
+  async updatePlotWithOverlay(plotDataPromise,zDepth) {
+    const y = await this.updatePlotData(plotDataPromise);
+    await this.addRectOverlay(zDepth);
+    await this.generatePlot();
+    return y;
   }
 
   async generatePlot() {

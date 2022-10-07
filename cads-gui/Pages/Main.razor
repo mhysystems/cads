@@ -125,9 +125,9 @@
     surfacePlot.Loading = true;
     var plotDataPromise = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData",belt.name,currentY,512,512);
 
-    await surfacePlot.UpdatePlotDataAsync(plotDataPromise);
+    await surfacePlot.UpdatePlotWithOverlayAsync(plotDataPromise,zd);
     await profilePlot.UpdatePlotAsync(plotDataPromise);
-    await surfacePlot.UpdatePlotWithOverlayAsync(zd);
+    
     surfacePlot.Loading = false;  
   }
 
