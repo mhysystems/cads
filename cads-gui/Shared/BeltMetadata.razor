@@ -54,7 +54,7 @@
     private double CurrentLength = 0.0;
     private TimeSpan RotationPeriod;
     private double CadsToOrigin = 0.0;
-    private double PullyOscillation = 0.0;
+    private double PulleyOscillation = 0.0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -78,7 +78,7 @@
                 CadsToOrigin = message.Value / 1000;
               break;
               case "PulleyOscillation":
-                PullyOscillation = message.Value;
+                PulleyOscillation = message.Value;
               break;
               default:
               break;
