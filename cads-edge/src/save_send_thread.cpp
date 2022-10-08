@@ -156,7 +156,7 @@ namespace cads
             if (global.sequence_cnt++ > 0)
             {
               bool terminate = false;
-              std::tie(global.revid, terminate) = global.daily_upload.resume({global.idx,global.belt_length});
+              std::tie(terminate,global.revid) = global.daily_upload.resume({global.idx,global.belt_length});
             }
             global.idx = 0;
           }
