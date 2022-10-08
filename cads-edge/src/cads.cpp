@@ -320,7 +320,7 @@ namespace cads
     const auto z_height_mm = global_config["z_height"].get<double>();
     const int nan_num = global_config["left_edge_nan"].get<int>();
     const int spike_window_size = nan_num * 2;
-    auto pully_circumfrence = global_config["pully_circumfrence"].get<double>(); // In mm
+    auto pully_circumfrence = global_config["pulley_circumfrence"].get<double>(); // In mm
 
     BlockingReaderWriterQueue<msg> db_fifo;
     BlockingReaderWriterQueue<msg> dynamic_processing_fifo;

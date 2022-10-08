@@ -276,7 +276,7 @@ void http_post_realtime(double y_area, double value)
 
     auto z_resolution = params.z_res;
     auto z_offset =  params.z_off;
-    auto y_step = belt_length * 1000 / YmaxN;
+    auto y_step = belt_length / YmaxN;
 
     if(std::floor(y_max_length * 0.75 / params.y_res) > last_idx) {
       spdlog::get("upload")->error("Ignoring uploading incomplete belt with last idx of {}", last_idx);

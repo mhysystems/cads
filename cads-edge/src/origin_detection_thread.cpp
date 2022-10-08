@@ -183,7 +183,7 @@ namespace cads
   {
 
     cads::msg m;
-    auto pully_circumfrence = global_config["pully_circumfrence"].get<double>() / 1000;
+    auto pully_circumfrence = global_config["pulley_circumfrence"].get<double>();
     auto start = std::chrono::high_resolution_clock::now();
     int64_t cnt = 0;
     auto buffer_size_warning = buffer_warning_increment;
@@ -221,8 +221,8 @@ namespace cads
 
                 if(origin_sequence_cnt > 0) {
                   auto estimated_belt_length = pully_circumfrence * (double(barrel_rotation_cnt - barrel_rotation_offset) / 2.0);
-                  spdlog::get("cads")->info("Barrel rotation count : {} Estimated Belt Length: {}",barrel_rotation_cnt - barrel_rotation_offset, estimated_belt_length);
-                  publish_meta_realtime("CurrentLength",estimated_belt_length*1000);
+                  spdlog::get("cads")->info("Barrel rotation count : {} Estimated Belt Length: {}",barrel_rotation_cnt - barrel_rotation_offset, estimated_belt_length / 1000);
+                  publish_meta_realtime("CurrentLength",estimated_belt_length);
                   next_fifo.enqueue({msgid::belt_length, estimated_belt_length});
                 }
                 

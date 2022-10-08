@@ -9,7 +9,7 @@
   "fiducial_x" : 50,
   "fiducial_y" : 67,
   "fiducial_gap" : 78,
-  "pully_circumfrence" : 2613.8,
+  "pulley_circumfrence" : 2613.8,
   "daily_start_time" : "06:00",
   "log_lengthMiB" : 128, 
   "iirfilter" : {
@@ -26,7 +26,7 @@
   "conveyor" : "cv405", 
   "nats_url" : "10.9.1.1",
   "drop_uploads" : 1, 
-  "base_url" : "https://cads:hMe-%3A%2AZO%23%29dj%7B@dev.mhysystems.com",
+  "base_url" : "https://cads:hMe-%3A%2AZO%23%29dj%7B@dev.mhysystems.com/api",
   "lua_window_height" : 10,
   "lua_fn" : "function process(width,height)\nlocal sum = 0\nfor i = 1,width do\nfor j = 0,height-1 do\nsum = sum + (win[j*width + i] < 20 and 1 or 0)\nend\nend\nreturn (sum / (width * height)) > 0.5 and sum or 0\nend"
 }

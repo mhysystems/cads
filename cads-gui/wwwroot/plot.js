@@ -532,8 +532,8 @@ class PlotDataCache {
 
   async deserialization(buf) {
     const plotDataBuf = plot_data.getRootAsplot_data(new ByteBuffer(new Uint8Array(buf)));
-    const x_min = plotDataBuf.xOff() / 1000; // mm to m
-    const y_axis = plotDataBuf.ySamplesArray().map(y => y / 1000);
+    const x_min = plotDataBuf.xOff();
+    const y_axis = plotDataBuf.ySamplesArray();
     const z_surface = plotDataBuf.zSamplesArray();
 
     return { xMin: x_min, yAxis: y_axis, zSurface: z_surface }
@@ -662,7 +662,7 @@ class ProfilePlot {
 
     yIndex = (yIndex || 0);
 
-    const x_min = plotData.xMin;
+    const x_min = plotData.xMin / 1000; //convert mm to m
     const rows = plotData.yAxis.length;
     const columns = plotData.zSurface.length / rows;
     const x_resolution = this.xRes / 1000; // convert mm to m
@@ -818,8 +818,8 @@ class SurfacePlot {
   async updatePlotData(plotDataPromise) {
 
     const plotData = await plotDataPromise;
-    const x_min = plotData.xMin;
-    const y_axis = plotData.yAxis;
+    const x_min = plotData.xMin / 1000; //mm to m
+    const y_axis = plotData.yAxis.map( y => y / 1000); //mm to m
     const rows = plotData.yAxis.length;
     let columns = plotData.zSurface.length / rows;
     const x_resolution = this.xRes / 1000; // convert mm to m
