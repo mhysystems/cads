@@ -28,7 +28,7 @@ using namespace std::chrono;
 namespace cads
 {
 
-  coro<long, std::tuple<long, double>, 1> daily_upload_coro(long revid)
+  coro<long, std::tuple<long, double>, 1> daily_upload_coro(long read_revid)
   {
 
     using namespace date;
@@ -38,6 +38,7 @@ namespace cads
     auto sts = global_config["daily_start_time"].get<std::string>();
     auto drop_uploads = global_config["drop_uploads"].get<int>();
     auto daily_upload = global_config["daily_upload"].get<bool>();
+    auto write_revid = read_revid;
 
     if (sts != "now"s)
     {
@@ -75,7 +76,7 @@ namespace cads
 
     for (; !terminate;)
     {
-      std::tie(args, terminate) = co_yield revid;
+      std::tie(args, terminate) = co_yield write_revid;
       std::tie(idx, belt_length) = args;
 
       if (terminate)
@@ -85,7 +86,8 @@ namespace cads
       {
       no_shedule:
       case no_shedule: {
-        fut = std::async(http_post_whole_belt, revid++, idx, belt_length);
+        fut = std::async(http_post_whole_belt, read_revid, idx, belt_length);
+        write_revid++;
         spdlog::get("cads")->info("Posting a belt");
         state = uploading;
         break;
@@ -101,7 +103,7 @@ namespace cads
         {
           if (drop_uploads == 0)
           {
-            fut = std::async(http_post_whole_belt, revid++, idx, belt_length);
+            fut = std::async(http_post_whole_belt, write_revid++, idx, belt_length);
             state = uploading;
             spdlog::get("cads")->info("Posting a belt");
           }
@@ -119,17 +121,18 @@ namespace cads
         if (fut.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
         {
           auto [time, err] = fut.get();
+          read_revid = write_revid;
           if (err)
           {
             state = daily_upload ? pre_upload : no_shedule;
           }
           else
           {
-            revid--;
+            write_revid = daily_upload ? write_revid - 1 : write_revid - 2;
             state = daily_upload ? post_upload : no_shedule;
           }
           spdlog::get("cads")->info("Belt upload thread finished");
-          if(state == no_shedule) goto no_shedule;
+          if(!daily_upload) goto no_shedule;
         }
         break;
 
