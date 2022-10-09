@@ -10,7 +10,7 @@
   "fiducial_y" : 67,
   "fiducial_gap" : 78,
   "pulley_circumfrence" : 2613.8,
-  "daily_upload" : true,
+  "daily_upload" : false,
   "daily_start_time" : "now",
   "log_lengthMiB" : 128, 
   "iirfilter" : {

@@ -37,7 +37,7 @@ namespace cads
     hours trigger_hour;
     auto sts = global_config["daily_start_time"].get<std::string>();
     auto drop_uploads = global_config["drop_uploads"].get<int>();
-    auto daily_upload = global_config["dailiy_upload"].get<bool>();
+    auto daily_upload = global_config["daily_upload"].get<bool>();
 
     if (sts != "now"s)
     {
@@ -147,6 +147,8 @@ namespace cads
   void save_send_thread(BlockingReaderWriterQueue<msg> &profile_fifo)
   {
     namespace sml = boost::sml;
+
+    spdlog::get("cads")->info("save_send_thread started");
 
     struct global_t
     {
