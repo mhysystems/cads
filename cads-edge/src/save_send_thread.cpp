@@ -85,6 +85,7 @@ namespace cads
       {
       case no_shedule: {
         fut = std::async(http_post_whole_belt, revid++, idx, belt_length);
+        spdlog::get("cads")->info("Posting a belt");
         state = uploading;
         break;
       }
@@ -126,6 +127,7 @@ namespace cads
             revid--;
             state = daily_upload ? post_upload : no_shedule;
           }
+          spdlog::get("cads")->info("Belt upload thread finished");
         }
         break;
 
@@ -134,7 +136,6 @@ namespace cads
         auto now = current_zone()->to_local(system_clock::now());
         if (today != chrono::floor<chrono::days>(now))
         {
-          spdlog::get("cads")->info("Switch to waiting");
           state = pre_upload;
         }
         break;
