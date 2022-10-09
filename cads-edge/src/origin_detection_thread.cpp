@@ -129,11 +129,11 @@ namespace cads
           if(sequence_cnt > 1) {
             publish_meta_realtime("RotationPeriod",period);
             y_max_length =  y * 1.05;
-            trigger_length = y_max_length * 0.95;
+            trigger_length = y * 0.95;
           }
           
           if(sequence_cnt == 1) {
-            trigger_length = 1000.0;
+            trigger_length = y_max_length * 0.90;
           }
 
           

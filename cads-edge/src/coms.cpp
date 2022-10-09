@@ -273,7 +273,7 @@ void http_post_realtime(double y_area, double value)
     
     if (err != 0)
     {
-      spdlog::get("upload")->error("Unable to fetch profile parameters from DB");
+      spdlog::get("upload")->error("Unable to fetch profile parameters from DB. Revid: {}", revid);
       return {now,true};
     }
 
@@ -282,14 +282,14 @@ void http_post_realtime(double y_area, double value)
     auto y_step = belt_length / YmaxN;
 
     if(std::floor(y_max_length * 0.75 / params.y_res) > last_idx) {
-      spdlog::get("upload")->error("Ignoring uploading incomplete belt with last idx of {}", last_idx);
+      spdlog::get("upload")->error("Belt less than 0.75 of max belt length. Length of {}, revid: {}", belt_length, revid);
       return {now,true};
     }
 
     auto cnt_width_n = count_with_width_n(db_name, revid, WidthN);
 
     if(cnt_width_n < 0 && cnt_width_n != belt_length) {
-      spdlog::get("upload")->error("Profiles of belt not same number of samples");
+      spdlog::get("upload")->error("Profiles of belt not same number of samples. revid: {}", revid);
       return {now,true};
     }
 
@@ -349,7 +349,7 @@ void http_post_realtime(double y_area, double value)
       http_post_profile_properties(revid,ts,belt_length);
     }else{
       failure = true;
-      spdlog::get("upload")->error("Number of profiles sent {} not matching idx of {}", final_idx+1,last_idx);
+      spdlog::get("upload")->error("Number of profiles sent {} not matching idx of {}. Revid id: {}", final_idx+1,last_idx, revid);
     }
 
     auto end = std::chrono::high_resolution_clock::now();
