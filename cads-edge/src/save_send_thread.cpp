@@ -28,7 +28,7 @@ using namespace std::chrono;
 namespace cads
 {
 
-  coro<long, std::tuple<long,double>, 1> daily_upload_coro(long revid)
+  coro<long, std::tuple<long, double>, 1> daily_upload_coro(long revid)
   {
 
     using namespace date;
@@ -37,6 +37,7 @@ namespace cads
     hours trigger_hour;
     auto sts = global_config["daily_start_time"].get<std::string>();
     auto drop_uploads = global_config["drop_uploads"].get<int>();
+    auto daily_upload = global_config["dailiy_upload"].get<bool>();
 
     if (sts != "now"s)
     {
@@ -56,31 +57,37 @@ namespace cads
     }
 
     std::chrono::time_point<date::local_t, std::chrono::days> today;
-    std::future<std::invoke_result_t<decltype(http_post_whole_belt),int,int,double>> fut;
+    std::future<std::invoke_result_t<decltype(http_post_whole_belt), int, int, double>> fut;
     bool terminate = false;
     long idx = 0;
     double belt_length = 0;
-    std::tuple<long,double> args;
+    std::tuple<long, double> args;
 
     enum state_t
     {
       pre_upload,
       uploading,
-      post_upload
+      post_upload,
+      no_shedule
     };
 
-    auto state = pre_upload;
+    auto state = daily_upload ? pre_upload : no_shedule;
 
     for (; !terminate;)
     {
       std::tie(args, terminate) = co_yield revid;
-      std::tie(idx,belt_length) = args;
+      std::tie(idx, belt_length) = args;
 
       if (terminate)
         continue;
 
       switch (state)
       {
+      case no_shedule: {
+        fut = std::async(http_post_whole_belt, revid++, idx, belt_length);
+        state = uploading;
+        break;
+      }
       case pre_upload:
       {
         auto now = current_zone()->to_local(system_clock::now());
@@ -109,12 +116,15 @@ namespace cads
       case uploading:
         if (fut.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
         {
-          auto [time,err] = fut.get();
-          if(err) {
-            state = pre_upload;
-          }else {
+          auto [time, err] = fut.get();
+          if (err)
+          {
+            state = daily_upload ? pre_upload : no_shedule;
+          }
+          else
+          {
             revid--;
-            state = post_upload;
+            state = daily_upload ? post_upload : no_shedule;
           }
         }
         break;
@@ -140,7 +150,7 @@ namespace cads
     struct global_t
     {
       cads::coro<int, std::tuple<int, int, cads::profile>, 1> store_profile = store_profile_coro();
-      coro<long, std::tuple<long,double>, 1> daily_upload = daily_upload_coro(0);
+      coro<long, std::tuple<long, double>, 1> daily_upload = daily_upload_coro(0);
       long sequence_cnt = 0;
       long revid = 0;
       long idx = 0;
@@ -161,7 +171,7 @@ namespace cads
             if (global.sequence_cnt++ > 0)
             {
               bool terminate = false;
-              std::tie(terminate,global.revid) = global.daily_upload.resume({global.idx,global.belt_length});
+              std::tie(terminate, global.revid) = global.daily_upload.resume({global.idx, global.belt_length});
             }
             global.idx = 0;
           }
@@ -182,9 +192,9 @@ namespace cads
         };
 
         return make_transition_table(
-            *"invalid_data"_s + event<begin_sequence_t> = "valid_data"_s, 
-            "valid_data"_s + event<scan_t> / store_action = "valid_data"_s, 
-            "valid_data"_s + event<belt_length_t> / update_belt_length = "valid_data"_s, 
+            *"invalid_data"_s + event<begin_sequence_t> = "valid_data"_s,
+            "valid_data"_s + event<scan_t> / store_action = "valid_data"_s,
+            "valid_data"_s + event<belt_length_t> / update_belt_length = "valid_data"_s,
             "valid_data"_s + event<end_sequence_t> / invalid_action = "invalid_data"_s);
       }
     };

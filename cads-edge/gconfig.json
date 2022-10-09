@@ -1,6 +1,6 @@
 {
   "data_source" : "gocator", 
-  "y_max_length" : 930000,
+  "y_max_length" : 950000,
   "z_height" : 27.0,
   "x_width"  : 1500,
   "left_edge_nan" : 10,
@@ -10,6 +10,7 @@
   "fiducial_y" : 67,
   "fiducial_gap" : 78,
   "pulley_circumfrence" : 2613.8,
+  "daily_upload" : true,
   "daily_start_time" : "06:00",
   "log_lengthMiB" : 128, 
   "iirfilter" : {
