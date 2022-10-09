@@ -335,7 +335,10 @@ namespace cads
 
     for (int i = 0; i < last_idx; i += size)
     {
-      auto [p, s] = fetch_belt_coro_step(std::move(stmt), i, i + size);
+      auto iend = i + size; 
+      if(iend > last_idx) iend = last_idx;
+      
+      auto [p, s] = fetch_belt_coro_step(std::move(stmt), i, iend);
       stmt = std::move(s);
 
       if (p.empty())

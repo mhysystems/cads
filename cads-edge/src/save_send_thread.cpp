@@ -82,69 +82,79 @@ namespace cads
       if (terminate)
         continue;
 
-      switch (state)
+      for (auto process = true; process;)
       {
-      no_shedule:
-      case no_shedule: {
-        fut = std::async(http_post_whole_belt, read_revid, idx, belt_length);
-        write_revid++;
-        spdlog::get("cads")->info("Posting a belt");
-        state = uploading;
-        break;
-      }
-      case pre_upload:
-      {
-        auto now = current_zone()->to_local(system_clock::now());
-        today = chrono::floor<chrono::days>(now);
-        auto daily_time = duration_cast<seconds>(now - today);
-        auto current_hour = chrono::floor<chrono::hours>(daily_time);
-
-        if (current_hour >= trigger_hour)
+        switch (state)
         {
-          if (drop_uploads == 0)
-          {
-            fut = std::async(http_post_whole_belt, write_revid++, idx, belt_length);
-            state = uploading;
-            spdlog::get("cads")->info("Posting a belt");
-          }
-          else
-          {
-            --drop_uploads;
-            state = post_upload;
-            spdlog::get("cads")->info("Dropped upload. Drops remaining:{}", drop_uploads);
-          }
-        }
-        break;
-      }
-
-      case uploading:
-        if (fut.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+        case no_shedule:
         {
-          auto [time, err] = fut.get();
-          read_revid = write_revid;
-          if (err)
-          {
-            state = daily_upload ? pre_upload : no_shedule;
-          }
-          else
-          {
-            write_revid = daily_upload ? write_revid - 1 : write_revid - 2;
-            state = daily_upload ? post_upload : no_shedule;
-          }
-          spdlog::get("cads")->info("Belt upload thread finished");
-          if(!daily_upload) goto no_shedule;
+          fut = std::async(http_post_whole_belt, read_revid, idx, belt_length);
+          write_revid++;
+          spdlog::get("cads")->info("Posting a belt");
+          state = uploading;
+          break;
         }
-        break;
-
-      case post_upload:
-      {
-        auto now = current_zone()->to_local(system_clock::now());
-        if (today != chrono::floor<chrono::days>(now))
+        case pre_upload:
         {
-          state = pre_upload;
+          auto now = current_zone()->to_local(system_clock::now());
+          today = chrono::floor<chrono::days>(now);
+          auto daily_time = duration_cast<seconds>(now - today);
+          auto current_hour = chrono::floor<chrono::hours>(daily_time);
+
+          if (current_hour >= trigger_hour)
+          {
+            if (drop_uploads == 0)
+            {
+              fut = std::async(http_post_whole_belt, read_revid, idx, belt_length);
+              write_revid++;
+              state = uploading;
+              spdlog::get("cads")->info("Posting a belt");
+            }
+            else
+            {
+              --drop_uploads;
+              state = post_upload;
+              spdlog::get("cads")->info("Dropped upload. Drops remaining:{}", drop_uploads);
+            }
+          }else {
+            process = false;
+          }
+          break;
         }
-        break;
-      }
+
+        case uploading:
+          if (fut.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+          {
+            auto [time, err] = fut.get();
+            read_revid = write_revid;
+            if (err)
+            {
+              write_revid++;
+              state = daily_upload ? pre_upload : no_shedule;
+            }
+            else
+            {
+              write_revid--;
+              state = daily_upload ? post_upload : no_shedule;
+            }
+            spdlog::get("cads")->info("Belt upload thread finished");
+          }else {
+            process = false;
+          }
+          break;
+
+        case post_upload:
+        {
+          auto now = current_zone()->to_local(system_clock::now());
+          if (today != chrono::floor<chrono::days>(now))
+          {
+            state = pre_upload;
+          }else {
+            process = false;
+          }
+          break;
+        }
+        }
       }
     }
   }
