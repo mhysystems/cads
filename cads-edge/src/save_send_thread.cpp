@@ -1,5 +1,6 @@
 #include <chrono>
 #include <future>
+#include <type_traits>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstringop-overflow="
@@ -55,7 +56,7 @@ namespace cads
     }
 
     std::chrono::time_point<date::local_t, std::chrono::days> today;
-    std::future<date::utc_clock::time_point> fut;
+    std::future<std::invoke_result_t<decltype(http_post_whole_belt),int,int,double>> fut;
     bool terminate = false;
     long idx = 0;
     double belt_length = 0;
@@ -108,9 +109,13 @@ namespace cads
       case uploading:
         if (fut.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
         {
-          fut.get();
-          revid--;
-          state = post_upload;
+          auto [time,err] = fut.get();
+          if(err) {
+            state = pre_upload;
+          }else {
+            revid--;
+            state = post_upload;
+          }
         }
         break;
 

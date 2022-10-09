@@ -26,6 +26,7 @@
   "conveyor" : "cv405",
   "nats_url" : "192.168.2.13",
   "drop_uploads" : 0, 
+  "upload_profile" : false, 
   "base_url" : "http://localhost:5000/api",
   "lua_window_height" : 10,
   "lua_fn" : "function process(width,height)\nlocal sum = 0\nfor i = 1,width do\nfor j = 0,height-1 do\nsum = sum + (win[j*width + i] < 25 and 1 or 0)\nend\nend\nreturn (sum / (width * height)) > 0.2 and sum or 0\nend"

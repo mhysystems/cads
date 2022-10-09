@@ -124,7 +124,8 @@ drop_msg:
       double z_off,
       int64_t idx,
       std::vector<flatbuffers::Offset<CadsFlatbuffers::profile>> &profiles_flat,
-      const cpr::Url &endpoint)
+      const cpr::Url &endpoint,
+      bool upload_profile = true)
   {
 
     builder.Finish(CadsFlatbuffers::Createprofile_array(builder, z_res, z_off, idx, profiles_flat.size(), builder.CreateVector(profiles_flat)));
@@ -132,7 +133,7 @@ drop_msg:
     auto buf = builder.GetBufferPointer();
     auto size = builder.GetSize();
 
-    while (true)
+    while (upload_profile)
     {
       cpr::Response r = cpr::Post(endpoint,
                                   cpr::Body{(char *)buf, size},
@@ -191,6 +192,7 @@ void http_post_realtime(double y_area, double value)
   {
 
     auto endpoint_url = global_config["base_url"].get<std::string>() + "/meta";
+    auto upload_props = global_config["upload_profile"].get<bool>();
 
     if (endpoint_url == "null")
     {
@@ -201,7 +203,7 @@ void http_post_realtime(double y_area, double value)
     cpr::Response r;
     const cpr::Url endpoint{endpoint_url};
 
-    while (true)
+    while (upload_props)
     {
       r = cpr::Post(endpoint,
                     cpr::Body{json},
@@ -242,7 +244,7 @@ void http_post_realtime(double y_area, double value)
     }
   }
 
-  date::utc_clock::time_point http_post_whole_belt(int revid, int last_idx, double belt_length)
+  std::tuple<date::utc_clock::time_point,bool> http_post_whole_belt(int revid, int last_idx, double belt_length)
   {
     using namespace flatbuffers;
 
@@ -250,11 +252,12 @@ void http_post_realtime(double y_area, double value)
     auto db_name = global_config["db_name"].get<std::string>();
     auto endpoint_url = global_config["base_url"].get<std::string>();
     auto y_max_length = global_config["y_max_length"].get<double>();
+    auto upload_profile = global_config["upload_profile"].get<bool>();
 
     if (endpoint_url == "null")
     {
       spdlog::get("upload")->info("http_post_whole_belt set to null. Belt not uploaded");
-      return now;
+      return {now,true};
     }
 
     auto fetch_profile = fetch_belt_coro(revid, last_idx);
@@ -271,7 +274,7 @@ void http_post_realtime(double y_area, double value)
     if (err != 0)
     {
       spdlog::get("upload")->error("Unable to fetch profile parameters from DB");
-      return now;
+      return {now,true};
     }
 
     auto z_resolution = params.z_res;
@@ -280,7 +283,14 @@ void http_post_realtime(double y_area, double value)
 
     if(std::floor(y_max_length * 0.75 / params.y_res) > last_idx) {
       spdlog::get("upload")->error("Ignoring uploading incomplete belt with last idx of {}", last_idx);
-      return now;
+      return {now,true};
+    }
+
+    auto cnt_width_n = count_with_width_n(db_name, revid, WidthN);
+
+    if(cnt_width_n < 0 && cnt_width_n != belt_length) {
+      spdlog::get("upload")->error("Profiles of belt not same number of samples");
+      return {now,true};
     }
 
     auto start = std::chrono::high_resolution_clock::now();
@@ -319,7 +329,7 @@ void http_post_realtime(double y_area, double value)
 
         if (profiles_flat.size() == 256)
         {
-          size += send_flatbuffer_array(builder, z_resolution, z_offset, frame_idx, profiles_flat, endpoint);
+          size += send_flatbuffer_array(builder, z_resolution, z_offset, frame_idx, profiles_flat, endpoint, upload_profile);
           frame_idx = -1;
         }
       }
@@ -327,17 +337,18 @@ void http_post_realtime(double y_area, double value)
       {
         if (profiles_flat.size() > 0)
         {
-          size += send_flatbuffer_array(builder, z_resolution, z_offset, frame_idx, profiles_flat, endpoint);
+          size += send_flatbuffer_array(builder, z_resolution, z_offset, frame_idx, profiles_flat, endpoint, upload_profile);
         }
         final_idx = idx;
         break;
       }
     }
 
+    bool failure = false;
     if(final_idx == last_idx-1) {
       http_post_profile_properties(revid,ts,belt_length);
     }else{
-      http_post_profile_properties(revid,ts,belt_length);
+      failure = true;
       spdlog::get("upload")->error("Number of profiles sent {} not matching idx of {}", final_idx+1,last_idx);
     }
 
@@ -346,7 +357,7 @@ void http_post_realtime(double y_area, double value)
 
     spdlog::get("upload")->info("ZMAX: {}, SIZE: {}, DUR:{}, RATE(Kb/s):{} ", belt_z_max, size, duration, size / (1000 * duration));
     spdlog::get("upload")->info("Leaving http_post_thread_bulk");
-    return now;
+    return {now,failure};
   }
 
   std::vector<profile> http_get_frame(double y, int len, date::utc_clock::time_point chrono)

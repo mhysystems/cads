@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <tuple>
 
 
 #pragma GCC diagnostic push
@@ -19,6 +20,6 @@ namespace cads
   void realtime_publish_thread(bool&);
   void publish_meta_realtime(std::string Id, double value);
   void http_post_realtime(double y_area, double value);
-  date::utc_clock::time_point http_post_whole_belt(int, int, double);
+  std::tuple<date::utc_clock::time_point,bool> http_post_whole_belt(int, int, double);
   std::vector<profile> http_get_frame(double y, int len, date::utc_clock::time_point chrono);
 }
