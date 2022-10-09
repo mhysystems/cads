@@ -83,6 +83,7 @@ namespace cads
 
       switch (state)
       {
+      no_shedule:
       case no_shedule: {
         fut = std::async(http_post_whole_belt, revid++, idx, belt_length);
         spdlog::get("cads")->info("Posting a belt");
@@ -128,6 +129,7 @@ namespace cads
             state = daily_upload ? post_upload : no_shedule;
           }
           spdlog::get("cads")->info("Belt upload thread finished");
+          if(state == no_shedule) goto no_shedule;
         }
         break;
 
