@@ -220,12 +220,12 @@ void http_post_realtime(double y_area, double value)
     }
   }
 
-  void http_post_profile_properties(int revid, std::string chrono, double belt_length)
+  void http_post_profile_properties(int revid, int last_idx, std::string chrono, double belt_length)
   {
     nlohmann::json params_json;
     auto db_name = global_config["db_name"].get<std::string>();
     auto [params, err] = fetch_profile_parameters(db_name);
-    auto [Ymin,Ymax,YmaxN,WidthN,err2] = fetch_belt_dimensions(revid,db_name);
+    auto [Ymin,Ymax,YmaxN,WidthN,err2] = fetch_belt_dimensions(revid,last_idx,db_name);
 
     params_json["site"] = global_config["site"].get<std::string>();
     params_json["conveyor"] = global_config["conveyor"].get<std::string>();
@@ -269,7 +269,7 @@ void http_post_realtime(double y_area, double value)
     cpr::Url endpoint{mk_post_profile_url(ts)};
 
     auto [params, err] = fetch_profile_parameters(db_name);
-    auto [Ymin,Ymax,YmaxN,WidthN,err2] = fetch_belt_dimensions(revid,db_name);
+    auto [Ymin,Ymax,YmaxN,WidthN,err2] = fetch_belt_dimensions(revid,last_idx,db_name);
     
     if (err != 0)
     {
@@ -279,7 +279,7 @@ void http_post_realtime(double y_area, double value)
 
     auto z_resolution = params.z_res;
     auto z_offset =  params.z_off;
-    auto y_step = belt_length / YmaxN;
+    auto y_step = belt_length / (YmaxN);
 
     if(std::floor(y_max_length * 0.75 / params.y_res) > last_idx) {
       spdlog::get("upload")->error("Belt less than 0.75 of max belt length. Length of {}, revid: {}", belt_length, revid);
@@ -288,8 +288,13 @@ void http_post_realtime(double y_area, double value)
 
     auto cnt_width_n = count_with_width_n(db_name, revid, WidthN);
 
-    if(cnt_width_n < 0 && cnt_width_n != belt_length) {
+    if(cnt_width_n < 0 && cnt_width_n != YmaxN) {
       spdlog::get("upload")->error("Profiles of belt not same number of samples. revid: {}", revid);
+      return {now,true};
+    }
+
+    if((last_idx-1) != (int)YmaxN) {
+      spdlog::get("upload")->error("Database doesn't contain the number of profiles requested. revid: {}, requested: {}, retrieved:{}", revid, last_idx-1, YmaxN);
       return {now,true};
     }
 
@@ -344,9 +349,16 @@ void http_post_realtime(double y_area, double value)
       }
     }
 
+    y_adjustment -= y_step;
+
+    if(std::abs((y_adjustment / belt_length) - 1) > 0.001 ) {
+      spdlog::get("upload")->error("Uploaded belt length validation failed. revid: {}, requested: {}, retrieved:{}", revid, belt_length, y_adjustment);
+      return {now,true};
+    }
+
     bool failure = false;
     if(final_idx == last_idx-1) {
-      http_post_profile_properties(revid,ts,belt_length);
+      http_post_profile_properties(revid,last_idx,ts,y_adjustment);
     }else{
       failure = true;
       spdlog::get("upload")->error("Number of profiles sent {} not matching idx of {}. Revid id: {}", final_idx+1,last_idx, revid);

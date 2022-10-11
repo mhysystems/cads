@@ -439,7 +439,9 @@ namespace cads
 
       auto avg = z | views::take(left_edge_index + fiducial_x) | views::drop(left_edge_index);
       float  avg2 = (float)std::accumulate(avg.begin(), avg.end(), 0.0) / (float)fiducial_x;
-      clip_height = (clip_height + avg2) / 2.0f;
+      const auto clip_height_check = (clip_height + avg2) / 2.0f;
+      if(clip_height_check > clip_height) clip_height = clip_height_check;
+     
       barrel_height_compensate(z, -bottom_filtered, clip_height + 3.0f);
 
       auto f = z | views::take(left_edge_index + width_n) | views::drop(left_edge_index);

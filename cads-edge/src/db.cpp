@@ -173,13 +173,14 @@ namespace cads
     return rtn;
   }
 
-  std::tuple<double, double, double, double, int> fetch_belt_dimensions(int revid, std::string name)
+  std::tuple<double, double, double, double, int> fetch_belt_dimensions(int revid, int idx, std::string name)
   {
 
-    auto query = R"(SELECT MIN(Y),MAX(Y),COUNT(Y),LENGTH(Z) FROM PROFILE WHERE REVID = ? LIMIT 1)"s;
+    auto query = R"(SELECT MIN(Y),MAX(Y),COUNT(Y),LENGTH(Z) FROM PROFILE WHERE REVID = ? AND IDX < ? LIMIT 1)"s;
     auto [db, stmt] = prepare_query(name, query);
 
     auto err = sqlite3_bind_int(stmt.get(), 1, revid);
+    err = sqlite3_bind_int(stmt.get(), 2, idx);
 
     tie(err, stmt) = db_step(move(stmt));
 

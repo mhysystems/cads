@@ -229,7 +229,7 @@ namespace cads
                   auto estimated_belt_length = pully_circumfrence * (double(barrel_rotation_cnt - barrel_rotation_offset) / 2.0);
                   spdlog::get("cads")->info("Barrel rotation count : {} Estimated Belt Length: {}",barrel_rotation_cnt - barrel_rotation_offset, estimated_belt_length / 1000);
                   publish_meta_realtime("CurrentLength",estimated_belt_length);
-                  next_fifo.enqueue({msgid::belt_length, estimated_belt_length});
+                  next_fifo.enqueue({msgid::complete_belt, estimated_belt_length});
                 }
                 
                 barrel_rotation_offset = barrel_rotation_cnt;

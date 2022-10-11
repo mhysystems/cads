@@ -21,6 +21,6 @@ namespace cads
   int store_profile_parameters(profile_params p, std::string name = "");
   std::tuple<profile_params, int> fetch_profile_parameters(std::string name);
 
-  std::tuple<double,double,double,double,int> fetch_belt_dimensions(int revid, std::string name);
+  std::tuple<double,double,double,double,int> fetch_belt_dimensions(int revid, int idx, std::string name);
 
 }

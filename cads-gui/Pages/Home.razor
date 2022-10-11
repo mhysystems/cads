@@ -15,9 +15,9 @@
 			{		
         <MudItem xs="4">
           <MudCard>
-            <MudLink Href=@(SiteHasData(site) ? "sites/"+ site +"/" + FirstBelt(site) : "/")>
+            <MudNavLink Href=@(SiteHasData(site) ? "sites/"+ site +"/" + FirstBelt(site) : "/")>
               <MudCardMedia Image=@("https://cadswebsite.blob.core.windows.net/wwwroot/" + site + ".png") Style=@(SiteHasData(site) ? "" : "filter: grayscale(1);") />
-            </MudLink>
+            </MudNavLink>
             <MudCardContent>
               <MudText Typo="Typo.h4" Align="Align.Center" GutterBottom="true">@displayName</MudText>
             </MudCardContent>

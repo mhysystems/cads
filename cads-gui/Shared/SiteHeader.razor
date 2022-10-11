@@ -16,12 +16,12 @@
   <MudDrawer Open="false" OpenMiniOnHover="false" Fixed="true" Variant="@DrawerVariant.Mini"
   ClipMode="DrawerClipMode.Always" Elevation="0">
   <MudNavMenu>
-    <MudNavLink DisableRipple=true IconColor="Color.Tertiary" Match="NavLinkMatch.All" Icon="@Icons.Filled.Home">Home
+    <MudNavLink Href="/" DisableRipple=true IconColor="Color.Tertiary" Match="NavLinkMatch.All" Icon="@Icons.Filled.Home">Home
     <MudTooltip Text="Home"/>
     </MudNavLink>
     <MudNavLink DisableRipple=true Icon="@Icons.Filled.AccessAlarm">Alarm</MudNavLink>
     <MudNavLink DisableRipple=true Icon="@Icons.Filled.OnlinePrediction">Prediction</MudNavLink>
-    <MudNavLink DisableRipple=true Icon="@Icons.Filled.TrendingUp">Trend</MudNavLink>
+    <MudNavLink Href="/sites/trend" DisableRipple=true Icon="@Icons.Filled.TrendingUp">Trend</MudNavLink>
     <MudNavLink DisableRipple=true Icon="@Icons.Filled.Settings">Settings</MudNavLink>
   </MudNavMenu>
 </MudDrawer>

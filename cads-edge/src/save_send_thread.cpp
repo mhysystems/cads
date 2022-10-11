@@ -90,7 +90,7 @@ namespace cads
         {
           fut = std::async(http_post_whole_belt, read_revid, idx, belt_length);
           write_revid++;
-          spdlog::get("cads")->info("Posting a belt");
+          spdlog::get("cads")->info("Posting a belt. Writing data to revid: {}",write_revid);
           state = uploading;
           break;
         }
@@ -108,7 +108,7 @@ namespace cads
               fut = std::async(http_post_whole_belt, read_revid, idx, belt_length);
               write_revid++;
               state = uploading;
-              spdlog::get("cads")->info("Posting a belt");
+              spdlog::get("cads")->info("Posting a belt. Writing data to revid: {}. Reading data from revid: {}",write_revid,read_revid);
             }
             else
             {
@@ -137,7 +137,7 @@ namespace cads
               write_revid--;
               state = daily_upload ? post_upload : no_shedule;
             }
-            spdlog::get("cads")->info("Belt upload thread finished");
+            spdlog::get("cads")->info("Belt upload thread finished. Writing data to revid: {}", write_revid);
           }else {
             process = false;
           }
@@ -169,10 +169,8 @@ namespace cads
     {
       cads::coro<int, std::tuple<int, int, cads::profile>, 1> store_profile = store_profile_coro();
       coro<long, std::tuple<long, double>, 1> daily_upload = daily_upload_coro(0);
-      long sequence_cnt = 0;
       long revid = 0;
       long idx = 0;
-      double belt_length = 0;
     } global;
 
     struct transitions
@@ -184,36 +182,32 @@ namespace cads
 
         const auto store_action = [](global_t &global, const scan_t &e)
         {
-          if (e.value.y == 0)
-          {
-            if (global.sequence_cnt++ > 0)
-            {
-              bool terminate = false;
-              std::tie(terminate, global.revid) = global.daily_upload.resume({global.idx, global.belt_length});
-            }
-            global.idx = 0;
+          auto [co_end,s_err] = global.store_profile.resume({global.revid, global.idx, e.value});
+          if(s_err == 101) {
+            global.idx++;
+          }else{
+            // error
           }
-
-          global.store_profile.resume({global.revid, global.idx++, e.value});
         };
 
-        const auto update_belt_length = [](global_t &global, const belt_length_t &e)
+        const auto complete_belt_action = [](global_t &global, const complete_belt_t &e)
         {
-          global.belt_length = e.value;
+            bool terminate = false;
+            std::tie(terminate, global.revid) = global.daily_upload.resume({global.idx, e.value});
+            global.idx = 0;
         };
 
-        const auto invalid_action = [](global_t &global)
+        const auto reset_globals_action = [](global_t &global)
         {
-          global.sequence_cnt = 0;
           global.idx = 0;
           global.revid = 0;
         };
 
         return make_transition_table(
-            *"invalid_data"_s + event<begin_sequence_t> = "valid_data"_s,
+            *"invalid_data"_s + event<begin_sequence_t> / reset_globals_action  = "valid_data"_s,
             "valid_data"_s + event<scan_t> / store_action = "valid_data"_s,
-            "valid_data"_s + event<belt_length_t> / update_belt_length = "valid_data"_s,
-            "valid_data"_s + event<end_sequence_t> / invalid_action = "invalid_data"_s);
+            "valid_data"_s + event<complete_belt_t> / complete_belt_action = "valid_data"_s,
+            "valid_data"_s + event<end_sequence_t> / reset_globals_action = "invalid_data"_s);
       }
     };
 
@@ -237,8 +231,8 @@ namespace cads
       case msgid::end_sequence:
         sm.process_event(end_sequence_t{});
         break;
-      case msgid::belt_length:
-        sm.process_event(belt_length_t{get<double>(get<1>(m))});
+      case msgid::complete_belt:
+        sm.process_event(complete_belt_t{get<double>(get<1>(m))});
         break;
       default:
         loop = false;
