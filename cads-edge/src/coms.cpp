@@ -220,7 +220,7 @@ void http_post_realtime(double y_area, double value)
     }
   }
 
-  void http_post_profile_properties(int revid, int last_idx, std::string chrono, double belt_length)
+  void http_post_profile_properties(int revid, int last_idx, std::string chrono, double belt_length, double y_step)
   {
     nlohmann::json params_json;
     auto db_name = global_config["db_name"].get<std::string>();
@@ -230,7 +230,7 @@ void http_post_realtime(double y_area, double value)
     params_json["site"] = global_config["site"].get<std::string>();
     params_json["conveyor"] = global_config["conveyor"].get<std::string>();
     params_json["chrono"] = chrono;
-    params_json["y_res"] = params.y_res;
+    params_json["y_res"] = y_step;
     params_json["x_res"] = params.x_res;
     params_json["z_res"] = params.z_res;
     params_json["z_off"] = params.z_off;
@@ -358,7 +358,7 @@ void http_post_realtime(double y_area, double value)
 
     bool failure = false;
     if(final_idx == last_idx-1) {
-      http_post_profile_properties(revid,last_idx,ts,y_adjustment);
+      http_post_profile_properties(revid,last_idx,ts,y_adjustment,y_step);
     }else{
       failure = true;
       spdlog::get("upload")->error("Number of profiles sent {} not matching idx of {}. Revid id: {}", final_idx+1,last_idx, revid);
