@@ -4,6 +4,8 @@ table plot_data {
 	x_off : double;
 	y_samples : [double];
 	z_samples : [float];
+  y_next : double;
+  y_prev : double;
 }
 
 root_type plot_data;
