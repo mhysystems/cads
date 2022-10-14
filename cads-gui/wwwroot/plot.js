@@ -494,21 +494,24 @@ class PlotDataCache {
     return r;
   }
 
-  inCacheSet(c) {
+  async inCacheSet(c) {
 
     for (const k of this.cache.keys()) {
       if (this.compareSets(k, c)) {
-        return [true, this.cache.get(k)];
+        const p = this.cache.get(k);
+        let resolved = false;
+        await p.then(e => resolved = true);
+        return [resolved, p];
       }
     }
 
     return [false, {}]
   }
 
-  inCache(belt, y, windowLen) {
+  async inCache(belt, y, windowLen) {
 
     const c = new Set([belt, y, windowLen]);
-    return this.inCacheSet(c);
+    return await this.inCacheSet(c);
   }
 
   async insertCache(belt, y, windowLen, data) {
@@ -541,7 +544,7 @@ class PlotDataCache {
 
   async fetchData(belt, y, windowLen, leftLen) {
 
-    const [inCache, data] = this.inCache(belt, y, windowLen);
+    const [inCache, data] = await this.inCache(belt, y, windowLen);
 
     if (inCache) {
       return data;
@@ -550,7 +553,7 @@ class PlotDataCache {
     const blazor = this.blazor;
     const plotDataPromise = fetch(`api/belt/${belt}/${y}/${windowLen}/${leftLen}`)
       .then(r => {
-        if (r.ok) throw new Error(`Response not ok. ${r.statusText}`);
+        if (!r.ok) throw new Error(`Response not ok. ${r.statusText}`);
         const reader = r.body.getReader();
 
         const contentLength = r.headers.get('Content-Length');
