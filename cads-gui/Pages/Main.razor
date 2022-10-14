@@ -10,31 +10,33 @@
 @inject ISnackbar Snackbar
 
 <SiteHeader>
-   <SearchControls SelectZDepthParams="@LoadZDepthParamsAsync" DateChanged="@DateChanged" Belt="@belt" JumpTo="@JumpToAsync" StepBack="@StepBackward" StepForward="@StepForward" Search="@SearchBelt"/>
+  <SearchControls SelectZDepthParams="@LoadZDepthParamsAsync" DateChanged="@DateChanged" Belt="@belt"
+    JumpTo="@JumpToAsync" StepBack="@StepBackward" StepForward="@StepForward" Search="@SearchBelt" />
 </SiteHeader>
 
-<MudContainer MaxWidth="MaxWidth.False" Class="ma-0 pa-0" Style="width:calc(100vw - var(--mud-drawer-width-mini-left));height:calc(100vh - var(--mud-appbar-height)">
+<MudContainer MaxWidth="MaxWidth.False" Class="ma-0 pa-0"
+  Style="width:calc(100vw - var(--mud-drawer-width-mini-left));height:calc(100vh - var(--mud-appbar-height)">
   <MudGrid Class="ma-0" Style="height:100%" Spacing=0>
     <MudItem xs="12" Class="d-flex" Style="height:40%">
-      <DoughnutPlot @ref="doughnutPlot" Style="flex-shrink:2" Belt="@belt" Y="@UpdateYAsync"/>
-      
-          <MudContainer Class="d-flex flex-column ">
-          <ZDepthQuery @ref="zDepthQuery" Belt=@Beltservice.GetBelt(site,conveyor) ></ZDepthQuery>
-          <MudExpansionPanels  Class="z-30">
-             <MudExpansionPanel Class="overflow-auto" Dense="true" MaxHeight="270" Text="Search Results">
-                        <Ztable @ref="@zDepthTabe" selectedRow="@UpdateYAsync"></Ztable>
-            </MudExpansionPanel>
+      <DoughnutPlot @ref="doughnutPlot" Style="flex-shrink:2" Belt="@belt" Y="@UpdateYAsync" />
 
-          </MudExpansionPanels>
-          </MudContainer>
-          
-          <RealtimeDetection Site="@site" Conveyor="@conveyor"/>
+      <MudContainer Class="d-flex flex-column ">
+        <ZDepthQuery @ref="zDepthQuery" Belt=@Beltservice.GetBelt(site,conveyor)></ZDepthQuery>
+        <MudExpansionPanels Class="z-30">
+          <MudExpansionPanel Class="overflow-auto" Dense="true" MaxHeight="270" Text="Search Results">
+            <Ztable @ref="@zDepthTabe" selectedRow="@UpdateYAsync"></Ztable>
+          </MudExpansionPanel>
 
-          <BeltMetadata Site="@site" Conveyor="@conveyor"/>
- </MudItem>
+        </MudExpansionPanels>
+      </MudContainer>
+
+      <RealtimeDetection Site="@site" Conveyor="@conveyor" />
+
+      <BeltMetadata Site="@site" Conveyor="@conveyor" />
+    </MudItem>
 
     <MudItem xs="12" Style="height:50%">
-      <MudProgressLinear Color="Color.Secondary" Class="my-0" Value="@progressPercentage"/>
+      <MudProgressLinear Color="Color.Secondary" Class="my-0" Value="@progressPercentage" />
       <SurfacePlot @ref="surfacePlot" Belt="@belt" YIndex="@UpdateProfilePlotAsync"></SurfacePlot>
     </MudItem>
     <MudItem xs="12" Style="height:10%">
@@ -56,7 +58,7 @@
   ProfilePlot profilePlot;
   ZDepthQuery zDepthQuery;
   DoughnutPlot doughnutPlot;
- 
+
   Ztable zDepthTabe;
 
   double currentY = 0;
@@ -69,7 +71,7 @@
 
   protected override async Task OnInitializedAsync()
   {
-    belt = Beltservice.GetBelt(site,conveyor);
+    belt = Beltservice.GetBelt(site, conveyor);
   }
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -78,43 +80,50 @@
     {
       selfReference = DotNetObjectReference.Create(this);
       var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
-      plotDataCache = await module.InvokeAsync<IJSObjectReference>("mk_PlotDataCache",selfReference);
-      await UpdateYAsync(currentY);    
+      plotDataCache = await module.InvokeAsync<IJSObjectReference>("mk_PlotDataCache", selfReference);
+      await UpdateYAsync(currentY);
     }
-  }  
+  }
 
-  async Task LoadZDepthParamsAsync(IEnumerable<SavedZDepthParams> xs) {
+  async Task LoadZDepthParamsAsync(IEnumerable<SavedZDepthParams> xs)
+  {
     await zDepthQuery.LoadZDepthParamsAsync(xs);
   }
-  
-  async Task UpdateProfilePlotAsync(int y) {
+
+  async Task UpdateProfilePlotAsync(int y)
+  {
     var plotDataPromise = await plotDataCache.InvokeAsync<IJSObjectReference>("getLastFetch");
-    await profilePlot.UpdatePlotAsync(plotDataPromise,y);
+    await profilePlot.UpdatePlotAsync(plotDataPromise, y);
   }
 
-  async Task StepForward() {
-    currentY += (belt.y_res*1024);
-    currentY = NoAsp.Mod(currentY,belt.Ymax);
+  async Task StepForward()
+  {
+    currentY += (belt.y_res * 1024);
+    currentY = NoAsp.Mod(currentY, belt.Ymax);
     await UpdateYAsync(currentY);
   }
 
-  async Task StepBackward() {
-    currentY -= (belt.y_res*1024);
-    currentY = NoAsp.Mod(currentY,belt.Ymax);
+  async Task StepBackward()
+  {
+    currentY -= (belt.y_res * 1024);
+    currentY = NoAsp.Mod(currentY, belt.Ymax);
     await UpdateYAsync(currentY);
   }
-  
+
   [JSInvokable]
-  public async Task SetProgressPercentageAsync(double p) {
-    if(p < 0) {
+  public async Task SetProgressPercentageAsync(double p)
+  {
+    if (p < 0)
+    {
       p = 0;
     }
 
-    if(p > 1) {
+    if (p > 1)
+    {
       p = 1;
     }
 
-    progressPercentage = 100*p;
+    progressPercentage = 100 * p;
     StateHasChanged();
 
   }
@@ -123,24 +132,36 @@
   {
     currentY = zd.y;
     surfacePlot.Loading = true;
-    var plotDataPromise = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData",belt.name,currentY,512,512);
+    try
+    {
+      var plotDataPromise = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData", belt.name, currentY, 512, 512);
 
-    await surfacePlot.UpdatePlotWithOverlayAsync(plotDataPromise,zd);
-    await profilePlot.UpdatePlotAsync(plotDataPromise);
-    
-    surfacePlot.Loading = false;  
+      await surfacePlot.UpdatePlotWithOverlayAsync(plotDataPromise, zd);
+      await profilePlot.UpdatePlotAsync(plotDataPromise);
+    }
+    catch (Exception)
+    {
+      Snackbar.Add($"Problem retrieving data", Severity.Error);
+    }
+    surfacePlot.Loading = false;
   }
 
   async Task UpdateYAsync(double y)
   {
     currentY = y;
     surfacePlot.Loading = true;
-    var plotDataPromise = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData",belt.name,currentY,512,512);
+    try
+    {
+      var plotDataPromise = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData", belt.name, currentY, 512, 512);
 
-    await surfacePlot.UpdatePlotAsync(plotDataPromise);
-    await profilePlot.UpdatePlotAsync(plotDataPromise);
-
-    surfacePlot.Loading = false;  
+      await surfacePlot.UpdatePlotAsync(plotDataPromise);
+      await profilePlot.UpdatePlotAsync(plotDataPromise);
+    }
+    catch (Exception)
+    {
+      Snackbar.Add($"Problem retrieving data", Severity.Error);
+    }
+    surfacePlot.Loading = false;
   }
 
   async Task JumpToAsync(double y)
@@ -148,89 +169,96 @@
     await UpdateYAsync(1000 * y);
   }
 
-  async Task DateChanged(DateTime? date) {
+  async Task DateChanged(DateTime? date)
+  {
 
-    if(!date.HasValue) {
+    if (!date.HasValue)
+    {
       return;
     }
-    
-    
-    var b = Beltservice.GetBelt(site,conveyor,date.Value);
-    
-    if(b is not null) {
+
+
+    var b = Beltservice.GetBelt(site, conveyor, date.Value);
+
+    if (b is not null)
+    {
       Snackbar.Add($"Loading belt scan on {DateOnly.FromDateTime(date.Value)}", Severity.Info);
       belt = b;
       await UpdateYAsync(currentY);
       StateHasChanged();
-    }else {
+    }
+    else
+    {
       Snackbar.Add($"No belt scan for {DateOnly.FromDateTime(date.Value)}", Severity.Warning);
     }
   }
 
 
-async Task SearchBelt()
-	{
+  async Task SearchBelt()
+  {
 
     var scan = zDepthQuery.SearchParameters;
     doughnutPlot.AnimateSearch = true;
-		
-		await Task.Delay(1);
 
-		//z_depth_value.Clear();
+    await Task.Delay(1);
 
-		var procn = Environment.ProcessorCount;
+    //z_depth_value.Clear();
 
-		long y_len = 1 + ((long)belt.YmaxN / procn);
-		var offsets = from number in Enumerable.Range(0, procn) select (number * y_len + 1, y_len);
+    var procn = Environment.ProcessorCount;
 
-		P3 zmin = new P3(0, 0, Double.MaxValue);
+    long y_len = 1 + ((long)belt.YmaxN / procn);
+    var offsets = from number in Enumerable.Range(0, procn) select (number * y_len + 1, y_len);
 
-		var zDepth = new ConcurrentBag<List<ZDepth>>();
-		//foreach(var offset in offsets)
-		//Parallel.ForEach(offsets, async (offset) =>
-		//var ts = offsets.Select(async (offset) =>
-		try
-		{
-			await Parallel.ForEachAsync(offsets, async (offset, token) =>
-			{
-				logger.LogDebug("Parallel.ForEach Thread ID: " + System.Threading.Thread.CurrentThread.ManagedThreadId);
+    P3 zmin = new P3(0, 0, Double.MaxValue);
 
-				await foreach (var z in Beltservice.BeltScanAsync(scan.Width, scan.Length, scan.Percentage, scan.Depth, belt, offset.Item1, offset.Item2))
-				{
-					var (xs, pz) = z;
-					zmin = zmin.z < pz.z ? zmin : pz;
-					zDepth.Add(xs);
-					// z_depth_value.AddRange(xs);
-				}
-			});
-		}
-		catch (Exception e)
-		{
-			logger.LogError(e.Message);
-		}
+    var zDepth = new ConcurrentBag<List<ZDepth>>();
+    //foreach(var offset in offsets)
+    //Parallel.ForEach(offsets, async (offset) =>
+    //var ts = offsets.Select(async (offset) =>
+    try
+    {
+      await Parallel.ForEachAsync(offsets, async (offset, token) =>
+      {
+        logger.LogDebug("Parallel.ForEach Thread ID: " + System.Threading.Thread.CurrentThread.ManagedThreadId);
+
+        await foreach (var z in Beltservice.BeltScanAsync(scan.Width, scan.Length, scan.Percentage, scan.Depth, belt,
+  offset.Item1, offset.Item2))
+        {
+          var (xs, pz) = z;
+          zmin = zmin.z < pz.z ? zmin : pz;
+          zDepth.Add(xs);
+          // z_depth_value.AddRange(xs);
+        }
+      });
+    }
+    catch (Exception e)
+    {
+      logger.LogError(e.Message);
+    }
 
 
-		if (zDepth.Any())
-		{
-      doughnutPlot.data = zDepth.SelectMany(i => i).OrderBy(i => i.y).Select(d => new PlotInfo(d.y,belt.FrameLength,d.z.z,"")).Take(1024).ToList();
+    if (zDepth.Any())
+    {
+      doughnutPlot.data = zDepth.SelectMany(i => i).OrderBy(i => i.y).Select(d => new
+      PlotInfo(d.y, belt.FrameLength, d.z.z, "")).Take(1024).ToList();
       zDepthTabe.data = zDepth.SelectMany(i => i).Take(1024).ToList();
       var fn = zDepthQuery.MakeAreaOfInterest();
       surfacePlot.HighlightSurface(fn);
 
       /*
-			lowest = zmin;
-			z_depth_value = zDepth.SelectMany(i => i).OrderBy(i => i.y).Take(1024).ToList();
-			//z_depth_value.Sort((a, b) => {return a.y < b.y ? -1 : a.y == b.y ? 0 : 1;});
-			plot_query = query;
-			var s = (await Beltservice.get_color_range2(fn, BeltConstants, c_level)).ToArray();
-			await plotly.change_color_range4(s);
+      lowest = zmin;
+      z_depth_value = zDepth.SelectMany(i => i).OrderBy(i => i.y).Take(1024).ToList();
+      //z_depth_value.Sort((a, b) => {return a.y < b.y ? -1 : a.y == b.y ? 0 : 1;});
+      plot_query = query;
+      var s = (await Beltservice.get_color_range2(fn, BeltConstants, c_level)).ToArray();
+      await plotly.change_color_range4(s);
       */
 
-		}
-		
+    }
+
     doughnutPlot.AnimateSearch = false;
 
-	}
+  }
 
   public void Dispose() => selfReference?.Dispose();
 }

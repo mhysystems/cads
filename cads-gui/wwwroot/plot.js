@@ -550,7 +550,7 @@ class PlotDataCache {
     const blazor = this.blazor;
     const plotDataPromise = fetch(`api/belt/${belt}/${y}/${windowLen}/${leftLen}`)
       .then(r => {
-        if (!r.ok) throw new Error();
+        if (r.ok) throw new Error(`Response not ok. ${r.statusText}`);
         const reader = r.body.getReader();
 
         const contentLength = r.headers.get('Content-Length');

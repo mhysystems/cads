@@ -63,7 +63,7 @@ namespace cads_gui.Data
 
     public static async Task<List<Profile>> RetrieveFrameAsync(string db, double y_min, long len)
     {
-
+      
       var frame = new List<Profile>();
       var order = len >= 0 ? "asc" : "desc";
       var op = len >= 0 ? ">=" : "<";

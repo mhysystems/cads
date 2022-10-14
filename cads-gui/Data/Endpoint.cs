@@ -31,15 +31,17 @@ namespace cads_gui.Data
       {
         if (len < 1) return NotFound();
 
-        var frame = await NoAsp.RetrieveFrameModular(belt, y, len, left);
-
+        var frame = await NoAsp.RetrieveFrameModular(belt, y, len+1, left+1);
+        var dbg = frame.Skip(1).SkipLast(1).SelectMany(x => x.z).ToArray();
         var builder = new FlatBufferBuilder(frame.Capacity);
 
         var data = CadsFlatbuffers.plot_data.Createplot_data(
           builder,
           frame.First().x_off,
-          CadsFlatbuffers.plot_data.CreateYSamplesVector(builder, frame.Select(x => x.y).ToArray()),
-          CadsFlatbuffers.plot_data.CreateZSamplesVector(builder, NoAsp.b2f(frame.SelectMany(x => x.z).ToArray()))
+          CadsFlatbuffers.plot_data.CreateYSamplesVector(builder, frame.Skip(1).SkipLast(1).Select(x => x.y).ToArray()),
+          CadsFlatbuffers.plot_data.CreateZSamplesVector(builder, NoAsp.b2f(dbg)),
+          frame.Last().y,
+          frame.First().y
         );
 
         builder.Finish(data.Value);
