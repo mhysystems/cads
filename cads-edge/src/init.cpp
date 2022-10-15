@@ -23,7 +23,7 @@ void init_logs(size_t log_len,size_t flush) {
   dup_filter[0]->add_sink(std::make_shared<spdlog::sinks::syslog_sink_mt>("cads",0,LOG_USER,false));
   //dup_filter[1]->add_sink(std::make_shared<spdlog::sinks::stdout_color_sink_mt>());
   
-  array<spdlog::sink_ptr,2> ms{
+    array<spdlog::sink_ptr,1> ms{
     dup_filter[0]
   //  ,dup_filter[1]
   };

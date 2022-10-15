@@ -50,8 +50,9 @@ int main(int argn, char **argv)
   if(vm["stop"].as<bool>()) {
     using namespace std;
     cout << "Only stopping gocator" << endl;
-    init_logs(1024*1024,1);
+    init_logs(5 * 1024 * 1024,60);
     stop_gocator();
+    drop_logs();
     return 0;
   }
 
