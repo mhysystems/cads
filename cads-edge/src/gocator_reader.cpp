@@ -197,7 +197,7 @@ namespace cads
   void GocatorReader::RunForever()
   {
     Start();
-    spdlog::info("Started Gocator");
+    spdlog::get("gocator")->info("Started Gocator");
 
     while (m_loop)
     {
@@ -206,7 +206,7 @@ namespace cads
     }
 
     Stop();
-    spdlog::info("Stopped Gocator");
+    spdlog::get("gocator")->info("Stopped Gocator");
   }
 
   kStatus GocatorReader::OnSystem(GoSystem system, GoDataSet dataset)
@@ -218,7 +218,7 @@ namespace cads
       {
         auto healthIndicator = GoHealthMsg_At(message, k);
         if (healthIndicator->id == GO_HEALTH_ENCODER_VALUE)
-          spdlog::info("Indicator[{}]: Id:{} Instance:{} Value:{}", k, healthIndicator->id, healthIndicator->instance, healthIndicator->value);
+          spdlog::get("gocator")->info("Indicator[{}]: Id:{} Instance:{} Value:{}", k, healthIndicator->id, healthIndicator->instance, healthIndicator->value);
       }
     }
 
