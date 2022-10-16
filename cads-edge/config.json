@@ -25,7 +25,8 @@
     "current_length" : [903000,907000],
     "surface_speed" : [1.8,2.5],
     "pulley_oscillation" : [1,2],
-    "cads_to_origin" : [0,907000]
+    "cads_to_origin" : [0,907000],
+    "rotation_period" : [140000,210000]
   },
   "db_name" : "profile.db",
   "belt_cross_correlation_threshold" : 0.4,

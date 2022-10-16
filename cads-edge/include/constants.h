@@ -19,6 +19,7 @@ namespace cads {
     value_type SurfaceSpeed;
     value_type PulleyOcillation;
     value_type CadsToOrigin;
+    value_type RotationPeriod;
   };
 
   extern constraints global_constraints;
