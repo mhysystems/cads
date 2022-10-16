@@ -1,32 +1,37 @@
-#include <boost/math/statistics/linear_regression.hpp>
 #include <vector>
 #include <numeric>
 #include <ranges>
-#include <Eigen/Core>
 #include <cmath>
 #include <limits>
+
+#include <Eigen/Core>
+#include <Eigen/Dense>
 
 #include <regression.h>
 #include <constants.h>
 
 namespace cads
 {
-  using boost::math::statistics::simple_ordinary_least_squares;
 
-  std::tuple<double, double> linear_regression(const z_type &yy, int left_edge_index, int right_edge_index)
-  {
+  std::tuple<double, double> linear_regression(const z_type &yy, int left_edge_index, int right_edge_index) {
+    
     namespace sr = std::ranges;
+    using namespace Eigen;
 
     auto r = yy | sr::views::take(right_edge_index) | sr::views::drop(left_edge_index) | sr::views::filter([](int16_t a)
                                                                                                            { return !NaN<z_element>::isnan(a); });
 
-    std::vector<double> y(r.begin(), r.end());
+    std::vector<double> yr(r.begin(), r.end());
+    auto y = Map<VectorXd>(yr.data(), yr.size());
 
-    std::vector<double> x(y.size());
-
-    std::iota(x.begin(), x.end(), 0);
-    return simple_ordinary_least_squares(x, y);
+    MatrixXd A(y.size(),2);
+    A.setOnes();
+    A.col(1) = ArrayXd::LinSpaced(y.size(), 0, y.size()-1);
+    MatrixXd s = A.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(y); 
+    
+    return {s(0,0),s(1,0)};
   }
+
 
   void regression_compensate(z_type &z, int left_edge_index, int right_edge_index, double gradient)
   {

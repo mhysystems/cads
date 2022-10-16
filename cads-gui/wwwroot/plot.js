@@ -589,7 +589,6 @@ class PlotDataCache {
     return plotDataPromise;
   }
 
-
 }
 
 

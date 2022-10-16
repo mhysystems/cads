@@ -20,7 +20,7 @@ add_project_arguments(
 
 
 thread = dependency('threads')
-boost = dependency('boost', modules : ['program_options','math_tr1f'])
+boost = dependency('boost', modules : ['program_options'])
 sqlite = dependency('sqlite3')
 opencv = dependency('opencv4', required:false, include_type:'system')
 tbb = dependency('tbb')
