@@ -107,12 +107,12 @@ vector<tuple<double,z_element>> histogram(const window& ps, z_element min, z_ele
 }
 
 double left_edge_avg_height(const cv::Mat& belt, const cv::Mat& fiducial) {
-  //double minVal;
-  //cv::minMaxLoc( belt.colRange(0,fiducial.cols*1.5), &minVal);
+
   cv::Mat mout;
   cv::multiply(belt.colRange(0,fiducial.cols),fiducial,mout);
   auto avg_val = cv::sum(mout)[0] / cv::countNonZero(mout);
   return avg_val;
+
 }
 
 tuple<z_element,z_element> barrel_offset(const window& win, double z_resolution, double z_height_mm) {

@@ -62,7 +62,7 @@ libdep = [opencv, tbb, thread, boost, sqlite, http_stuff,log_stuff, flatbuffers,
 subdir('flatbuffers')
 
 subdir('src')
-subdir('test')
+#subdir('test')
 
 
 

@@ -74,8 +74,6 @@ namespace cads
       profile_buffer.push_back(p);
     }
 
-
-
     cv::Mat belt = window_to_mat_fixed(profile_buffer, width_n);
     if (!belt.isContinuous())
     {

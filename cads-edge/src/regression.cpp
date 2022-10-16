@@ -4,7 +4,6 @@
 #include <cmath>
 #include <limits>
 
-#include <Eigen/Core>
 #include <Eigen/Dense>
 
 #include <regression.h>

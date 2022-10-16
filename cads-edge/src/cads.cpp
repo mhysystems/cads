@@ -351,6 +351,8 @@ namespace cads
     z_element schmitt1 = 1.0, schmitt0 = -1.0;
     z_type prev_z;
 
+    long drop_profiles = 1024; // Allow for iir fillter too stablize
+
     do
     {
 
@@ -417,6 +419,11 @@ namespace cads
       
       if (!delayed)
         continue;
+
+      if (drop_profiles > 0) {
+        --drop_profiles;
+        continue;
+      }
 
       auto [y, x, z] = dd;
 
