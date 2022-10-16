@@ -35,7 +35,7 @@ namespace cads_gui.Data
       public string Conveyor {get; set;}
       public string Id {get; set;}
       public double Value {get; set;}
-      public bool Valid {get; set;}
+      public bool Valid {get; set;} = false;
     }
 
     public class AppSettings
