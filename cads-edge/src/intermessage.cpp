@@ -31,8 +31,8 @@ namespace cads {
 
   void publish_RotationPeriod(double value) {
     constraints::value_type range {
-      get<0>(global_constraints.CurrentLength) / get<0>(global_constraints.SurfaceSpeed)
-      ,get<1>(global_constraints.CurrentLength) / get<1>(global_constraints.SurfaceSpeed)
+      get<0>(global_constraints.CurrentLength) / (1000 * get<0>(global_constraints.SurfaceSpeed))
+      ,get<1>(global_constraints.CurrentLength) / (1000 * get<1>(global_constraints.SurfaceSpeed))
     };
 
     auto valid = between(range,value);
