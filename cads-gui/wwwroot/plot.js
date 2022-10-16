@@ -529,7 +529,7 @@ class PlotDataCache {
   }
 
   async getLastFetch() {
-    const [_, data] = this.inCacheSet(this.lastInsert);
+    const [_, data] = await this.inCacheSet(this.lastInsert);
     return data;
   }
 
