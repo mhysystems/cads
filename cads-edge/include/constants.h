@@ -13,6 +13,16 @@ constexpr size_t buffer_warning_increment = 4092;
 
 namespace cads {
 
+  struct constraints {
+    using value_type = std::tuple<double,double>;
+    value_type CurrentLength;
+    value_type SurfaceSpeed;
+    value_type PulleyOcillation;
+    value_type CadsToOrigin;
+  };
+
+  extern constraints global_constraints;
+  
   template<typename T> struct NaN;
 
   template<> struct NaN<int16_t> {

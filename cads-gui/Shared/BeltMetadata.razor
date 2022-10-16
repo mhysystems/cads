@@ -13,35 +13,35 @@
   <MudText Typo="Typo.h6">Surface Speed (m/s)</MudText>
   </MudItem>
   <MudItem xs="4">
-  <MudText Typo="Typo.h6">@SurfaceSpeed.ToString("F2")</MudText>
+  <MudText Typo="Typo.h6">@SurfaceSpeed</MudText>
   </MudItem>
   
   <MudItem xs="8">
   <MudText Typo="Typo.h6">Current Length (m)</MudText>
   </MudItem>
   <MudItem xs="4">
-  <MudText Typo="Typo.h6">@CurrentLength.ToString("F2")</MudText>
+  <MudText Typo="Typo.h6">@CurrentLength</MudText>
   </MudItem>
 
   <MudItem xs="8">
   <MudText Typo="Typo.h6">Rotation period (mm:ss)</MudText>
   </MudItem>
   <MudItem xs="4">
-  <MudText Typo="Typo.h6">@RotationPeriod.ToString(@"mm\:ss")</MudText>
+  <MudText Typo="Typo.h6">@RotationPeriod</MudText>
   </MudItem>
   
   <MudItem xs="8">
   <MudText Typo="Typo.h6">CADS to Origin (m)</MudText>
   </MudItem>
   <MudItem xs="4">
-  <MudText Typo="Typo.h6">@CadsToOrigin.ToString("F2")</MudText>
+  <MudText Typo="Typo.h6">@CadsToOrigin</MudText>
   </MudItem>
   
   <MudItem xs="8">
   <MudText Typo="Typo.h6">Pulley Oscillation (mm)</MudText>
   </MudItem>
   <MudItem xs="4">
-  <MudText Typo="Typo.h6">@PulleyOscillation.ToString("F2")</MudText>
+  <MudText Typo="Typo.h6">@PulleyOscillation</MudText>
   </MudItem>
 
 </MudGrid>
@@ -54,11 +54,11 @@
     [Parameter]
     public string Conveyor { get; set; } = String.Empty;
     private HubConnection? hubConnection;
-    private double SurfaceSpeed = 0.0;
-    private double CurrentLength = 0.0;
-    private TimeSpan RotationPeriod;
-    private double CadsToOrigin = 0.0;
-    private double PulleyOscillation = 0.0;
+    private string SurfaceSpeed = string.Empty;
+    private string CurrentLength = string.Empty;
+    private string RotationPeriod = string.Empty;
+    private string CadsToOrigin = string.Empty;
+    private string PulleyOscillation = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -77,19 +77,19 @@
         {
             switch(message.Id) {
               case "SurfaceSpeed":
-                SurfaceSpeed = message.Value;
+                SurfaceSpeed = message.Valid ? message.Value.ToString("F2") : string.Empty;
               break;
               case "CurrentLength":
-                CurrentLength = message.Value / 1000;
+                CurrentLength = message.Valid ? (message.Value / 1000).ToString("F2") : string.Empty;
               break;
               case "RotationPeriod":
-                RotationPeriod = TimeSpan.FromMilliseconds(message.Value);
+                RotationPeriod = message.Valid ? TimeSpan.FromMilliseconds(message.Value).ToString(@"mm\:ss") : string.Empty;
               break;
               case "CadsToOrigin":
-                CadsToOrigin = message.Value / 1000;
+                CadsToOrigin = message.Valid ? (message.Value / 1000).ToString("F2") : string.Empty;
               break;
               case "PulleyOscillation":
-                PulleyOscillation = message.Value;
+                PulleyOscillation = message.Valid ? message.Value.ToString("F2") : string.Empty;
               break;
               default:
               break;

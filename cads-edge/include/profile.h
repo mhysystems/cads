@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <deque>
 #include <limits>
-#include <cmath>
 #include <functional>
 
 namespace cads
@@ -13,6 +12,7 @@ namespace cads
   using z_element = float; //int16_t;
   using y_type = double;
   using z_type = std::vector<z_element>;
+  
   struct profile{y_type y; double x_off; z_type z;}; 
   using profile_window = std::deque<profile>;
   bool operator==(const profile&, const profile&);

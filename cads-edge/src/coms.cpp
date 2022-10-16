@@ -173,7 +173,7 @@ void http_post_realtime(double y_area, double value)
 
   }
 
-  void publish_meta_realtime(std::string Id, double value)
+  void publish_meta_realtime(std::string Id, double value, bool valid)
   {
     
     if(isnan(value) || isinf(value)) return;
@@ -183,6 +183,7 @@ void http_post_realtime(double y_area, double value)
     params_json["Conveyor"] = global_config["conveyor"].get<std::string>();
     params_json["Id"] = Id;
     params_json["Value"] = value;
+    params_json["Valid"] = valid; 
     
     nats_queue.enqueue({"/realtimemeta",params_json.dump()});
  

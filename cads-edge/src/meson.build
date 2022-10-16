@@ -15,7 +15,8 @@ cadsSrc += files(
   'dynamic_processing.cpp',
   'init.cpp',
   'save_send_thread.cpp',
-  'origin_detection_thread.cpp'
+  'origin_detection_thread.cpp',
+  'intermessage.cpp'
 )
 
 cadsEntry += files('main.cpp')

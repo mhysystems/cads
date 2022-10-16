@@ -13,7 +13,7 @@
 #include <fiducial.h>
 #include <constants.h>
 #include <coro.hpp>
-#include <coms.h>
+#include <intermessage.h>
 
 using namespace moodycamel;
 
@@ -100,7 +100,7 @@ namespace cads
       y_type y = profile_buffer.front().y;
       
       if(sequence_cnt > 0 && (cnt++ % 10000) == 0) {
-        publish_meta_realtime("CadsToOrigin",y);
+        publish_CadsToOrigin(y);
       }
 
 
@@ -125,7 +125,7 @@ namespace cads
           start = now;
 
           if(sequence_cnt > 1) {
-            publish_meta_realtime("RotationPeriod",period);
+            publish_RotationPeriod(period);
             y_max_length =  y * 1.05;
             trigger_length = y * 0.95;
           }
@@ -226,7 +226,7 @@ namespace cads
                 if(origin_sequence_cnt > 0) {
                   auto estimated_belt_length = pully_circumfrence * (double(barrel_rotation_cnt - barrel_rotation_offset) / 2.0);
                   spdlog::get("cads")->info("Barrel rotation count : {} Estimated Belt Length: {}",barrel_rotation_cnt - barrel_rotation_offset, estimated_belt_length / 1000);
-                  publish_meta_realtime("CurrentLength",estimated_belt_length);
+                  publish_CurrentLength(estimated_belt_length);
                   next_fifo.enqueue({msgid::complete_belt, estimated_belt_length});
                 }
                 

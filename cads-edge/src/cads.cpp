@@ -45,7 +45,7 @@
 #include <dynamic_processing.h>
 #include <save_send_thread.h>
 #include <origin_detection_thread.h>
-#include <coms.h>
+#include <intermessage.h>
 
 using namespace std;
 using namespace moodycamel;
@@ -404,8 +404,8 @@ namespace cads
         if (barrel_cnt % 100 == 0)
         {
           spdlog::get("cads")->info("Barrel Frequency(Hz): {}", 1000.0 / ((double)period * 2) );
-          publish_meta_realtime("PulleyOscillation",amplitude_extraction(bottom_filtered,true));
-          publish_meta_realtime("SurfaceSpeed",pully_circumfrence / (2 * period));
+          publish_PulleyOscillation(amplitude_extraction(bottom_filtered,true));
+          publish_SurfaceSpeed(pully_circumfrence / (2 * period));
         }
         winFifo.enqueue({msgid::barrel_rotation_cnt, barrel_cnt});
         barrel_cnt++;
