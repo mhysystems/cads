@@ -1,3 +1,6 @@
-source "$BR2_EXTERNAL_DEFAULT_PATH/package/hardware-nvidia/Config.in"
 source "$BR2_EXTERNAL_DEFAULT_PATH/package/cads-edge/Config.in"
 source "$BR2_EXTERNAL_DEFAULT_PATH/package/cpr/Config.in"
+source "$BR2_EXTERNAL_DEFAULT_PATH/package/hardware-nvidia/Config.in"
+source "$BR2_EXTERNAL_DEFAULT_PATH/package/linux-nvgpu/Config.in"
+source "$BR2_EXTERNAL_DEFAULT_PATH/package/linux-nvidia/Config.in"
+source "$BR2_EXTERNAL_DEFAULT_PATH/package/tegra210/Config.in"
