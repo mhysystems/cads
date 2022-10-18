@@ -1,0 +1,47 @@
+@namespace Cads
+@using cads_gui.Data
+
+@implements IAsyncDisposable
+
+
+@inject IJSRuntime JS
+@inject BeltService Beltservice
+
+<plotly-container>
+    <div id="container-profile" @ref="@jsPlotElement"></div>
+</plotly-container>
+
+
+@code {
+
+  [Parameter]
+	public Belt Belt {get; set;}
+  
+  protected IJSObjectReference jsPlot;
+  protected ElementReference jsPlotElement;  
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender)
+    {
+      var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
+      jsPlot = await module.InvokeAsync<IJSObjectReference>("mk_TrendPlot",jsPlotElement,Belt.x_res,Belt.z_min + 12,Belt.z_max);
+    }
+
+  }
+
+  public async Task UpdatePlotAsync(int index, double XOffset, float[] z, string color) {
+    if(jsPlot is not null) {
+      await jsPlot.InvokeVoidAsync("updatePlot",index,XOffset, z, color);
+    }
+  }
+
+  async ValueTask IAsyncDisposable.DisposeAsync()
+  {
+    try {
+    if (jsPlot is not null) {
+     await jsPlot.DisposeAsync();
+    }
+    }catch(Microsoft.JSInterop.JSDisconnectedException) {}
+  }
+
+}

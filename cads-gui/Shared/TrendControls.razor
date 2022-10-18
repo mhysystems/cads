@@ -1,0 +1,83 @@
+@inject BeltService Beltservice
+
+
+  <MudToolBar Class="d-flex flex-grow-0 ma-0" Style="width:50%">
+  @if(_scanDate0 is not null) {
+    <MudDatePicker Class="mud-theme-secondary mr-4" Style="@($"color:{DatePickerColor[0]}")" AdornmentColor="@Color.Inherit" @bind-Date="@scanDate0" IsDateDisabledFunc="@IsDateDisabledFunc" />
+    <MudDatePicker Class="mud-theme-secondary mr-4" Style="@($"color:{DatePickerColor[1]}")" AdornmentColor="@Color.Inherit" @bind-Date="@scanDate1" IsDateDisabledFunc="@IsDateDisabledFunc" />
+    <MudDatePicker Class="mud-theme-secondary mr-4" Style="@($"color:{DatePickerColor[2]}")" AdornmentColor="@Color.Inherit" @bind-Date="@scanDate2" IsDateDisabledFunc="@IsDateDisabledFunc" />
+    <MudDatePicker Class="mud-theme-secondary mr-4" Style="@($"color:{DatePickerColor[3]}")" AdornmentColor="@Color.Inherit" @bind-Date="@scanDate3" IsDateDisabledFunc="@IsDateDisabledFunc" />
+  }
+  </MudToolBar >
+
+
+@code {
+  string[] DatePickerColor = new string[]{
+    Colors.Orange.Accent3
+    ,Colors.Green.Accent3
+    ,Colors.Blue.Accent3
+    ,Colors.BlueGrey.Default
+  };
+
+  protected DateTime? _scanDate0 = null;
+
+  protected DateTime? scanDate0 { 
+    get{ return _scanDate0;} 
+    set{ 
+      _scanDate0 = value;
+      DateChanged.InvokeAsync((value,0,DatePickerColor[0])).AndForget();
+    } 
+  }
+
+  protected DateTime? _scanDate1 = null;
+
+  protected DateTime? scanDate1 { 
+    get{ return _scanDate1;} 
+    set{ 
+      _scanDate1 = value;
+      DateChanged.InvokeAsync((value,1,DatePickerColor[1])).AndForget();
+    } 
+  }
+
+  protected DateTime? _scanDate2 = null;
+
+  protected DateTime? scanDate2 { 
+    get{ return _scanDate2;} 
+    set{ 
+      _scanDate2 = value;
+      DateChanged.InvokeAsync((value,2,DatePickerColor[2])).AndForget();
+    } 
+  }
+
+  protected DateTime? _scanDate3 = null;
+
+  protected DateTime? scanDate3 { 
+    get{ return _scanDate3;} 
+    set{ 
+      _scanDate3 = value;
+      DateChanged.InvokeAsync((value,3,DatePickerColor[3])).AndForget();
+    } 
+  }
+
+
+  protected Func<DateTime,bool> IsDateDisabledFunc = (DateTime d) => false;
+
+  [Parameter]
+  public Belt Belt {get; set;}
+  
+  [Parameter]
+  public EventCallback<ValueTuple<DateTime?,int,string>> DateChanged {get; set;}
+
+
+  protected override async Task OnInitializedAsync()
+  {
+    _scanDate0 = (await Beltservice.GetBeltDatesAsync(Belt)).LastOrDefault(DateTime.Now); 
+    _scanDate1 = _scanDate0;
+    _scanDate2 = _scanDate0;
+    _scanDate3 = _scanDate0;
+    
+    var validDates = await Beltservice.GetBeltDatesAsync(Belt);
+    IsDateDisabledFunc = (DateTime d) => !validDates.Where(e => e.Date == d.Date).Any();
+  }
+
+}

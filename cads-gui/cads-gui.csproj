@@ -14,6 +14,8 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(OS)' != 'Windows_NT'">
+    <PackageReference Include="fluxor" Version="5.5.0" />
+    <PackageReference Include="fluxor.Blazor.Web" Version="5.5.0" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="6.0.9" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="3.11.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.sqlite" Version="5.0.10" />

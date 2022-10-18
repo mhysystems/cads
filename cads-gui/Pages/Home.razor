@@ -6,7 +6,9 @@
 
 @inject BeltService Beltservice
 
-<SiteHeader />
+<SiteHeader>
+  <MudSpacer/>
+</SiteHeader>
 <MudContainer>
 		<MudText Typo="Typo.h3" Align="Align.Center" GutterBottom="true">Conveyor Anomalies Detection Systems</MudText>
     <MudGrid Spacing="2">
@@ -15,7 +17,7 @@
 			{		
         <MudItem xs="4">
           <MudCard>
-            <MudNavLink Href=@(SiteHasData(site) ? "sites/"+ site +"/" + FirstBelt(site) : "/")>
+            <MudNavLink Href=@(SiteHasData(site) ? "site/dashboard/"+ site +"/" + FirstBelt(site) : "/")>
               <MudCardMedia Image=@("https://cadswebsite.blob.core.windows.net/wwwroot/" + site + ".png") Style=@(SiteHasData(site) ? "" : "filter: grayscale(1);") />
             </MudNavLink>
             <MudCardContent>

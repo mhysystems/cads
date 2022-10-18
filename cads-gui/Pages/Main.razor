@@ -1,17 +1,20 @@
-@page "/sites/{site}/{conveyor}"
+@page "/site/dashboard/{site}/{conveyor}"
 
 @using Cads
 @using Microsoft.Extensions.Logging
 @using System.Collections.Concurrent
+@using Fluxor.Blazor.Store
 
 @inject IJSRuntime JS
 @inject BeltService Beltservice
 @inject ILogger<Main> logger
 @inject ISnackbar Snackbar
 
-<SiteHeader>
-  <SearchControls SelectZDepthParams="@LoadZDepthParamsAsync" DateChanged="@DateChanged" Belt="@belt"
-    JumpTo="@JumpToAsync" StepBack="@StepBackward" StepForward="@StepForward" Search="@SearchBelt" />
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+
+<SiteHeader ShowDraw site="@site" conveyor="@conveyor">
+    <SearchControls SelectZDepthParams="@LoadZDepthParamsAsync" DateChanged="@DateChanged" Belt="@belt"
+      JumpTo="@JumpToAsync" StepBack="@StepBackward" StepForward="@StepForward" Search="@SearchBelt" />
 </SiteHeader>
 
 <MudContainer MaxWidth="MaxWidth.False" Class="ma-0 pa-0"
@@ -64,14 +67,17 @@
   double currentY = 0;
   double progressPercentage = 0;
 
-  protected Belt belt;
+  protected Belt belt { get; set; }
   protected IJSObjectReference plotDataCache;
   protected IJSObjectReference plotData;
-
+  [Inject]
+  public IDispatcher Dispatcher { get; set; }
 
   protected override async Task OnInitializedAsync()
   {
     belt = Beltservice.GetBelt(site, conveyor);
+    var action = new PublishAction(belt);
+		Dispatcher.Dispatch(action);
   }
 
   protected override async Task OnAfterRenderAsync(bool firstRender)

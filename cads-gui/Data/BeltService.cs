@@ -164,13 +164,6 @@ namespace cads_gui.Data
       return from r in rows group r by r.site into site select (site.Key, site.First().conveyor);
     }
 
-    public P4 get_belt_resolution(string site, string belt)
-    {
-      using var context = dBContext.CreateDbContext();
-      var data = from a in context.belt where a.site == site && a.conveyor == belt select new P4(a.x_res, a.y_res, a.z_res, a.z_off);
-      return data.First();
-
-    }
 
     public async Task StoreBeltConstantsAsync(Belt entry)
     {
@@ -180,9 +173,9 @@ namespace cads_gui.Data
       await context.SaveChangesAsync();
     }
 
-    public async Task<(double, float[])> GetBeltProfileAsync(double o, long num_y_samples, Belt belt)
+    public async Task<(double, float[])> GetBeltProfileAsync(double y, long num_y_samples, Belt belt)
     {
-      var fs = await NoAsp.RetrieveFrameModular(belt.name, o, num_y_samples);
+      var fs = await NoAsp.RetrieveFrameModular(belt.name, y, num_y_samples);
       return NoAsp.make_same_widthf(fs, belt.x_res);
     }
 

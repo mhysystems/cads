@@ -1,17 +1,14 @@
-@inject NavigationManager nav
-@implements IDisposable
-
 <MudAppBar Elevation="0" Class="d-flex">
   <MudText Typo="Typo.h2">CADS</MudText>
-  <MudText Typo="Typo.h2" Class="ml-4">@site</MudText>
-  <MudText Typo="Typo.h2" Class="ml-4">@belt</MudText>
-  <MudSpacer/>
-  @ChildContent
-  <MudSpacer/>
+    <MudText Typo="Typo.h2" Class="ml-4">@site</MudText>
+    <MudText Typo="Typo.h2" Class="ml-4">@conveyor</MudText>
+    <MudSpacer/>
+      @ChildContent
+    <MudSpacer/>
   <MudImage Style="height:100%" ObjectFit="ObjectFit.ScaleDown" Src="https://cadswebsite.blob.core.windows.net/wwwroot/MHY Systems Logo.png" Alt="MHY Logo" />
 </MudAppBar>
 
-@if (nav.Uri != nav.BaseUri)
+@if (ShowDraw)
 {
   <MudDrawer Open="false" OpenMiniOnHover="false" Fixed="true" Variant="@DrawerVariant.Mini"
   ClipMode="DrawerClipMode.Always" Elevation="0">
@@ -19,9 +16,10 @@
     <MudNavLink Href="/" DisableRipple=true IconColor="Color.Tertiary" Match="NavLinkMatch.All" Icon="@Icons.Filled.Home">Home
     <MudTooltip Text="Home"/>
     </MudNavLink>
+    <MudNavLink Href=@($"/site/dashboard/{site}/{conveyor}")  DisableRipple=true Icon="@Icons.Filled.Dashboard">Dashboard</MudNavLink>
     <MudNavLink DisableRipple=true Icon="@Icons.Filled.AccessAlarm">Alarm</MudNavLink>
     <MudNavLink DisableRipple=true Icon="@Icons.Filled.OnlinePrediction">Prediction</MudNavLink>
-    <MudNavLink Href="/sites/trend" DisableRipple=true Icon="@Icons.Filled.TrendingUp">Trend</MudNavLink>
+    <MudNavLink Href=@($"/site/trend/{site}/{conveyor}") DisableRipple=true Icon="@Icons.Filled.TrendingUp">Trend</MudNavLink>
     <MudNavLink DisableRipple=true Icon="@Icons.Filled.Settings">Settings</MudNavLink>
   </MudNavMenu>
 </MudDrawer>
@@ -29,37 +27,11 @@
 
 @code {
   [Parameter]
-  public RenderFragment? ChildContent { get; set; }
-  string site = "";
-  string belt = "";
-  protected override void OnInitialized()
-  {
-    var uri = new Uri(nav.Uri);
-
-    if (uri.Segments.Length > 3)
-    {
-      site = uri.Segments[2].Replace("/", string.Empty);
-      belt = uri.Segments[3].Replace("/", string.Empty);
-    }
-
-    nav.LocationChanged += HandleLocationChanged;
-  }
-
-  private void HandleLocationChanged(object? sender, LocationChangedEventArgs e)
-  {
-    var uri = new Uri(nav.Uri);
-
-    if (uri.Segments.Length > 3)
-    {
-      site = uri.Segments[2].Replace("/", string.Empty);
-      belt = uri.Segments[3].Replace("/", string.Empty);
-    }
-    
-    StateHasChanged();
-  }
-
-  public void Dispose()
-  {
-    nav.LocationChanged -= HandleLocationChanged;
-  }
+  public RenderFragment ChildContent { get; set; }
+  [Parameter]
+  public bool ShowDraw {get; set;} = false;
+  [Parameter]
+  public string site { get; set; } = ""
+;  [Parameter]
+  public string conveyor { get; set; } = "";
 }

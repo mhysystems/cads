@@ -1,5 +1,68 @@
-@page "/sites/trend"
+@page "/site/trend/{site}/{conveyor}"
 
-<SiteHeader>
-  
+@using Fluxor.Blazor.Store;
+@using Cads
+
+@inject IJSRuntime JS
+@inject BeltService Beltservice
+@inject ISnackbar Snackbar
+
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+
+<SiteHeader ShowDraw site="@site" conveyor="@conveyor">
+  <MudSpacer/>
+    <TrendControls DateChanged="@DateChanged" Belt="@GuiState.Value.Belt" />
+  <MudSpacer/>
 </SiteHeader>
+
+@if(@GuiState.Value.Belt is not null) {
+<MudContainer MaxWidth="MaxWidth.False" Class="ma-0 pa-0"
+  Style="width:calc(100vw - var(--mud-drawer-width-mini-left));height:calc(100vh - var(--mud-appbar-height)">
+  <MudGrid Class="ma-0" Style="height:100%" Spacing=0>
+    <MudItem xs="12" />
+<MudItem xs="12" Class="d-flex" Style="height:50%">
+<TrendPlot @ref="trendPlot" Belt="@GuiState.Value.Belt"></TrendPlot>
+</MudItem>
+    <MudItem xs="12" />
+</MudGrid>
+</MudContainer>
+}
+
+@code {
+  
+  protected TrendPlot trendPlot;
+  [Parameter]
+  public string site { get; set; }
+  [Parameter]
+  public string conveyor { get; set; }
+
+
+  [Inject]
+  private IState<GuiState> GuiState { get; set; }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender)
+    {
+      var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
+    }
+  }
+
+  async Task DateChanged(ValueTuple<DateTime?, int, string> arg)
+  {
+    var (date,index,color) = arg;
+    if (!date.HasValue || index > 3)
+    {
+      return;
+    }
+
+    var belt = Beltservice.GetBelt(site, conveyor, date.Value);
+    if(belt is not null) {
+      var (XOffset,z) = await Beltservice.GetBeltProfileAsync(0, 1, belt);
+      await trendPlot.UpdatePlotAsync(index,XOffset,z,color);
+    }else{
+      Snackbar.Add($"No data for selected date", Severity.Error);
+    }
+
+  }
+}

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
+using Fluxor;
 
 using cads_gui.Data;
 using cads_gui.Services;
@@ -14,6 +15,7 @@ builder.Services.AddDbContextFactory<SQLiteDBContext>(options =>
   options.UseSqlite("Data Source=conveyors.db; Mode=ReadWriteCreate")
 );
 
+builder.Services.AddFluxor(o => o.ScanAssemblies(typeof(Program).Assembly));
 builder.Services.AddScoped<BeltService>();
 builder.Services.AddMudServices();
 builder.Services.AddHostedService<NatsConsumerHostedService>();

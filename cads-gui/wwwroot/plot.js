@@ -593,6 +593,72 @@ class PlotDataCache {
 
 
 
+
+class TrendPlot {
+  constructor(plotElement, x_res, z_min, z_max) {
+    this.plotElement = plotElement;
+    this.xRes = x_res;
+    this.zMax = z_max;
+
+    this.layout = {
+      autosize: true,
+      yaxis: {
+        range: [z_min, z_max],
+        side: 'right'
+      },
+
+      xaxis: {},
+
+      margin: {
+        l: 20,
+        r: 20,
+        b: 20,
+        t: 20,
+      },
+
+      aspectratio: {
+        x: 1
+      }
+    };
+
+    this.config = {
+      displaylogo: false,
+      displayModeBar: false
+    };
+
+
+    const trace = {
+      type: 'scatter',
+      showlegend: false,
+      line: {
+        color: "#f77f00"
+      }
+    };
+
+    this.plotData = [structuredClone(trace),structuredClone(trace),structuredClone(trace),structuredClone(trace)];
+  }
+
+  async updatePlot(index,xMin,z_profile,color) {
+
+    const x_min = xMin / 1000; //convert mm to m
+    const x_resolution = this.xRes / 1000; // convert mm to m
+    const belt_width = z_profile.length * x_resolution;
+
+    const x_axis = [...Array(z_profile.length).keys()].map(x => x_min + x * x_resolution);
+
+    this.layout.xaxis = [x_axis[0], x_axis[x_axis.length - 1]];
+
+    this.layout.aspectratio.y = this.zMax / (belt_width * 1000);
+
+    this.plotData[index].y = z_profile;
+    this.plotData[index].x = x_axis;
+    this.plotData[index].line.color = color
+    await Plotly.react(this.plotElement, this.plotData, this.layout, this.config);
+  }
+
+
+}
+
 class ProfilePlot {
   constructor(plotElement, x_res, z_min, z_max) {
     this.plotElement = plotElement;
@@ -934,6 +1000,10 @@ export function mk_SurfacePlot(plotElement, x_res, z_min, z_max, color_scale, bl
 
 export function mk_ProfilePlot(plotElement, x_res, z_min, z_max) {
   return new ProfilePlot(plotElement, x_res, z_min, z_max);
+}
+
+export function mk_TrendPlot(plotElement, x_res, z_min, z_max) {
+  return new TrendPlot(plotElement, x_res, z_min, z_max);
 }
 
 export function mk_PlotDataCache(...args) {
