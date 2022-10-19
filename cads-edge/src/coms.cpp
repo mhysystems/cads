@@ -216,7 +216,7 @@ void http_post_realtime(double y_area, double value)
       }
       else
       {
-        spdlog::get("upload")->error("http_post_profile_properties_json failed with http status code {}, body: {}, endpoint: {}", r.status_code,json,endpoint);
+        spdlog::get("upload")->error("http_post_profile_properties_json failed with http status code {}, body: {}, endpoint: {}", r.status_code,json,endpoint.str());
       }
     }
   }
