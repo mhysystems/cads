@@ -64,7 +64,15 @@
 
   Ztable zDepthTabe;
 
-  double currentY = 0;
+  double _currentY = 0;
+  protected double currentY { 
+    get{ return _currentY;} 
+    set{ 
+      _currentY = value;
+      var action = new YAction(value);
+		  Dispatcher.Dispatch(action);
+    } 
+  }
   double progressPercentage = 0;
 
   protected Belt belt { get; set; }
@@ -76,7 +84,7 @@
   protected override async Task OnInitializedAsync()
   {
     belt = Beltservice.GetBelt(site, conveyor);
-    var action = new PublishAction(belt);
+    var action = new BeltAction(belt);
 		Dispatcher.Dispatch(action);
   }
 
@@ -96,10 +104,12 @@
     await zDepthQuery.LoadZDepthParamsAsync(xs);
   }
 
-  async Task UpdateProfilePlotAsync(int y)
+  async Task UpdateProfilePlotAsync(ValueTuple<int,double> args)
   {
+    var (yIndex,y) = args;
+		Dispatcher.Dispatch(new YAction(y));
     var plotDataPromise = await plotDataCache.InvokeAsync<IJSObjectReference>("getLastFetch");
-    await profilePlot.UpdatePlotAsync(plotDataPromise, y);
+    await profilePlot.UpdatePlotAsync(plotDataPromise, yIndex);
   }
 
   async Task StepForward()

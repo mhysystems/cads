@@ -58,7 +58,7 @@
 
     var belt = Beltservice.GetBelt(site, conveyor, date.Value);
     if(belt is not null) {
-      var (XOffset,z) = await Beltservice.GetBeltProfileAsync(0, 1, belt);
+      var (XOffset,z) = await Beltservice.GetBeltProfileAsync(GuiState.Value.Y, 1, belt);
       await trendPlot.UpdatePlotAsync(index,XOffset,z,color);
     }else{
       Snackbar.Add($"No data for selected date", Severity.Error);

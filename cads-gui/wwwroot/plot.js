@@ -623,7 +623,7 @@ class TrendPlot {
 
     this.config = {
       displaylogo: false,
-      displayModeBar: false
+      displayModeBar: true
     };
 
 
@@ -879,8 +879,9 @@ class SurfacePlot {
     Plotly.react(this.plotElement, [], this.layout, this.config);
 
     this.plotElement.on('plotly_click', function (e) {
-      const y = e.points[0].pointNumber[1];
-      blazor.invokeMethodAsync('PlotClicked', y);
+      const yIndex = e.points[0].pointNumber[1];
+      const y = e.points[0].y * 1000;
+      blazor.invokeMethodAsync('PlotClicked', yIndex,y);
     });
 
   }
