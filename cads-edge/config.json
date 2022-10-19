@@ -1,6 +1,7 @@
 {
   "data_source" : "../../profiles/rawprofile-2022-18-23.db", 
   "y_max_length" : 930000,
+  "y_max_upload" : 906000,
   "z_height" : 27.0,
   "x_width"  : 1500,
   "left_edge_nan" : 10,

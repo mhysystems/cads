@@ -216,7 +216,7 @@ void http_post_realtime(double y_area, double value)
       }
       else
       {
-        spdlog::get("upload")->error("First Upload failed with http status code {}", r.status_code);
+        spdlog::get("upload")->error("http_post_profile_properties_json failed with http status code {}, body: {}, endpoint: {}", r.status_code,json,endpoint);
       }
     }
   }
@@ -253,7 +253,11 @@ void http_post_realtime(double y_area, double value)
     auto db_name = global_config["db_name"].get<std::string>();
     auto endpoint_url = global_config["base_url"].get<std::string>();
     auto y_max_length = global_config["y_max_length"].get<double>();
+    auto y_max_upload = global_config["y_max_upload"].get<double>();
     auto upload_profile = global_config["upload_profile"].get<bool>();
+
+    //override belt_length
+    belt_length = y_max_upload;
 
     if (endpoint_url == "null")
     {

@@ -49,7 +49,7 @@ if __name__ == "__main__":
     parser.add_argument("db", help="DB's to query", type=str, nargs='+')
     parser.add_argument("--appdb", type=str, help="webapp db", default="conveyors.db")
     parser.add_argument("--commit", help="commit changes", action='store_true')
-    parser.add_argument("--beltlength", type=float, help="new prefered beltlength", default=905000.0)
+    parser.add_argument("--beltlength", type=float, help="new prefered beltlength", default=906000.0)
 
     args = parser.parse_args()
   
