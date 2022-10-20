@@ -1,0 +1,25 @@
+From 291dbfbacbe5bd53725198910a54eccc3e7c60e7 Mon Sep 17 00:00:00 2001
+From: Paul McAlpine <paul.mcalpine@mhysystems.com>
+Date: Fri, 21 Oct 2022 00:20:52 +0800
+Subject: [PATCH] Copy result from poptGetArg
+
+---
+ gptcl.cc | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/gptcl.cc b/gptcl.cc
+index 34c9421..0d578eb 100644
+--- a/gptcl.cc
++++ b/gptcl.cc
+@@ -155,7 +155,7 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
+    } // while
+ 
+    // Assume first non-option argument is the device filename....
+-   device = (char*) poptGetArg(poptCon);
++   device = strdup((char*) poptGetArg(poptCon));
+    poptResetContext(poptCon);
+ 
+    if (device != NULL) {
+-- 
+2.17.1
+

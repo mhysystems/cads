@@ -21,7 +21,7 @@ move_app_partition()
     # fixed special device /dev/mmcblk0p1.
     sgdisk ${BINARIES_DIR}/sdcard.img --transpose=15:1
     sgdisk ${BINARIES_DIR}/sdcard.img -d 15
-    app_part=$(gdisk -l ${BINARIES_DIR}/sdcard.img | grep APP | awk {'print $1'})
+    app_part=$(sgdisk -p ${BINARIES_DIR}/sdcard.img | grep " APP$" | awk {'print $1'})
     if [[ "${app_part}" -eq 1 ]]; then
         return 0
     else
