@@ -1,0 +1,27 @@
+From aaa69b5fb1943d058e37857dd3fea0d264dde756 Mon Sep 17 00:00:00 2001
+From: Paul McAlpine <paul.mcalpine@mhysystems.com>
+Date: Thu, 20 Oct 2022 22:56:51 +0800
+Subject: [PATCH] Fix tegra-rel-dtstree blank handling for newer makes
+
+---
+ scripts/Kbuild.include | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/scripts/Kbuild.include b/scripts/Kbuild.include
+index 064a44284f81..f95089e4faa3 100644
+--- a/scripts/Kbuild.include
++++ b/scripts/Kbuild.include
+@@ -461,8 +461,8 @@ endef
+ # It's a common trick to declare makefile variable that contains space
+ # we'll need it to convert the path string to list (string delimited by spaces)
+ # and vice versa
+-the-space :=
+-the-space += 
++the-blank :=
++the-space := $(the-blank) $(the-blank)
+ # TEGRA_ROOT_PATH is the relative path to the directory one level upper than $srctree
+ _TEGRA_ROOT_PATH = $(subst ^$(realpath $(srctree)/..)/,,^$(realpath $(kbuild-dir)))
+ # _TEGRA_REL_PATH is path like "../../../" that points to directory one level
+-- 
+2.17.1
+
