@@ -93,6 +93,15 @@ endef
 
 LINUX4TEGRA_LEGACY_POST_EXTRACT_HOOKS += LINUX4TEGRA_LEGACY_EXTRACT_NVIDIA_TOOLS
 
+define LINUX4TEGRA_LEGACY_EXTRACT_KERNEL_SUPPLEMENTS
+	@mkdir -p $(@D)/kernel/kernel_supplements
+	$(call suitable-extractor,kernel_supplements.tbz2) \
+		$(@D)/kernel/kernel_supplements.tbz2 | \
+		$(TAR) -C $(@D)/kernel/kernel_supplements $(TAR_OPTIONS) -
+endef
+
+LINUX4TEGRA_LEGACY_POST_EXTRACT_HOOKS += LINUX4TEGRA_LEGACY_EXTRACT_KERNEL_SUPPLEMENTS
+
 define LINUX4TEGRA_LEGACY_CONFIGURE_CMDS
 	cp $(@D)/bootloader/t210ref/nvtboot.bin $(@D)/bootloader/nvtboot.bin
 	cp $(@D)/bootloader/t210ref/cboot.bin $(@D)/bootloader/cboot.bin
@@ -187,6 +196,8 @@ define LINUX4TEGRA_LEGACY_INSTALL_TARGET_CMDS
 	$(LINUX4TEGRA_LEGACY_RSYNC) $(@D)/nv_tegra/nvidia_configs/ $(TARGET_DIR)/
 	# install nvidia_tools
 	$(LINUX4TEGRA_LEGACY_RSYNC) $(@D)/nv_tegra/nvidia_tools/ $(TARGET_DIR)/
+    # install kernel_supplements
+    $(LINUX4TEGRA_LEGACY_RSYNC) $(@D)/kernel/kernel_supplements/ $(TARGET_DIR)/
 
     $(INSTALL) -D -m 0644 $(@D)/kernel/Image $(TARGET_DIR)/boot/Image
 	$(INSTALL) -D -m 0644 $(@D)/bootloader/extlinux.conf $(TARGET_DIR)/boot/extlinux/extlinux.conf
