@@ -386,7 +386,6 @@ namespace cads
 
       spike_filter(iz, spike_window_size);
       auto [bottom_avg, top_avg, invalid] = barrel_offset(iz, z_height_mm);
-      nan_filter(iz);
       auto [a0,a1,a2] = curve_fitter(iz);
 
       if (invalid)

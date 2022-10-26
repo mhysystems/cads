@@ -85,7 +85,7 @@ void belt_model(Eigen::VectorXf &z, float height, float x_offset, float z_offset
   }
 
   
-  std::function<std::tuple<double,double,double>(z_type&)>  mk_curvefitter(float init_height, float init_x_offset, float init_z_offset, const int width_n, const double x_res, const double z_res) {
+  std::function<std::tuple<double,double,double>(z_type)>  mk_curvefitter(float init_height, float init_x_offset, float init_z_offset, const int width_n, const double x_res, const double z_res) {
     
     const auto belt_height = 0;
     const auto x_offset = 1;
@@ -156,7 +156,7 @@ void belt_model(Eigen::VectorXf &z, float height, float x_offset, float z_offset
 
   LMFunctor functor((float)x_res,(float)z_res,width_n);
   
-  return [=](std::vector<float> &z) mutable -> std::tuple<double,double,double> {
+  return [=](std::vector<float> z) mutable -> std::tuple<double,double,double> {
     functor.belt_z = Eigen::Map<Eigen::VectorXf>(z.data(), z.size());
 
     Eigen::LevenbergMarquardt<LMFunctor, float> lm(functor);
