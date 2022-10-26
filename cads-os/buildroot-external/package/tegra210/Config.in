@@ -1,9 +1,17 @@
-config BR2_PACKAGE_TEGRA210
-	bool "Tegra T210 Board Support Package"
-	depends on BR2_PACKAGE_LINUX_NVIDIA
-	help
-	  NVIDIA Tegra210 board support package.
-	  Includes binaries and tools required for the flashing and
-	  booting process.
+config BR2_PACKAGE_TEGRA210_SUPPORTS
+	bool
+	default y
+	depends on BR2_cortex_a57
 
-	  https://developer.nvidia.com/embedded/linux-tegra
+config BR2_PACKAGE_TEGRA210
+	bool "tegra210"
+	depends on BR2_PACKAGE_TEGRA210_SUPPORTS
+    select BR2_PACKAGE_HOST_KMOD
+    select BR2_PACKAGE_HOST_PYTHON3
+	help
+	  Linux Tegra210 Board Support Package
+
+	  https://developer.nvidia.com/embedded/linux-tegra-archive
+
+comment "tegra210 only works on aarch64"
+	depends on !BR2_PACKAGE_TEGRA210_SUPPORTS

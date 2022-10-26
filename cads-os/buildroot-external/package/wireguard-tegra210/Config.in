@@ -1,6 +1,6 @@
 config BR2_PACKAGE_WIREGUARD_TEGRA210
 	bool "wireguard tegra210"
-	depends on BR2_PACKAGE_LINUX4TEGRA_LEGACY
+	depends on BR2_PACKAGE_TEGRA210
 	# kernel module requires 3.10+
 	depends on BR2_TOOLCHAIN_HEADERS_AT_LEAST_3_10
 	# kernel module in upstream linux since 5.6
@@ -21,9 +21,6 @@ config BR2_PACKAGE_WIREGUARD_TEGRA210
 
 	  https://www.wireguard.com
 
-comment "wireguard-tegra210 needs the Linux4Tegra BSP"
-	depends on !BR2_PACKAGE_LINUX4TEGRA_LEGACY
-
 comment "wireguard-tegra210 needs a toolchain w/ headers >= 3.10"
-	depends on BR2_PACKAGE_LINUX4TEGRA_LEGACY
+	depends on BR2_PACKAGE_TEGRA210
 	depends on !BR2_TOOLCHAIN_HEADERS_AT_LEAST_3_10
