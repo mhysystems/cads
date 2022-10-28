@@ -347,6 +347,7 @@ namespace cads
     long barrel_cnt = 0;
     auto schmitt_trigger = mk_schmitt_trigger(0.001f);
     auto edge_adjust = mk_edge_adjust(left_edge_index_init, width_n);
+    auto curve_fitter = mk_curvefitter(belt_top - bottom, 0, bottom, width_n, x_resolution, z_resolution);
     auto amplitude_extraction = mk_amplitude_extraction();
     z_element schmitt1 = 1.0, schmitt0 = -1.0;
     z_type prev_z;
@@ -385,6 +386,7 @@ namespace cads
 
       spike_filter(iz, spike_window_size);
       auto [bottom_avg, top_avg, invalid] = barrel_offset(iz, z_height_mm);
+      auto [a0,a1,a2] = curve_fitter(iz);
 
       if (invalid)
       {
