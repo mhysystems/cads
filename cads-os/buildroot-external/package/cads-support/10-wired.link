@@ -1,0 +1,6 @@
+[Match]
+Property=ID_NET_NAME_PATH=enp1s0
+
+[Link]
+Description=Nano Ethernet Adapter
+Name=eth0

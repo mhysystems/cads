@@ -1,0 +1,6 @@
+[Match]
+Driver=cdc_ether
+
+[Link]
+Description=USB Mobile
+Name=usbmodem0
