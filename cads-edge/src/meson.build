@@ -16,7 +16,8 @@ cadsSrc += files(
   'init.cpp',
   'save_send_thread.cpp',
   'origin_detection_thread.cpp',
-  'intermessage.cpp'
+  'intermessage.cpp',
+  'belt.cpp'
 )
 
 cadsEntry += files('main.cpp')

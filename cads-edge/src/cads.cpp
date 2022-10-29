@@ -46,6 +46,8 @@
 #include <save_send_thread.h>
 #include <origin_detection_thread.h>
 #include <intermessage.h>
+#include <belt.h>
+
 
 using namespace std;
 using namespace moodycamel;
@@ -320,7 +322,6 @@ namespace cads
     const auto z_height_mm = global_config["z_height"].get<double>();
     const int nan_num = global_config["left_edge_nan"].get<int>();
     const int spike_window_size = nan_num * 2;
-    auto pully_circumfrence = global_config["pulley_circumfrence"].get<double>(); // In mm
 
     BlockingReaderWriterQueue<msg> db_fifo;
     BlockingReaderWriterQueue<msg> dynamic_processing_fifo;
@@ -340,19 +341,19 @@ namespace cads
     z_element clip_height = belt_top + 3.0f;
 
     auto start = std::chrono::high_resolution_clock::now();
-    auto barrel_origin_time = std::chrono::high_resolution_clock::now();
+   
 
     cads::msg m;
-    cads::z_element bottom_filtered0 = bottom; // For differential calculation
-    long barrel_cnt = 0;
+    
     auto schmitt_trigger = mk_schmitt_trigger(0.001f);
     auto edge_adjust = mk_edge_adjust(left_edge_index_init, width_n);
-    auto curve_fitter = mk_curvefitter(belt_top - bottom, 0, bottom, width_n, x_resolution, z_resolution);
-    auto amplitude_extraction = mk_amplitude_extraction();
-    z_element schmitt1 = 1.0, schmitt0 = -1.0;
-    z_type prev_z;
+    auto pulley_frequency = mk_pulley_frequency();
+    auto profiles_align = mk_profiles_align(width_n);
 
-    long drop_profiles = 1024; // Allow for iir fillter too stablize
+
+   std::ofstream filt("filt.txt");
+
+    long drop_profiles = global_config["iirfilter"]["skip"]; // Allow for iir fillter too stablize
 
     do
     {
@@ -385,39 +386,11 @@ namespace cads
       ++cnt;
 
       spike_filter(iz, spike_window_size);
-      auto [bottom_avg, top_avg, invalid] = barrel_offset(iz, z_height_mm);
-      auto [a0,a1,a2] = curve_fitter(iz);
-
-      if (invalid)
-      {
-        // spdlog::get("cads")->error("Barrel not detected, profile is invalid");
-      }
-
+      auto [ileft_edge_index,iright_edge_index] = find_profile_edges_nans_outer(iz);
+      regression_compensate(iz, 0, iz.size(), -gradient);
+      auto bottom_avg = barrel_mean(iz,ileft_edge_index,iright_edge_index);
       auto bottom_filtered = (z_element)iirfilter(bottom_avg);
-
-      auto dbottom1 = bottom_filtered - bottom_filtered0;
-      schmitt1 = schmitt_trigger(dbottom1);
-      amplitude_extraction(bottom_filtered,false);
-
-      if ((std::signbit(schmitt1) == false && std::signbit(schmitt0) == true) || (std::signbit(schmitt1) == true && std::signbit(schmitt0) == false) )
-      {
-        auto now = std::chrono::high_resolution_clock::now();
-        auto period = std::chrono::duration_cast<std::chrono::milliseconds>(now - barrel_origin_time).count();
-        if (barrel_cnt % 100 == 0)
-        {
-          spdlog::get("cads")->info("Barrel Frequency(Hz): {}", 1000.0 / ((double)period * 2) );
-          publish_PulleyOscillation(amplitude_extraction(bottom_filtered,true));
-          publish_SurfaceSpeed(pully_circumfrence / (2 * period));
-        }
-        winFifo.enqueue({msgid::barrel_rotation_cnt, barrel_cnt});
-        barrel_cnt++;
-        barrel_origin_time = now;
-      }
-
-      bottom_filtered0 = bottom_filtered;
-      schmitt0 = schmitt1;
-
-      auto [delayed, dd] = delay({iy, ix, iz});
+      auto [delayed, dd] = delay({iy, ix, iz,ileft_edge_index,iright_edge_index});
       
       if (!delayed)
         continue;
@@ -426,25 +399,14 @@ namespace cads
         --drop_profiles;
         continue;
       }
-
-      auto [y, x, z] = dd;
-
-      auto [left_edge_index, right_edge_index] = find_profile_edges_nans_outer(z, nan_num);
+      
+      auto barrel_cnt = pulley_frequency(bottom_filtered);
+      winFifo.enqueue({msgid::barrel_rotation_cnt, barrel_cnt});
+      
+      auto [y, x, z, left_edge_index, right_edge_index] = dd;
 
       nan_filter(z);
-      regression_compensate(z, left_edge_index, right_edge_index, gradient);
-
-      if(prev_z.size() != 0) {
-        auto dbg = correlation_lowest(prev_z, z | views::take(right_edge_index) | views::drop(left_edge_index));
-        left_edge_index -= dbg;
-        auto f = z | views::take(left_edge_index + width_n) | views::drop(left_edge_index);
-        prev_z = {f.begin(), f.end()};
-      }
-
-      //left_edge_index = edge_adjust(left_edge_index, right_edge_index);
-
-
-      std::tie(bottom_avg, top_avg, invalid) = barrel_offset(z, z_height_mm);
+      left_edge_index = profiles_align(z,left_edge_index, right_edge_index);
 
       auto avg = z | views::take(left_edge_index + fiducial_x) | views::drop(left_edge_index);
       float  avg2 = (float)std::accumulate(avg.begin(), avg.end(), 0.0) / (float)fiducial_x;
@@ -518,11 +480,11 @@ namespace cads
         filt << bottom_avg << "," << bottom_filtered << '\n';
         filt.flush();
 
-        auto [delayed, dd] = delay({iy, ix, iz});
+        auto [delayed, dd] = delay({iy, ix, iz,0,0});
         if (!delayed)
           continue;
 
-        auto [y, x, z] = dd;
+        auto [y, x, z, ignore_a, ignore_b] = dd;
       }
 
     } while (std::get<0>(m) != msgid::finished);

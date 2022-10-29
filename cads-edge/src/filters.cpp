@@ -37,6 +37,15 @@ namespace cads
     }
   }
 
+
+  z_type nan_filter(z_type &&z) {
+    using namespace std::ranges;
+
+    auto f = z | views::filter([](z_element a) { return !std::isnan(a);});
+
+    return z_type(f.begin(),f.end());
+  }
+
   void nan_filter(z_type &z)
   {
     namespace sr = std::ranges;
@@ -83,7 +92,7 @@ namespace cads
     for (auto &e : z)
     {
       e += z_off;
-      if (e < 0)
+      if (e < 5.0f )
         e = 0;
       if (e > z_max_compendated)
         e = z_max_compendated;
@@ -95,7 +104,7 @@ namespace cads
     auto coeff = global_config["iirfilter"]["sos"].get<std::vector<std::vector<double>>>();
     auto r = coeff | std::ranges::views::join;
     std::vector<double> in(r.begin(), r.end());
-    Iir::Custom::SOSCascade<5> a(*(double(*)[5][6])in.data());
+    Iir::Custom::SOSCascade<10> a(*(double(*)[10][6])in.data());
 
     return [=](z_element xn) mutable
     {
@@ -103,17 +112,17 @@ namespace cads
     };
   }
 
-  std::function<std::tuple<bool, std::tuple<y_type, double, z_type>>(std::tuple<y_type, double, z_type>)> mk_delay(size_t len)
+  std::function<std::tuple<bool, std::tuple<y_type, double, z_type,int,int>>(std::tuple<y_type, double, z_type,int,int>)> mk_delay(size_t len)
   {
 
-    std::deque<std::tuple<y_type, double, z_type>> delay;
-    return [=](std::tuple<y_type, double, z_type> p) mutable
+    std::deque<std::tuple<y_type, double, z_type,int,int>> delay;
+    return [=](std::tuple<y_type, double, z_type,int,int> p) mutable
     {
       delay.push_back(p);
 
       if (delay.size() < len)
       {
-        return std::tuple{false, std::tuple<y_type, double, z_type>()};
+        return std::tuple{false, std::tuple<y_type, double, z_type,int,int>()};
       }
 
       auto rn = delay.front();

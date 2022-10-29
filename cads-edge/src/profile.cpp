@@ -9,12 +9,47 @@
 #include <profile.h>
 #include <constants.h>
 #include <regression.h>
-
-using namespace std;
+#include <edge_detection.h>
+#include <stats.hpp>
 
 namespace cads
 {
 
+  
+  std::tuple<z_type,z_type> partition_profile(const z_type& z, int left_edge_index, int right_edge_index) {
+    using namespace std::ranges;
+
+
+    auto left_edge = z | views::take(left_edge_index);
+    auto right_edge = z | views::drop(right_edge_index);
+    auto belt = z | views::take(right_edge_index) | views::drop(left_edge_index);
+    
+    z_type barrel(left_edge.begin(),left_edge.end());
+
+    barrel.insert(barrel.end(),right_edge.begin(),right_edge.end());
+
+    return {barrel,z_type(belt.begin(),belt.end())};
+
+  }
+
+  double barrel_mean(const z_type& z, int left_edge_index, int right_edge_index) {
+      
+      namespace sr = std::ranges;
+
+      auto[barrel,belt] = partition_profile(z, left_edge_index, right_edge_index);
+
+      auto [q1,q3] = interquartile_range(barrel);
+      auto barrel_no_nans = barrel | sr::views::filter([=](z_element a){ return a >= q1 && a <= q3;});
+      
+      auto sum = std::reduce(barrel_no_nans.begin(),barrel_no_nans.end());
+      auto count = (double)std::ranges::distance(barrel_no_nans.begin(),barrel_no_nans.end());
+      
+      auto mean = sum / count;
+
+      return mean;
+
+  }
+  
   std::tuple<z_element, z_element> find_minmax_z(const z_type &ps)
   {
 
@@ -51,11 +86,11 @@ namespace cads
     return cnt < threshold && cnt > int(len * 0.5);
   }
 
-  vector<tuple<double, z_element>> histogram(const z_type &ps, z_element min, z_element max, double size)
+  std::vector<std::tuple<double, z_element>> histogram(const z_type &ps, z_element min, z_element max, double size)
   {
 
     const float dz = ((float)size - 1) / (max - min);
-    vector<tuple<double, z_element>> hist((size_t)size, {0, 0.0f});
+    std::vector<std::tuple<double, z_element>> hist((size_t)size, {0, 0.0f});
 
     for (auto z : ps)
     {
@@ -66,12 +101,12 @@ namespace cads
       }
     }
 
-    ranges::sort(hist, [](auto a, auto b)
+    std::ranges::sort(hist, [](auto a, auto b)
                  { return get<1>(a) > get<1>(b); });
     return hist;
   }
 
-  tuple<z_element, z_element, bool> barrel_offset(const z_type &win, double z_height_mm)
+  std::tuple<z_element, z_element, bool> barrel_offset(const z_type &win, double z_height_mm)
   {
 
     auto [z_min, z_max] = find_minmax_z(win);
@@ -79,16 +114,16 @@ namespace cads
     // Histogram, first is z value, second is count
     auto hist = histogram(win, z_min, z_max, 100);
 
-    const auto peak = get<0>(hist[0]);
+    const auto peak = std::get<0>(hist[0]);
 
     // Remove z values greater than the peak minus approx belt thickness.
     // Assumes the next peak will be the barrel values
-    auto f = hist | views::filter([z_height_mm, peak](tuple<double, z_element> a)
+    auto f = hist | std::ranges::views::filter([z_height_mm, peak](std::tuple<double, z_element> a)
                                   { return peak - get<0>(a) > z_height_mm; });
 
     if (f.begin() != f.end())
     {
-      return {get<0>(*f.begin()), peak, false};
+      return {std::get<0>(*f.begin()), peak, false};
     }
     else
     {
