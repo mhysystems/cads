@@ -2,6 +2,7 @@
 
 #include <profile.h>
 #include <tuple>
+#include <constants.h>
 
 namespace cads 
 {
@@ -17,7 +18,7 @@ namespace cads
   @return Left and Right index of an edge in z
 
   */
-  std::tuple<int,int> find_profile_edges_nans(const z_type& z, int len);
+  std::tuple<int,int> find_profile_edges_nans(const z_type& z, int len = global_profile_parameters.left_edge_nan);
 
   /** @brief Searches for belt edge using NaN.
 
@@ -30,7 +31,7 @@ namespace cads
   @return Left and Right index of an edge in z
 
   */
-  std::tuple<int,int> find_profile_edges_nans_outer(const z_type& z, int len);
+  std::tuple<int,int> find_profile_edges_nans_outer(const z_type& z, int len = global_profile_parameters.left_edge_nan);
 
   std::tuple<int,int> find_profile_edges_sobel(const z_type& z, int len, int x_width);
 

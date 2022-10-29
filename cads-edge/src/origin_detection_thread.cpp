@@ -115,7 +115,7 @@ namespace cads
           cv_threshold_correleation = cv_threshhold;
           matrix_correlation = belt.clone();
         }
-        
+
         if (correlation < belt_crosscorr_threshold)
         {
           ++sequence_cnt;

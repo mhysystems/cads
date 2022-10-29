@@ -22,7 +22,13 @@ namespace cads {
     value_type RotationPeriod;
   };
 
+  struct profile_parameters {
+    int left_edge_nan;
+    int right_edge_nan;
+  };
+
   extern constraints global_constraints;
+  extern profile_parameters global_profile_parameters;
   
   template<typename T> struct NaN;
 

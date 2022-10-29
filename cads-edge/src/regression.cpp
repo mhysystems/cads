@@ -42,6 +42,7 @@ namespace cads
                    { return v != NaN<z_element>::value ? v - (gradient * i++) : NaN<z_element>::value; });
   }
 
+
   int correlation_lowest(float *a, size_t al, float *b, size_t bl)
   {
 
@@ -157,6 +158,8 @@ void belt_model(Eigen::VectorXf &z, float height, float x_offset, float z_offset
   LMFunctor functor((float)x_res,(float)z_res,width_n);
   
   return [=](std::vector<float> z) mutable -> std::tuple<double,double,double> {
+    auto f = z | std::views::filter([](float a) { return !std::isnan(a);});
+    z = decltype(z)(f.begin(),f.end());
     functor.belt_z = Eigen::Map<Eigen::VectorXf>(z.data(), z.size());
 
     Eigen::LevenbergMarquardt<LMFunctor, float> lm(functor);

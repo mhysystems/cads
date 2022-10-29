@@ -25,5 +25,7 @@ namespace cads
   std::tuple<z_element,z_element> find_minmax_z(const profile& ps);
   std::tuple<z_element,z_element,bool>  barrel_offset(const z_type& win,double z_height_mm);
   std::function<int(int,int)> mk_edge_adjust(int left_edge_index_previous, int width_n);
+  std::tuple<z_type,z_type> partition_profile(const z_type& z,int,int);
+  double barrel_mean(const z_type& z,int,int);
   
 }

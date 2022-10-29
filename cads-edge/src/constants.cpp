@@ -7,6 +7,7 @@ nlohmann::json global_config;
 
 namespace cads {  
   constraints global_constraints;
+  profile_parameters global_profile_parameters;
   
   auto mk_contraints(nlohmann::json config) {
     using namespace std;
@@ -20,11 +21,21 @@ namespace cads {
     return constraints{current_length,surface_speed,pulley_oscillation,cads_to_origin,rotation_period};
 
   }
+
+  auto mk_profile_parameters(nlohmann::json config) {
+    using namespace std;
+    auto left_edge_nan = global_config["left_edge_nan"].get<int>();
+    auto right_edge_nan = global_config["right_edge_nan"].get<int>();
+
+    return profile_parameters{left_edge_nan,right_edge_nan};
+
+  }
   
   void init_config(std::string f) {
     auto json = slurpfile(f);
 		global_config = nlohmann::json::parse(json);
     global_constraints = mk_contraints(global_config);
+    global_profile_parameters = mk_profile_parameters(global_config);
   }
 
   void drop_config() {
