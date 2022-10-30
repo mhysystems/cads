@@ -336,6 +336,8 @@ namespace cads
     }
 
     auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution] = get<resolutions_t>(get<1>(m));
+    store_profile_parameters({y_resolution, x_resolution, z_resolution, 33.0, encoder_resolution, clip_height});
+
     int fiducial_x = (int) (double(make_fiducial(x_resolution, y_resolution).cols) * 1.5);
 
 
@@ -481,7 +483,9 @@ namespace cads
         auto iz = p.z;
 
         spike_filter(iz, spike_window_size);
-        auto [bottom_avg, top_avg, invalid] = barrel_offset(iz, z_height_mm);
+        //auto [bottom_avg, top_avg, invalid] = barrel_offset(iz, z_height_mm);
+        auto [left_edge_index,right_edge_index] = find_profile_edges_nans_outer(iz);
+        auto bottom_avg = barrel_mean(iz,left_edge_index,right_edge_index);
 
         auto bottom_filtered = iirfilter(bottom_avg);
 
