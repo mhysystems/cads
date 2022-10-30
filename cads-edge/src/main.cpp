@@ -28,6 +28,7 @@ int main(int argn, char **argv)
     ("stop,s", po::bool_switch(), "Stop Gocator")
     ("upload,u", po::bool_switch(), "Upload Profile Only")
     ("signal,e", po::bool_switch(), "Generate signal for input into python filter parameter creation")
+    ("params,p", po::value<long>(), "Generate belt paramaters to be used in cads config")
     ("level,l", po::value<std::string>(), "Logging Level");
 
 	po::variables_map vm;
@@ -95,6 +96,8 @@ int main(int argn, char **argv)
     process();
   }else if(vm["signal"].as<bool>()) {
     generate_signal();
+  }else if(vm.count("params") > 0) {
+    generate_belt_parameters(vm["params"].as<long>());
   }else{
 	  process();
   }

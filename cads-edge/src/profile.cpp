@@ -19,7 +19,6 @@ namespace cads
   std::tuple<z_type,z_type> partition_profile(const z_type& z, int left_edge_index, int right_edge_index) {
     using namespace std::ranges;
 
-
     auto left_edge = z | views::take(left_edge_index);
     auto right_edge = z | views::drop(right_edge_index);
     auto belt = z | views::take(right_edge_index) | views::drop(left_edge_index);
@@ -29,6 +28,35 @@ namespace cads
     barrel.insert(barrel.end(),right_edge.begin(),right_edge.end());
 
     return {barrel,z_type(belt.begin(),belt.end())};
+
+  }
+
+  std::tuple<double,double> pulley_left_right_mean(const z_type& z, int left_edge_index, int right_edge_index)
+  {
+    using namespace std::ranges;
+
+    auto left_edge = z | views::take(left_edge_index) | views::filter([](z_element a) { return !std::isnan(a); });
+    auto right_edge = z | views::drop(right_edge_index) | views::filter([](z_element a) { return !std::isnan(a); });
+    
+    auto tl = z_type(left_edge.begin(),left_edge.end());
+    auto tr = z_type(right_edge.begin(),right_edge.end());
+    
+    auto [lq1,lq3] = interquartile_range(tl);
+    auto [rq1,rq3] = interquartile_range(tr);
+
+    auto left_quartile_filtered = left_edge | views::filter([=](z_element a){ return a >= lq1 && a <= lq3;});
+    auto right_quartile_filtered = right_edge | views::filter([=](z_element a){ return a >= rq1 && a <= rq3;});
+
+    auto left_sum = std::reduce(left_quartile_filtered.begin(),left_quartile_filtered.end());
+    auto left_count = (double)std::ranges::distance(left_quartile_filtered.begin(),left_quartile_filtered.end());
+
+    auto right_sum = std::reduce(right_quartile_filtered.begin(),right_quartile_filtered.end());
+    auto right_count = (double)std::ranges::distance(right_quartile_filtered.begin(),right_quartile_filtered.end());
+
+    auto left_mean = left_sum / left_count;
+    auto right_mean = right_sum / right_count;
+
+    return {left_mean,right_mean};
 
   }
 

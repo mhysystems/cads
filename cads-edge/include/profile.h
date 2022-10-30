@@ -27,5 +27,6 @@ namespace cads
   std::function<int(int,int)> mk_edge_adjust(int left_edge_index_previous, int width_n);
   std::tuple<z_type,z_type> partition_profile(const z_type& z,int,int);
   double barrel_mean(const z_type& z,int,int);
+  std::tuple<double,double> pulley_left_right_mean(const z_type& z, int left_edge_index, int right_edge_index);
   
 }

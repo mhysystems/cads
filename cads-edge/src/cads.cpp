@@ -26,6 +26,7 @@
 #include <chrono>
 #include <sstream>
 #include <fstream>
+#include <iostream>
 
 #include <spdlog/spdlog.h>
 
@@ -494,6 +495,60 @@ namespace cads
 
     gocator->Stop();
     spdlog::get("cads")->info("Gocator Stopped");
+  }
+
+
+  void generate_belt_parameters(long cnt)
+  {
+    BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
+
+    auto gocator = mk_gocator(gocatorFifo);
+    gocator->Start();
+
+    const int nan_num = global_config["left_edge_nan"].get<int>();
+    const int spike_window_size = nan_num * 2;
+    
+    cads::msg m;
+    double sum_left_mean = 0, sum_right_mean = 0;
+    long sum_width_n = 0;
+    long loop_cnt = cnt;
+
+    do
+    {
+
+      gocatorFifo.wait_dequeue(m);
+      auto m_id = get<0>(m);
+
+      if (m_id == cads::msgid::scan)
+      {
+
+        auto p = get<profile>(get<1>(m));
+        auto iy = p.y;
+        auto ix = p.x_off;
+        auto iz = p.z;
+
+        spike_filter(iz, spike_window_size);
+        auto [left_edge_index,right_edge_index] = find_profile_edges_nans_outer(iz);
+        auto [left_mean,right_mean] = pulley_left_right_mean(iz,left_edge_index,right_edge_index);
+
+        sum_left_mean += left_mean;
+        sum_right_mean += right_mean;
+
+        sum_width_n += right_edge_index - left_edge_index;
+        if(--loop_cnt == 0) break;
+
+      }
+
+    } while (std::get<0>(m) != msgid::finished);
+
+    gocator->Stop();
+
+    long width_n = sum_width_n / (cnt - 1);
+    double left_mean = sum_left_mean / (cnt - 1);
+    double right_mean = sum_right_mean / (cnt - 1);
+    double gradient = (right_mean - left_mean) / width_n;
+    std::cout << fmt::format("width_n : {}, regression_gradient : {}, left_mean : {}, right_mean : {}", width_n , gradient, left_mean, right_mean);
+
   }
 
   void stop_gocator()
