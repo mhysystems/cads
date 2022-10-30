@@ -389,6 +389,9 @@ namespace cads
       auto [ileft_edge_index,iright_edge_index] = find_profile_edges_nans_outer(iz);
       regression_compensate(iz, 0, iz.size(), -gradient);
       auto bottom_avg = barrel_mean(iz,ileft_edge_index,iright_edge_index);
+
+      publish_BarrelHeight(bottom_avg); // Don't pulish this data yet
+
       auto bottom_filtered = (z_element)iirfilter(bottom_avg);
       auto [delayed, dd] = delay({iy, ix, iz,ileft_edge_index,iright_edge_index});
       

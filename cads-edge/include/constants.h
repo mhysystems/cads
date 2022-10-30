@@ -20,6 +20,7 @@ namespace cads {
     value_type PulleyOcillation;
     value_type CadsToOrigin;
     value_type RotationPeriod;
+    value_type BarrelHeight;
   };
 
   struct profile_parameters {

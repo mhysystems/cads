@@ -17,8 +17,9 @@ namespace cads {
     auto pulley_oscillation = config["constraints"]["pulley_oscillation"].get<constraints::value_type>();
     auto cads_to_origin = config["constraints"]["cads_to_origin"].get<constraints::value_type>();
     auto rotation_period = config["constraints"]["rotation_period"].get<constraints::value_type>();
+    auto barrel_height = config["constraints"]["barrel_height"].get<constraints::value_type>();
 
-    return constraints{current_length,surface_speed,pulley_oscillation,cads_to_origin,rotation_period};
+    return constraints{current_length,surface_speed,pulley_oscillation,cads_to_origin,rotation_period,barrel_height};
 
   }
 
