@@ -313,16 +313,31 @@ namespace cads
     BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
     BlockingReaderWriterQueue<msg> winFifo(4096 * 1024);
 
+    const auto x_width = global_config["x_width"].get<int>();
+    const auto width_n = global_config["width_n"].get<int>();
+    const int nan_num = global_config["left_edge_nan"].get<int>();
+    const z_element clip_height = global_config["clip_height"].get<z_element>();
+    const auto gradient = global_config["gradient"].get<double>();
+    const int spike_window_size = nan_num * 2;
+    
+    
     auto gocator = mk_gocator(gocatorFifo);
     gocator->Start();
 
-    auto [x_resolution, y_resolution, z_resolution, bottom, belt_top, width_n, left_edge_index_init] = preprocessing(gocatorFifo);
+    
+    
+    cads::msg m;
+    gocatorFifo.wait_dequeue(m);
+    auto m_id = get<0>(m);
+
+    if (m_id != cads::msgid::resolutions)
+    {
+      std::throw_with_nested(std::runtime_error("preprocessing:First message must be resolutions"));
+    }
+
+    auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution] = get<resolutions_t>(get<1>(m));
     int fiducial_x = (int) (double(make_fiducial(x_resolution, y_resolution).cols) * 1.5);
 
-    const auto x_width = global_config["x_width"].get<int>();
-    const auto z_height_mm = global_config["z_height"].get<double>();
-    const int nan_num = global_config["left_edge_nan"].get<int>();
-    const int spike_window_size = nan_num * 2;
 
     BlockingReaderWriterQueue<msg> db_fifo;
     BlockingReaderWriterQueue<msg> dynamic_processing_fifo;
@@ -333,21 +348,15 @@ namespace cads
     std::jthread dynamic_processing(dynamic_processing_thread, std::ref(dynamic_processing_fifo), std::ref(db_fifo), width_n);
     std::jthread origin_dectection(window_processing_thread, x_resolution, y_resolution, width_n, std::ref(winFifo), std::ref(dynamic_processing_fifo));
 
-    auto gradient = belt_regression(64, gocatorFifo);
-
+    
     auto iirfilter = mk_iirfilterSoS();
     auto delay = mk_delay(global_config["iirfilter"]["delay"]);
 
     int64_t cnt = 0;
-    z_element clip_height = belt_top + 3.0f;
-
+   
     auto start = std::chrono::high_resolution_clock::now();
    
-
-    cads::msg m;
-    
     auto schmitt_trigger = mk_schmitt_trigger(0.001f);
-    auto edge_adjust = mk_edge_adjust(left_edge_index_init, width_n);
     auto pulley_frequency = mk_pulley_frequency();
     auto profiles_align = mk_profiles_align(width_n);
 
@@ -381,14 +390,14 @@ namespace cads
       if (iz.size() < (size_t)width_n)
       {
         spdlog::get("cads")->error("Gocator sending profiles with sample number {} less than {}", iz.size(), width_n);
-        iz.insert(iz.end(), width_n - iz.size(), bottom);
+        continue;
       }
 
       ++cnt;
 
       spike_filter(iz, spike_window_size);
       auto [ileft_edge_index,iright_edge_index] = find_profile_edges_nans_outer(iz);
-      regression_compensate(iz, 0, iz.size(), -gradient);
+      regression_compensate(iz, 0, iz.size(), gradient);
       auto bottom_avg = barrel_mean(iz,ileft_edge_index,iright_edge_index);
 
       publish_BarrelHeight(bottom_avg); // Don't pulish this data yet
@@ -412,12 +421,7 @@ namespace cads
       nan_filter(z);
       left_edge_index = profiles_align(z,left_edge_index, right_edge_index);
 
-      auto avg = z | views::take(left_edge_index + fiducial_x) | views::drop(left_edge_index);
-      float  avg2 = (float)std::accumulate(avg.begin(), avg.end(), 0.0) / (float)fiducial_x;
-      const auto clip_height_check = (clip_height + avg2) / 2.0f;
-      if(clip_height_check > clip_height) clip_height = clip_height_check;
-     
-      barrel_height_compensate(z, -bottom_filtered, clip_height + 3.0f);
+      barrel_height_compensate(z, -bottom_filtered, clip_height);
 
       auto f = z | views::take(left_edge_index + width_n) | views::drop(left_edge_index);
       
