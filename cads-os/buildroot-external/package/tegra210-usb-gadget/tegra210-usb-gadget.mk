@@ -14,6 +14,7 @@ define TEGRA210_USB_GADGET_INSTALL_COMMON
 endef
 
 define TEGRA210_USB_GADGET_INSTALL_INIT_SYSTEMD
+	$(TEGRA210_USB_GADGET_INSTALL_COMMON)
 	$(INSTALL) -D -m 0644 $(TEGRA210_USB_GADGET_PKGDIR)/usb-gadget.service \
 		$(TARGET_DIR)/lib/systemd/system/usb-gadget.service
 	$(INSTALL) -D -m 0644 $(TEGRA210_USB_GADGET_PKGDIR)/20-usb-gadget.network \
