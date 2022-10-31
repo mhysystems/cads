@@ -1,0 +1,5 @@
+[Match]
+Name=rndis0
+
+[Network]
+Bridge=l4tbr0
