@@ -69,5 +69,12 @@ namespace cads
     };
   }
 
+  std::function<double(double)> mk_differentiation(double v0) {
 
+    return [=](double v1) mutable {
+      auto dv = (v1 - v0) * 64;
+      v0 = v1;
+      return dv;    
+    };
+  }
 }

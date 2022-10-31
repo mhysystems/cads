@@ -1,12 +1,11 @@
 {
-  "data_source" : "../../profiles/rawprofile-2022-18-23.db", 
+  "data_source" : "../../profiles/rawprofile_2022-10-30.db", 
   "y_max_length" : 930000,
   "y_max_upload" : 906000,
   "z_height" : 27.0,
   "x_width"  : 1500,
   "width_n" : 1820,
   "clip_height" : 36.0,
-  "gradient" : 0.00072446,
   "left_edge_nan" : 10,
   "right_edge_nan" : 10,
   "fiducial_depth" : 3,
@@ -37,7 +36,7 @@
     "pulley_oscillation" : [1,2],
     "cads_to_origin" : [0,907000],
     "rotation_period" : [140000,210000],
-    "barrel_height" : [-33.5,-31.0]
+    "barrel_height" : [-34,-31.0]
   },
   "db_name" : "profile.db",
   "belt_cross_correlation_threshold" : 0.4,

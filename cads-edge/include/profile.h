@@ -28,5 +28,6 @@ namespace cads
   std::tuple<z_type,z_type> partition_profile(const z_type& z,int,int);
   double barrel_mean(const z_type& z,int,int);
   std::tuple<double,double> pulley_left_right_mean(const z_type& z, int left_edge_index, int right_edge_index);
+  double barrel_gradient(const z_type &z, int left_edge_index, int right_edge_index);
   
 }

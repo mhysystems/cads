@@ -16,17 +16,17 @@ sos = signal.iirfilter(19, 4, rs=120, btype='low',analog=False, ftype='cheby2', 
 
 # Insert delay in front using usless data.
 #plt.plot(np.append([0 for x in range(1,228)],arr))
-plt.plot(np.append([0 for x in range(1,20)],arr))
-#plt.plot(arr)
+#plt.plot(np.append([0 for x in range(1,20)],arr))
+plt.plot(arr)
 
-#plt.plot(arrf)
-plt.plot(signal.sosfilt(sos,arr))
+plt.plot(arrf)
+#plt.plot(signal.sosfilt(sos,arr))
 
 
 
 
 #Plot frequency response
-if True:
+if False:
     w, h = signal.sosfreqz(sos, 2000, fs=980)
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)

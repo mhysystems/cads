@@ -317,7 +317,6 @@ namespace cads
     const auto width_n = global_config["width_n"].get<int>();
     const int nan_num = global_config["left_edge_nan"].get<int>();
     const z_element clip_height = global_config["clip_height"].get<z_element>();
-    const auto gradient = global_config["gradient"].get<double>();
     const int spike_window_size = nan_num * 2;
     
     
@@ -358,9 +357,11 @@ namespace cads
    
     auto start = std::chrono::high_resolution_clock::now();
    
-    auto schmitt_trigger = mk_schmitt_trigger(0.001f);
+    auto schmitt_trigger = mk_schmitt_trigger(0.1f);
+    auto differentiation = mk_differentiation(-32.5);
     auto pulley_frequency = mk_pulley_frequency();
     auto profiles_align = mk_profiles_align(width_n);
+
 
 
    std::ofstream filt("filt.txt");
@@ -399,6 +400,7 @@ namespace cads
 
       spike_filter(iz, spike_window_size);
       auto [ileft_edge_index,iright_edge_index] = find_profile_edges_nans_outer(iz);
+      auto gradient = barrel_gradient(iz,ileft_edge_index,iright_edge_index);
       regression_compensate(iz, 0, iz.size(), gradient);
       auto bottom_avg = barrel_mean(iz,ileft_edge_index,iright_edge_index);
 
@@ -415,7 +417,7 @@ namespace cads
         continue;
       }
       
-      auto barrel_cnt = pulley_frequency(bottom_filtered);
+      auto barrel_cnt = pulley_frequency(differentiation(bottom_filtered));
       winFifo.enqueue({msgid::barrel_rotation_cnt, barrel_cnt});
       
       auto [y, x, z, left_edge_index, right_edge_index] = dd;
@@ -459,12 +461,15 @@ namespace cads
 
     const auto z_height_mm = global_config["z_height"].get<double>();
     const int nan_num = global_config["left_edge_nan"].get<int>();
+    const auto width_n = global_config["width_n"].get<int>();
     const int spike_window_size = nan_num * 2;
 
     auto iirfilter = mk_iirfilterSoS();
     auto delay = mk_delay(global_config["iirfilter"]["delay"]);
 
     cads::msg m;
+
+    auto differentiation = mk_differentiation(0);
 
     std::ofstream filt("filt.txt");
 
@@ -483,13 +488,14 @@ namespace cads
         auto iz = p.z;
 
         spike_filter(iz, spike_window_size);
-        //auto [bottom_avg, top_avg, invalid] = barrel_offset(iz, z_height_mm);
-        auto [left_edge_index,right_edge_index] = find_profile_edges_nans_outer(iz);
-        auto bottom_avg = barrel_mean(iz,left_edge_index,right_edge_index);
+        auto [ileft_edge_index,iright_edge_index] = find_profile_edges_nans_outer(iz);
+        auto gradient = barrel_gradient(iz,ileft_edge_index,iright_edge_index);
+        regression_compensate(iz, 0, iz.size(), gradient);
+        auto bottom_avg = barrel_mean(iz,ileft_edge_index,iright_edge_index);
 
         auto bottom_filtered = iirfilter(bottom_avg);
 
-        filt << bottom_avg << "," << bottom_filtered << '\n';
+        filt << bottom_filtered << "," << differentiation(bottom_filtered) << '\n';
         filt.flush();
 
         auto [delayed, dd] = delay({iy, ix, iz,0,0});
@@ -513,6 +519,7 @@ namespace cads
     auto gocator = mk_gocator(gocatorFifo);
     gocator->Start();
 
+    const auto width_n2 = global_config["width_n"].get<int>();
     const int nan_num = global_config["left_edge_nan"].get<int>();
     const int spike_window_size = nan_num * 2;
     
@@ -537,6 +544,7 @@ namespace cads
 
         spike_filter(iz, spike_window_size);
         auto [left_edge_index,right_edge_index] = find_profile_edges_nans_outer(iz);
+
         auto [left_mean,right_mean] = pulley_left_right_mean(iz,left_edge_index,right_edge_index);
 
         sum_left_mean += left_mean;

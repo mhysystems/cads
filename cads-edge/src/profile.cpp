@@ -159,6 +159,13 @@ namespace cads
     }
   }
 
+
+  double barrel_gradient(const z_type &z, int left_edge_index, int right_edge_index) {
+    auto [l,r] = pulley_left_right_mean(z,left_edge_index,right_edge_index);
+    auto gradient  = (r - l) / (double)z.size();
+    return gradient;
+  }
+
   std::function<int(int,int)> mk_edge_adjust(int left_edge_index_previous, int width_n) {
 
     return [=](int left_edge_index, int right_edge_index) mutable {
