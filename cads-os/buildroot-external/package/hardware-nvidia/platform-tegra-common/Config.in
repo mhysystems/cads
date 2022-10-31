@@ -1,6 +1,0 @@
-config BR2_PACKAGE_PLATFORM_TEGRA_COMMON
-	bool
-	help
-	  NVIDIA Tegra Common Device Tree Source
-
-	  https://developer.nvidia.com/embedded/linux-tegra

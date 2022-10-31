@@ -1,7 +1,0 @@
-config BR2_PACKAGE_LINUX_NVGPU
-	bool
-	help
-	  The download helper for NVIDIA NVGPU Tegra driver kernel
-	  patches.
-
-	  https://developer.nvidia.com/embedded/linux-tegra

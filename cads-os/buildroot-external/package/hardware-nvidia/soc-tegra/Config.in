@@ -1,6 +1,0 @@
-config BR2_PACKAGE_SOC_TEGRA
-	bool
-	help
-	  NVIDIA Tegra Jetson hardware drivers
-
-	  https://developer.nvidia.com/embedded/linux-tegra

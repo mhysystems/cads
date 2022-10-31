@@ -1,6 +1,0 @@
-config BR2_PACKAGE_PLATFORM_T210_COMMON
-	bool
-	help
-	  NVIDIA T210 Common hardware drivers
-
-	  https://developer.nvidia.com/embedded/linux-tegra

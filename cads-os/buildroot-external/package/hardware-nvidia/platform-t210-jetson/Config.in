@@ -1,6 +1,0 @@
-config BR2_PACKAGE_PLATFORM_T210_JETSON
-	bool
-	help
-	  NVIDIA T210 Jetson Device Tree Source
-
-	  https://developer.nvidia.com/embedded/linux-tegra

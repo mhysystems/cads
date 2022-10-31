@@ -1,5 +1,5 @@
-config BR2_PACKAGE_CADS_SUPPORT
-	bool "cads-support"
+config BR2_PACKAGE_CADS_CONFIG
+	bool "cads-config"
 	depends on BR2_INIT_SYSTEMD
 	select BR2_PACKAGE_OPENSSL
 	select BR2_PACKAGE_SQLITE
@@ -9,7 +9,8 @@ config BR2_PACKAGE_CADS_SUPPORT
 	select BR2_PACKAGE_BOOST_PROGRAM_OPTIONS
 	select BR2_PACKAGE_TBB
 	select BR2_PACKAGE_TEGRA210
-	select BR2_PACKAGE_WIREGUARD_TEGRA210
+	select BR2_PACKAGE_TEGRA210_USB_GADGET
+	select BR2_PACKAGE_TEGRA210_WIREGUARD
 	select BR2_PACKAGE_WIREGUARD_TOOLS
 	help
-	  Support package for CADS system
+	  System level configuration for CADS edge device

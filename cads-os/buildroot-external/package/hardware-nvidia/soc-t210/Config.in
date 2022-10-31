@@ -1,6 +1,0 @@
-config BR2_PACKAGE_SOC_T210
-	bool
-	help
-	  NVIDIA T210 Jetson hardware drivers
-
-	  https://developer.nvidia.com/embedded/linux-tegra

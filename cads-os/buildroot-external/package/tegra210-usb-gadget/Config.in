@@ -1,0 +1,5 @@
+config BR2_PACKAGE_TEGRA210_USB_GADGET
+	bool "tegra210-usb-gadget"
+	depends on BR2_PACKAGE_TEGRA210
+	help
+	  USB gadget support

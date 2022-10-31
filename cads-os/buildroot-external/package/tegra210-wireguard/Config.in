@@ -1,5 +1,5 @@
-config BR2_PACKAGE_WIREGUARD_TEGRA210
-	bool "wireguard tegra210"
+config BR2_PACKAGE_TEGRA210_WIREGUARD
+	bool "tegra210-wireguard"
 	depends on BR2_PACKAGE_TEGRA210
 	# kernel module requires 3.10+
 	depends on BR2_TOOLCHAIN_HEADERS_AT_LEAST_3_10
@@ -21,6 +21,6 @@ config BR2_PACKAGE_WIREGUARD_TEGRA210
 
 	  https://www.wireguard.com
 
-comment "wireguard-tegra210 needs a toolchain w/ headers >= 3.10"
+comment "tegra210-wireguard needs a toolchain w/ headers >= 3.10"
 	depends on BR2_PACKAGE_TEGRA210
 	depends on !BR2_TOOLCHAIN_HEADERS_AT_LEAST_3_10

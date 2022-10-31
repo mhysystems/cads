@@ -1,6 +1,0 @@
-config BR2_PACKAGE_LINUX_NVIDIA
-	bool
-	help
-	  NVIDIA Linux source code for Tegra
-
-	  https://developer.nvidia.com/embedded/linux-tegra
