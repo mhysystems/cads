@@ -4,9 +4,11 @@ Name=l4tbr0
 [Network]
 Address=192.168.55.1/24
 DHCPServer=yes
-IPMasquerade=ipv4
 
 [DHCPServer]
 PoolOffset=100
 PoolSize=1
 EmitDNS=no
+EmitNTP=no
+EmitRouter=no
+EmitTimezone=no
