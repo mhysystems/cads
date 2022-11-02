@@ -20,6 +20,10 @@ namespace cads
     static_assert(!std::is_integral_v<Real>, "Integer values have not yet been implemented.");
     auto m = std::distance(first, last);
 
+    if(m < 3) {
+      return *first;
+    }
+
     auto k = m / 4;
     auto j = m - (4 * k);
     // m = 4k+j.
