@@ -70,7 +70,10 @@ cleanup_opts:
 drop_msg:
       if(!terminate) {
         std::tuple<std::string,std::string> dropped_msg;
-        nats_queue.wait_dequeue(dropped_msg);
+        if(nats_queue.wait_dequeue_timed(dropped_msg,std::chrono::seconds(1))) 
+        {
+          goto drop_msg;
+        }
       }
     }
 

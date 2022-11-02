@@ -33,6 +33,6 @@ namespace cads
   */
   std::tuple<int,int> find_profile_edges_nans_outer(const z_type& z, int len = global_profile_parameters.left_edge_nan);
 
-  std::tuple<int,int> find_profile_edges_sobel(const z_type& z, int len, int x_width);
+  std::tuple<int,int> find_profile_edges_sobel(const z_type& z, int len = global_profile_parameters.sobel_filter);
 
 } // namespace cads

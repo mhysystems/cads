@@ -61,8 +61,7 @@ namespace cads
   {
     using namespace std::ranges;
 
-    auto f = z | views::filter([](z_element a)
-                               { return !std::isnan(a); });
+    auto f = z | views::filter([](z_element a) { return !std::isnan(a); });
     
     Container tmp(f.begin(),f.end()); // range filter view iterator nor random access
     return interquartile_range(std::begin(tmp), std::end(tmp));

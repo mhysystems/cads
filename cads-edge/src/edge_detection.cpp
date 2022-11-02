@@ -28,8 +28,11 @@ template<typename T> int edge(T s, T e,int len) {
   auto r = sr::find_if(s,e,[](z_element z) {return !NaN<z_element>::isnan(z);} );
   auto d = sr::distance(s,r);
 
-  if(d >= len || r == e) {
+  if(r == e) {
     return 0;
+  }
+  else if(d >= len) {
+    return d;
   }
   else{
     auto window_len = s + len > e ? sr::distance(s,e) : len;
@@ -72,7 +75,7 @@ std::tuple<int,int> find_profile_edges_nans_outer(const z_type& z, int len) {
 }
 
 
-std::tuple<int,int> find_profile_edges_sobel(const z_type& z, int len, int x_width) {
+std::tuple<int,int> find_profile_edges_sobel(const z_type& z, int len) {
 
   std::vector<double> win(len*2 + 1,0.0);
   std::fill(win.begin(),win.begin()+len,-1.0);
@@ -99,11 +102,6 @@ std::tuple<int,int> find_profile_edges_sobel(const z_type& z, int len, int x_wid
       min = sum;
       right = i+len; 
     }
-
-    if(right - left < 0.9*x_width) {
-      right = z.size()-1;
-    }
-
   }
 
   return std::tuple<int,int>{left, right};

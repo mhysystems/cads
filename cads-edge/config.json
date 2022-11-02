@@ -1,5 +1,5 @@
 {
-  "data_source" : "../../profiles/rawprofile_2022-10-30.db", 
+  "data_source" : "../../profiles/rawprofile_2022-11-01.db", 
   "y_max_length" : 930000,
   "y_max_upload" : 906000,
   "z_height" : 27.0,
@@ -13,9 +13,11 @@
   "fiducial_y" : 67,
   "fiducial_gap" : 78,
   "pulley_circumfrence" : 2613.8,
-  "daily_upload" : true,
+  "daily_upload" : false,
   "daily_start_time" : "now",
   "log_lengthMiB" : 128, 
+  "spike_filter" : 5,
+  "sobel_filter" : 5,
   "iirfilter" : {
     "skip" : 4000,
     "delay" : 10,
@@ -44,7 +46,7 @@
   "conveyor" : "cv405",
   "nats_url" : "192.168.2.13",
   "drop_uploads" : 0, 
-  "upload_profile" : true, 
+  "upload_profile" : false, 
   "base_url" : "http://localhost:5000/api",
   "lua_window_height" : 10,
   "lua_fn" : "function process(width,height)\nlocal sum = 0\nfor i = 1,width do\nfor j = 0,height-1 do\nsum = sum + (win[j*width + i] < 25 and 1 or 0)\nend\nend\nreturn (sum / (width * height)) > 0.2 and sum or 0\nend"

@@ -21,7 +21,7 @@ namespace cads
   using sqlite3_t = std::unique_ptr<sqlite3, decltype(&sqlite3_close)>;
   using sqlite3_stmt_t = std::unique_ptr<sqlite3_stmt, decltype(&sqlite3_finalize)>;
 
-  tuple<sqlite3_t, sqlite3_stmt_t> prepare_query(string name, string query, int flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX)
+  tuple<sqlite3_stmt_t,sqlite3_t> prepare_query(string name, string query, int flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX)
   {
 
     sqlite3 *db_raw = nullptr;
@@ -46,7 +46,8 @@ namespace cads
 
     sqlite3_stmt_t stmt(stmt_raw, &sqlite3_finalize);
 
-    return {move(db), move(stmt)};
+    // Undefined behaviour. FIXME Current destruction order is left to right
+    return {move(stmt),move(db)};
   }
 
   tuple<int, sqlite3_stmt_t> db_step(sqlite3_stmt_t stmt)
@@ -124,7 +125,7 @@ namespace cads
   int store_profile_parameters(profile_params params, std::string name)
   {
     auto query = R"(INSERT OR REPLACE INTO PARAMETERS (rowid,y_res,x_res,z_res,z_off,encoder_res,z_max) VALUES (1,?,?,?,?,?,?))"s;
-    auto [db, stmt] = prepare_query(name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
+    auto [stmt,db] = prepare_query(name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
 
     auto err = sqlite3_bind_double(stmt.get(), 1, params.y_res);
     err = sqlite3_bind_double(stmt.get(), 2, params.x_res);
@@ -147,7 +148,7 @@ namespace cads
   {
 
     auto query = R"(SELECT * FROM PARAMETERS WHERE ROWID = 1)"s;
-    auto [db, stmt] = prepare_query(name, query);
+    auto [stmt,db] = prepare_query(name, query);
     auto err = SQLITE_OK;
 
     tie(err, stmt) = db_step(move(stmt));
@@ -177,7 +178,7 @@ namespace cads
   {
 
     auto query = R"(SELECT MIN(Y),MAX(Y),COUNT(Y),LENGTH(Z) FROM PROFILE WHERE REVID = ? AND IDX < ? LIMIT 1)"s;
-    auto [db, stmt] = prepare_query(name, query);
+    auto [stmt,db] = prepare_query(name, query);
 
     auto err = sqlite3_bind_int(stmt.get(), 1, revid);
     err = sqlite3_bind_int(stmt.get(), 2, idx);
@@ -210,7 +211,7 @@ namespace cads
 
   long count_with_width_n(string name, int revid, int width_n) {
     auto query = fmt::format(R"(SELECT count(idx) FROM PROFILE WHERE REVID = {} AND LENGTH(z) = ?)", revid);
-    auto [db, stmt] = prepare_query(name, query);
+    auto [stmt,db] = prepare_query(name, query);
     auto err = sqlite3_bind_int(stmt.get(), 1, width_n);
 
     tie(err, stmt) = db_step(move(stmt));
@@ -228,7 +229,7 @@ namespace cads
   {
 
     auto query = R"(INSERT OR REPLACE INTO PROFILE (revid,idx,y,x_off,z) VALUES (?,?,?,?,?))"s;
-    auto [db, stmt] = prepare_query(name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
+    auto [stmt,db] = prepare_query(name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
 
     auto query2 = R"(PRAGMA synchronous=OFF)"s;
     char *errmsg;
@@ -332,7 +333,7 @@ namespace cads
   coro<std::tuple<int, profile>> fetch_belt_coro(int revid, int last_idx, int size, std::string name)
   {
     auto query = fmt::format(R"(SELECT idx,y,x_off,z FROM PROFILE WHERE REVID = {} AND IDX >= ? AND IDX < ? ORDER BY Y)", revid);
-    auto [db, stmt] = prepare_query(name, query);
+    auto [stmt,db] = prepare_query(name, query);
 
     for (int i = 0; i < last_idx; i += size)
     {

@@ -317,13 +317,9 @@ namespace cads
     const auto width_n = global_config["width_n"].get<int>();
     const int nan_num = global_config["left_edge_nan"].get<int>();
     const z_element clip_height = global_config["clip_height"].get<z_element>();
-    const int spike_window_size = nan_num * 2;
-    
     
     auto gocator = mk_gocator(gocatorFifo);
     gocator->Start();
-
-    
     
     cads::msg m;
     gocatorFifo.wait_dequeue(m);
@@ -362,10 +358,6 @@ namespace cads
     auto pulley_frequency = mk_pulley_frequency();
     auto profiles_align = mk_profiles_align(width_n);
 
-
-
-   std::ofstream filt("filt.txt");
-
     long drop_profiles = global_config["iirfilter"]["skip"]; // Allow for iir fillter too stablize
 
     do
@@ -398,10 +390,13 @@ namespace cads
 
       ++cnt;
 
-      spike_filter(iz, spike_window_size);
+      spike_filter(iz);
+      auto iiz = iz;
+      nan_filter(iiz);
       auto [ileft_edge_index,iright_edge_index] = find_profile_edges_nans_outer(iz);
-      auto gradient = barrel_gradient(iz,ileft_edge_index,iright_edge_index);
-      regression_compensate(iz, 0, iz.size(), gradient);
+      //auto [ll,rr] = find_profile_edges_sobel(iiz);
+      //auto gradient = barrel_gradient(iz,ll,rr);
+      //regression_compensate(iz, 0, iz.size(), gradient);
       auto bottom_avg = barrel_mean(iz,ileft_edge_index,iright_edge_index);
 
       publish_BarrelHeight(bottom_avg); // Don't pulish this data yet

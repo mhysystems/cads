@@ -27,8 +27,10 @@ namespace cads {
     using namespace std;
     auto left_edge_nan = global_config["left_edge_nan"].get<int>();
     auto right_edge_nan = global_config["right_edge_nan"].get<int>();
+    auto spike_filter = global_config["spike_filter"].get<int>();
+    auto sobel_filter = global_config["sobel_filter"].get<int>();
 
-    return profile_parameters{left_edge_nan,right_edge_nan};
+    return profile_parameters{left_edge_nan,right_edge_nan,spike_filter,sobel_filter};
 
   }
   

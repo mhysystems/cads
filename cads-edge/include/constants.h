@@ -26,6 +26,8 @@ namespace cads {
   struct profile_parameters {
     int left_edge_nan;
     int right_edge_nan;
+    int spike_filter;
+    int sobel_filter;
   };
 
   extern constraints global_constraints;

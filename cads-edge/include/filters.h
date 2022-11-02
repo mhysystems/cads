@@ -2,11 +2,12 @@
 #include <profile.h>
 #include <vector>
 #include <functional>
+#include <constants.h>
 
 
 namespace cads
 {
-  void spike_filter(z_type& z, int window_size);
+  void spike_filter(z_type& z, int window_size = global_profile_parameters.spike_filter);
   void nan_filter(z_type& z);
   void barrel_height_compensate(z_type& z, z_element z_off, z_element z_max);
   std::function<double(double)> mk_iirfilterSoS();
