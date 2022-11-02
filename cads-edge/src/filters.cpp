@@ -38,12 +38,9 @@ namespace cads
   }
 
 
-  z_type nan_filter(z_type &&z) {
-    using namespace std::ranges;
-
-    auto f = z | views::filter([](z_element a) { return !std::isnan(a);});
-
-    return z_type(f.begin(),f.end());
+  z_type nan_filter_pure(z_type z) {
+    nan_filter(z);
+    return z;
   }
 
   void nan_filter(z_type &z)

@@ -346,7 +346,8 @@ namespace cads
     std::jthread origin_dectection(window_processing_thread, x_resolution, y_resolution, width_n, std::ref(winFifo), std::ref(dynamic_processing_fifo));
 
     
-    auto iirfilter = mk_iirfilterSoS();
+    auto iirfilter_left = mk_iirfilterSoS();
+    auto iirfilter_right = mk_iirfilterSoS();
     auto delay = mk_delay(global_config["iirfilter"]["delay"]);
 
     int64_t cnt = 0;
@@ -391,17 +392,18 @@ namespace cads
       ++cnt;
 
       spike_filter(iz);
-      auto iiz = iz;
-      nan_filter(iiz);
-      auto [ileft_edge_index,iright_edge_index] = find_profile_edges_nans_outer(iz);
-      //auto [ll,rr] = find_profile_edges_sobel(iiz);
-      //auto gradient = barrel_gradient(iz,ll,rr);
-      //regression_compensate(iz, 0, iz.size(), gradient);
-      auto bottom_avg = barrel_mean(iz,ileft_edge_index,iright_edge_index);
+    
+      auto [ileft_edge_index,iright_edge_index] = find_profile_edges_sobel(nan_filter_pure(iz));
+      auto [pulley_left,pulley_right] = pulley_left_right_mean(iz,ileft_edge_index,iright_edge_index);
+      
+      auto pulley_left_filtered = (z_element)iirfilter_left(pulley_left);
+      auto pulley_right_filtered = (z_element)iirfilter_right(pulley_right);
+      auto bottom_filtered = pulley_left_filtered;
 
-      publish_BarrelHeight(bottom_avg); // Don't pulish this data yet
+      auto barrel_cnt = pulley_frequency(differentiation(bottom_filtered));
+      winFifo.enqueue({msgid::barrel_rotation_cnt, barrel_cnt});
 
-      auto bottom_filtered = (z_element)iirfilter(bottom_avg);
+
       auto [delayed, dd] = delay({iy, ix, iz,ileft_edge_index,iright_edge_index});
       
       if (!delayed)
@@ -412,11 +414,14 @@ namespace cads
         continue;
       }
       
-      auto barrel_cnt = pulley_frequency(differentiation(bottom_filtered));
-      winFifo.enqueue({msgid::barrel_rotation_cnt, barrel_cnt});
+
+
       
       auto [y, x, z, left_edge_index, right_edge_index] = dd;
-
+      
+      auto gradient  = (pulley_right_filtered - pulley_left_filtered) / (double)z.size();
+      regression_compensate(z, 0, z.size(), gradient);
+      
       nan_filter(z);
       left_edge_index = profiles_align(z,left_edge_index, right_edge_index);
 

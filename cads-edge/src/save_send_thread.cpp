@@ -30,8 +30,6 @@ namespace cads
 
   coro<long, std::tuple<long, double>, 1> daily_upload_coro(long read_revid)
   {
-    co_yield read_revid;
-
     using namespace date;
     using namespace std;
 
@@ -176,7 +174,7 @@ namespace cads
     struct global_t
     {
       cads::coro<int, std::tuple<int, int, cads::profile>, 1> store_profile = store_profile_coro();
-      // coro<long, std::tuple<long, double>, 1> daily_upload = daily_upload_coro(0);
+      coro<long, std::tuple<long, double>, 1> daily_upload = daily_upload_coro(0);
       long revid = 0;
       long idx = 0;
     } global;
@@ -204,7 +202,7 @@ namespace cads
         const auto complete_belt_action = [](global_t &global, const complete_belt_t &e)
         {
           bool terminate = false;
-          // std::tie(terminate, global.revid) = global.daily_upload.resume({global.idx, e.value});
+          std::tie(terminate, global.revid) = global.daily_upload.resume({global.idx, e.value});
           global.idx = 0;
         };
 
