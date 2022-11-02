@@ -21,7 +21,7 @@ namespace cads
     auto m = std::distance(first, last);
 
     if(m < 3) {
-      return *first;
+      return std::make_tuple(*first,*first);
     }
 
     auto k = m / 4;
