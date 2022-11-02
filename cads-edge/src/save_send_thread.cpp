@@ -30,6 +30,7 @@ namespace cads
 
   coro<long, std::tuple<long, double>, 1> daily_upload_coro(long read_revid)
   {
+    co_yield read_revid;
 
     using namespace date;
     using namespace std;
@@ -84,13 +85,14 @@ namespace cads
 
       for (auto process = true; process;)
       {
+
         switch (state)
         {
         case no_shedule:
         {
           fut = std::async(http_post_whole_belt, read_revid, idx, belt_length);
           write_revid++;
-          spdlog::get("cads")->info("Posting a belt. Writing data to revid: {}",write_revid);
+          spdlog::get("cads")->info("Posting a belt. Writing data to revid: {}", write_revid);
           state = uploading;
           break;
         }
@@ -108,7 +110,7 @@ namespace cads
               fut = std::async(http_post_whole_belt, read_revid, idx, belt_length);
               write_revid++;
               state = uploading;
-              spdlog::get("cads")->info("Posting a belt. Writing data to revid: {}. Reading data from revid: {}",write_revid,read_revid);
+              spdlog::get("cads")->info("Posting a belt. Writing data to revid: {}. Reading data from revid: {}", write_revid, read_revid);
             }
             else
             {
@@ -116,7 +118,9 @@ namespace cads
               state = post_upload;
               spdlog::get("cads")->info("Dropped upload. Drops remaining:{}", drop_uploads);
             }
-          }else {
+          }
+          else
+          {
             process = false;
           }
           break;
@@ -138,7 +142,9 @@ namespace cads
               state = daily_upload ? post_upload : no_shedule;
             }
             spdlog::get("cads")->info("Belt upload thread finished. Writing data to revid: {}", write_revid);
-          }else {
+          }
+          else
+          {
             process = false;
           }
           break;
@@ -149,7 +155,9 @@ namespace cads
           if (today != chrono::floor<chrono::days>(now))
           {
             state = pre_upload;
-          }else {
+          }
+          else
+          {
             process = false;
           }
           break;
@@ -168,7 +176,7 @@ namespace cads
     struct global_t
     {
       cads::coro<int, std::tuple<int, int, cads::profile>, 1> store_profile = store_profile_coro();
-      coro<long, std::tuple<long, double>, 1> daily_upload = daily_upload_coro(0);
+      // coro<long, std::tuple<long, double>, 1> daily_upload = daily_upload_coro(0);
       long revid = 0;
       long idx = 0;
     } global;
@@ -182,19 +190,22 @@ namespace cads
 
         const auto store_action = [](global_t &global, const scan_t &e)
         {
-          auto [co_end,s_err] = global.store_profile.resume({global.revid, global.idx, e.value});
-          if(s_err == 101) {
+          auto [co_end, s_err] = global.store_profile.resume({global.revid, global.idx, e.value});
+          if (s_err == 101)
+          {
             global.idx++;
-          }else{
+          }
+          else
+          {
             // error
           }
         };
 
         const auto complete_belt_action = [](global_t &global, const complete_belt_t &e)
         {
-            bool terminate = false;
-            std::tie(terminate, global.revid) = global.daily_upload.resume({global.idx, e.value});
-            global.idx = 0;
+          bool terminate = false;
+          // std::tie(terminate, global.revid) = global.daily_upload.resume({global.idx, e.value});
+          global.idx = 0;
         };
 
         const auto reset_globals_action = [](global_t &global)
@@ -204,7 +215,7 @@ namespace cads
         };
 
         return make_transition_table(
-            *"invalid_data"_s + event<begin_sequence_t> / reset_globals_action  = "valid_data"_s,
+            *"invalid_data"_s + event<begin_sequence_t> / reset_globals_action = "valid_data"_s,
             "valid_data"_s + event<scan_t> / store_action = "valid_data"_s,
             "valid_data"_s + event<complete_belt_t> / complete_belt_action = "valid_data"_s,
             "valid_data"_s + event<end_sequence_t> / reset_globals_action = "invalid_data"_s);
