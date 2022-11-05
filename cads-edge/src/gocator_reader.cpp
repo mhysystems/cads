@@ -305,7 +305,7 @@ namespace cads
 
     auto samples_width = (double)distance(profile, profile_begin);
     auto z = GocatorReaderBase::k16sToFloat(profile_begin, profile_end, zResolution, zOffset);
-    m_gocatorFifo.enqueue({msgid::scan, cads::profile{y, xOffset + samples_width * xResolution, z}});
+    m_gocatorFifo.enqueue({msgid::scan, cads::profile{y, xOffset + samples_width * xResolution, std::move(z)}});
 
     GoDestroy(dataset);
 

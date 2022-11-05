@@ -75,7 +75,7 @@ namespace cads
 
     for (; !terminate;)
     {
-      std::tie(args, terminate) = co_yield write_revid;
+      std::tie(args, terminate) =  co_yield write_revid;
       std::tie(idx, belt_length) = args;
 
       if (terminate)
@@ -123,8 +123,8 @@ namespace cads
           }
           break;
         }
-
         case uploading:
+        {
           if (fut.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
           {
             auto [time, err] = fut.get();
@@ -146,11 +146,13 @@ namespace cads
             process = false;
           }
           break;
-
+        }
         case post_upload:
         {
-          auto now = current_zone()->to_local(system_clock::now());
-          if (today != chrono::floor<chrono::days>(now))
+          auto tmp = date::current_zone();//->to_local(std::chrono::system_clock::now());
+          auto now = tmp->to_local(std::chrono::system_clock::now());
+          auto huh  = chrono::floor<chrono::days>(now);
+          if (today != huh)
           {
             state = pre_upload;
           }
@@ -161,8 +163,9 @@ namespace cads
           break;
         }
         }
-      }
+      }    
     }
+
   }
 
   void save_send_thread(BlockingReaderWriterQueue<msg> &profile_fifo)

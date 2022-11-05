@@ -73,7 +73,7 @@
 			"type": "cppdbg",
 			"request": "launch",
 			"program": "${workspaceFolder}/debug/cads",
-			"args": ["-c", "${workspaceFolder}/gtconfig.json"],
+			"args": ["-c", "${workspaceFolder}/gconfig.json"],
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}/debug",
 			"environment": [],
