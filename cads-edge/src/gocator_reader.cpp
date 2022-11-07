@@ -169,6 +169,7 @@ namespace cads
 
     m_encoder_resolution = (double)GoTransform_EncoderResolution(GoSensor_Transform(m_sensor));
     m_yResolution = GoSetup_EncoderSpacing(setup);
+    m_frame_rate = GoSetup_FrameRate(setup);
   }
 
   GocatorReader::GocatorReader(moodycamel::BlockingReaderWriterQueue<msg> &gocatorFifo, bool use_encoder, std::string ip_add) : GocatorReader(gocatorFifo, ip_add)

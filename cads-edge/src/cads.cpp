@@ -214,6 +214,8 @@ namespace cads
       auto iz = p.z;
       ++cnt;
 
+      encoder_distance_estimation([](){});
+
       if (iz.size() < size_t(x_width * 0.75))
       {
         spdlog::get("cads")->error("Gocator sending profiles with widths less than 0.75 of expected width");

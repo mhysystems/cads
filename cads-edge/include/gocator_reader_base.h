@@ -29,6 +29,7 @@ protected:
 	moodycamel::BlockingReaderWriterQueue<msg>& m_gocatorFifo;
   std::atomic<double> m_yResolution = 1.0;
   std::atomic<double> m_encoder_resolution = 1.0;
+  std::atomic<double> m_frame_rate = 1.0;
   std::condition_variable m_condition;
   std::mutex m_mutex;
   std::atomic<bool> m_loop;
