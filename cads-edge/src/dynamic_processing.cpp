@@ -195,7 +195,8 @@ namespace cads
     next_fifo.enqueue({msgid::finished, 0});
     realtime_processing.terminate();
 
-    spdlog::get("cads")->info("DYNAMIC PROCESSING - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, cnt / duration);
+    auto rate = duration != 0 ? (double)cnt / duration : 0;
+    spdlog::get("cads")->info("DYNAMIC PROCESSING - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, rate);
   }
 
 }

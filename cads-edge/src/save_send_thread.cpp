@@ -255,7 +255,9 @@ namespace cads
     global.store_profile.terminate();
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    spdlog::get("cads")->info("DB PROCESSING - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, cnt / duration);
+    
+    auto rate = duration != 0 ? (double)cnt / duration : 0;
+    spdlog::get("cads")->info("DB PROCESSING - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, rate);
 
     // spdlog::get("cads")->info("Final Upload");
     // http_post_whole_belt(revid, idx); // For replay and not having a complete belt, so something is uploaded

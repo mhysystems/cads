@@ -49,7 +49,6 @@
 #include <intermessage.h>
 #include <belt.h>
 
-
 using namespace std;
 using namespace moodycamel;
 using namespace std::chrono;
@@ -197,7 +196,7 @@ namespace cads
     {
       bool connect_via_ip = global_config.contains("gocator_ip");
       spdlog::get("cads")->debug("Using gocator as data source");
-      return connect_via_ip ?  make_unique<GocatorReader>(gocatorFifo,global_config.at("gocator_ip"s).get<std::string>()) : make_unique<GocatorReader>(gocatorFifo);
+      return connect_via_ip ? make_unique<GocatorReader>(gocatorFifo, global_config.at("gocator_ip"s).get<std::string>()) : make_unique<GocatorReader>(gocatorFifo);
     }
     else
     {
@@ -208,7 +207,7 @@ namespace cads
 
   void upload_profile_only()
   {
-    http_post_whole_belt(0, std::numeric_limits<int>::max(),0);
+    http_post_whole_belt(0, std::numeric_limits<int>::max(), 0);
   }
 
   void store_profile_only()
@@ -219,7 +218,6 @@ namespace cads
 
     BlockingReaderWriterQueue<msg> gocatorFifo;
 
-    
     auto gocator = mk_gocator(gocatorFifo);
 
     gocator->Start();
@@ -277,7 +275,6 @@ namespace cads
     gocator->Stop();
   }
 
-  
   auto preprocessing(BlockingReaderWriterQueue<msg> &gocatorFifo)
   {
     cads::msg m;
@@ -306,7 +303,7 @@ namespace cads
     return std::tuple{x_resolution, y_resolution, z_resolution, bottom, top, width_n, left_edge_index};
   }
 
-  void process()
+  bool process_impl()
   {
     create_db(global_config["db_name"].get<std::string>().c_str());
 
@@ -315,12 +312,11 @@ namespace cads
 
     const auto x_width = global_config["x_width"].get<int>();
     const auto width_n = global_config["width_n"].get<int>();
-    const int nan_num = global_config["left_edge_nan"].get<int>();
     const z_element clip_height = global_config["clip_height"].get<z_element>();
-    
+
     auto gocator = mk_gocator(gocatorFifo);
     gocator->Start();
-    
+
     cads::msg m;
     gocatorFifo.wait_dequeue(m);
     auto m_id = get<0>(m);
@@ -333,33 +329,30 @@ namespace cads
     auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution] = get<resolutions_t>(get<1>(m));
     store_profile_parameters({y_resolution, x_resolution, z_resolution, 33.0, encoder_resolution, clip_height});
 
-    int fiducial_x = (int) (double(make_fiducial(x_resolution, y_resolution).cols) * 1.5);
-
-
     BlockingReaderWriterQueue<msg> db_fifo;
     BlockingReaderWriterQueue<msg> dynamic_processing_fifo;
 
     bool terminate_publish = false;
-    std::jthread realtime_publish(realtime_publish_thread,std::ref(terminate_publish));
+    std::jthread realtime_publish(realtime_publish_thread, std::ref(terminate_publish));
     std::jthread save_send(save_send_thread, std::ref(db_fifo));
     std::jthread dynamic_processing(dynamic_processing_thread, std::ref(dynamic_processing_fifo), std::ref(db_fifo), width_n);
     std::jthread origin_dectection(window_processing_thread, x_resolution, y_resolution, width_n, std::ref(winFifo), std::ref(dynamic_processing_fifo));
 
-    
     auto iirfilter_left = mk_iirfilterSoS();
     auto iirfilter_right = mk_iirfilterSoS();
     auto delay = mk_delay(global_config["iirfilter"]["delay"]);
 
     int64_t cnt = 0;
-   
+
     auto start = std::chrono::high_resolution_clock::now();
-   
+
     auto schmitt_trigger = mk_schmitt_trigger(0.1f);
     auto differentiation = mk_differentiation(-32.5);
     auto pulley_frequency = mk_pulley_frequency();
     auto profiles_align = mk_profiles_align(width_n);
 
     long drop_profiles = global_config["iirfilter"]["skip"]; // Allow for iir fillter too stablize
+    bool error = false;
 
     do
     {
@@ -376,26 +369,37 @@ namespace cads
       auto iy = p.y;
       auto ix = p.x_off;
       auto iz = p.z;
+      ++cnt;
 
       if (iz.size() < size_t(x_width * 0.75))
       {
         spdlog::get("cads")->error("Gocator sending profiles with widths less than 0.75 of expected width");
-        continue;
+        error = true;
+        break;
       }
 
       if (iz.size() < (size_t)width_n)
       {
         spdlog::get("cads")->error("Gocator sending profiles with sample number {} less than {}", iz.size(), width_n);
-        continue;
+        error = true;
+        break;
       }
 
-      ++cnt;
+      double nan_cnt = std::count_if(iz.begin(), iz.end(), [](z_element z)
+                                   { return std::isnan(z); });
+
+      if ((nan_cnt / iz.size()) > 0.05 )
+      {
+        spdlog::get("cads")->error("Percentage of nan({}) in profile > 5%", nan_cnt);
+        error = true;
+        break;
+      }
 
       spike_filter(iz);
-    
-      auto [ileft_edge_index,iright_edge_index] = find_profile_edges_sobel(nan_filter_pure(iz));
-      auto [pulley_left,pulley_right] = pulley_left_right_mean(iz,ileft_edge_index,iright_edge_index);
-      
+
+      auto [ileft_edge_index, iright_edge_index] = find_profile_edges_sobel(nan_filter_pure(iz));
+      auto [pulley_left, pulley_right] = pulley_left_right_mean(iz, ileft_edge_index, iright_edge_index);
+
       auto pulley_left_filtered = (z_element)iirfilter_left(pulley_left);
       auto pulley_right_filtered = (z_element)iirfilter_right(pulley_right);
       auto bottom_filtered = pulley_left_filtered;
@@ -403,32 +407,29 @@ namespace cads
       auto barrel_cnt = pulley_frequency(differentiation(bottom_filtered));
       winFifo.enqueue({msgid::barrel_rotation_cnt, barrel_cnt});
 
+      auto [delayed, dd] = delay({iy, ix, iz, ileft_edge_index, iright_edge_index});
 
-      auto [delayed, dd] = delay({iy, ix, iz,ileft_edge_index,iright_edge_index});
-      
       if (!delayed)
         continue;
 
-      if (drop_profiles > 0) {
+      if (drop_profiles > 0)
+      {
         --drop_profiles;
         continue;
       }
-      
 
-
-      
       auto [y, x, z, left_edge_index, right_edge_index] = dd;
-      
-      auto gradient  = (pulley_right_filtered - pulley_left_filtered) / (double)z.size();
+
+      auto gradient = (pulley_right_filtered - pulley_left_filtered) / (double)z.size();
       regression_compensate(z, 0, z.size(), gradient);
-      
+
       nan_filter(z);
-      left_edge_index = profiles_align(z,left_edge_index, right_edge_index);
+      left_edge_index = profiles_align(z, left_edge_index, right_edge_index);
 
       barrel_height_compensate(z, -bottom_filtered, clip_height);
 
       auto f = z | views::take(left_edge_index + width_n) | views::drop(left_edge_index);
-      
+
       winFifo.enqueue({msgid::scan, cads::profile{y, x + left_edge_index * x_resolution, {f.begin(), f.end()}}});
 
     } while (std::get<0>(m) != msgid::finished);
@@ -438,7 +439,8 @@ namespace cads
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     origin_dectection.join();
-    spdlog::get("cads")->info("CADS - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, cnt / duration);
+    auto rate = duration != 0 ? (double)cnt / duration : 0;
+    spdlog::get("cads")->info("CADS - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, rate);
 
     gocator->Stop();
     spdlog::get("cads")->info("Gocator Stopped");
@@ -449,6 +451,42 @@ namespace cads
     terminate_publish = true;
     realtime_publish.join();
     spdlog::get("cads")->info("Realtime publishing Thread Stopped");
+
+    return error;
+  }
+
+  void process()
+  {
+    for (int sleep_wait = 1;;)
+    {
+      
+      auto start = std::chrono::high_resolution_clock::now();
+
+      bool error = process_impl();
+
+      auto now = std::chrono::high_resolution_clock::now();
+      auto period = std::chrono::duration_cast<std::chrono::seconds>(now - start).count();
+
+      if (period > sleep_wait * 60)
+      {
+        sleep_wait = 1;
+      }
+
+      if (error)
+      {
+        spdlog::get("cads")->info("Sleeping for {} minutes",sleep_wait);
+        std::this_thread::sleep_for(std::chrono::seconds(sleep_wait * 60));
+
+        if (sleep_wait < 128)
+        {
+          sleep_wait *= 2;
+        }
+      }
+      else
+      {
+        break;
+      }
+    }
   }
 
   void generate_signal()
@@ -459,9 +497,7 @@ namespace cads
     auto gocator = mk_gocator(gocatorFifo);
     gocator->Start();
 
-    const auto z_height_mm = global_config["z_height"].get<double>();
     const int nan_num = global_config["left_edge_nan"].get<int>();
-    const auto width_n = global_config["width_n"].get<int>();
     const int spike_window_size = nan_num * 2;
 
     auto iirfilter = mk_iirfilterSoS();
@@ -488,17 +524,17 @@ namespace cads
         auto iz = p.z;
 
         spike_filter(iz, spike_window_size);
-        auto [ileft_edge_index,iright_edge_index] = find_profile_edges_nans_outer(iz);
-        auto gradient = barrel_gradient(iz,ileft_edge_index,iright_edge_index);
+        auto [ileft_edge_index, iright_edge_index] = find_profile_edges_nans_outer(iz);
+        auto gradient = barrel_gradient(iz, ileft_edge_index, iright_edge_index);
         regression_compensate(iz, 0, iz.size(), gradient);
-        auto bottom_avg = barrel_mean(iz,ileft_edge_index,iright_edge_index);
+        auto bottom_avg = barrel_mean(iz, ileft_edge_index, iright_edge_index);
 
         auto bottom_filtered = iirfilter(bottom_avg);
 
         filt << bottom_filtered << "," << differentiation(bottom_filtered) << '\n';
         filt.flush();
 
-        auto [delayed, dd] = delay({iy, ix, iz,0,0});
+        auto [delayed, dd] = delay({iy, ix, iz, 0, 0});
         if (!delayed)
           continue;
 
@@ -511,7 +547,6 @@ namespace cads
     spdlog::get("cads")->info("Gocator Stopped");
   }
 
-
   void generate_belt_parameters(long cnt)
   {
     BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
@@ -519,10 +554,9 @@ namespace cads
     auto gocator = mk_gocator(gocatorFifo);
     gocator->Start();
 
-    const auto width_n2 = global_config["width_n"].get<int>();
     const int nan_num = global_config["left_edge_nan"].get<int>();
     const int spike_window_size = nan_num * 2;
-    
+
     cads::msg m;
     double sum_left_mean = 0, sum_right_mean = 0;
     long sum_width_n = 0;
@@ -538,21 +572,19 @@ namespace cads
       {
 
         auto p = get<profile>(get<1>(m));
-        auto iy = p.y;
-        auto ix = p.x_off;
         auto iz = p.z;
 
         spike_filter(iz, spike_window_size);
-        auto [left_edge_index,right_edge_index] = find_profile_edges_nans_outer(iz);
+        auto [left_edge_index, right_edge_index] = find_profile_edges_nans_outer(iz);
 
-        auto [left_mean,right_mean] = pulley_left_right_mean(iz,left_edge_index,right_edge_index);
+        auto [left_mean, right_mean] = pulley_left_right_mean(iz, left_edge_index, right_edge_index);
 
         sum_left_mean += left_mean;
         sum_right_mean += right_mean;
 
         sum_width_n += right_edge_index - left_edge_index;
-        if(--loop_cnt == 0) break;
-
+        if (--loop_cnt == 0)
+          break;
       }
 
     } while (std::get<0>(m) != msgid::finished);
@@ -563,8 +595,7 @@ namespace cads
     double left_mean = sum_left_mean / (cnt - 1);
     double right_mean = sum_right_mean / (cnt - 1);
     double gradient = (right_mean - left_mean) / width_n;
-    std::cout << fmt::format("width_n : {}, regression_gradient : {}, left_mean : {}, right_mean : {}", width_n , gradient, left_mean, right_mean);
-
+    std::cout << fmt::format("width_n : {}, regression_gradient : {}, left_mean : {}, right_mean : {}", width_n, gradient, left_mean, right_mean);
   }
 
   void stop_gocator()
