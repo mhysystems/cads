@@ -18,6 +18,7 @@
   "log_lengthMiB" : 128, 
   "spike_filter" : 5,
   "sobel_filter" : 5,
+  "nan_%" : 0.07,
   "iirfilter" : {
     "skip" : 4000,
     "delay" : 10,

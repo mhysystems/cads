@@ -311,6 +311,7 @@ namespace cads
     BlockingReaderWriterQueue<msg> winFifo(4096 * 1024);
 
     const auto x_width = global_config["x_width"].get<int>();
+    const auto nan_percentage = global_config["nan_%"].get<double>();
     const auto width_n = global_config["width_n"].get<int>();
     const z_element clip_height = global_config["clip_height"].get<z_element>();
 
@@ -388,9 +389,9 @@ namespace cads
       double nan_cnt = std::count_if(iz.begin(), iz.end(), [](z_element z)
                                    { return std::isnan(z); });
 
-      if ((nan_cnt / iz.size()) > 0.05 )
+      if ((nan_cnt / iz.size()) > nan_percentage )
       {
-        spdlog::get("cads")->error("Percentage of nan({}) in profile > 5%", nan_cnt);
+        spdlog::get("cads")->error("Percentage of nan({}) in profile > {}%", nan_cnt,nan_percentage);
         error = true;
         break;
       }
