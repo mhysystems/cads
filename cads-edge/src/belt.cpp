@@ -27,6 +27,8 @@ namespace cads
     return [=](double bottom) mutable -> long
     {
       schmitt1 = schmitt_trigger(bottom);
+      amplitude_extraction(bottom,false);
+
       if ((std::signbit(schmitt1) == false && std::signbit(schmitt0) == true) || (std::signbit(schmitt1) == true && std::signbit(schmitt0) == false))
       {
         auto now = std::chrono::high_resolution_clock::now();

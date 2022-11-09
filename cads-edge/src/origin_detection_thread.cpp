@@ -153,7 +153,7 @@ namespace cads
         {
           sequence_cnt = 0;
           spdlog::get("cads")->info("Origin not found before Max samples. Lowest Correlation: {} at Y: {} with threshold: {}", lowest_correlation,y_lowest_correlation,cv_threshold_correleation);
-          fiducial_as_image(matrix_correlation,"best-failed-match");
+          //fiducial_as_image(matrix_correlation,"best-failed-match");
 
           y_offset += y;
 
