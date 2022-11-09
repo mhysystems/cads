@@ -147,6 +147,7 @@ namespace cads
   bool process_impl()
   {
     create_db(global_config["db_name"].get<std::string>().c_str());
+    create_program_state_db(global_config["program_state_db_name"].get<std::string>());
 
     BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
     BlockingReaderWriterQueue<msg> winFifo(4096 * 1024);
@@ -232,7 +233,7 @@ namespace cads
 
       if ((nan_cnt / iz.size()) > nan_percentage )
       {
-        spdlog::get("cads")->error("Percentage of nan({}) in profile > {}%", nan_cnt,nan_percentage);
+        spdlog::get("cads")->error("Percentage of nan({}) in profile > {}%", nan_cnt,nan_percentage * 100);
         error = true;
         break;
       }

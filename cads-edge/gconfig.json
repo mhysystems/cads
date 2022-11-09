@@ -42,6 +42,7 @@
     "barrel_height" : [-34,-31.0]
   },
   "db_name" : "profile.db",
+  "program_state_db_name" : "state.db",
   "belt_cross_correlation_threshold" : 0.4,
   "site" : "whaleback",
   "conveyor" : "cv405",

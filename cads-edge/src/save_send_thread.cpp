@@ -37,6 +37,8 @@ namespace cads
     auto sts = global_config["daily_start_time"].get<std::string>();
     auto drop_uploads = global_config["drop_uploads"].get<int>();
     auto daily_upload = global_config["daily_upload"].get<bool>();
+    auto program_state_db_name = global_config["program_state_db_name"].get<std::string>();
+
     auto write_revid = read_revid;
 
     if (sts != "now"s)
@@ -50,9 +52,9 @@ namespace cads
     }
     else
     {
-      auto now = current_zone()->to_local(system_clock::now());
-      auto today = chrono::floor<chrono::days>(now);
-      auto daily_time = duration_cast<seconds>(now - today);
+      date::zoned_time now{ date::current_zone(),std::chrono::system_clock::now() };
+      auto today = chrono::floor<chrono::days>(now.get_local_time());
+      auto daily_time = duration_cast<seconds>(now.get_local_time() - today);
       trigger_hour = chrono::floor<chrono::hours>(daily_time);
     }
 
@@ -72,6 +74,7 @@ namespace cads
     };
 
     auto state = daily_upload ? pre_upload : no_shedule;
+    auto last_upload_date = fetch_daily_upload(program_state_db_name);
 
     for (; !terminate;)
     {
@@ -100,8 +103,8 @@ namespace cads
           today = chrono::floor<chrono::days>(now);
           auto daily_time = duration_cast<seconds>(now - today);
           auto current_hour = chrono::floor<chrono::hours>(daily_time);
-
-          if (current_hour >= trigger_hour)
+         
+          if (current_hour >= trigger_hour && (today > last_upload_date))
           {
             if (drop_uploads == 0)
             {
@@ -138,6 +141,8 @@ namespace cads
             {
               write_revid--;
               state = daily_upload ? post_upload : no_shedule;
+              last_upload_date = today;
+              store_daily_upload(last_upload_date,program_state_db_name);
             }
             spdlog::get("cads")->info("Belt upload thread finished. Writing data to revid: {}", write_revid);
           }

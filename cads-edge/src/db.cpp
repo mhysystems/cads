@@ -5,8 +5,10 @@
 #include <iostream>
 #include <filesystem>
 #include <memory>
+#include <sstream>
 
 #include <fmt/core.h>
+#include <fmt/chrono.h>
 #include <spdlog/spdlog.h>
 
 #include <readerwriterqueue.h>
@@ -64,6 +66,113 @@ namespace cads
     return {err, move(stmt)};
   }
 
+  
+  
+  bool db_exec_seq(sqlite3 *db, std::vector<std::string> tables)
+  {
+    bool error = false;
+    for (auto query : tables)
+    {
+
+      char *errmsg;
+      auto err = sqlite3_exec(db, query.c_str(), nullptr, nullptr, &errmsg);
+
+      if (err != SQLITE_OK)
+      {
+        spdlog::get("db")->error("create_db:sqlite3_exec, Error Code:{}, query:{}, sqlite error msg:{}", err, query, errmsg);
+        sqlite3_free(errmsg);
+        error = true;
+      }
+    }
+
+    return error;
+  }
+  
+  bool create_program_state_db(std::string name)
+  {
+    using namespace date;
+    using namespace std::chrono;
+
+    sqlite3 *db = nullptr;
+    bool error = false;
+    auto db_name_string = name.empty() ? global_config["program_state_db_name"].get<std::string>() : name;
+    const char *db_name = db_name_string.c_str();
+    
+    auto now = system_clock::now();
+    auto inital_day = floor<date::days>(now) - date::days{2};
+    auto ts = date::format("%FT%T", inital_day);
+
+    vector<string> tables{
+      R"(CREATE TABLE IF NOT EXISTS STATE (DAILYUPLOAD TEXT NOT NULL))",
+      fmt::format(R"(INSERT INTO STATE(DAILYUPLOAD) SELECT '{}' WHERE NOT EXISTS (SELECT * FROM STATE))", ts)
+    };
+
+    int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);
+    
+    if (err == SQLITE_OK)
+    {
+      error = db_exec_seq(db,tables);
+    }
+    else
+    {
+      spdlog::get("db")->error("create_program_state_db:sqlite3_open_v2 Error Code:{}", err);
+      std::throw_with_nested(std::runtime_error("create_program_state_db:sqlite3_open_v2"));
+    }
+
+    return error;
+
+  }
+
+  int store_daily_upload(std::chrono::time_point<date::local_t, std::chrono::days> date, std::string name)
+  {
+    auto query = R"(UPDATE STATE SET DAILYUPLOAD = ? WHERE ROWID = 1)"s;
+    auto [stmt,db] = prepare_query(name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
+    
+    auto ts = date::format("%FT%T", date);
+
+    auto err = sqlite3_bind_text(stmt.get(), 1, ts.c_str(),ts.size(),nullptr);
+
+    if (err != SQLITE_OK)
+    {
+      spdlog::get("db")->error("store_daily_upload: SQLite Error Code:{}", err);
+    }
+
+    tie(err, stmt) = db_step(move(stmt));
+
+    if (err != SQLITE_DONE)
+    {
+      spdlog::get("db")->error("db_step: SQLite Error Code:{}", err);
+    }
+
+    return err;
+  }
+
+  std::chrono::time_point<date::local_t, std::chrono::days> fetch_daily_upload(std::string name)
+  {
+    auto query = R"(SELECT DAILYUPLOAD FROM STATE WHERE ROWID = 1)"s;
+    auto [stmt,db] = prepare_query(name, query);
+    auto err = SQLITE_OK;
+
+    tie(err, stmt) = db_step(move(stmt));
+    
+    if (err != SQLITE_ROW)
+    {
+      spdlog::get("db")->error("db_step: SQLite Error Code:{}", err);
+    }
+    
+    const char* date_cstr = (const char* )sqlite3_column_text(stmt.get(), 0);
+    auto date_cstr_len = sqlite3_column_bytes(stmt.get(), 0);
+
+    std::string date_str(date_cstr,date_cstr_len);
+    std::istringstream in(date_str);
+
+    std::chrono::time_point<date::local_t, std::chrono::days> date;
+    in >> date::parse("%FT%T", date);
+
+    return date; 
+  }
+
+  
   bool create_db(std::string name)
   {
     sqlite3 *db = nullptr;
