@@ -166,7 +166,7 @@ namespace cads
     long root_cnt = 0;
     auto pulley_revolution = mk_pulley_revolution();
 
-    return [=](double pulley_height) mutable -> long
+    return [=](double pulley_height) mutable -> double
     {
       auto [root, root_distance] = pulley_revolution(pulley_height);
 

@@ -49,51 +49,11 @@
 			"miDebuggerPath": "/usr/bin/gdb"
 		},
     {
-			"name": "(gdb) Dump",
-			"type": "cppdbg",
-			"request": "launch",
-			"program": "${workspaceFolder}/debug/cads",
-			"args": ["-d","-c", "${workspaceFolder}/config.json"],
-			"stopAtEntry": false,
-			"cwd": "${workspaceFolder}/debug",
-			"environment": [],
-			"externalConsole": false,
-			"MIMode": "gdb",
-			"setupCommands": [
-				{
-					"description": "Enable pretty-printing for gdb",
-					"text": "-enable-pretty-printing",
-					"ignoreFailures": true
-				}
-			],
-			"miDebuggerPath": "/usr/bin/gdb"
-		},
-    {
 			"name": "(gdb) gocator Launch",
 			"type": "cppdbg",
 			"request": "launch",
 			"program": "${workspaceFolder}/debug/cads",
 			"args": ["-c", "${workspaceFolder}/gconfig.json"],
-			"stopAtEntry": false,
-			"cwd": "${workspaceFolder}/debug",
-			"environment": [],
-			"externalConsole": false,
-			"MIMode": "gdb",
-			"setupCommands": [
-				{
-					"description": "Enable pretty-printing for gdb",
-					"text": "-enable-pretty-printing",
-					"ignoreFailures": true
-				}
-			],
-			"miDebuggerPath": "/usr/bin/gdb"
-		},
-    {
-			"name": "(gdb) gocator dump",
-			"type": "cppdbg",
-			"request": "launch",
-			"program": "${workspaceFolder}/debug/cads",
-			"args": ["-d","-c", "${workspaceFolder}/gtconfig.json"],
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}/debug",
 			"environment": [],
