@@ -194,6 +194,7 @@ namespace cads
     auto differentiation = mk_differentiation(-32.5);
     auto pulley_frequency = mk_pulley_frequency();
     auto profiles_align = mk_profiles_align(width_n);
+    auto pulley_speed = mk_pulley_speed();
 
     long drop_profiles = global_config["iirfilter"]["skip"]; // Allow for iir fillter too stablize
     bool error = false;
@@ -259,6 +260,17 @@ namespace cads
       auto barrel_cnt = pulley_frequency(removed_dc_bias);
       winFifo.enqueue({msgid::barrel_rotation_cnt, barrel_cnt});
 
+      auto speed = pulley_speed(removed_dc_bias);
+
+      if (!between(global_constraints.SurfaceSpeed,speed))
+      {
+        spdlog::get("cads")->error("Speed outside range");
+        error = true;
+        break;
+      }
+
+
+
       auto [delayed, dd] = delay({iy, ix, iz, ileft_edge_index, iright_edge_index});
 
       if (!delayed)
@@ -290,8 +302,6 @@ namespace cads
       {
         fn.resume({removed_dc_bias,cads::profile{y, x + left_edge_index * x_resolution, {f.begin(), f.end()}}});
       }
-
-
 
     } while (std::get<0>(m) != msgid::finished);
 

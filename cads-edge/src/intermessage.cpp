@@ -8,10 +8,6 @@
 
 namespace cads {
   
-  bool between(constraints::value_type range, double value) {
-    return get<0>(range) <= value && value <= get<1>(range);  
-  }
-
   void publish_CurrentLength(double value) {
     auto valid = between(global_constraints.CurrentLength,value);
     publish_meta_realtime("CurrentLength",value, valid);

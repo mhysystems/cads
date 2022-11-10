@@ -51,5 +51,6 @@ namespace cads {
 
   void init_config(std::string f);
   void drop_config();
+  bool between(constraints::value_type range, double value);
 }
 

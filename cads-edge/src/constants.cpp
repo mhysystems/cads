@@ -1,11 +1,12 @@
+#include <tuple>
+
 #include <constants.h>
 #include <init.h>
 
 nlohmann::json global_config;
 
-
-
 namespace cads {  
+
   constraints global_constraints;
   profile_parameters global_profile_parameters;
   
@@ -45,6 +46,9 @@ namespace cads {
     global_config = nlohmann::json();
   }
 
+  bool between(constraints::value_type range, double value) {
+    return get<0>(range) <= value && value <= get<1>(range);  
+  }
 
 
 }

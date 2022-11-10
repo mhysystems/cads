@@ -75,13 +75,13 @@ namespace cads
         
         auto drain_action = [](global_t &global, const root_event& o) mutable {
           auto step_size = o.root_distance / global.fifo.size();
-          for (auto i = 0; i < global.fifo.size(); i++)
+          for (std::size_t i = 0; i < global.fifo.size(); i++)
           {
             auto e = global.fifo[i];
             e.y = global.distance + i * step_size;
             global.csp(e);
           }
-          
+
           global.distance += o.root_distance;
           global.fifo.clear();
           process(profile_event{o.p});
@@ -140,12 +140,14 @@ namespace cads
       {
         auto now = std::chrono::high_resolution_clock::now();
         auto period = std::chrono::duration_cast<std::chrono::milliseconds>(now - barrel_origin_time).count();
+       
         if (barrel_cnt % 100 == 0)
         {
           spdlog::get("cads")->info("Barrel Frequency(Hz): {}", 1000.0 / ((double)period * 2));
           publish_PulleyOscillation(amplitude_extraction(bottom, true));
           publish_SurfaceSpeed(pully_circumfrence / (2 * period));
         }
+        
 
         barrel_cnt++;
         barrel_origin_time = now;
@@ -153,6 +155,31 @@ namespace cads
 
       schmitt0 = schmitt1;
       return barrel_cnt;
+    };
+  }
+
+  std::function<double(double)> mk_pulley_speed(double init)
+  {
+
+    auto barrel_origin_time = std::chrono::high_resolution_clock::now();
+    double speed = init;
+    long root_cnt = 0;
+    auto pulley_revolution = mk_pulley_revolution();
+
+    return [=](double pulley_height) mutable -> long
+    {
+      auto [root, root_distance] = pulley_revolution(pulley_height);
+
+      if (root && root_cnt > 1)
+      {
+        auto now = std::chrono::high_resolution_clock::now();
+        auto period = std::chrono::duration_cast<std::chrono::milliseconds>(now - barrel_origin_time).count();
+        speed = root_distance / period;
+        barrel_origin_time = now;
+        root_cnt++;
+      }
+      
+      return speed;
     };
   }
 
