@@ -38,17 +38,17 @@ namespace cads
     };
   }
 
-  coro<int, profile> encoder_distance_estimation(std::function<void(void)> next)
+  coro<int, std::tuple<double,profile>> encoder_distance_estimation(std::function<void(profile)> next)
   {
     namespace sml = boost::sml;
 
-    profile p;
+    auto args_in = std::tuple<double,profile>{};
     std::deque<profile> fifo;
     auto pulley_revolution = mk_pulley_revolution();
 
     struct root_event 
     {
-      double distance = 0.0;
+      double root_distance;
       profile p;
     };
 
@@ -57,50 +57,67 @@ namespace cads
       profile p;
     };
 
+    struct global_t
+    {
+      double distance = 0;
+      std::deque<profile> fifo;
+      decltype(next) csp;
+    } global;
+
+    global.csp = next;
+
     class transitions
     {
     public:
       auto operator()() const noexcept
       {
         using namespace sml;
-        std::deque<profile> fifo;
-
-        auto take_action = [=](const root_event& o) mutable {
-          fifo.push_back(o.p);
+        
+        auto drain_action = [](global_t &global, const root_event& o) mutable {
+          auto step_size = o.root_distance / global.fifo.size();
+          for (auto i = 0; i < global.fifo.size(); i++)
+          {
+            auto e = global.fifo[i];
+            e.y = global.distance + i * step_size;
+            global.csp(e);
+          }
+          
+          global.distance += o.root_distance;
+          global.fifo.clear();
+          process(profile_event{o.p});
         };
 
+        auto init_action = [](const root_event & e) 
+        {
+          process(profile_event{e.p});
+        }; 
+
         return make_transition_table(
-            *"drop"_s + event<root_event> / [](const root_event & e) {process(profile_event{e.p});} = "take"_s,
-             "take"_s + event<profile_event> / [&](const profile_event & e) mutable {fifo.push_back(e.p);} = "take"_s,
-             "take"_s + event<root_event>  = "drain"_s,
-             "drain"_s + event<origin> [guard] = "take"_s
+            *"drop"_s + event<root_event> / init_action = "take"_s,
+             "take"_s + event<profile_event> / [](global_t &global,const profile_event & e) mutable {global.fifo.push_back(e.p);} = "take"_s,
+             "take"_s + event<root_event>  / drain_action = "take"_s
         );
       }
     };
 
-    sml::sm<transitions> sm;
+    sml::sm<transitions> sm{global};
 
-    for (auto terminate = true; terminate;)
+    for (auto terminate = false; !terminate;)
     {
-      std::tie(p, terminate) = co_yield 0;
+      std::tie(args_in, terminate) = co_yield 0;
+      auto [pully_height,p] = args_in;
+      
       if (terminate)
         continue;
 
-      auto [a, b] = pulley_revolution(0);
+      auto [root, root_distance] = pulley_revolution(pully_height);
 
-      sm.process_event(origin{b,a,p});
-
-      fifo.push_back(p);
-
-      auto step_size = b / fifo.size();
-      for (auto i = 0; i < fifo.size(); i++)
-      {
-        auto e = fifo[i];
-        e.y = distance + i * step_size;
-        next();
+      if(root) {
+        sm.process_event(root_event{root_distance,p});
+      }else {
+        sm.process_event(profile_event{p});
       }
-      distance += b;
-      fifo.clear();
+
     }
   }
 

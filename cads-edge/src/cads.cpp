@@ -57,7 +57,7 @@ using CadsMat = cv::UMat; // cv::cuda::GpuMat
 namespace cads
 {
 
-  unique_ptr<GocatorReaderBase> mk_gocator(BlockingReaderWriterQueue<msg> &gocatorFifo)
+  unique_ptr<GocatorReaderBase> mk_gocator(BlockingReaderWriterQueue<msg> &gocatorFifo, bool use_encoder = false)
   {
     auto data_src = global_config["data_source"].get<std::string>();
 
@@ -65,7 +65,7 @@ namespace cads
     {
       bool connect_via_ip = global_config.contains("gocator_ip");
       spdlog::get("cads")->debug("Using gocator as data source");
-      return connect_via_ip ? make_unique<GocatorReader>(gocatorFifo, global_config.at("gocator_ip"s).get<std::string>()) : make_unique<GocatorReader>(gocatorFifo);
+      return connect_via_ip ? make_unique<GocatorReader>(gocatorFifo, use_encoder, global_config.at("gocator_ip"s).get<std::string>()) : make_unique<GocatorReader>(gocatorFifo,use_encoder);
     }
     else
     {
@@ -155,9 +155,10 @@ namespace cads
     const auto x_width = global_config["x_width"].get<int>();
     const auto nan_percentage = global_config["nan_%"].get<double>();
     const auto width_n = global_config["width_n"].get<int>();
-    const z_element clip_height = global_config["clip_height"].get<z_element>();
+    const auto clip_height = global_config["clip_height"].get<z_element>();
+    const auto use_encoder = global_config["use_encoder"].get<bool>();
 
-    auto gocator = mk_gocator(gocatorFifo);
+    auto gocator = mk_gocator(gocatorFifo,use_encoder);
     gocator->Start();
 
     cads::msg m;
@@ -197,6 +198,12 @@ namespace cads
     long drop_profiles = global_config["iirfilter"]["skip"]; // Allow for iir fillter too stablize
     bool error = false;
 
+    auto csp = [&](const profile &p) {
+      winFifo.enqueue({msgid::scan, p});
+    };
+
+    auto fn = encoder_distance_estimation(csp);
+    
     do
     {
 
@@ -214,7 +221,7 @@ namespace cads
       auto iz = p.z;
       ++cnt;
 
-      encoder_distance_estimation([](){});
+      
 
       if (iz.size() < size_t(x_width * 0.75))
       {
@@ -248,8 +255,8 @@ namespace cads
       auto pulley_left_filtered = (z_element)iirfilter_left(pulley_left);
       auto pulley_right_filtered = (z_element)iirfilter_right(pulley_right);
       auto bottom_filtered = pulley_left_filtered;
-
-      auto barrel_cnt = pulley_frequency(differentiation(bottom_filtered));
+      auto removed_dc_bias = differentiation(bottom_filtered);
+      auto barrel_cnt = pulley_frequency(removed_dc_bias);
       winFifo.enqueue({msgid::barrel_rotation_cnt, barrel_cnt});
 
       auto [delayed, dd] = delay({iy, ix, iz, ileft_edge_index, iright_edge_index});
@@ -275,7 +282,16 @@ namespace cads
 
       auto f = z | views::take(left_edge_index + width_n) | views::drop(left_edge_index);
 
-      winFifo.enqueue({msgid::scan, cads::profile{y, x + left_edge_index * x_resolution, {f.begin(), f.end()}}});
+      if(use_encoder) 
+      {
+        winFifo.enqueue({msgid::scan, cads::profile{y, x + left_edge_index * x_resolution, {f.begin(), f.end()}}});
+      }
+      else 
+      {
+        fn.resume({removed_dc_bias,cads::profile{y, x + left_edge_index * x_resolution, {f.begin(), f.end()}}});
+      }
+
+
 
     } while (std::get<0>(m) != msgid::finished);
 
