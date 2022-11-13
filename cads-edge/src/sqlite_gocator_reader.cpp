@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <thread>
 #include <vector>
+#include <cmath>
 
 #include <spdlog/spdlog.h>
 #include <db.h>
@@ -72,8 +73,12 @@ namespace cads
         m_loop = false;
         break;
       }
+      
+      // Trim NaN's
+      auto first = std::find_if(p.z.begin(),  p.z.end(),  [](z_element z) {return !std::isnan(z);});
+      auto last = std::find_if(p.z.rbegin(), p.z.rend(), [](z_element z) {return !std::isnan(z);});
 
-      m_gocatorFifo.enqueue({msgid::scan, p});
+      m_gocatorFifo.enqueue({msgid::scan, profile{p.y,p.x_off,z_type(first,last.base())}});
       
       if (terminate)
       {

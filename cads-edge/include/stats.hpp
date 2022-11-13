@@ -21,7 +21,7 @@ namespace cads
     auto m = std::distance(first, last);
 
     if(m < 3) {
-      return std::make_tuple(*first,*first);
+      return std::make_tuple(std::numeric_limits<Real>::quiet_NaN(),std::numeric_limits<Real>::quiet_NaN());
     }
 
     auto k = m / 4;

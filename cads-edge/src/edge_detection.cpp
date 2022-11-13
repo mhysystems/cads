@@ -104,6 +104,18 @@ std::tuple<int,int> find_profile_edges_sobel(const z_type& z, int len) {
     }
   }
 
+  if(-min < max) {
+    // Edge wasn't found
+    if(-min / max < 0.75) {
+      right = z.size();
+    }
+  }else {
+    // Edge wasn't found
+    if(max / -min  < 0.75) {
+      left = 0;
+    }
+  }
+  
   return std::tuple<int,int>{left, right};
 
 }

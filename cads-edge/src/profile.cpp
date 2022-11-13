@@ -31,6 +31,20 @@ namespace cads
 
   }
 
+  auto pulley_mean(z_type &z) 
+  {
+    using namespace std::ranges;
+
+    auto [q1,q3] = interquartile_range(z);
+    auto quartile_filtered = z | views::filter([=](z_element a){ return a >= q1 && a <= q3;});
+    auto sum = std::reduce(quartile_filtered.begin(),quartile_filtered.end());
+    auto count = (double)std::ranges::distance(quartile_filtered.begin(),quartile_filtered.end());
+    auto mean = sum / count;
+
+    return mean;
+
+  }
+
   std::tuple<double,double> pulley_left_right_mean(const z_type& z, int left_edge_index, int right_edge_index)
   {
     using namespace std::ranges;

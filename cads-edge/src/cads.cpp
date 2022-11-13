@@ -396,13 +396,14 @@ namespace cads
 
         spike_filter(iz, spike_window_size);
         auto [ileft_edge_index, iright_edge_index] = find_profile_edges_nans_outer(iz);
-        auto gradient = barrel_gradient(iz, ileft_edge_index, iright_edge_index);
-        regression_compensate(iz, 0, iz.size(), gradient);
-        auto bottom_avg = barrel_mean(iz, ileft_edge_index, iright_edge_index);
+        //auto gradient = barrel_gradient(iz, ileft_edge_index, iright_edge_index);
+        //regression_compensate(iz, 0, iz.size(), gradient);
+        auto [bottom_avg, right_mean] = pulley_left_right_mean(iz, ileft_edge_index, iright_edge_index);
+        //auto bottom_avg = barrel_mean(iz, ileft_edge_index, iright_edge_index);
 
         auto bottom_filtered = iirfilter(bottom_avg);
 
-        filt << bottom_filtered << "," << differentiation(bottom_filtered) << '\n';
+        filt << bottom_avg << "," << bottom_filtered << '\n';
         filt.flush();
 
         auto [delayed, dd] = delay({iy, ix, iz, 0, 0});
