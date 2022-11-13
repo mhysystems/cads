@@ -18,7 +18,7 @@
   "log_lengthMiB" : 128, 
   "spike_filter" : 5,
   "sobel_filter" : 5,
-  "nan_%" : 0.07,
+  "nan_%" : 0.17,
   "iirfilter" : {
     "skip" : 4000,
     "delay" : 10,
@@ -43,7 +43,7 @@
   },
   "db_name" : "profile.db",
   "program_state_db_name" : "state.db",
-  "use_encoder" : false,
+  "use_encoder" : true,
   "belt_cross_correlation_threshold" : 0.4,
   "site" : "whaleback",
   "conveyor" : "cv405",

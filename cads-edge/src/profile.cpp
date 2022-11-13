@@ -55,22 +55,7 @@ namespace cads
     auto tl = z_type(left_edge.begin(),left_edge.end());
     auto tr = z_type(right_edge.begin(),right_edge.end());
     
-    auto [lq1,lq3] = interquartile_range(tl);
-    auto [rq1,rq3] = interquartile_range(tr);
-
-    auto left_quartile_filtered = left_edge | views::filter([=](z_element a){ return a >= lq1 && a <= lq3;});
-    auto right_quartile_filtered = right_edge | views::filter([=](z_element a){ return a >= rq1 && a <= rq3;});
-
-    auto left_sum = std::reduce(left_quartile_filtered.begin(),left_quartile_filtered.end());
-    auto left_count = (double)std::ranges::distance(left_quartile_filtered.begin(),left_quartile_filtered.end());
-
-    auto right_sum = std::reduce(right_quartile_filtered.begin(),right_quartile_filtered.end());
-    auto right_count = (double)std::ranges::distance(right_quartile_filtered.begin(),right_quartile_filtered.end());
-
-    auto left_mean = left_sum / left_count;
-    auto right_mean = right_sum / right_count;
-
-    return {left_mean,right_mean};
+    return {pulley_mean(tl),pulley_mean(tr)};
 
   }
 

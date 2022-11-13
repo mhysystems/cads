@@ -249,12 +249,27 @@ namespace cads
       }
 
       spike_filter(iz);
-
-      auto [ileft_edge_index, iright_edge_index] = find_profile_edges_sobel(nan_filter_pure(iz));
+      auto z_nan_filtered = nan_filter_pure(iz);
+      auto [ileft_edge_index, iright_edge_index] = find_profile_edges_sobel(z_nan_filtered);
       auto [pulley_left, pulley_right] = pulley_left_right_mean(iz, ileft_edge_index, iright_edge_index);
-
+      
+      
+      if(std::isnan(pulley_left) && !std::isnan(pulley_right)) {
+        pulley_left = pulley_right;
+      }
+      else if(!std::isnan(pulley_left) && std::isnan(pulley_right)) {
+        pulley_right = pulley_left;
+      }
+      else if(std::isnan(pulley_left) && std::isnan(pulley_right)) {
+        spdlog::get("cads")->error("Cannot find either belt edge");
+        //error = true;
+        break;
+      }
+      
       auto pulley_left_filtered = (z_element)iirfilter_left(pulley_left);
       auto pulley_right_filtered = (z_element)iirfilter_right(pulley_right);
+      
+      
       auto bottom_filtered = pulley_left_filtered;
       auto removed_dc_bias = differentiation(bottom_filtered);
       auto barrel_cnt = pulley_frequency(removed_dc_bias);
