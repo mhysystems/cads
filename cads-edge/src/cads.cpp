@@ -262,7 +262,7 @@ namespace cads
       }
       else if(std::isnan(pulley_left) && std::isnan(pulley_right)) {
         spdlog::get("cads")->error("Cannot find either belt edge");
-        //error = true;
+        error = true;
         break;
       }
       

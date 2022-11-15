@@ -1,5 +1,5 @@
 {
-  "data_source" : "../../profiles/left.csv.db", 
+  "data_source" : "../../profiles/whaleback-cv405-2022-11-14-19332_timertrigger", 
   "y_max_length" : 930000,
   "y_max_upload" : 906000,
   "z_height" : 27.0,
