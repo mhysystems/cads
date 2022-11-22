@@ -102,6 +102,8 @@ int main(int argn, char **argv)
     generate_belt_parameters(vm["params"].as<long>());
   }else if(vm["direct"].as<bool>()) {
     direct_process();
+  }else if(vm["go-log"].as<bool>()) {
+    dump_gocator_log();
   }else{
 	  process();
   }
