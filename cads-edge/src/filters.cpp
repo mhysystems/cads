@@ -99,6 +99,18 @@ namespace cads
     }
   }
 
+  void constraint_clipping(z_type& z, z_element z_min, z_element z_max) {
+    for (auto &e : z)
+    {
+      if(!std::isnan(e)) {
+        if (e < z_min )
+          e = z_min;
+        if (e > z_max)
+          e = z_max;
+      }
+    } 
+  }
+
   std::function<double(double)> mk_iirfilterSoS()
   {
     auto coeff = global_config["iirfilter"]["sos"].get<std::vector<std::vector<double>>>();

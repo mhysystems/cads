@@ -21,6 +21,7 @@ namespace cads {
     value_type CadsToOrigin;
     value_type RotationPeriod;
     value_type BarrelHeight;
+    value_type ZUnbiased;
   };
 
   struct profile_parameters {

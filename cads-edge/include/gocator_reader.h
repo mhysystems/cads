@@ -43,6 +43,7 @@ public:
   void RunForever();
 	void Start();
 	void Stop();
+  void Log();
 	GocatorReader(moodycamel::BlockingReaderWriterQueue<cads::msg>&, std::string ip_add = "");
   GocatorReader(moodycamel::BlockingReaderWriterQueue<cads::msg>&, bool, std::string ip_add = "");
 	virtual ~GocatorReader();

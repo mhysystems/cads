@@ -1,6 +1,7 @@
 #include "gocator_reader.h"
 
 #include <GoSdk/GoSdk.h>
+#include <kApi/kApiDef.h>
 
 #include <algorithm>
 #include <bits/stdint-uintn.h>
@@ -82,6 +83,24 @@ namespace cads
     {
       throw runtime_error{"GoSensor_Stop: "s + to_string(status)};
     }
+  }
+
+  void GocatorReader::Log() {
+    
+    kObj(GoSensor, m_sensor);
+    kAlloc tempAlloc = kObject_Alloc(m_sensor);
+    kByte* fileData = kNULL;
+    kSize fileSize = 0;
+
+    GoSensor_IsReadable(m_sensor);
+
+    GoControl_ReadFile(obj->control, GO_SENSOR_LIVE_LOG_NAME, &fileData, &fileSize, tempAlloc);
+
+        // Uncomment to save transform to file (useful for debugging transform problems)
+    kFile_Save("GoSensor.log", fileData, fileSize);
+
+    kAlloc_Free(tempAlloc, fileData);
+
   }
 
   GocatorReader::GocatorReader(moodycamel::BlockingReaderWriterQueue<msg> &gocatorFifo, std::string ip_add) : GocatorReaderBase(gocatorFifo)
