@@ -118,7 +118,8 @@ namespace cads
     else
     {
       date::zoned_time now{ date::current_zone(),std::chrono::system_clock::now() };
-      ts = date::format("%FT%T", now);
+      auto seconds = chrono::floor<chrono::seconds>(now.get_local_time());
+      ts = date::format("%FT%T", seconds);
     }
 
     vector<string> tables{
@@ -142,7 +143,7 @@ namespace cads
 
   }
 
-  int store_daily_upload(std::chrono::time_point<date::local_t, std::chrono::days> date, std::string name)
+  int store_daily_upload(std::chrono::time_point<date::local_t, std::chrono::seconds> date, std::string name)
   {
     auto query = R"(UPDATE STATE SET DAILYUPLOAD = ? WHERE ROWID = 1)"s;
     auto [stmt,db] = prepare_query(name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
@@ -166,7 +167,7 @@ namespace cads
     return err;
   }
 
-  std::chrono::time_point<date::local_t, std::chrono::days> fetch_daily_upload(std::string name)
+  std::chrono::time_point<date::local_t, std::chrono::seconds> fetch_daily_upload(std::string name)
   {
     auto query = R"(SELECT DAILYUPLOAD FROM STATE WHERE ROWID = 1)"s;
     auto [stmt,db] = prepare_query(name, query);
@@ -185,7 +186,7 @@ namespace cads
     std::string date_str(date_cstr,date_cstr_len);
     std::istringstream in(date_str);
 
-    std::chrono::time_point<date::local_t, std::chrono::days> date;
+    std::chrono::time_point<date::local_t,std::chrono::seconds> date;
     in >> date::parse("%FT%T", date);
 
     return date; 

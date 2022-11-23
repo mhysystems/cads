@@ -25,8 +25,8 @@ namespace cads
 
   std::tuple<double,double,double,double,int> fetch_belt_dimensions(int revid, int idx, std::string name);
 
-  std::chrono::time_point<date::local_t, std::chrono::days> fetch_daily_upload(std::string name);
-  int store_daily_upload(std::chrono::time_point<date::local_t, std::chrono::days> date, std::string name);
+  std::chrono::time_point<date::local_t, std::chrono::seconds> fetch_daily_upload(std::string name);
+  int store_daily_upload(std::chrono::time_point<date::local_t, std::chrono::seconds> date, std::string name);
   bool create_program_state_db(std::string name);
 
 }
