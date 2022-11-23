@@ -10,9 +10,6 @@
 
 #include <date/date.h>
 #include <date/tz.h>
-#include <fmt/core.h>
-#include <fmt/chrono.h>
-#include <spdlog/spdlog.h>
 #include <boost/sml.hpp>
 
 #pragma GCC diagnostic pop
@@ -21,6 +18,7 @@
 #include <constants.h>
 #include <coms.h>
 #include <db.h>
+#include <spdlog/spdlog.h>
 
 using namespace moodycamel;
 using namespace std::chrono;
@@ -32,33 +30,12 @@ namespace cads
   {
     using namespace date;
     using namespace std;
-
-    hours trigger_hour;
-    auto sts = global_config["daily_start_time"].get<std::string>();
-    auto drop_uploads = global_config["drop_uploads"].get<int>();
+ 
     auto daily_upload = global_config["daily_upload"].get<bool>();
     auto program_state_db_name = global_config["program_state_db_name"].get<std::string>();
 
     auto write_revid = read_revid;
 
-    if (sts != "now"s)
-    {
-      std::stringstream st{sts};
-
-      system_clock::duration run_in;
-      st >> parse("%R", run_in);
-
-      trigger_hour = chrono::floor<chrono::hours>(run_in);
-    }
-    else
-    {
-      date::zoned_time now{ date::current_zone(),std::chrono::system_clock::now() };
-      auto today = chrono::floor<chrono::days>(now.get_local_time());
-      auto daily_time = duration_cast<seconds>(now.get_local_time() - today);
-      trigger_hour = chrono::floor<chrono::hours>(daily_time);
-    }
-
-    std::chrono::time_point<date::local_t, std::chrono::days> today;
     std::future<std::invoke_result_t<decltype(http_post_whole_belt), int, int, double>> fut;
     bool terminate = false;
     long idx = 0;
@@ -69,12 +46,11 @@ namespace cads
     {
       pre_upload,
       uploading,
-      post_upload,
       no_shedule
     };
 
     auto state = daily_upload ? pre_upload : no_shedule;
-    auto last_upload_date = fetch_daily_upload(program_state_db_name);
+    auto next_upload_date = fetch_daily_upload(program_state_db_name);
 
     for (; !terminate;)
     {
@@ -100,25 +76,16 @@ namespace cads
         case pre_upload:
         {
           auto now = current_zone()->to_local(system_clock::now());
-          today = chrono::floor<chrono::days>(now);
-          auto daily_time = duration_cast<seconds>(now - today);
-          auto current_hour = chrono::floor<chrono::hours>(daily_time);
-         
-          if (current_hour >= trigger_hour && (today > last_upload_date))
+          auto dbg = date::format("%FT%T", now);
+          auto dbg2 = date::format("%FT%T", next_upload_date);
+          if (now > next_upload_date)
           {
-            if (drop_uploads == 0)
-            {
+
               fut = std::async(http_post_whole_belt, read_revid, idx, belt_length);
               write_revid++;
               state = uploading;
               spdlog::get("cads")->info("Posting a belt. Writing data to revid: {}. Reading data from revid: {}", write_revid, read_revid);
-            }
-            else
-            {
-              --drop_uploads;
-              state = post_upload;
-              spdlog::get("cads")->info("Dropped upload. Drops remaining:{}", drop_uploads);
-            }
+
           }
           else
           {
@@ -140,26 +107,11 @@ namespace cads
             else
             {
               write_revid--;
-              state = daily_upload ? post_upload : no_shedule;
-              last_upload_date = today;
-              store_daily_upload(last_upload_date,program_state_db_name);
+              state = daily_upload ? pre_upload : no_shedule;
+              next_upload_date += std::chrono::days(1);
+              store_daily_upload(next_upload_date,program_state_db_name);
             }
             spdlog::get("cads")->info("Belt upload thread finished. Writing data to revid: {}", write_revid);
-          }
-          else
-          {
-            process = false;
-          }
-          break;
-        }
-        case post_upload:
-        {
-          auto tmp = date::current_zone();//->to_local(std::chrono::system_clock::now());
-          auto now = tmp->to_local(std::chrono::system_clock::now());
-          auto huh  = chrono::floor<chrono::days>(now);
-          if (today != huh)
-          {
-            state = pre_upload;
           }
           else
           {

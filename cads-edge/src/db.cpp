@@ -7,6 +7,8 @@
 #include <memory>
 #include <sstream>
 
+#include <date/date.h>
+#include <date/tz.h>
 #include <fmt/core.h>
 #include <fmt/chrono.h>
 #include <spdlog/spdlog.h>
@@ -95,12 +97,29 @@ namespace cads
 
     sqlite3 *db = nullptr;
     bool error = false;
+    auto sts = global_config["daily_start_time"].get<std::string>();
     auto db_name_string = name.empty() ? global_config["program_state_db_name"].get<std::string>() : name;
+    
     const char *db_name = db_name_string.c_str();
     
-    auto now = system_clock::now();
-    auto inital_day = floor<date::days>(now) - date::days{2};
-    auto ts = date::format("%FT%T", inital_day);
+    std::string ts = "";
+
+    if (sts != "now"s)
+    {
+      std::stringstream st{sts};
+
+      system_clock::duration run_in;
+      st >> parse("%R", run_in);
+      date::zoned_time now{ date::current_zone(),std::chrono::system_clock::now() };
+      auto today = chrono::floor<chrono::days>(now.get_local_time());
+      ts = date::format("%FT%T", today + run_in);
+
+    }
+    else
+    {
+      date::zoned_time now{ date::current_zone(),std::chrono::system_clock::now() };
+      ts = date::format("%FT%T", now);
+    }
 
     vector<string> tables{
       R"(CREATE TABLE IF NOT EXISTS STATE (DAILYUPLOAD TEXT NOT NULL))",
