@@ -26,47 +26,43 @@ public class NatsConsumerHostedService : BackgroundService
 
   protected async override Task ExecuteAsync(CancellationToken stoppingToken)
   {
-    try {
-    Object testLock = new Object();
-    var args = ConnectionFactory.GetDefaultOptions();
-    args.Url = _config.NatsUrl;
-    using var c = new ConnectionFactory().CreateConnection(args);
-    EventHandler<MsgHandlerEventArgs> msgHandler = (sender, args) =>
- {
+    while(true) {
+      try
+      {
+        var args = ConnectionFactory.GetDefaultOptions();
+        args.Url = _config.NatsUrl;
+        using var c = new ConnectionFactory().CreateConnection(args);
+        EventHandler<MsgHandlerEventArgs> msgHandler = (sender, args) =>
+        {
 
-   if (args.Message.Subject == "/realtime")
-   {
-     var json = JsonSerializer.Deserialize<Realtime>(new ReadOnlySpan<byte>(args.Message.Data));
-     _realtimehubContext.Clients.Group("/realtime"+json.Site+json.Conveyor).SendAsync("ReceiveMessageRealtime", json);
-   }
-   else if (args.Message.Subject == "/realtimemeta")
-   {
+          if (args.Message.Subject == "/realtime")
+          {
+            var json = JsonSerializer.Deserialize<Realtime>(new ReadOnlySpan<byte>(args.Message.Data));
+            _realtimehubContext.Clients.Group("/realtime" + json.Site + json.Conveyor).SendAsync("ReceiveMessageRealtime", json);
+          }
+          else if (args.Message.Subject == "/realtimemeta")
+          {
 
-     var json = JsonSerializer.Deserialize<MetaRealtime>(new ReadOnlySpan<byte>(args.Message.Data));
-     _realtimehubContext.Clients.Group("/realtimemeta"+json.Site+json.Conveyor).SendAsync("ReceiveMessageMeta", json);
-   }
+            var json = JsonSerializer.Deserialize<MetaRealtime>(new ReadOnlySpan<byte>(args.Message.Data));
+            _realtimehubContext.Clients.Group("/realtimemeta" + json.Site + json.Conveyor).SendAsync("ReceiveMessageMeta", json);
+          }
 
-   if (false)
-   {
+        };
 
-     lock (testLock)
-     {
-       Monitor.Pulse(testLock);
-     }
-   }
- };
-    using IAsyncSubscription s = c.SubscribeAsync(">", msgHandler);
-    while (!stoppingToken.IsCancellationRequested)
-    {
+        using IAsyncSubscription s = c.SubscribeAsync(">", msgHandler);
+        while (!stoppingToken.IsCancellationRequested)
+        {
+          await Task.Delay(Timeout.Infinite, stoppingToken);
+        }
 
-      await Task.Delay(10000, stoppingToken);
-    }
-    lock (testLock)
-    {
-      Monitor.Wait(testLock);
-    }
-    }catch(NATSConnectionException e) {
-      _logger.LogError("Unable to connect to Nats server. Realtime infomation disabled. Nats error: {} ",e.Message);
+        break;
+
+      }
+      catch (NATSConnectionException e)
+      {
+        _logger.LogError("Unable to connect to Nats server. Realtime infomation disabled. Nats error: {} ", e.Message);
+        await Task.Delay(10000, stoppingToken);
+      }
     }
   }
 
