@@ -16,6 +16,7 @@ namespace cads_gui.Data
   public record Profile<T>(double Y, T[] Z);
   public record Profile(double y, double x_off, byte[] z);
 
+
   public static class NoAsp
   {
 
@@ -115,66 +116,71 @@ namespace cads_gui.Data
     
     }
 
-    public static async IAsyncEnumerable<Profile<float>> RetrieveFrameForwardAsync(string db, double y, long len)
+    public static async IAsyncEnumerable<Profile<float>> RetrieveFrameForwardAsync(string db, double y, long len, ILogger logger = null)
     {
-      
-      len = Math.Abs(len);
+      if (File.Exists(db))
+      {
+        len = Math.Abs(len);
 
-      using var connection = new SqliteConnection("" +
-        new SqliteConnectionStringBuilder
+        using var connection = new SqliteConnection("" +
+          new SqliteConnectionStringBuilder
+          {
+            Mode = SqliteOpenMode.ReadOnly,
+            DataSource = db
+          });
+
+        await connection.OpenAsync();
+        var query = $"select * from PROFILE where y >= @y_min order by y limit @len";
+        var command = connection.CreateCommand();
+
+        command.CommandText = "select max(y) from PROFILE";
+        var y_max = (double)await command.ExecuteScalarAsync();
+
+        y = Mod(y, y_max);
+        command.CommandText = query;
+        command.Parameters.AddWithValue("@y_min", y);
+        command.Parameters.AddWithValue("@len", len);
+        command.Prepare();
+
+        while (len > 0)
         {
-          Mode = SqliteOpenMode.ReadOnly,
-          DataSource = db
-        });
 
-      await connection.OpenAsync();
-      var query = $"select * from PROFILE where y >= @y_min order by y limit @len";
-      var command = connection.CreateCommand();
-      
-      command.CommandText = "select max(y) from PROFILE";
-      var y_max = (double) await command.ExecuteScalarAsync();
+          using var reader = command.ExecuteReader();
 
-      y = Mod(y,y_max);
-      command.CommandText = query;
-      command.Parameters.AddWithValue("@y_min", y);
-      command.Parameters.AddWithValue("@len", len);
-      command.Prepare();
+          while (await reader.ReadAsync())
+          {
+            var y_row = reader.GetDouble(0);
+            var x_off = reader.GetDouble(1);
+            byte[] z = (byte[])reader[2];
+            var j = Convert(z);
 
-      while(len > 0) {
- 
-        using var reader = command.ExecuteReader();
+            yield return new Profile<float>(y_row, j);
+            len--;
 
-        while (await reader.ReadAsync())
-        {
-          var y_row = reader.GetDouble(0);
-          var x_off = reader.GetDouble(1);
-          byte[] z = (byte [])reader[2];
-          var j = Convert(z);
-           
-          yield return new Profile<float>(y_row, j);
-          len--;
+          }
 
+          command.Parameters[0].Value = 0;
+          command.Parameters[1].Value = len;
         }
-        
-        command.Parameters[0].Value = 0;
-        command.Parameters[1].Value = len;
+      }else {
+        logger?.LogError("Belt DB {} file doesn't exits",db);
       }
     }
 
-   
-    public static async IAsyncEnumerable<(DateTime,double)> ConveyorsHeightAsync(IAsyncEnumerable<(DateTime,string)> belts, double y, long x) {
+
+    public static async IAsyncEnumerable<(DateTime,double)> ConveyorsHeightAsync(IAsyncEnumerable<(DateTime,string)> belts, double y, long x, ILogger logger = null) {
 			
       await foreach (var (date,name) in belts) {
-        await foreach (var r in RetrieveFrameForwardAsync(name,y,1)) {
+        await foreach (var r in RetrieveFrameForwardAsync(name,y,1,logger)) {
           yield return (date,r.Z[x]);
         }  
       }
     }
 
-    public static async IAsyncEnumerable<(DateTime,double)> ConveyorsHeightAsync(IEnumerable<(DateTime,string)> belts, double y, long x) {
+    public static async IAsyncEnumerable<(DateTime,double)> ConveyorsHeightAsync(IEnumerable<(DateTime,string)> belts, double y, long x, ILogger logger = null) {
 			
       foreach (var (date,name) in belts) {
-        await foreach (var r in RetrieveFrameForwardAsync(name,y,1)) {
+        await foreach (var r in RetrieveFrameForwardAsync(name,y,1,logger)) {
           yield return (date,r.Z[x]);
         }  
       }
