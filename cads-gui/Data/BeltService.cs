@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
@@ -33,11 +34,13 @@ namespace cads_gui.Data
   {
     private readonly IDbContextFactory<SQLiteDBContext> dBContext;
     private readonly ILogger<BeltService> _logger;
+    public readonly AppSettings _config;
 
-    public BeltService(IDbContextFactory<SQLiteDBContext> db, ILogger<BeltService> logger)
+    public BeltService(IDbContextFactory<SQLiteDBContext> db, ILogger<BeltService> logger, IOptions<AppSettings> config)
     {
       this.dBContext = db;
       this._logger = logger;
+      this._config = config.Value;
     }
 
     public IEnumerable<Conveyors> GetConveyors()
@@ -92,6 +95,15 @@ namespace cads_gui.Data
         return data.First();
       else
         return null;
+    }
+
+    public Task<List<Belt>> GetBeltsAsync(string site, string conveyor)
+    {
+      using var context = dBContext.CreateDbContext();
+      var data = from a in context.belt orderby a.chrono where a.site == site && a.conveyor == conveyor select a;
+      
+      return data.ToListAsync();
+
     }
 
     public async Task<IEnumerable<DateTime>> GetBeltDatesAsync(Belt belt)
@@ -175,8 +187,18 @@ namespace cads_gui.Data
 
     public async Task<(double, float[])> GetBeltProfileAsync(double y, long num_y_samples, Belt belt)
     {
-      var fs = await NoAsp.RetrieveFrameModular(belt.name, y, num_y_samples);
+      var dbpath = Path.GetFullPath(Path.Combine(_config.DBPath,belt.name));
+      var fs = await NoAsp.RetrieveFrameModular(dbpath, y, num_y_samples);
       return NoAsp.make_same_widthf(fs, belt.x_res);
+    }
+
+    
+    public async IAsyncEnumerable<(DateTime,double)> ConveyorsHeightAsync(double y, long x, IEnumerable<Belt> belts) {
+			var dbg = belts.Select(x => (x.chrono,NoAsp.EndpointToSQliteDbName(x.site, x.conveyor, x.chrono)));
+      await foreach (var d in NoAsp.ConveyorsHeightAsync(dbg, y, x))
+      {
+        yield return d;
+      }
     }
 
     public void SetBeltAsync(BeltOld b)

@@ -31,7 +31,8 @@ namespace cads_gui.Data
       {
         if (len < 1) return NotFound();
 
-        var frame = await NoAsp.RetrieveFrameModular(belt, y, len+1, left+1);
+        var dbpath = Path.GetFullPath(Path.Combine(beltservice._config.DBPath,belt));
+        var frame = await NoAsp.RetrieveFrameModular(dbpath, y, len+1, left+1);
         var dbg = frame.Skip(1).SkipLast(1).SelectMany(x => x.z).ToArray();
         var builder = new FlatBufferBuilder(frame.Capacity);
 

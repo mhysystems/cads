@@ -591,11 +591,64 @@ class PlotDataCache {
 
 }
 
+class LinePlot {
+  constructor(plotElement) {
+    this.plotElement = plotElement;
 
+    this.layout = {
+      autosize: true,
+      yaxis: {
+        range: [12, 36],
+        side: 'right'
+      },
+
+      xaxis: {},
+
+      margin: {
+        l: 20,
+        r: 20,
+        b: 20,
+        t: 20,
+      },
+
+      aspectratio: {
+        x: 1
+      }
+    };
+
+    this.config = {
+      displaylogo: false,
+      displayModeBar: true
+    };
+
+
+    const trace = {
+      type: 'scatter',
+      showlegend: false,
+      line: {
+        color: "#f77f00"
+      }
+    };
+
+    this.plotData = [trace];
+    
+  }
+
+  async updatePlot(x_axis,y_axis) {
+
+    this.layout.xaxis = [x_axis[0], x_axis[x_axis.length - 1]];
+
+    this.plotData[0].y = y_axis;
+    this.plotData[0].x = x_axis;
+    await Plotly.react(this.plotElement, this.plotData, this.layout, this.config);
+  }
+
+
+}
 
 
 class TrendPlot {
-  constructor(plotElement, x_res, z_min, z_max) {
+  constructor(plotElement, x_res, z_min, z_max, blazor) {
     this.plotElement = plotElement;
     this.xRes = x_res;
     this.zMax = z_max;
@@ -636,6 +689,12 @@ class TrendPlot {
     };
 
     this.plotData = [structuredClone(trace),structuredClone(trace),structuredClone(trace),structuredClone(trace)];
+    Plotly.react(this.plotElement, [], this.layout, this.config);
+
+    this.plotElement.on('plotly_click', function (e) {
+      const xIndex = e.points[0].pointNumber;
+      blazor.invokeMethodAsync('TrendPlotClicked', xIndex);
+    });
   }
 
   async updatePlot(index,xMin,z_profile,color) {
@@ -1003,8 +1062,12 @@ export function mk_ProfilePlot(plotElement, x_res, z_min, z_max) {
   return new ProfilePlot(plotElement, x_res, z_min, z_max);
 }
 
-export function mk_TrendPlot(plotElement, x_res, z_min, z_max) {
-  return new TrendPlot(plotElement, x_res, z_min, z_max);
+export function mk_TrendPlot(plotElement, x_res, z_min, z_max,blazor) {
+  return new TrendPlot(plotElement, x_res, z_min, z_max,blazor);
+}
+
+export function mk_LinePlot(plotElement) {
+  return new LinePlot(plotElement);
 }
 
 export function mk_PlotDataCache(...args) {

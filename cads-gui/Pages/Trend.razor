@@ -19,11 +19,13 @@
 <MudContainer MaxWidth="MaxWidth.False" Class="ma-0 pa-0"
   Style="width:calc(100vw - var(--mud-drawer-width-mini-left));height:calc(100vh - var(--mud-appbar-height)">
   <MudGrid Class="ma-0" Style="height:100%" Spacing=0>
-    <MudItem xs="12" />
+
 <MudItem xs="12" Class="d-flex" Style="height:50%">
-<TrendPlot @ref="trendPlot" Belt="@GuiState.Value.Belt"></TrendPlot>
+<TrendPlot @ref="trendPlot" Belt="@GuiState.Value.Belt" XIndex="@UpdateWearPlot"></TrendPlot>
 </MudItem>
-    <MudItem xs="12" />
+    <MudItem xs="12" >
+    <LinePlot @ref="wearPlot" ></LinePlot>
+    </MudItem>
 </MudGrid>
 </MudContainer>
 }
@@ -31,12 +33,13 @@
 @code {
   
   protected TrendPlot trendPlot;
+  protected LinePlot wearPlot;
+
   [Parameter]
   public string site { get; set; }
   [Parameter]
   public string conveyor { get; set; }
-
-
+  
   [Inject]
   private IState<GuiState> GuiState { get; set; }
 
@@ -45,6 +48,8 @@
     if (firstRender)
     {
       var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
+      await DateChanged((GuiState.Value.Belt.chrono,0,Colors.Orange.Accent3));
+      await UpdateWearPlot(0);
     }
   }
 
@@ -57,12 +62,28 @@
     }
 
     var belt = Beltservice.GetBelt(site, conveyor, date.Value);
+    var Y = GuiState?.Value.Y ?? 0;
+
     if(belt is not null) {
-      var (XOffset,z) = await Beltservice.GetBeltProfileAsync(GuiState.Value.Y, 1, belt);
+      var (XOffset,z) = await Beltservice.GetBeltProfileAsync(Y, 1, belt);
       await trendPlot.UpdatePlotAsync(index,XOffset,z,color);
     }else{
       Snackbar.Add($"No data for selected date", Severity.Error);
     }
 
+  }
+
+  async Task UpdateWearPlot(int x_index) {
+    var belts = await Beltservice.GetBeltsAsync(site, conveyor);
+    List<DateTime> x = new();
+    List<double> y = new();
+    
+    var Y = GuiState?.Value.Y ?? 0;
+
+    await foreach (var (chrono,height) in Beltservice.ConveyorsHeightAsync(Y,x_index,belts)) {
+      x.Add(chrono);
+      y.Add(height);
+    };
+    await wearPlot.UpdatePlotAsync(x.ToArray(),y.ToArray());
   }
 }
