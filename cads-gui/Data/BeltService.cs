@@ -194,7 +194,7 @@ namespace cads_gui.Data
 
     
     public async IAsyncEnumerable<(DateTime,double)> ConveyorsHeightAsync(double y, long x, IEnumerable<Belt> belts) {
-			var dbg = belts.Select(x => (x.chrono,NoAsp.EndpointToSQliteDbName(x.site, x.conveyor, x.chrono)));
+			var dbg = belts.Select(x => (x.chrono,Path.GetFullPath(Path.Combine(NoAsp.EndpointToSQliteDbName(x.site, x.conveyor, x.chrono)))));
       await foreach (var d in NoAsp.ConveyorsHeightAsync(dbg, y, x, _logger))
       {
         yield return d;
