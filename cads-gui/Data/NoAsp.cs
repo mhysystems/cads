@@ -178,7 +178,7 @@ namespace cads_gui.Data
       }
     }
 
-    public static Profile<float> RetrievePointAsync(string db, double y, long len, ILogger logger = null)
+    public static async Task<float> RetrievePointAsync(string db, double y, long x, ILogger logger = null)
     {
       if (File.Exists(db))
       {
@@ -192,8 +192,8 @@ namespace cads_gui.Data
             DataSource = db
           });
 
-        connection.Open();
-        var query = $"select * from PROFILE where y >= @y_min order by y limit 1";
+        await connection.OpenAsync();
+        var query = $"select z from PROFILE where y >= @y_min order by y limit 1";
         var command = connection.CreateCommand();
 
         command.CommandText = query;
@@ -205,20 +205,18 @@ namespace cads_gui.Data
 
         reader.Read();
 
-        var y_row = reader.GetDouble(0);
-        var x_off = reader.GetDouble(1);
-        byte[] z = (byte[])reader[2];
+        byte[] z = (byte[])reader[0];
         var j = Convert(z);
         stopWatch.Stop();
         logger?.LogError("DB Elapsed time : {}", stopWatch.Elapsed);
-        return new Profile<float>(y_row, j);
+        return z[x];
       }
       else
       {
         logger?.LogError("Belt DB {} file doesn't exits", db);
       }
 
-      return null;
+      return 0.0f;
     }
 
 
@@ -234,14 +232,13 @@ namespace cads_gui.Data
       }
     }
 
-    public static async IAsyncEnumerable<(DateTime, double)> ConveyorsHeightAsync(IEnumerable<(DateTime, string)> belts, double y, long x, ILogger logger = null)
+    public static async IAsyncEnumerable<(DateTime, Task<float>)> ConveyorsHeightAsync(IEnumerable<(DateTime, string)> belts, double y, long x, ILogger logger = null)
     {
-
       foreach (var (date, name) in belts)
       {
-        var r = RetrievePointAsync(name, y, 1, logger);
+          var r = RetrievePointAsync(name, y, 1, logger);
         
-          yield return (date, r.Z[x]);
+          yield return (date, r);
         
       }
     }

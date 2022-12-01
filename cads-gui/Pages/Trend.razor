@@ -84,7 +84,7 @@
     timer.Start();
     await foreach (var (chrono,height) in Beltservice.ConveyorsHeightAsync(Y,x_index,belts)) {
       x.Add(chrono);
-      y.Add(height);
+      y.Add(await height);
       logger.LogDebug("UpdateWearPlot: {}",timer.Elapsed);
     };
     await wearPlot.UpdatePlotAsync(x.ToArray(),y.ToArray());
