@@ -82,9 +82,9 @@
     var Y = GuiState?.Value.Y ?? 0;
     var timer = new Stopwatch();
     timer.Start();
-    await foreach (var (chrono,height) in Beltservice.ConveyorsHeightAsync(Y,x_index,belts)) {
+    foreach (var (chrono,height) in await Beltservice.ConveyorsHeightAsync(Y,x_index,belts)) {
       x.Add(chrono);
-      y.Add(await height);
+      y.Add(height);
       logger.LogDebug("UpdateWearPlot: {}",timer.Elapsed);
     };
     await wearPlot.UpdatePlotAsync(x.ToArray(),y.ToArray());

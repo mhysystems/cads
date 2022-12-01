@@ -178,7 +178,7 @@ namespace cads_gui.Data
       }
     }
 
-    public static async Task<float> RetrievePointAsync(string db, double y, long x, ILogger logger = null)
+    public static async Task<(DateTime,float)> RetrievePointAsync(string db, double y, long x, DateTime date, ILogger logger = null)
     {
       if (File.Exists(db))
       {
@@ -198,8 +198,6 @@ namespace cads_gui.Data
 
         command.CommandText = query;
         command.Parameters.AddWithValue("@y_min", y);
-        command.Prepare();
-
 
         using var reader = command.ExecuteReader();
 
@@ -209,38 +207,23 @@ namespace cads_gui.Data
         var j = Convert(z);
         stopWatch.Stop();
         logger?.LogError("DB Elapsed time : {}", stopWatch.Elapsed);
-        return z[x];
+        return (date,j[x]);
       }
       else
       {
         logger?.LogError("Belt DB {} file doesn't exits", db);
       }
 
-      return 0.0f;
+      return (date,0.0f);
     }
 
 
-    public static async IAsyncEnumerable<(DateTime, double)> ConveyorsHeightAsync(IAsyncEnumerable<(DateTime, string)> belts, double y, long x, ILogger logger = null)
-    {
 
-      await foreach (var (date, name) in belts)
-      {
-        await foreach (var r in RetrieveFrameForwardAsync(name, y, 1, logger))
-        {
-          yield return (date, r.Z[x]);
-        }
-      }
-    }
-
-    public static async IAsyncEnumerable<(DateTime, Task<float>)> ConveyorsHeightAsync(IEnumerable<(DateTime, string)> belts, double y, long x, ILogger logger = null)
+    public static async Task<(DateTime, float)[]> ConveyorsHeightAsync(IEnumerable<(DateTime, string)> belts, double y, long x, ILogger logger = null)
     {
-      foreach (var (date, name) in belts)
-      {
-          var r = RetrievePointAsync(name, y, 1, logger);
-        
-          yield return (date, r);
-        
-      }
+      
+      var t = belts.Select( e => RetrievePointAsync(e.Item2, y, x,e.Item1, logger));
+      return await Task.WhenAll(t);
     }
 
     public static async Task<List<Profile>> RetrieveFrameModular(string belt, double y_min, long len, long left)
