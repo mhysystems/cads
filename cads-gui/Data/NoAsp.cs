@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Microsoft.Data.Sqlite;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
+using System.Data;
 using System.Threading.Tasks;
 
 using SQLitePCL;
@@ -189,7 +190,8 @@ namespace cads_gui.Data
           new SqliteConnectionStringBuilder
           {
             Mode = SqliteOpenMode.ReadOnly,
-            DataSource = db
+            DataSource = db,
+            Cache = SqliteCacheMode.Private
           });
 
         await connection.OpenAsync();
@@ -199,7 +201,7 @@ namespace cads_gui.Data
         command.CommandText = query;
         command.Parameters.AddWithValue("@y_min", y);
 
-        using var reader = command.ExecuteReader();
+        using var reader = command.ExecuteReader(CommandBehavior.SingleRow | CommandBehavior.CloseConnection);
 
         reader.Read();
 

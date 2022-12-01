@@ -7,7 +7,7 @@ namespace cads_gui.Data
 
   public static class NoEFCore
   {
-    public static async IAsyncEnumerable<(DateTime,string)> RetrieveConveyorScanAsync(string site, string conveyor, string db = "conveyors.db")
+    public static IEnumerable<(DateTime,string)> RetrieveConveyorScanAsync(string site, string conveyor, string db = "conveyors.db")
     {
 
       using var connection = new SqliteConnection("" +
@@ -17,7 +17,7 @@ namespace cads_gui.Data
           DataSource = db
         });
 
-      await connection.OpenAsync();
+      connection.Open();
       var query = $"select chrono from BELTINFO where site = @site and conveyor = @conveyor order by chrono";
       var command = connection.CreateCommand();
       command.CommandText = query;
@@ -28,14 +28,18 @@ namespace cads_gui.Data
 
       using var reader = command.ExecuteReader();
 
-      while (await reader.ReadAsync())
+      List<(DateTime,string)> rtn = new();
+
+      while (reader.Read())
       {
         var chronos = reader.GetString(0);
         var chrono = DateTime.Parse(chronos);
 
-        yield return (chrono,NoAsp.EndpointToSQliteDbName(site, conveyor, chrono));
+        rtn.Add((chrono,NoAsp.EndpointToSQliteDbName(site, conveyor, chrono)));
 
       }
+
+      return rtn.AsEnumerable();
 
     }
   }
