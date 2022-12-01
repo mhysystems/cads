@@ -195,7 +195,7 @@ namespace cads_gui.Data
     
     public async Task<(DateTime,float)[]> ConveyorsHeightAsync(double y, long x, IEnumerable<Belt> belts) {
 			
-      var dbg = belts.Select(x => (x.chrono,Path.GetFullPath(Path.Combine(_config.DBPath,x.name)))).Take(30);
+      var dbg = belts.Select(x => (x.chrono,Path.GetFullPath(Path.Combine(_config.DBPath,x.name))));
       
       return await NoAsp.ConveyorsHeightAsync(dbg, y, x, _logger);
 
