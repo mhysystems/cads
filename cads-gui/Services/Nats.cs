@@ -60,7 +60,7 @@ public class NatsConsumerHostedService : BackgroundService
       }
       catch (NATSConnectionException e)
       {
-        _logger.LogError("Unable to connect to Nats server. Realtime infomation disabled. Nats error: {} ", e.Message);
+        //_logger.LogError("Unable to connect to Nats server. Realtime infomation disabled. Nats error: {} ", e.Message);
         await Task.Delay(10000, stoppingToken);
       }
     }

@@ -67,12 +67,12 @@ namespace cads_gui.Data
 
     public static async Task<List<Profile>> RetrieveFrameAsync(string db, double y_min, long len)
     {
-      
+
       var frame = new List<Profile>();
       var order = len >= 0 ? "asc" : "desc";
       var op = len >= 0 ? ">=" : "<";
       var abslen = Math.Abs(len);
-      
+
       using var connection = new SqliteConnection("" +
         new SqliteConnectionStringBuilder
         {
@@ -81,7 +81,7 @@ namespace cads_gui.Data
         });
 
       await connection.OpenAsync();
-      
+
 
       var query = $"select * from PROFILE where y {op} @y_min order by y {order} limit @len";
       var command = connection.CreateCommand();
@@ -97,11 +97,14 @@ namespace cads_gui.Data
         var y = reader.GetDouble(0);
         var x_off = reader.GetDouble(1);
         byte[] z = (byte[])reader[2];
-        
-        if(len >=0) {
+
+        if (len >= 0)
+        {
           frame.Add(new Profile(y, x_off, z));
-        }else{
-          frame.Insert(0,new Profile(y, x_off, z));
+        }
+        else
+        {
+          frame.Insert(0, new Profile(y, x_off, z));
         }
       }
 
@@ -109,12 +112,13 @@ namespace cads_gui.Data
     }
 
     public static double Mod(double x, double n) { return ((x % n) + n) % n; }
-    static float[] Convert(byte[] a) {
+    static float[] Convert(byte[] a)
+    {
 
       ReadOnlySpan<byte> z_ptr = new(a);
       var j = MemoryMarshal.Cast<byte, float>(z_ptr);
       return j.ToArray();
-    
+
     }
 
     public static async IAsyncEnumerable<Profile<float>> RetrieveFrameForwardAsync(string db, double y, long len, ILogger logger = null)
@@ -166,28 +170,79 @@ namespace cads_gui.Data
           command.Parameters[1].Value = len;
         }
         stopWatch.Stop();
-        logger?.LogError("DB Elapsed time : {}",stopWatch.Elapsed);
-      }else {
-        logger?.LogError("Belt DB {} file doesn't exits",db);
+        logger?.LogError("DB Elapsed time : {}", stopWatch.Elapsed);
+      }
+      else
+      {
+        logger?.LogError("Belt DB {} file doesn't exits", db);
       }
     }
 
+    public static Profile<float> RetrievePointAsync(string db, double y, long len, ILogger logger = null)
+    {
+      if (File.Exists(db))
+      {
+        var stopWatch = new Stopwatch();
+        stopWatch.Start();
 
-    public static async IAsyncEnumerable<(DateTime,double)> ConveyorsHeightAsync(IAsyncEnumerable<(DateTime,string)> belts, double y, long x, ILogger logger = null) {
-			
-      await foreach (var (date,name) in belts) {
-        await foreach (var r in RetrieveFrameForwardAsync(name,y,1,logger)) {
-          yield return (date,r.Z[x]);
-        }  
+        using var connection = new SqliteConnection("" +
+          new SqliteConnectionStringBuilder
+          {
+            Mode = SqliteOpenMode.ReadOnly,
+            DataSource = db
+          });
+
+        connection.Open();
+        var query = $"select * from PROFILE where y >= @y_min order by y limit 1";
+        var command = connection.CreateCommand();
+
+        command.CommandText = query;
+        command.Parameters.AddWithValue("@y_min", y);
+        command.Prepare();
+
+
+        using var reader = command.ExecuteReader();
+
+        reader.Read();
+
+        var y_row = reader.GetDouble(0);
+        var x_off = reader.GetDouble(1);
+        byte[] z = (byte[])reader[2];
+        var j = Convert(z);
+        stopWatch.Stop();
+        logger?.LogError("DB Elapsed time : {}", stopWatch.Elapsed);
+        return new Profile<float>(y_row, j);
+      }
+      else
+      {
+        logger?.LogError("Belt DB {} file doesn't exits", db);
+      }
+
+      return null;
+    }
+
+
+    public static async IAsyncEnumerable<(DateTime, double)> ConveyorsHeightAsync(IAsyncEnumerable<(DateTime, string)> belts, double y, long x, ILogger logger = null)
+    {
+
+      await foreach (var (date, name) in belts)
+      {
+        await foreach (var r in RetrieveFrameForwardAsync(name, y, 1, logger))
+        {
+          yield return (date, r.Z[x]);
+        }
       }
     }
 
-    public static async IAsyncEnumerable<(DateTime,double)> ConveyorsHeightAsync(IEnumerable<(DateTime,string)> belts, double y, long x, ILogger logger = null) {
-			
-      foreach (var (date,name) in belts) {
-        await foreach (var r in RetrieveFrameForwardAsync(name,y,1,logger)) {
-          yield return (date,r.Z[x]);
-        }  
+    public static async IAsyncEnumerable<(DateTime, double)> ConveyorsHeightAsync(IEnumerable<(DateTime, string)> belts, double y, long x, ILogger logger = null)
+    {
+
+      foreach (var (date, name) in belts)
+      {
+        var r = RetrievePointAsync(name, y, 1, logger);
+        
+          yield return (date, r.Z[x]);
+        
       }
     }
 
@@ -196,17 +251,23 @@ namespace cads_gui.Data
       var (min, max, cnt) = await BeltBoundaryAsync(belt);
       var beltLength = max + (max - min) / cnt;
       var fst = await RetrieveFrameModular(belt, y_min, -left);
-      
+
       fst.AddRange(await RetrieveFrameModular(belt, y_min, len));
 
       // Plotly requires y axis to be totally ordered, so need to change y near the belt end to negative numbers around origin
-      if(fst.Any()) {
-        var first = fst.First().y ;
-        if(first > fst.Last().y ) {
-          fst = fst.Select(e => {
-            if(e.y >= first) {
-              return new Profile(e.y - beltLength,e.x_off,e.z);
-            }else {
+      if (fst.Any())
+      {
+        var first = fst.First().y;
+        if (first > fst.Last().y)
+        {
+          fst = fst.Select(e =>
+          {
+            if (e.y >= first)
+            {
+              return new Profile(e.y - beltLength, e.x_off, e.z);
+            }
+            else
+            {
               return e;
             }
           }).ToList();
@@ -230,21 +291,30 @@ namespace cads_gui.Data
 
       if (fst.Count < len)
       {
-        if(sign > 0) {
+        if (sign > 0)
+        {
           fst.AddRange(await RetrieveFrameAsync(belt, origin, sign * (len - fst.Count)));
-        }else{
-          fst.InsertRange(0,await RetrieveFrameAsync(belt, origin, sign * (len - fst.Count)));
+        }
+        else
+        {
+          fst.InsertRange(0, await RetrieveFrameAsync(belt, origin, sign * (len - fst.Count)));
         }
       }
 
       // Plotly requires y axis to be totally ordered, so need to change y near the belt end to negative numbers around origin
-      if(fst.Any()) {
-        var first = fst.First().y ;
-        if(first > fst.Last().y ) {
-          fst = fst.Select(e => {
-            if(e.y >= first) {
-              return new Profile(e.y - beltLength,e.x_off,e.z);
-            }else {
+      if (fst.Any())
+      {
+        var first = fst.First().y;
+        if (first > fst.Last().y)
+        {
+          fst = fst.Select(e =>
+          {
+            if (e.y >= first)
+            {
+              return new Profile(e.y - beltLength, e.x_off, e.z);
+            }
+            else
+            {
               return e;
             }
           }).ToList();
