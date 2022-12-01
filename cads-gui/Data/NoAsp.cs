@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using Microsoft.Data.Sqlite;
 using System.Runtime.InteropServices;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
 using SQLitePCL;
@@ -120,6 +121,8 @@ namespace cads_gui.Data
     {
       if (File.Exists(db))
       {
+        var stopWatch = new Stopwatch();
+        stopWatch.Start();
         len = Math.Abs(len);
 
         using var connection = new SqliteConnection("" +
@@ -162,6 +165,8 @@ namespace cads_gui.Data
           command.Parameters[0].Value = 0;
           command.Parameters[1].Value = len;
         }
+        stopWatch.Stop();
+        logger?.LogError("DB Elapsed time : {}",stopWatch.Elapsed);
       }else {
         logger?.LogError("Belt DB {} file doesn't exits",db);
       }

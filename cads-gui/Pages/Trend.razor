@@ -6,6 +6,7 @@
 @inject IJSRuntime JS
 @inject BeltService Beltservice
 @inject ISnackbar Snackbar
+@inject ILogger<Trend> logger
 
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
@@ -79,10 +80,12 @@
     List<double> y = new();
     
     var Y = GuiState?.Value.Y ?? 0;
-
+    var timer = new Stopwatch();
+    timer.Start();
     await foreach (var (chrono,height) in Beltservice.ConveyorsHeightAsync(Y,x_index,belts)) {
       x.Add(chrono);
       y.Add(height);
+      logger.LogDebug("UpdateWearPlot: {}",timer.Elapsed);
     };
     await wearPlot.UpdatePlotAsync(x.ToArray(),y.ToArray());
   }
