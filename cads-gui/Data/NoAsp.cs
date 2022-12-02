@@ -179,7 +179,7 @@ namespace cads_gui.Data
       }
     }
 
-    public static async Task<(DateTime,float)> RetrievePointAsync(string db, double y, long x, DateTime date, ILogger logger = null)
+    public static (DateTime,float) RetrievePointAsync(string db, double y, long x, DateTime date, ILogger logger = null)
     {
       if (File.Exists(db))
       {
@@ -191,25 +191,25 @@ namespace cads_gui.Data
           {
             Mode = SqliteOpenMode.ReadOnly,
             DataSource = db,
-            Cache = SqliteCacheMode.Private
           });
 
-        await connection.OpenAsync();
-        var query = $"select z from PROFILE where y >= @y_min order by y limit 1";
+        connection.Open();
+        var query = $"select z from PROFILE where y >= @y_min limit 1";
         var command = connection.CreateCommand();
 
         command.CommandText = query;
         command.Parameters.AddWithValue("@y_min", y);
 
-        using var reader = command.ExecuteReader(CommandBehavior.SingleRow | CommandBehavior.CloseConnection);
+        using var reader = command.ExecuteReader(CommandBehavior.SingleRow );
 
         reader.Read();
 
         byte[] z = (byte[])reader[0];
         var j = Convert(z);
-        stopWatch.Stop();
+        var r = j[x];
+         stopWatch.Stop();
         logger?.LogError("DB Elapsed time : {}", stopWatch.Elapsed);
-        return (date,j[x]);
+        return (date,r);
       }
       else
       {
@@ -221,11 +221,11 @@ namespace cads_gui.Data
 
 
 
-    public static async Task<(DateTime, float)[]> ConveyorsHeightAsync(IEnumerable<(DateTime, string)> belts, double y, long x, ILogger logger = null)
+    public static List<(DateTime, float)> ConveyorsHeightAsync(List<(DateTime, string)> belts, double y, long x, ILogger logger = null)
     {
       
-      var t = belts.Select( e => RetrievePointAsync(e.Item2, y, x,e.Item1, logger));
-      return await Task.WhenAll(t);
+      return belts.Select( e => RetrievePointAsync(e.Item2, y, x,e.Item1, logger)).ToList();
+     
     }
 
     public static async Task<List<Profile>> RetrieveFrameModular(string belt, double y_min, long len, long left)
