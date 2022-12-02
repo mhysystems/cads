@@ -75,17 +75,14 @@
   }
 
   async Task UpdateWearPlot(int x_index) {
-    var belts = (await Beltservice.GetBeltsAsync(site, conveyor)).Take(32).ToList();
+    var belts = (await Beltservice.GetBeltsAsync(site, conveyor)).ToList();
     List<DateTime> x = new();
     List<double> y = new();
     
     var Y = GuiState?.Value.Y ?? 0;
-    var timer = new Stopwatch();
-    timer.Start();
     foreach (var (chrono,height) in Beltservice.ConveyorsHeightAsync(Y,x_index,belts)) {
       x.Add(chrono);
       y.Add(height);
-      logger.LogDebug("UpdateWearPlot: {}",timer.Elapsed);
     };
     await wearPlot.UpdatePlotAsync(x.ToArray(),y.ToArray());
   }

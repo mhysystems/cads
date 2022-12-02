@@ -122,109 +122,54 @@ namespace cads_gui.Data
 
     }
 
-    public static async IAsyncEnumerable<Profile<float>> RetrieveFrameForwardAsync(string db, double y, long len, ILogger logger = null)
+    public static (bool,float) RetrievePoint(string db, double y, long x)
     {
-      if (File.Exists(db))
-      {
-        var stopWatch = new Stopwatch();
-        stopWatch.Start();
-        len = Math.Abs(len);
-
-        using var connection = new SqliteConnection("" +
-          new SqliteConnectionStringBuilder
-          {
-            Mode = SqliteOpenMode.ReadOnly,
-            DataSource = db
-          });
-
-        await connection.OpenAsync();
-        var query = $"select * from PROFILE where y >= @y_min order by y limit @len";
-        var command = connection.CreateCommand();
-
-        command.CommandText = "select max(y) from PROFILE";
-        var y_max = (double)await command.ExecuteScalarAsync();
-
-        y = Mod(y, y_max);
-        command.CommandText = query;
-        command.Parameters.AddWithValue("@y_min", y);
-        command.Parameters.AddWithValue("@len", len);
-        command.Prepare();
-
-        while (len > 0)
+      if (!File.Exists(db)) {
+        return (true,0.0f);
+      }
+      
+      using var connection = new SqliteConnection("" +
+        new SqliteConnectionStringBuilder
         {
+          Mode = SqliteOpenMode.ReadOnly,
+          DataSource = db,
+        });
 
-          using var reader = command.ExecuteReader();
-
-          while (await reader.ReadAsync())
-          {
-            var y_row = reader.GetDouble(0);
-            var x_off = reader.GetDouble(1);
-            byte[] z = (byte[])reader[2];
-            var j = Convert(z);
-
-            yield return new Profile<float>(y_row, j);
-            len--;
-
-          }
-
-          command.Parameters[0].Value = 0;
-          command.Parameters[1].Value = len;
-        }
-        stopWatch.Stop();
-        logger?.LogError("DB Elapsed time : {}", stopWatch.Elapsed);
-      }
-      else
-      {
-        logger?.LogError("Belt DB {} file doesn't exits", db);
-      }
-    }
-
-    public static (DateTime,float) RetrievePointAsync(string db, double y, long x, DateTime date, ILogger logger = null)
-    {
-      if (File.Exists(db))
-      {
-        var stopWatch = new Stopwatch();
-        stopWatch.Start();
-
-        using var connection = new SqliteConnection("" +
-          new SqliteConnectionStringBuilder
-          {
-            Mode = SqliteOpenMode.ReadOnly,
-            DataSource = db,
-          });
-
-        connection.Open();
-        var query = $"select z from PROFILE where y >= @y_min limit 1";
-        var command = connection.CreateCommand();
-
-        command.CommandText = query;
-        command.Parameters.AddWithValue("@y_min", y);
-
-        using var reader = command.ExecuteReader(CommandBehavior.SingleRow );
-
-        reader.Read();
-
-        byte[] z = (byte[])reader[0];
-        var j = Convert(z);
-        var r = j[x];
-         stopWatch.Stop();
-        logger?.LogError("DB Elapsed time : {}", stopWatch.Elapsed);
-        return (date,r);
-      }
-      else
-      {
-        logger?.LogError("Belt DB {} file doesn't exits", db);
+      if(connection is null) {
+        return (true,0.0f);
       }
 
-      return (date,0.0f);
+      connection.OpenAsync();
+      var query = $"select z from PROFILE where y >= @y_min limit 1";
+      var command = connection.CreateCommand();
+
+      if(command is null) {
+        return (true,0.0f);
+      }
+
+      command.CommandText = query;
+      command.Parameters.AddWithValue("@y_min", y);
+
+      using var reader = command.ExecuteReader(CommandBehavior.SingleRow);
+      
+      if(reader is null) {
+        return (true,0.0f);
+      }
+
+      reader.Read();
+
+      byte[] z = (byte[])reader[0];
+      var j = Convert(z);
+      var r = j[x];
+      return (false,r);
+
     }
 
 
-
-    public static List<(DateTime, float)> ConveyorsHeightAsync(List<(DateTime, string)> belts, double y, long x, ILogger logger = null)
+    public static IEnumerable<(DateTime, float)> ConveyorsHeightAsync(List<(DateTime, string)> belts, double y, long x)
     {
       
-      return belts.Select( e => RetrievePointAsync(e.Item2, y, x,e.Item1, logger)).ToList();
+      return belts.Select( e => (e.Item1,RetrievePoint(e.Item2, y, x))).Where(e => !e.Item2.Item1).Select(e => (e.Item1,e.Item2.Item2));
      
     }
 
