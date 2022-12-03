@@ -377,6 +377,10 @@ void http_post_realtime(double y_area, double value)
 
     spdlog::get("upload")->info("ZMAX: {}, SIZE: {}, DUR:{}, RATE(Kb/s):{} ", belt_z_max, size, duration, size / (1000 * duration));
     spdlog::get("upload")->info("Leaving http_post_thread_bulk");
+    auto program_state_db_name = global_config["program_state_db_name"].get<std::string>();
+    auto next_upload_date = fetch_daily_upload(program_state_db_name);
+    next_upload_date += std::chrono::days(1);
+    store_daily_upload(next_upload_date,program_state_db_name);
     return {now,failure};
   }
 

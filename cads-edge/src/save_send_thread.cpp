@@ -109,7 +109,7 @@ namespace cads
               write_revid--;
               state = daily_upload ? pre_upload : no_shedule;
               next_upload_date += std::chrono::days(1);
-              store_daily_upload(next_upload_date,program_state_db_name);
+              //store_daily_upload(next_upload_date,program_state_db_name);
             }
             spdlog::get("cads")->info("Belt upload thread finished. Writing data to revid: {}", write_revid);
           }
