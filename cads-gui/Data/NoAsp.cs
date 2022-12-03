@@ -139,29 +139,45 @@ namespace cads_gui.Data
         return (true,0.0f);
       }
 
-      connection.OpenAsync();
-      var query = $"select z from PROFILE where y >= @y_min limit 1";
-      var command = connection.CreateCommand();
-
+      connection.Open();
+      
+      
+      var command = connection.CreateCommand();      
+      
       if(command is null) {
         return (true,0.0f);
       }
 
-      command.CommandText = query;
-      command.Parameters.AddWithValue("@y_min", y);
+      command.CommandText = $"select y from profile where y > 0 limit 1";
 
       using var reader = command.ExecuteReader(CommandBehavior.SingleRow);
+      var y_res =  0.0;
       
-      if(reader is null) {
+      if(reader.Read()) {
+        y_res = reader.GetDouble(0);
+      }else {
+        return (true,0.0f);
+      }
+      reader.Close();
+      
+      command.CommandText = $"select z from profile where rowid = @rowid";
+      command.Parameters.AddWithValue("@rowid", (int)(y / y_res));
+
+      using var reader2 = command.ExecuteReader(CommandBehavior.SingleRow);
+      
+      if(reader2 is null) {
         return (true,0.0f);
       }
 
-      reader.Read();
+      if(reader2.Read()) {
 
-      byte[] z = (byte[])reader[0];
-      var j = Convert(z);
-      var r = j[x];
-      return (false,r);
+        byte[] z = (byte[])reader2[0];
+        var j = Convert(z);
+        var r = j[x];
+        return (false,r);
+      }else {
+        return (true,0.0f);
+      }
 
     }
 
