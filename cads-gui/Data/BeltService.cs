@@ -60,19 +60,6 @@ namespace cads_gui.Data
       return await NoAsp.BeltBoundaryAsync(belt);
     }
 
-    public Task<IQueryable<BeltChart>> GetBeltChartAsync(Func<BeltOld, Boolean> w = null)
-    {
-
-      w = w ?? (_ => true);
-      using var context = dBContext.CreateDbContext();
-      var t = from a in context.anomalies.Where(w).OrderBy(row => row.z_depth).ThenByDescending(row => row.length)//.Take(64)
-              join b in context.chart on a.anomaly_ID equals b.anomaly_ID
-              select new BeltChart(a, b.visible);
-
-      return Task.FromResult(t.AsQueryable());
-
-    }
-
     public Belt GetBelt(string site, string belt)
     {
       using var context = dBContext.CreateDbContext();
@@ -97,12 +84,13 @@ namespace cads_gui.Data
         return null;
     }
 
-    public Task<List<Belt>> GetBeltsAsync(string site, string conveyor)
+    public IEnumerable<Belt> GetBeltsAsync(string site, string conveyor)
     {
       using var context = dBContext.CreateDbContext();
       var data = from a in context.belt orderby a.chrono where a.site == site && a.conveyor == conveyor select a;
       
-      return data.ToListAsync();
+      // context will be disposed without evaluation of data
+      return data.ToArray(); 
 
     }
 
@@ -193,30 +181,11 @@ namespace cads_gui.Data
     }
 
     
-    public IEnumerable<(DateTime,float)> ConveyorsHeightAsync(double y, long x, List<Belt> belts) {
-			
-      var dbg = belts.Select(x => (x.chrono,Path.GetFullPath(Path.Combine(_config.DBPath,x.name)))).ToList();
-      
-      return NoAsp.ConveyorsHeightAsync(dbg, y, x);
-
+    public string AppendPath(string belt) {
+      return Path.GetFullPath(Path.Combine(_config.DBPath,belt));
     }
 
-    public void SetBeltAsync(BeltOld b)
-    {
-      using var context = dBContext.CreateDbContext();
-      context.anomalies.Update(b);
-      context.SaveChanges();
-    }
-
-    public void SetChartAsync(Chart b)
-    {
-      using var context = dBContext.CreateDbContext();
-      var r = context.chart.Find(b.anomaly_ID);
-      r.visible = b.visible;
-      //dBContext.CreateDbContext().chart.Update(b);
-      context.SaveChanges();
-    }
-
+    
     public List<SavedZDepthParams> GetSavedZDepthParams(Belt belt)
     {
       using var context = dBContext.CreateDbContext();
@@ -233,41 +202,6 @@ namespace cads_gui.Data
     }
 
     
-    public async IAsyncEnumerable<(List<ZDepth>, P3)> BeltScanAsync(string s, Belt BeltConstants, long offset, long y_len)
-    {
-
-      var sw = Stopwatch.StartNew();
-      using JsonDocument doc = JsonDocument.Parse("{" + s + "}");
-      JsonElement root = doc.RootElement;
-      var sum = root.GetProperty("sum").GetDouble();
-      var area = root.GetProperty("area").GetDouble();
-      var query = $"z => {root.GetProperty("query").GetString()}";
-
-
-      Func<float, bool> fn = (float x) => false;
-
-      try
-      {
-        var options = ScriptOptions.Default.AddReferences(typeof(cads_gui.Data.BeltOld).Assembly);
-        fn = await CSharpScript.EvaluateAsync<Func<float, bool>>(query, options);
-      }
-      catch (CompilationErrorException)
-      {
-        _logger.LogDebug($"CompilationErrorException");
-      }
-
-      var seg = Math.Sqrt(area); // Assume area is a square      
-
-      await foreach (var e in BeltScanAsync(seg, seg, sum, fn, BeltConstants, offset, y_len))
-      {
-        yield return e;
-      }
-
-
-    }
-
-
-
     /// <summary>
     /// Search for areas of interest on a section of belt.
     /// </summary>

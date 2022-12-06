@@ -207,43 +207,6 @@ namespace cads_gui.Data
 
     }
 
-    public class BeltOld
-    {
-
-        public  int anomaly_ID { get; set; }
-        public  string category { get; set; }
-        public  int danger { get; set; }
-        public  string time { get; set; }
-        public  double area { get; set; }
-        public  double z_depth { get; set; }
-        public  double x_lower { get; set; }
-        public  double x_upper { get; set; }
-        public  double volume { get; set; }
-        public  double start { get; set; }
-        public  double length { get; set; }
-        public  double contour_x { get; set; }
-        public  double contour_theta { get; set; }
-        public  int epoch { get; set; }
-        public  string comment { get; set; }
- 
-    }
-    public class Chart 
-    {
-        public  int anomaly_ID { get; set; }
-        public  bool visible { get; set; }
-    }
-
-    public class BeltChart
-    {
-      public BeltOld belt;
-      public bool visible;
-      public BeltChart(BeltOld b, bool v)  {
-        belt = b;
-        visible = v;
-      }
-    }
-
-
 		public static class Lh {
       public static IEnumerable<(T item, int index)> WithIndex<T>(this IEnumerable<T> source)
       {

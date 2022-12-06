@@ -75,15 +75,27 @@
   }
 
   async Task UpdateWearPlot(int x_index) {
-    var belts = (await Beltservice.GetBeltsAsync(site, conveyor)).ToList();
+    
     List<DateTime> x = new();
     List<double> y = new();
     
+    var tasks = new List<Task<(DateTime,(bool,float))>>();
+
     var Y = GuiState?.Value.Y ?? 0;
-    foreach (var (chrono,height) in Beltservice.ConveyorsHeightAsync(Y,x_index,belts)) {
-      x.Add(chrono);
-      y.Add(height);
-    };
+    foreach (var b in Beltservice.GetBeltsAsync(site, conveyor)) {
+      var beltFullPath = Beltservice.AppendPath(b.name);
+      tasks.Add(Task.Run(() => (b.chrono,NoAsp.RetrievePoint(beltFullPath,Y,x_index))));
+    }
+
+   
+    foreach(var d in await Task.WhenAll(tasks.ToArray())) {
+      if(!d.Item2.Item1) {
+        x.Add(d.Item1);
+        y.Add(d.Item2.Item2);
+      }
+    }
+
     await wearPlot.UpdatePlotAsync(x.ToArray(),y.ToArray());
   }
+
 }

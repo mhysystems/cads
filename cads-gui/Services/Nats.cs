@@ -26,7 +26,8 @@ public class NatsConsumerHostedService : BackgroundService
 
   protected async override Task ExecuteAsync(CancellationToken stoppingToken)
   {
-    while(true) {
+    while (true)
+    {
       try
       {
         var args = ConnectionFactory.GetDefaultOptions();
@@ -37,14 +38,21 @@ public class NatsConsumerHostedService : BackgroundService
 
           if (args.Message.Subject == "/realtime")
           {
-            var json = JsonSerializer.Deserialize<Realtime>(new ReadOnlySpan<byte>(args.Message.Data));
-            _realtimehubContext.Clients.Group("/realtime" + json.Site + json.Conveyor).SendAsync("ReceiveMessageRealtime", json);
+            var msg = new ReadOnlySpan<byte>(args.Message.Data);
+            var json = JsonSerializer.Deserialize<Realtime>(msg);
+            if (json is not null)
+            {
+              _realtimehubContext.Clients.Group("/realtime" + json.Site + json.Conveyor).SendAsync("ReceiveMessageRealtime", json);
+            }
           }
           else if (args.Message.Subject == "/realtimemeta")
           {
 
             var json = JsonSerializer.Deserialize<MetaRealtime>(new ReadOnlySpan<byte>(args.Message.Data));
-            _realtimehubContext.Clients.Group("/realtimemeta" + json.Site + json.Conveyor).SendAsync("ReceiveMessageMeta", json);
+            if (json is not null)
+            {
+              _realtimehubContext.Clients.Group("/realtimemeta" + json.Site + json.Conveyor).SendAsync("ReceiveMessageMeta", json);
+            }
           }
 
         };
@@ -58,7 +66,7 @@ public class NatsConsumerHostedService : BackgroundService
         break;
 
       }
-      catch (NATSConnectionException e)
+      catch (NATSConnectionException)
       {
         //_logger.LogError("Unable to connect to Nats server. Realtime infomation disabled. Nats error: {} ", e.Message);
         await Task.Delay(10000, stoppingToken);
@@ -66,9 +74,4 @@ public class NatsConsumerHostedService : BackgroundService
     }
   }
 
-  public async Task StopAsync(CancellationToken cancellationToken)
-  {
-    //  await _subscription?.DrainAsync();
-    //  _subscription?.Unsubscribe();
-  }
 }

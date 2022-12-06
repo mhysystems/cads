@@ -52,7 +52,7 @@ namespace cads_gui.Data
         x_max = Math.Max(x_max, profile_width(p, x_resolution));
       }
       int size = (int)Math.Round((x_max - x_min) / x_resolution);
-      var ret = new float[size * frame.Count];
+      float[] ret = new float[size * frame.Count];
       Array.Fill(ret, float.NaN);
 
       int i = 0;
@@ -140,8 +140,7 @@ namespace cads_gui.Data
       }
 
       connection.Open();
-      
-      
+            
       var command = connection.CreateCommand();      
       
       if(command is null) {
@@ -159,7 +158,7 @@ namespace cads_gui.Data
         return (true,0.0f);
       }
       reader.Close();
-      
+
       command.CommandText = $"select z from profile where rowid = @rowid";
       command.Parameters.AddWithValue("@rowid", (int)(y / y_res));
 
@@ -182,12 +181,6 @@ namespace cads_gui.Data
     }
 
 
-    public static IEnumerable<(DateTime, float)> ConveyorsHeightAsync(List<(DateTime, string)> belts, double y, long x)
-    {
-      
-      return belts.Select( e => (e.Item1,RetrievePoint(e.Item2, y, x))).Where(e => !e.Item2.Item1).Select(e => (e.Item1,e.Item2.Item2));
-     
-    }
 
     public static async Task<List<Profile>> RetrieveFrameModular(string belt, double y_min, long len, long left)
     {
