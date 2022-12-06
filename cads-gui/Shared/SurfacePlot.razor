@@ -125,7 +125,7 @@
     /// <param name="zStart"> Length(mm) of area in X direction</param>
     /// <param name="fn"> Length(mm) of area in Y direction</param>
     /// <returns></returns>
-   public async Task<List<(double, string)>> GenerateColorRangeAsync(double zStart = 0, Func<float, bool> fn = null)
+   public async Task<List<(double, string)>> GenerateColorRangeAsync(double zStart = 0)
     {
     
       var colour_range = new List<(double, string)>();
