@@ -461,7 +461,9 @@ namespace cads
 
   coro<std::tuple<int, profile>> fetch_belt_coro(int revid, int last_idx, int size, std::string name)
   {
-    auto query = fmt::format(R"(SELECT idx,y,x_off,z FROM PROFILE WHERE REVID = {} AND IDX >= ? AND IDX < ? ORDER BY Y)", revid);
+    auto query = std::numeric_limits<int>::min() != revid ? 
+        fmt::format(R"(SELECT idx,y,x_off,z FROM PROFILE WHERE REVID = {} AND IDX >= ? AND IDX < ? ORDER BY Y)", revid)
+      : fmt::format(R"(SELECT idx,y,x_off,z FROM PROFILE WHERE IDX >= ? AND IDX < ? )");
     auto [stmt,db] = prepare_query(name, query);
 
     for (int i = 0; i < last_idx; i += size)

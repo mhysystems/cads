@@ -70,7 +70,9 @@ namespace cads
     else
     {
       spdlog::get("cads")->debug("Using sqlite as data source");
-      return make_unique<SqliteGocatorReader>(gocatorFifo);
+      auto fps = global_config["laser_fps"].get<double>();
+      auto forever = global_config["forever"].get<bool>();
+      return make_unique<SqliteGocatorReader>(gocatorFifo,fps,forever);
     }
   }
 
@@ -366,7 +368,7 @@ namespace cads
         spdlog::get("cads")->info("Sleeping for {} minutes",sleep_wait);
         std::this_thread::sleep_for(std::chrono::seconds(sleep_wait * 60));
 
-        if (sleep_wait < 128)
+        if (sleep_wait < 32)
         {
           sleep_wait *= 2;
         }
@@ -497,7 +499,7 @@ namespace cads
   }
 
 
-  void direct_process()
+  bool direct_process()
   {
     create_db(global_config["db_name"].get<std::string>().c_str());
     create_program_state_db(global_config["program_state_db_name"].get<std::string>());
@@ -528,7 +530,6 @@ namespace cads
     BlockingReaderWriterQueue<msg> db_fifo;
     BlockingReaderWriterQueue<msg> dynamic_processing_fifo;
 
-    bool terminate_publish = false;
     std::jthread save_send(save_send_thread, std::ref(winFifo));
 
     auto iirfilter_left = mk_iirfilterSoS();
@@ -615,7 +616,6 @@ namespace cads
       
       
       auto bottom_filtered = pulley_left_filtered;
-      auto removed_dc_bias = differentiation(bottom_filtered);
 
       auto [delayed, dd] = delay({iy, ix, iz, ileft_edge_index, iright_edge_index});
 
@@ -662,7 +662,7 @@ namespace cads
     save_send.join();
     spdlog::get("cads")->info("Upload Thread Stopped");
 
-
+    return error;
   }
 
   void dump_gocator_log() {
