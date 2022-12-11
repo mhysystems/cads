@@ -229,7 +229,7 @@ namespace cads
 
       
 
-      if (iz.size() < size_t(x_width * 0.75))
+      if (iz.size()*x_resolution < size_t(x_width * 0.75))
       {
         spdlog::get("cads")->error("Gocator sending profiles with widths less than 0.75 of expected width");
         error = true;
@@ -288,8 +288,6 @@ namespace cads
         error = true;
         break;
       }
-
-
 
       auto [delayed, dd] = delay({iy, ix, iz, ileft_edge_index, iright_edge_index});
 

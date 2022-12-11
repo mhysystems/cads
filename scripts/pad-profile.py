@@ -3,7 +3,7 @@
 import numpy as np
 import argparse
 import sqlite3
-import sys
+import math
 
 def process_profile(db: str, width : int, pad : float) :
     conn = sqlite3.connect(db)
@@ -14,9 +14,10 @@ def process_profile(db: str, width : int, pad : float) :
         tmp.fill(pad)
         z = np.frombuffer(row[1],dtype='f')
         if tmp.size >= z.size :
-            tmp[0,:z.size] = z
+          off = math.floor((tmp.size - z.size) / 2)
+          tmp[0,off:z.size+off] = z
         else :
-            tmp = z[0,:tmp.size]
+          tmp = z[0,:tmp.size]
 
         cur2.execute("update PROFILE set z=? where rowid=?", (tmp,row[0]))
 

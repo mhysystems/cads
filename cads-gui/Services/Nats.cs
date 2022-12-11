@@ -60,16 +60,17 @@ public class NatsConsumerHostedService : BackgroundService
         using IAsyncSubscription s = c.SubscribeAsync(">", msgHandler);
         while (!stoppingToken.IsCancellationRequested)
         {
+          _logger.LogInformation("Connected to Nats and waiting for messages");
           await Task.Delay(Timeout.Infinite, stoppingToken);
         }
 
         break;
 
       }
-      catch (NATSConnectionException)
+      catch (NATSConnectionException e)
       {
-        //_logger.LogError("Unable to connect to Nats server. Realtime infomation disabled. Nats error: {} ", e.Message);
-        await Task.Delay(10000, stoppingToken);
+        _logger.LogError("Unable to connect to Nats server. Realtime infomation disabled. Nats error: {} ", e.Message);
+        await Task.Delay(60000, stoppingToken);
       }
     }
   }

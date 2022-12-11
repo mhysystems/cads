@@ -56,8 +56,9 @@ namespace cads
     m_yResolution = params.y_res;
     m_encoder_resolution = params.encoder_res;
 
-    for (;;)
+    for (;m_loop;)
     {
+      spdlog::get("gocator")->info("Loop Belt");
       auto fetch_profile = fetch_belt_coro(0, std::numeric_limits<int>::max(), 256, data_src);
       
       while (m_loop)
@@ -68,7 +69,6 @@ namespace cads
 
         if (co_terminate)
         {
-          m_loop = false;
           break;
         }
 

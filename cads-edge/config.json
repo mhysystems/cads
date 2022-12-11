@@ -1,9 +1,9 @@
 {
-  "data_source" : "../../profiles/rawprofile-2022-18-23.db", 
+  "data_source" : "../../profiles/rawprofile-2022-18-23.sqlite", 
   "laser_fps" : 980,
   "forever" : true,
-  "y_max_length" : 930000,
-  "y_max_upload" : 906000,
+  "y_max_length" : 301000,
+  "y_max_upload" : 300000,
   "z_height" : 27.0,
   "x_width"  : 1500,
   "width_n" : 1820,
@@ -36,11 +36,11 @@
             [ 1.00000000e+00, -1.99933782e+00, 1.00000000e+00, 1.00000000e+00, -1.99752113e+00, 9.97907883e-01]]   
   },
   "constraints" : {
-    "current_length" : [903000,907000],
+    "current_length" : [290000,301000],
     "surface_speed" : [4.5,5.9],
     "pulley_oscillation" : [0,5],
-    "cads_to_origin" : [0,907000],
-    "rotation_period" : [140000,210000],
+    "cads_to_origin" : [0,307000],
+    "rotation_period" : [46666,70000],
     "barrel_height" : [-34,-31.0],
     "z_unbiased" : [-29.0,4.0]
   },
