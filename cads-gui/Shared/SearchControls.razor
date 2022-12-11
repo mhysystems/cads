@@ -26,7 +26,6 @@
     </MudTooltip>
 
 
-  <MudTextField @bind-Value="TextValue" Label="Todo" Variant="Variant.Text"></MudTextField>
   <MudTooltip Text="Historical Scans">
   @if(_scanDate is not null) {
     <MudDatePicker Class="mud-theme-secondary" AdornmentColor="@Color.Primary" @bind-Date="@scanDate" IsDateDisabledFunc="@IsDateDisabledFunc" />
@@ -36,7 +35,7 @@
 
 
 @code {
-  public string TextValue { get; set; }
+
   protected DateTime? _scanDate = null;
 
   protected DateTime? scanDate { 
