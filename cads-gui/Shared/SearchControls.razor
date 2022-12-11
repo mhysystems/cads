@@ -1,6 +1,5 @@
 @inject BeltService Beltservice
 
-
   <MudToolBar Class="d-flex flex-grow-0 ma-0" Style="width:50%">
   <MudTooltip Text="Search">
   <MudButton Class="mud-theme-secondary" StartIcon="@Icons.Filled.ImageSearch" Size="Size.Large" OnClick="@Search" />
@@ -79,7 +78,7 @@
   {
     savedZDepthParams = await Task.Run(() => Beltservice.GetSavedZDepthParams(Belt) ?? new List<SavedZDepthParams>());
     _scanDate = (await Beltservice.GetBeltDatesAsync(Belt)).LastOrDefault(DateTime.Now);
-    
+  
     if(savedZDepthParams.Any()) {
         selectedZDepthParams = savedZDepthParams.First(); 
     }

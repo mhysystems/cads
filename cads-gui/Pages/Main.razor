@@ -21,8 +21,7 @@
   Style="width:calc(100vw - var(--mud-drawer-width-mini-left));height:calc(100vh - var(--mud-appbar-height)">
   <MudGrid Class="ma-0" Style="height:100%" Spacing=0>
     <MudItem xs="12" Class="d-flex" Style="height:40%">
-      <DoughnutPlot @ref="doughnutPlot" Style="flex-shrink:2" Belt="@belt" Y="@UpdateYAsync" />
-
+        <DoughnutPlot @ref="doughnutPlot" Style="flex-shrink:2" Belt="@belt" Y="@UpdateYAsync" />
       <MudContainer Class="d-flex flex-column ">
         <ZDepthQuery @ref="zDepthQuery" Belt=@Beltservice.GetBelt(site,conveyor)></ZDepthQuery>
         <MudExpansionPanels Class="z-30">
