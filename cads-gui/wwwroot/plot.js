@@ -885,9 +885,24 @@ class SurfacePlot {
       } // end scene
     };
 
+
     this.config = {
       displaylogo: false,
-      displayModeBar: true
+      displayModeBar: true,
+      modeBarButtonsToAdd: [
+        {
+          name: 'Reset camera to default',
+          icon: Plotly.Icons.home,
+          direction: 'up',
+          surfacePlot : this,
+          click: function (gd) {
+            this.surfacePlot.layout.scene.camera.eye = { ...SurfacePlot.defaultEyePosition };
+            this.surfacePlot.layout.scene.camera.center = { x: 0, y: 0, z: 0 };
+            Plotly.relayout(gd, this.surfacePlot.layout);
+          }
+        }],
+
+      modeBarButtonsToRemove: ['resetCameraDefault3d', 'resetCameraLastSave3d']
     };
 
     this.plotData = [

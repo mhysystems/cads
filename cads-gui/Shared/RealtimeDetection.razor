@@ -7,17 +7,19 @@
 @implements IAsyncDisposable
 
 <MudContainer Style="height:100%">
-  <MudText Typo="Typo.h5">Real-Time Detection:</MudText>
+  <MudTooltip Text="Damage detected based on search criteria below.">
+    <MudText Typo="Typo.h5">Real-Time Detection:</MudText>
+  </MudTooltip>
   <MudTable Style="height:100%" Class="overflow-scroll" Items="@messages" @ref="@mudTable" Breakpoint="Breakpoint.Sm" T="Realtime">
     <HeaderContent>
-        <MudTh><MudText Typo="Typo.body2">Time</MudText></MudTh>
-        <MudTh><MudText Typo="Typo.body2">Y</MudText></MudTh>
-        <MudTh><MudText Typo="Typo.body2"> Total </MudText></MudTh>
+        <MudTh><MudText Typo="Typo.h5">Time</MudText></MudTh>
+        <MudTh><MudText Typo="Typo.h5">Y</MudText></MudTh>
+        <MudTh><MudText Typo="Typo.h5"> Total </MudText></MudTh>
     </HeaderContent>
     <RowTemplate>
-            <MudTd DataLabel="Time" >@(string.Format("{0:d}:{0:t}", @context.Time))</MudTd>
-            <MudTd DataLabel="Y" >@(string.Format("{0}", @context.YArea/1000))</MudTd>
-            <MudTd DataLabel="Total" >@(string.Format("{0}", @context.Value))</MudTd>
+            <MudTd Typo="Typo.h5" DataLabel="Time" >@(string.Format("{0:d}:{0:t}", @context.Time))</MudTd>
+            <MudTd Typo="Typo.h5" DataLabel="Y" >@(string.Format("{0}", @context.YArea/1000))</MudTd>
+            <MudTd Typo="Typo.h5" DataLabel="Total" >@(string.Format("{0}", @context.Value))</MudTd>
     </RowTemplate>
   </MudTable>
 

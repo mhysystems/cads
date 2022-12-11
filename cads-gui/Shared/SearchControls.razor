@@ -1,7 +1,7 @@
 @inject BeltService Beltservice
 
   <MudToolBar Class="d-flex flex-grow-0 ma-0" Style="width:50%">
-  <MudTooltip Text="Search">
+  <MudTooltip Text="Search belt for damage ">
   <MudButton Class="mud-theme-secondary" StartIcon="@Icons.Filled.ImageSearch" Size="Size.Large" OnClick="@Search" />
   </MudTooltip>
   <MudSelect @bind-Value="@selectedZDepthParams" T="SavedZDepthParams" Class="mud-palette-text-secondary mud-theme-secondary ma-0 flex-grow-0" Dense="true" SelectedValuesChanged="@SelectZDepthParams">
