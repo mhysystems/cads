@@ -273,7 +273,7 @@ namespace cads_gui.Data
 
           if (total >= p)
           {
-            x_coord.Add(new ZDepth(x * dx + x_start, (y + offset) * dy, area_sample_x * dx, area_sample_y * dy, (long)total, pz));
+            x_coord.Add(new ZDepth(x * dx + x_start, (y + offset) * dy, area_sample_x * dx, area_sample_y * dy, (long)(total*100), pz));
           }
         }
 
@@ -285,7 +285,7 @@ namespace cads_gui.Data
 
           if (total >= p)
           {
-            x_coord.Add(new ZDepth(x * dx + x_start, (y + offset) * dy, area_sample_x * dx, area_sample_y * dy, (long)total, pz));
+            x_coord.Add(new ZDepth(x * dx + x_start, (y + offset) * dy, area_sample_x * dx, area_sample_y * dy, (long)(total*100), pz));
           }
         }
 
