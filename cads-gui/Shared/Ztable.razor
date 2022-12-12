@@ -19,10 +19,10 @@
   <MudTable Items="@_data" @ref="@mudTable" Hover="true" RowClassFunc="@SelectedRowClassFunc" Breakpoint="Breakpoint.Sm" OnRowClick="@RowClickEventAsync" T="ZDepth">
     <HeaderContent>
         <!--<MudTh></MudTh>-->
-        <MudTh><MudText Typo="Typo.body2">X</MudText></MudTh>
-        <MudTh><MudText Typo="Typo.body2">Y</MudText></MudTh>
-        <MudTh><MudText Typo="Typo.body2"> Total </MudText></MudTh>
-        <MudTh><MudText Typo="Typo.body2"> Z-Min </MudText></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<ZDepth, object>(e=>e.x)"><MudText Typo="Typo.body2">X</MudText></MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<ZDepth, object>(e=>e.y)"><MudText Typo="Typo.body2">Y</MudText></MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<ZDepth, object>(e=>e.t)"><MudText Typo="Typo.body2"> Total </MudText></MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<ZDepth, object>(e=>e.z.z)"><MudText Typo="Typo.body2"> Z-Min </MudText></MudTableSortLabel></MudTh>
     </HeaderContent>
     <RowTemplate>
             <!--<MudTd><span class="oi oi-location" @onclick=@(e => row_clicked(context.index))></span></MudTd>-->
