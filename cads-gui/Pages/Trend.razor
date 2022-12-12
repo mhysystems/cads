@@ -18,13 +18,13 @@
 
 @if(@GuiState.Value.Belt is not null) {
 <MudContainer MaxWidth="MaxWidth.False" Class="ma-0 pa-0"
-  Style="width:calc(100vw - var(--mud-drawer-width-mini-left));height:calc(100vh - var(--mud-appbar-height)">
+  Style="width:calc(98vw - var(--mud-drawer-width-mini-left));height:calc(96vh - var(--mud-appbar-height)">
   <MudGrid Class="ma-0" Style="height:100%" Spacing=0>
 
-<MudItem xs="12" Class="d-flex" Style="height:50%">
+<MudItem xs="12"  Style="height:46%">
 <TrendPlot @ref="trendPlot" Belt="@GuiState.Value.Belt" XIndex="@UpdateWearPlot"></TrendPlot>
 </MudItem>
-    <MudItem xs="12" >
+    <MudItem xs="12" Style="height:46%">
     <LinePlot @ref="wearPlot" ></LinePlot>
     </MudItem>
 </MudGrid>
@@ -35,6 +35,8 @@
   
   protected TrendPlot trendPlot;
   protected LinePlot wearPlot;
+
+  protected int XIndex = 0;
 
   [Parameter]
   public string site { get; set; }
@@ -50,7 +52,7 @@
     {
       var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
       await DateChanged((GuiState.Value.Belt.chrono,0,Colors.Orange.Accent3));
-      await UpdateWearPlot(0);
+      await UpdateWearPlot(1000);
     }
   }
 

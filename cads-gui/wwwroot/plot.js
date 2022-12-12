@@ -596,6 +596,14 @@ class LinePlot {
     this.plotElement = plotElement;
 
     this.layout = {
+      title: {
+        text: "Wear Rate of Selected Point on Profile",
+        font : {
+          family : "Century Gothic",
+          size : 24
+        },
+        x : 0.05
+      },
       autosize: true,
       yaxis: {
         range: [12, 36],
@@ -605,15 +613,17 @@ class LinePlot {
       xaxis: {},
 
       margin: {
-        l: 20,
-        r: 20,
-        b: 20,
-        t: 20,
+        l: 40,
+        r: 40,
+        b: 40,
+        t: 40,
       },
 
       aspectratio: {
         x: 1
-      }
+      },
+
+      hovermode : "closest"
     };
 
     this.config = {
@@ -654,6 +664,14 @@ class TrendPlot {
     this.zMax = z_max;
 
     this.layout = {
+      title: {
+        text: "Belt Cross Section Profile",
+        font : {
+          family : "Century Gothic",
+          size : 24
+        },
+      x : 0.05
+    },
       autosize: true,
       yaxis: {
         range: [z_min, z_max],
@@ -663,15 +681,17 @@ class TrendPlot {
       xaxis: {},
 
       margin: {
-        l: 20,
-        r: 20,
-        b: 20,
-        t: 20,
+        l: 40,
+        r: 40,
+        b: 40,
+        t: 40,
       },
 
       aspectratio: {
         x: 1
-      }
+      },
+
+      hovermode : "closest"
     };
 
     this.config = {
