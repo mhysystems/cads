@@ -7,6 +7,7 @@ using System.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Xunit;
 using cads_gui.Data;
+using cads_gui.BeltN;
 
 using System.IO;
 
@@ -29,29 +30,14 @@ namespace tests
     }
 
     [Fact]
-    public async Task RetrieveFrameForwardAsync()
+    public async Task RetrieveFrameSamplesAsync()
     {
-      var configuration = new ConfigurationBuilder()
-            .SetBasePath(Directory.GetCurrentDirectory())
-            .AddJsonFile("appsettings.json")
-            .Build();
-      var pathString = configuration.GetSection("webgui").GetValue<string>("DBPath") ?? String.Empty;
-      var dbpath = Path.GetFullPath(Path.Combine(pathString, "conveyors.db"));
-      var t0 = NoEFCore.RetrieveConveyorScanAsync("whaleback", "cv405", dbpath);
-      var belts = t0.Select(x => (x.Item1, Path.GetFullPath(Path.Combine(pathString, x.Item2))));
-      List<DateTime> x = new();
-      List<double> y = new();
-
-      var timer = new Stopwatch();
-      timer.Start();
-      foreach (var (chrono, height) in await NoAsp.ConveyorsHeightAsync(belts,0, 40))
-      {
-        x.Add(chrono);
-        y.Add(height);
-      };
-
-      timer.Stop();
-      Assert.Equal(true, true);
+      var ans = new float[]{1,2,3,4};
+      var req = new List<float>();
+      await foreach (var r in Search.RetrieveFrameSamplesAsync(0,3,"test.db")) {
+        req.AddRange(r.Item2);
+      }
+      Assert.Equal(ans, req.ToArray());
     }
 
   }

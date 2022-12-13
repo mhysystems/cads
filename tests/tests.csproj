@@ -31,4 +31,11 @@
     <ProjectReference Include="..\cads-gui\cads-gui.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+  <None 
+     Include="test.db" 
+     CopyToOutputDirectory="PreserveNewest" 
+     LinkBase="TestFiles\" />
+</ItemGroup>
+
 </Project>
