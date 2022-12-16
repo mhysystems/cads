@@ -214,7 +214,7 @@
   }
 
 
-  async Task SearchBelt()
+  async Task SearchBelt2()
   {
 
     var scan = zDepthQuery.SearchParameters;
@@ -266,6 +266,52 @@
       surfacePlot.HighlightSurface(fn);
 
     }
+
+    doughnutPlot.AnimateSearch = false;
+
+  }
+
+  async Task SearchBelt()
+  {
+
+    var scan = zDepthQuery.SearchParameters;
+    doughnutPlot.AnimateSearch = true;
+
+    await Task.Delay(1);
+
+
+
+    var procn = Environment.ProcessorCount;
+
+    long y_len = 1 + ((long)belt.YmaxN / procn);
+    var offsets = from number in Enumerable.Range(0, procn) select (number * y_len + 1, y_len);
+
+    P3 zmin = new P3(0, 0, Double.MaxValue);
+
+    var zDepth = new ConcurrentBag<List<ZDepth>>();
+    //foreach(var offset in offsets)
+    //Parallel.ForEach(offsets, async (offset) =>
+    //var ts = offsets.Select(async (offset) =>
+    try
+    {
+      var r = await Beltservice.BeltScanAsync2(scan.Width, scan.Length, scan.Percentage, scan.Depth, belt);
+      if (zDepth.Any())
+    {
+      doughnutPlot.data = zDepth.SelectMany(i => i).OrderBy(i => i.y).Select(d => new
+      PlotInfo(d.y, belt.FrameLength, d.z.z, "")).Take(1024).ToList();
+      zDepthTabe.data = zDepth.SelectMany(i => i).Take(1024).ToList();
+      var fn = zDepthQuery.MakeAreaOfInterest();
+      surfacePlot.HighlightSurface(fn);
+    }
+     
+    }
+    catch (Exception e)
+    {
+      logger.LogError(e.Message);
+    }
+
+
+
 
     doughnutPlot.AnimateSearch = false;
 

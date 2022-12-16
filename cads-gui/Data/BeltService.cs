@@ -21,6 +21,8 @@ using System.Reactive.Linq;
 using SQLitePCL;
 using static SQLitePCL.raw;
 
+using cads_gui.BeltN;
+
 namespace cads_gui.Data
 {
   public record P3(double x, double y, double z);
@@ -312,6 +314,35 @@ namespace cads_gui.Data
       }
 
       yield return (r, zmin); //Useless but will leave for now
+
+    }
+
+    public async Task<List<(double, double, double, float)>> BeltScanAsync2(double X, double Y, double P, double Z, Belt belt) {
+      var db = NoAsp.EndpointToSQliteDbName(belt.site,belt.conveyor,belt.chrono);
+      
+      var dx = belt.x_res;
+      var dy = belt.y_res;
+
+      var columns = (int)Math.Ceiling(X / dx);
+      var rows = (int)Math.Ceiling(Y / dy);
+
+      bool fz(float z) 
+      {
+        return z < Z;
+      }
+
+      bool fp((double, double, double, float) p) 
+      {
+        return p.Item3 > P;
+      }
+
+      var req = new List<(double,double,double,float)>();
+  
+      foreach (var r in await Search.SearchPartitionParallelAsync(db,columns,rows,(int)belt.WidthN,(long)belt.YmaxN,64,(x) => true, fz, fp)) {
+        req.Add((r.Item1*dx + -732.24,r.Item2*dy,r.Item3,r.Item4));
+      }
+
+      return req;
 
     }
 
