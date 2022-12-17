@@ -317,8 +317,9 @@ namespace cads_gui.Data
 
     }
 
-    public async Task<List<(double, double, double, float)>> BeltScanAsync2(double X, double Y, double P, double Z, Belt belt) {
-      var db = NoAsp.EndpointToSQliteDbName(belt.site,belt.conveyor,belt.chrono);
+     public async Task<List<ZDepth>> BeltScanAsync2(double X, double Y, double P, double Z, Belt belt) {
+      var db = AppendPath(NoAsp.EndpointToSQliteDbName(belt.site,belt.conveyor,belt.chrono));
+      var xOff = NoAsp.BeltXOff(db);
       
       var dx = belt.x_res;
       var dy = belt.y_res;
@@ -331,21 +332,21 @@ namespace cads_gui.Data
         return z < Z;
       }
 
-      bool fp((double, double, double, float) p) 
+      bool fp(Search.SearchResult p) 
       {
-        return p.Item3 > P;
+        return p.Percent > P;
       }
 
-      var req = new List<(double,double,double,float)>();
+      var req = new List<ZDepth>();
   
-      foreach (var r in await Search.SearchPartitionParallelAsync(db,columns,rows,(int)belt.WidthN,(long)belt.YmaxN,64,(x) => true, fz, fp)) {
-        req.Add((r.Item1*dx + -732.24,r.Item2*dy,r.Item3,r.Item4));
+      foreach (var r in await Search.SearchParallelAsync(db,columns,rows,(int)belt.WidthN,(long)belt.YmaxN,64,(x) => true, fz, fp)) {
+        req.Add(new (r.Col*dx + xOff,r.Row*dy,r.Width*dx,r.Length*dy,0,new(r.ZMin.X,r.ZMin.Y,r.ZMin.Z)));
       }
 
       return req;
 
     }
-
+ 
 
     public async Task<double> GetLength(string belt)
     {

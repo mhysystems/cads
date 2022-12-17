@@ -325,6 +325,35 @@ namespace cads_gui.Data
       return (first, last, count, width);
     }
 
+    
+    public static double BeltXOff(string belt)
+    {
+      double xOff = 0.0;
+
+      using var connection = new SqliteConnection("" +
+        new SqliteConnectionStringBuilder
+        {
+          Mode = SqliteOpenMode.ReadOnly,
+          DataSource = belt
+        });
+
+      connection.Open();
+      var command = connection.CreateCommand();
+
+      command.CommandText = @"SELECT x_off FROM PROFILE LIMIT 1";
+
+      using var reader = command.ExecuteReader();
+
+      while (reader.Read())
+      {
+        xOff = reader.GetDouble(0);
+      }
+
+      connection.Close();
+
+      return xOff;
+    }
+
     public static async Task<(double, double, long)> BeltBoundaryAsync(string belt)
     {
       return await Task.Run(() => BeltBoundary(belt));
