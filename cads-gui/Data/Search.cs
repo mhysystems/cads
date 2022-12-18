@@ -35,9 +35,10 @@ public static class Search
     var command = cmdBuild(connection.CreateCommand());
 
     using var reader = await command.ExecuteReaderAsync(stop);
-
+    int a = 0;
     while (await reader.ReadAsync(stop))
     {
+      a++;
       yield return rows(reader);
     }
   }
@@ -147,7 +148,7 @@ public static class Search
         var len = Math.Min(stride, z.Length - i);
         var p = z.Slice(i, len);
         var (cnt, zMin) = CountIf(p.Span, fx, fz);
-        yield return new (cnt, len, 1, zMin with {X = i + zMin.X});
+        yield return new (cnt, len, 1, zMin with {X = 0 + zMin.X});
       }
 
     }
@@ -166,7 +167,7 @@ public static class Search
     {
       hasColumns = true;
       var x = i % columns;
-      var y = i / columns;
+      var y = i / columns % stride;
       var zMin = columnPartition[x].ZMin;
       
       if(r.ZMin.Z < columnPartition[x].ZMin.Z) {
@@ -212,7 +213,22 @@ public static class Search
       var x = t % columns;
       var y = t / columns;
       t++;
-      yield return new ResultCoord(x, y + yOrigin, area with {ZMin = area.ZMin with {Y = area.ZMin.Y + yOrigin}});
+      yield return new ResultCoord(x, y, area);// with {ZMin = area.ZMin with {Y = area.ZMin.Y}});
+    }
+  }
+
+  public static async IAsyncEnumerable<ResultCoord> AddCoordinatesAsync2(IAsyncEnumerable<Result> areas, int columns, long xStride, long yStride, long yOrigin, [EnumeratorCancellation] CancellationToken stop = default)
+  {
+
+    long t = 0;
+
+    await foreach (var area in areas.WithCancellation(stop))
+    {
+      var x = t % columns;
+      var y = t / columns;
+      t++;
+      var zMin = area.ZMin with {X = x*xStride + area.ZMin.X, Y = y*yStride + area.ZMin.Y + yOrigin};
+      yield return new ResultCoord(x*xStride, y*yStride + yOrigin, area with {ZMin = zMin});// with {ZMin = area.ZMin with {Y = area.ZMin.Y}});
     }
   }
 
@@ -258,22 +274,21 @@ public static class Search
   }
 
 
-  public static async IAsyncEnumerable<SearchResult> SearchPartitionAsync(string db, int columns, int rows, long y, int width, long length, long limit, Func<int, bool> fx, Func<float, bool> fz, Func<SearchResult, bool> fp, [EnumeratorCancellation] CancellationToken cancel = default)
+  public static async IAsyncEnumerable<SearchResult> SearchPartitionAsync(string db, int xStride, int yStride, long y, int width, long length, long limit, Func<int, bool> fx, Func<float, bool> fz, Func<SearchResult, bool> fp, [EnumeratorCancellation] CancellationToken cancel = default)
   {
-    var xStride = (int)Math.Ceiling((double)width / columns);
-    var yStride = (long)Math.Ceiling((double)length / rows);
-    var ySkipped = (long)Math.Floor((double)y / yStride);
+    var columns = (int)Math.Ceiling((double)width / xStride);
+    var rows = (long)Math.Ceiling((double)length / yStride);
     var rawSamples = RetrieveFrameSamplesAsync(y, length, db, cancel);
     var g = CountIf(rawSamples, xStride, fx, fz, cancel);
     var l = CountIfMatrixAsync(g, columns, yStride,  cancel);
-    var ll = AddCoordinatesAsync(l, columns, y / rows,cancel);
+    var ll = AddCoordinatesAsync2(l, columns, xStride, yStride, y,cancel);
 
     static SearchResult map(ResultCoord a)
     {
       return new SearchResult(a.Col,a.Row,a.Result.Width,a.Result.Length,(double)a.Result.Count / (a.Result.Width * a.Result.Length),a.Result.ZMin);
     }
 
-    await foreach (var m in Filter(Map(Take(ll, limit, cancel), map, cancel), fp, cancel).WithCancellation(cancel))
+    await foreach (var m in Take(Filter(Map(ll, map, cancel), fp, cancel),limit,cancel).WithCancellation(cancel)         )
     {
       yield return m;
     }
@@ -284,6 +299,8 @@ public static class Search
   {
     var procn = (int)Math.Min(Environment.ProcessorCount, rows);
 
+    var xStride = (int)Math.Ceiling((double)width / columns);
+    var yStride = (int)Math.Ceiling((double)length / rows);
     long yPartitionLength = length / procn;
     var rowsPartition = (int)Math.Floor((double)rows / procn);
     var yOffsets = (from number in Enumerable.Range(0, procn - 1) select (number * yPartitionLength, yPartitionLength,rowsPartition)).Append(((procn - 1) * yPartitionLength, length - (procn - 1) * yPartitionLength,rows - (procn - 1)*rowsPartition));
@@ -292,7 +309,7 @@ public static class Search
     await Parallel.ForEachAsync(yOffsets, async (yOffset, stop) =>
     {
       var cancellation = CancellationTokenSource.CreateLinkedTokenSource(stop, cancel);
-      await foreach (var m in SearchPartitionAsync(db, columns, yOffset.Item3, yOffset.Item1, width, yOffset.Item2, limit, fx, fz, fp, cancellation.Token).WithCancellation(cancellation.Token))
+      await foreach (var m in SearchPartitionAsync(db, xStride, (int)Math.Min(yStride,yOffset.Item2), yOffset.Item1, width, yOffset.Item2, limit, fx, fz, fp, cancellation.Token).WithCancellation(cancellation.Token))
       {
         results.Add(m);
       }

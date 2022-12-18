@@ -1041,7 +1041,8 @@ class SurfacePlot {
 
   }
 
-  async updatePlot(plotDataPromise) {
+  async updatePlot(plotDataPromise,xRes) {
+    this.xRes = xRes;
     const y = await this.updatePlotData(plotDataPromise);
     await this.generatePlot();
     return y;
@@ -1068,14 +1069,20 @@ class SurfacePlot {
     
     const xyRatio = ((yArray[yLength - 1] - yArray[0]) / yLength) / ((xArray[xLength - 1] - xArray[0]) / xLength);
     const width = 50; // x axis
-    const length = Math.floor(xyRatio); // y axis
+    const length = Math.floor(width / xyRatio); // y axis
 
-    const yIndex = this.plotData[SurfacePlot.surfacePlotData].y.findIndex( y => zDepth.z.y < y*1000);
-    const xIndex = this.plotData[SurfacePlot.surfacePlotData].x.findIndex( x => zDepth.z.x < x*1000);
+    const yIndex = this.plotData[SurfacePlot.surfacePlotData].y.findIndex( y => zDepth.z.y <= y*1000);
+    const xIndex = this.plotData[SurfacePlot.surfacePlotData].x.findIndex( x => zDepth.z.x <= x*1000);
 
-    this.plotData[SurfacePlot.overlayPlotData].y = this.plotData[SurfacePlot.surfacePlotData].y.slice(yIndex - length,yIndex + length);
-    this.plotData[SurfacePlot.overlayPlotData].x = this.plotData[SurfacePlot.surfacePlotData].x.slice(xIndex - width,xIndex + width);
-    this.plotData[SurfacePlot.overlayPlotData].z = this.plotData[SurfacePlot.surfacePlotData].z.slice(yIndex - length,yIndex + length).map( x=> x.slice(xIndex - width,xIndex + width)).map(x => x.map( z => z+0.5)); 
+    const yMin = Math.max(yIndex - length,0);
+    const xMin = Math.max(xIndex - width,0);
+
+    const Y = this.plotData[SurfacePlot.surfacePlotData].y.slice(yMin,yIndex + length);
+    const X = this.plotData[SurfacePlot.surfacePlotData].x.slice(xMin,xIndex + width);
+    const Z = this.plotData[SurfacePlot.surfacePlotData].z.slice(yMin,yIndex + length).map( x=> x.slice(xMin,xIndex + width)).map(x => x.map( z => z+0.5)); 
+    this.plotData[SurfacePlot.overlayPlotData].y = Y;
+    this.plotData[SurfacePlot.overlayPlotData].x = X;
+    this.plotData[SurfacePlot.overlayPlotData].z = Z;
 
   }
 

@@ -98,13 +98,15 @@ namespace tests
     [Fact]
     public async Task SearchPartition()
     {
-      var db = "test.db";
-      var columns = 3;
-      var rows = 3;
+      var db = "/home/me/dev/cads/profiles/gui-extern/whaleback-cv405-2022-12-17-00000";// "test.db";
+      var xStride = 1500;
+      var yStride = 6;
+
+      var why = 606;
 
       var req = new List<Search.SearchResult>();
   
-      await foreach (var r in Search.SearchPartitionAsync(db,columns,rows,0,12,12,100,(x) => true, (z) => z < 30, (p) => true)) {
+      await foreach (var r in Search.SearchPartitionAsync(db,xStride,yStride,179999-why,1500,why,1000000,(x) => true, (z) => z < 30, (p) => p.Percent > 0)) {
         req.Add(r);
       }
 
@@ -117,12 +119,12 @@ namespace tests
     public async Task SearchPartitionParallel()
     {
       var db = "test.db";
-      var columns = 3;
-      var rows = 3;
+      var columns = 1;
+      var rows = 12;
 
       var req = new List<Search.SearchResult>();
   
-      foreach (var r in await Search.SearchParallelAsync(db,columns,rows,12,12,100,(x) => true, (z) => z < 30, (p) => true)) {
+      foreach (var r in await Search.SearchParallelAsync(db,columns,rows,14,14,100,(x) => true, (z) => z < 30, (p) => p.Percent > 0)) {
         req.Add(r);
       }
 

@@ -27,4 +27,5 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     for db_file in args.db:
+      print(db_file)
       process_profile(db_file, args.x, args.y,args.width, args.length, args.z)

@@ -30,7 +30,7 @@ namespace cads_gui.Data
   // ZDepth represents an area with origin x and y 
   // t is total z samples on belt found less than a certain number
   // z in the minimum z sample found in area before total threshold
-  public record ZDepth(double x, double y, double width, double length, long t, P3 z);
+  public record ZDepth(double x, double y, double width, double length, double t, P3 z);
 
   public class BeltService
   {
@@ -317,15 +317,15 @@ namespace cads_gui.Data
 
     }
 
-     public async Task<List<ZDepth>> BeltScanAsync2(double X, double Y, double P, double Z, Belt belt) {
+     public async Task<List<ZDepth>> BeltScanAsync2(double X, double Y, double P, double Z, Belt belt, long limit) {
       var db = AppendPath(NoAsp.EndpointToSQliteDbName(belt.site,belt.conveyor,belt.chrono));
       var xOff = NoAsp.BeltXOff(db);
       
       var dx = belt.x_res;
       var dy = belt.y_res;
 
-      var columns = (int)Math.Ceiling(X / dx);
-      var rows = (int)Math.Ceiling(Y / dy);
+      var columns = (int)Math.Ceiling(belt.Xmax / X);
+      var rows = (int)Math.Ceiling(belt.Ymax / Y);
 
       bool fz(float z) 
       {
@@ -339,8 +339,8 @@ namespace cads_gui.Data
 
       var req = new List<ZDepth>();
   
-      foreach (var r in await Search.SearchParallelAsync(db,columns,rows,(int)belt.WidthN,(long)belt.YmaxN,64,(x) => true, fz, fp)) {
-        req.Add(new (r.Col*dx + xOff,r.Row*dy,r.Width*dx,r.Length*dy,0,new(r.ZMin.X,r.ZMin.Y,r.ZMin.Z)));
+      foreach (var r in await Search.SearchParallelAsync(db,columns,rows,(int)belt.WidthN,(long)belt.YmaxN,limit,(x) => true, fz, fp)) {
+        req.Add(new (r.Col*dx + xOff,r.Row*dy,r.Width*dx,r.Length*dy,r.Percent,new(r.ZMin.X*dx + xOff,r.ZMin.Y*dy,r.ZMin.Z)));
       }
 
       return req;
