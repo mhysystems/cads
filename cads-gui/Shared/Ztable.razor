@@ -26,9 +26,9 @@
     </HeaderContent>
     <RowTemplate>
             <!--<MudTd><span class="oi oi-location" @onclick=@(e => row_clicked(context.index))></span></MudTd>-->
-            <MudTd DataLabel="X" >@(string.Format("{0:0.00}", @context.x/1000))</MudTd>
-            <MudTd DataLabel="Y" >@(string.Format("{0:0.00}", @context.y/1000))</MudTd>
-            <MudTd DataLabel="Total" >@(string.Format("{0:0.00}", @context.t*100))</MudTd>
+            <MudTd DataLabel="X" >@(string.Format("{0:0.00}", @context.z.x/1000))</MudTd>
+            <MudTd DataLabel="Y" >@(string.Format("{0:0.00}", @context.z.y/1000))</MudTd>
+            <MudTd DataLabel="%" >@(string.Format("{0:0}", @context.t*100))</MudTd>
             <MudTd DataLabel="Z-Min" >@(string.Format("{0:0.00}", @context.z.z))</MudTd>
     </RowTemplate>
   </MudTable>

@@ -274,31 +274,25 @@
   async Task SearchBelt()
   {
 
-    var scan = zDepthQuery.SearchParameters;
     doughnutPlot.AnimateSearch = true;
 
-    var procn = Environment.ProcessorCount;
-
-    long y_len = 1 + ((long)belt.YmaxN / procn);
-    var offsets = from number in Enumerable.Range(0, procn) select (number * y_len + 1, y_len);
-    var limit = 64l;
+    var limit = 64L;
 
     try
     {
-      var zDepth = await Beltservice.BeltScanAsync2(scan.Width, scan.Length, scan.Percentage, scan.Depth, belt, limit);
+      var zDepth = await Beltservice.BeltScanAsync2(zDepthQuery.SearchParameters, belt, limit);
+      
       if(zDepth.Count > limit) {
         Snackbar.Add($"Too many results. Limited to {limit}", Severity.Warning);
       }
-      //if (zDepth.Any())
-    //{
+
       doughnutPlot.data = zDepth.OrderBy(i => i.y).Take((int)limit).Select(d => new
       PlotInfo(d.y, belt.FrameLength, d.z.z, "")).ToList();
       
       zDepthTabe.data = zDepth;
       var fn = zDepthQuery.MakeAreaOfInterest();
       surfacePlot.HighlightSurface(fn);
-    //}
-     
+
     }
     catch (Exception e)
     {

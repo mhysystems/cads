@@ -7,7 +7,7 @@ namespace cads_gui.Data
 {
 		public record P4(double x, double y, double z, double z_off);
 
-    public record ZDepthQueryParameters(double Width, double Length, double Depth, double Percentage); 
+    public record ZDepthQueryParameters(double Width, double Length, double Depth, double Percentage, double XMin, double XMax); 
 
 		public class SavedZDepthParams{
 

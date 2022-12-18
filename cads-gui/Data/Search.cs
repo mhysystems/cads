@@ -112,24 +112,24 @@ public static class Search
     return await DBReadQuerySingle(db, CmdBuilder, Read, stop);
   }
 
-  public static (int, ZMinCoord) CountIf(ReadOnlySpan<float> sq, Func<int, bool> fx, Func<float, bool> fz)
+  public static (int, ZMinCoord) CountIf(ReadOnlySpan<float> sq, Func<int, bool> fx, Func<float, bool> fz, int x)
   {
 
     var zMin = new ZMinCoord(0,0,float.MaxValue);
     var cnt = 0;
-    var x = 0;
+    var i = 0;
 
     foreach (var z in sq)
     {
-      if (!float.IsNaN(z) && fz(z) && fx(x))
+      if (!float.IsNaN(z) && fz(z) && fx(x+i))
       {
         if(z < zMin.Z) {
-          zMin = zMin with {X = x, Z = z};
+          zMin = zMin with {X = i, Z = z};
         }
         cnt++;
       }
 
-      x++;
+      i++;
     }
 
     return (cnt, zMin);
@@ -147,7 +147,7 @@ public static class Search
       {
         var len = Math.Min(stride, z.Length - i);
         var p = z.Slice(i, len);
-        var (cnt, zMin) = CountIf(p.Span, fx, fz);
+        var (cnt, zMin) = CountIf(p.Span, fx, fz, i);
         yield return new (cnt, len, 1, zMin with {X = 0 + zMin.X});
       }
 

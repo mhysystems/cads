@@ -317,12 +317,21 @@ namespace cads_gui.Data
 
     }
 
-     public async Task<List<ZDepth>> BeltScanAsync2(double X, double Y, double P, double Z, Belt belt, long limit) {
+     public async Task<List<ZDepth>> BeltScanAsync2(ZDepthQueryParameters search, Belt belt, long limit) {
+      
       var db = AppendPath(NoAsp.EndpointToSQliteDbName(belt.site,belt.conveyor,belt.chrono));
-      var xOff = NoAsp.BeltXOff(db);
+      var xOff = - belt.Xmax / 2;
       
       var dx = belt.x_res;
       var dy = belt.y_res;
+
+      var X = search.Width;
+      var Y = search.Length;
+      var Z = search.Depth;
+      var P = search.Percentage;
+
+      var xMinIndex = (int)Math.Max(Math.Floor((search.XMin - xOff) / belt.x_res),0);
+      var xMaxIndex = (int)Math.Min(Math.Floor((search.XMax - xOff) / belt.x_res),belt.WidthN);
 
       var columns = (int)Math.Ceiling(belt.Xmax / X);
       var rows = (int)Math.Ceiling(belt.Ymax / Y);
@@ -337,9 +346,13 @@ namespace cads_gui.Data
         return p.Percent > P;
       }
 
+      bool xRange(int xIndex) {
+        return xMinIndex <= xIndex && xIndex < xMaxIndex;
+      }
+
       var req = new List<ZDepth>();
   
-      foreach (var r in await Search.SearchParallelAsync(db,columns,rows,(int)belt.WidthN,(long)belt.YmaxN,limit,(x) => true, fz, fp)) {
+      foreach (var r in await Search.SearchParallelAsync(db,columns,rows,(int)belt.WidthN,(long)belt.YmaxN,limit,xRange, fz, fp)) {
         req.Add(new (r.Col*dx + xOff,r.Row*dy,r.Width*dx,r.Length*dy,r.Percent,new(r.ZMin.X*dx + xOff,r.ZMin.Y*dy,r.ZMin.Z)));
       }
 

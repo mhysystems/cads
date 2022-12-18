@@ -10,31 +10,47 @@
 @inject BeltService Beltservice
 
 
-  <MudGrid Style="height:100%" Spacing="1">
-    <MudItem Style="height:50%" xs="12">
-      <canvas id="three"></canvas>
-    </MudItem>
-    <MudItem xs="12" Class="d-flex gap-0 ">
+<MudGrid Style="height:100%" Spacing="1">
+  <MudItem Style="height:50%" xs="12">
+    <canvas id="three"></canvas>
+  </MudItem>
+  <MudItem xs="12" Class="d-flex gap-0 ">
+    <MudTooltip Text="X Range Minimum">
+      <MudNumericField HideSpinButtons="true" Immediate="true" Class="X queryInput mt-0" T="double" @bind-Value="@XMin"
+        Min="-Belt.Xmax / 2" Max="0" Variant="Variant.Text">
+      </MudNumericField>
+    </MudTooltip>
+    <MudTooltip Text="X Range Maximum">
+      <MudNumericField HideSpinButtons="true" Immediate="true" Class="X queryInput mt-0" T="double" @bind-Value="@XMax"
+        Min="0" Max="(int)Belt.Xmax" Variant="Variant.Text">
+      </MudNumericField>
+    </MudTooltip>
+  </MudItem>
+  <MudItem xs="12" Class="d-flex gap-0 ">
 
-        <MudTooltip Text="X">
-        <MudNumericField HideSpinButtons="true" Immediate="true" Class="X queryInput mt-0" T="int"  @bind-Value="@X" Min="0" Max="(int)Belt.Xmax" Variant="Variant.Text">
-        </MudNumericField>
-        </MudTooltip>
+    <MudTooltip Text="X">
+      <MudNumericField HideSpinButtons="true" Immediate="true" Class="X queryInput mt-0" T="int" @bind-Value="@X"
+        Min="0" Max="(int)Belt.Xmax" Variant="Variant.Text">
+      </MudNumericField>
+    </MudTooltip>
 
-        <MudTooltip Text="Y">
-        <MudNumericField HideSpinButtons="true" Immediate="true" Class="Y queryInput mt-0" T="int"  @bind-Value="@Y" Min="0" Max="(int)Belt.FrameLength" Variant="Variant.Text">
-        </MudNumericField>
-        </MudTooltip>
-        <MudTooltip Text="Z">
-        <MudNumericField HideSpinButtons="true" Immediate="true" Class="Z queryInput mt-0" T="int"  @bind-Value="@Z" Min="0" Max="(int)Belt.z_max" Variant="Variant.Text">
-        </MudNumericField>
-        </MudTooltip>
-        <MudTooltip Text="%">
-        <MudNumericField HideSpinButtons="true" Immediate="true" Class="P mt-0" T="double" @bind-Value="@P" Min="0" Max="100" Step="1.0" Format="F2" Variant="Variant.Text">
-        </MudNumericField>
-        </MudTooltip>
-    </MudItem>
-  </MudGrid>
+    <MudTooltip Text="Y">
+      <MudNumericField HideSpinButtons="true" Immediate="true" Class="Y queryInput mt-0" T="int" @bind-Value="@Y"
+        Min="0" Max="(int)Belt.FrameLength" Variant="Variant.Text">
+      </MudNumericField>
+    </MudTooltip>
+    <MudTooltip Text="Z">
+      <MudNumericField HideSpinButtons="true" Immediate="true" Class="Z queryInput mt-0" T="int" @bind-Value="@Z"
+        Min="0" Max="(int)Belt.z_max" Variant="Variant.Text">
+      </MudNumericField>
+    </MudTooltip>
+    <MudTooltip Text="%">
+      <MudNumericField HideSpinButtons="true" Immediate="true" Class="P mt-0" T="double" @bind-Value="@P" Min="0"
+        Max="100" Step="1.0" Format="F2" Variant="Variant.Text">
+      </MudNumericField>
+    </MudTooltip>
+  </MudItem>
+</MudGrid>
 
 
 @code {
@@ -43,12 +59,15 @@
   protected int Z = 90;
   protected double P = 1;
 
+  protected double XMin = 0;
+  protected double XMax = 0;
+
   protected List<SavedZDepthParams> savedZDepthParams = new List<SavedZDepthParams>();
 
   [Parameter]
-  public Belt Belt {get; set;}
+  public Belt Belt { get; set; }
 
-  public ZDepthQueryParameters SearchParameters { get{return new ZDepthQueryParameters(X,Y,Z,P / 100);} private set{} }
+  public ZDepthQueryParameters SearchParameters { get { return new ZDepthQueryParameters(X, Y, Z, P / 100, XMin, XMax); } private set { } }
 
 
   protected IJSObjectReference module;
@@ -58,12 +77,16 @@
     Y = (int)Belt.FrameLength;
     X = (int)Belt.Xmax;
     Z = (int)Belt.z_max;
+    XMin = -Belt.Xmax/2;
+    XMax = Belt.Xmax/2;
 
-    savedZDepthParams = await Task.Run(() => Beltservice.GetSavedZDepthParams(Belt).ToList()) ?? new List<SavedZDepthParams>();
+    savedZDepthParams = await Task.Run(() => Beltservice.GetSavedZDepthParams(Belt).ToList()) ?? new
+    List<SavedZDepthParams>();
 
   }
 
-  protected override async Task OnParametersSetAsync() {
+  protected override async Task OnParametersSetAsync()
+  {
 
   }
 
@@ -72,7 +95,7 @@
     if (firstRender)
     {
       module = await JS.InvokeAsync<IJSObjectReference>("import", "./querybuilder.js");
-      await module.InvokeVoidAsync("initThree",Belt.Xmax,Belt.FrameLength,Belt.z_max);
+      await module.InvokeVoidAsync("initThree", Belt.Xmax, Belt.FrameLength, Belt.z_max);
       await module.InvokeVoidAsync("update", X, Y, Z);
     }
 
@@ -85,7 +108,8 @@
     Z = (int)d.Depth;
     P = d.Percentage * 100;
 
-    if(module is not null) {
+    if (module is not null)
+    {
       await module.InvokeVoidAsync("update", X, Y, Z, P);
     }
 
@@ -93,29 +117,34 @@
 
   }
 
-  public Func<float,bool> MakeAreaOfInterest()
+  public Func<float, bool> MakeAreaOfInterest()
   {
-    return z => z < Z;  
+    return z => z < Z;
   }
 
 
   public async Task LoadZDepthParamsAsync(IEnumerable<SavedZDepthParams> xs)
   {
-    if(xs.Count() > 1) {
+    if (xs.Count() > 1)
+    {
       logger.LogError("Expected 1 SavedZDepthParams. Received {}", xs.Count());
     }
 
-    if(xs.Any()) {
+    if (xs.Any())
+    {
       await LoadDamageAsync(xs.First());
     }
   }
 
   async ValueTask IAsyncDisposable.DisposeAsync()
   {
-    try {
-    if (module is not null) {
-     await module.DisposeAsync();
+    try
+    {
+      if (module is not null)
+      {
+        await module.DisposeAsync();
+      }
     }
-    }catch(Microsoft.JSInterop.JSDisconnectedException) {}
+    catch (Microsoft.JSInterop.JSDisconnectedException) { }
   }
 }
