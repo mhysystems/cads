@@ -50,7 +50,7 @@ function initMesh(sc, nx, ny, nz) {
 	let geo = new THREE.EdgesGeometry(geometry);
 	let mat = new THREE.LineBasicMaterial({ color: 0x051d4b,  linewidth : 2 });
 	let wireframe = new THREE.LineSegments(geo, mat);
-	wireframe.position.set(0, (bZ - ny) / 2, (bY - nz) / 2)
+	wireframe.position.set(0, (-bZ + ny) /  2, (bY - nz) / 2)
 	sc.add(wireframe);
 
 	drawBelt(sc);
