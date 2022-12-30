@@ -1,11 +1,18 @@
 import * as THREE from 'https://cdn.skypack.dev/three@0.132.2';
 
-const queryInput = "div .queryInput input";
+const queryInput = "div .queryInput";
 var scene, camera, renderer;
 var bX = 1600, bY = 4000, bZ = 100;
 
+function findInput(nodes,query) {
+  return nodes?.filter(e => e?.matches(query))[0]?.querySelector('input');
+}
+
 export function change() {
-	const[dx,dy,dz] = [...document.querySelectorAll(queryInput)];
+  const nodes = [...document.querySelectorAll(queryInput)];
+	const dx = findInput(nodes,'.X');
+  const dy = findInput(nodes,'.Y');
+  const dz = findInput(nodes,'.Z');
 
 	const x = parseInt(dx.value);
 	const y = parseInt(dy.value);
