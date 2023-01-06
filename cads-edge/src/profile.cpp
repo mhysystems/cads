@@ -194,4 +194,23 @@ namespace cads
     return tx && ty && tz;
   }
 
+  z_type trim_nan(const z_type& z) {
+
+    auto left = std::find_if(z.begin(), z.end(), [](z_element z){ return !std::isnan(z); });
+    auto right = std::find_if(z.rbegin(), z.rend(), [](z_element z){ return !std::isnan(z); });
+
+    return {left,right.base()};
+  }
+  
+  void constraint_substitute(z_type& z, z_element z_min, z_element z_max, z_element sub) {
+    for (auto &e : z)
+    {
+      if(!std::isnan(e)) {
+        if (e < z_min || e > z_max) {
+          e = sub;
+        }
+      }
+    } 
+  }
+
 } // namespace cads

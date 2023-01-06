@@ -1,5 +1,5 @@
 {
-  "data_source" : "../../profiles/rawprofile-2022-12-19.db", 
+  "data_source" : "../../profiles/rawprofile_2023-01-06.db", 
   "laser_fps" : 980,
   "forever" : false,
   "y_max_length" : 301000,
@@ -42,7 +42,7 @@
     "cads_to_origin" : [0,307000],
     "rotation_period" : [46666,70000],
     "barrel_height" : [-34,-31.0],
-    "z_unbiased" : [-29.0,4.0]
+    "z_unbiased" : [-34.0,4.0]
   },
   "db_name" : "profile.db",
   "program_state_db_name" : "state.db",

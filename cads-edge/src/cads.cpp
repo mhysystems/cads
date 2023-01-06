@@ -209,6 +209,7 @@ namespace cads
     };
 
     auto fn = encoder_distance_estimation(csp);
+    const auto [z_min_unbiased,z_max_unbiased] = global_constraints.ZUnbiased;
     
     do
     {
@@ -252,6 +253,8 @@ namespace cads
         error = true;
         break;
       }
+      constraint_substitute(iz,z_min_unbiased,z_max_unbiased);
+      iz = trim_nan(iz);
 
       spike_filter(iz);
       auto z_nan_filtered = nan_filter_pure(iz);
