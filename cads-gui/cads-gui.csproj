@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <RootNamespace>cads_gui</RootNamespace>
-    <!--<Nullable>enable</Nullable>-->
+    <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
@@ -14,6 +14,7 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(OS)' != 'Windows_NT'">
+    <PackageReference Include="CommunityToolkit.HighPerformance" Version="8.1.0-preview1" />
     <PackageReference Include="fluxor" Version="5.5.0" />
     <PackageReference Include="fluxor.Blazor.Web" Version="5.5.0" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="6.0.9" />
@@ -22,7 +23,6 @@
     <PackageReference Include="MudBlazor" Version="6.0.12" />
     <PackageReference Include="NATS.Client" Version="1.0.1" />
     <PackageReference Include="System.Reactive" Version="5.0.0" />
-    <!--<PackageReference Include="Microsoft.EntityFrameworkCore.sqlite" Version="6.0.0-preview.3.21201.2" />-->
   </ItemGroup>
   <ItemGroup>
     <FlatbufferSchemasCsharp Include="$(MSBuildProjectDirectory)\..\flatbuffers-schema\z-data.fbs $(MSBuildProjectDirectory)\..\flatbuffers-schema\plot-data.fbs" />

@@ -135,7 +135,7 @@ namespace cads
           }
 
           
-          // fiducial_as_image(belt);
+           // fiducial_as_image(belt);
 
           y_offset += y;
 

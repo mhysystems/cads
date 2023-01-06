@@ -17,14 +17,19 @@
   [Parameter]
 	public Belt Belt {get; set;}
   
+  [Parameter]
+  public EventCallback<int> XIndex {get; set;}
+  
+  private DotNetObjectReference<TrendPlot>? selfReference;
   protected IJSObjectReference jsPlot;
   protected ElementReference jsPlotElement;  
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
     if (firstRender)
     {
+      selfReference = DotNetObjectReference.Create(this);
       var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
-      jsPlot = await module.InvokeAsync<IJSObjectReference>("mk_TrendPlot",jsPlotElement,Belt.x_res,Belt.z_min + 12,Belt.z_max);
+      jsPlot = await module.InvokeAsync<IJSObjectReference>("mk_TrendPlot",jsPlotElement,Belt.x_res,Belt.z_min + 12,Belt.z_max,selfReference);
     }
 
   }
@@ -35,9 +40,17 @@
     }
   }
 
+
+  [JSInvokable]
+  public async Task TrendPlotClicked(int xIndex)
+  {
+    await XIndex.InvokeAsync(xIndex);
+  }
+
   async ValueTask IAsyncDisposable.DisposeAsync()
   {
     try {
+      selfReference?.Dispose();
     if (jsPlot is not null) {
      await jsPlot.DisposeAsync();
     }

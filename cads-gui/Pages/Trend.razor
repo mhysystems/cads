@@ -6,6 +6,7 @@
 @inject IJSRuntime JS
 @inject BeltService Beltservice
 @inject ISnackbar Snackbar
+@inject ILogger<Trend> logger
 
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
@@ -17,13 +18,15 @@
 
 @if(@GuiState.Value.Belt is not null) {
 <MudContainer MaxWidth="MaxWidth.False" Class="ma-0 pa-0"
-  Style="width:calc(100vw - var(--mud-drawer-width-mini-left));height:calc(100vh - var(--mud-appbar-height)">
+  Style="width:calc(98vw - var(--mud-drawer-width-mini-left));height:calc(96vh - var(--mud-appbar-height)">
   <MudGrid Class="ma-0" Style="height:100%" Spacing=0>
-    <MudItem xs="12" />
-<MudItem xs="12" Class="d-flex" Style="height:50%">
-<TrendPlot @ref="trendPlot" Belt="@GuiState.Value.Belt"></TrendPlot>
+
+<MudItem xs="12"  Style="height:46%">
+<TrendPlot @ref="trendPlot" Belt="@GuiState.Value.Belt" XIndex="@UpdateWearPlot"></TrendPlot>
 </MudItem>
-    <MudItem xs="12" />
+    <MudItem xs="12" Style="height:46%">
+    <LinePlot @ref="wearPlot" ></LinePlot>
+    </MudItem>
 </MudGrid>
 </MudContainer>
 }
@@ -31,12 +34,15 @@
 @code {
   
   protected TrendPlot trendPlot;
+  protected LinePlot wearPlot;
+
+  protected int XIndex = 0;
+
   [Parameter]
   public string site { get; set; }
   [Parameter]
   public string conveyor { get; set; }
-
-
+  
   [Inject]
   private IState<GuiState> GuiState { get; set; }
 
@@ -45,6 +51,8 @@
     if (firstRender)
     {
       var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
+      await DateChanged((GuiState.Value.Belt.chrono,0,Colors.Orange.Accent3));
+      await UpdateWearPlot(1000);
     }
   }
 
@@ -57,12 +65,39 @@
     }
 
     var belt = Beltservice.GetBelt(site, conveyor, date.Value);
+    var Y = GuiState?.Value.Y ?? 0;
+
     if(belt is not null) {
-      var (XOffset,z) = await Beltservice.GetBeltProfileAsync(GuiState.Value.Y, 1, belt);
+      var (XOffset,z) = await Beltservice.GetBeltProfileAsync(Y, 1, belt);
       await trendPlot.UpdatePlotAsync(index,XOffset,z,color);
     }else{
       Snackbar.Add($"No data for selected date", Severity.Error);
     }
 
   }
+
+  async Task UpdateWearPlot(int x_index) {
+    
+    List<DateTime> x = new();
+    List<double> y = new();
+    
+    var tasks = new List<Task<(DateTime,(bool,float))>>();
+
+    var Y = GuiState?.Value.Y ?? 0;
+    foreach (var b in Beltservice.GetBeltsAsync(site, conveyor)) {
+      var beltFullPath = Beltservice.AppendPath(b.name);
+      tasks.Add(Task.Run(() => (b.chrono,NoAsp.RetrievePoint(beltFullPath,Y,x_index))));
+    }
+
+   
+    foreach(var d in await Task.WhenAll(tasks.ToArray())) {
+      if(!d.Item2.Item1) {
+        x.Add(d.Item1);
+        y.Add(d.Item2.Item2);
+      }
+    }
+
+    await wearPlot.UpdatePlotAsync(x.ToArray(),y.ToArray());
+  }
+
 }

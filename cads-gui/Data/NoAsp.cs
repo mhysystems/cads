@@ -2,6 +2,9 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using Microsoft.Data.Sqlite;
+using System.Runtime.InteropServices;
+using System.Diagnostics;
+using System.Data;
 using System.Threading.Tasks;
 
 using SQLitePCL;
@@ -12,7 +15,9 @@ using static SQLitePCL.raw;
 namespace cads_gui.Data
 {
 
+  public record Profile<T>(double Y, T[] Z);
   public record Profile(double y, double x_off, byte[] z);
+
 
   public static class NoAsp
   {
@@ -47,7 +52,7 @@ namespace cads_gui.Data
         x_max = Math.Max(x_max, profile_width(p, x_resolution));
       }
       int size = (int)Math.Round((x_max - x_min) / x_resolution);
-      var ret = new float[size * frame.Count];
+      float[] ret = new float[size * frame.Count];
       Array.Fill(ret, float.NaN);
 
       int i = 0;
@@ -63,12 +68,12 @@ namespace cads_gui.Data
 
     public static async Task<List<Profile>> RetrieveFrameAsync(string db, double y_min, long len)
     {
-      
+
       var frame = new List<Profile>();
       var order = len >= 0 ? "asc" : "desc";
       var op = len >= 0 ? ">=" : "<";
       var abslen = Math.Abs(len);
-      
+
       using var connection = new SqliteConnection("" +
         new SqliteConnectionStringBuilder
         {
@@ -77,7 +82,7 @@ namespace cads_gui.Data
         });
 
       await connection.OpenAsync();
-      
+
 
       var query = $"select * from PROFILE where y {op} @y_min order by y {order} limit @len";
       var command = connection.CreateCommand();
@@ -93,33 +98,112 @@ namespace cads_gui.Data
         var y = reader.GetDouble(0);
         var x_off = reader.GetDouble(1);
         byte[] z = (byte[])reader[2];
-        
-        if(len >=0) {
+
+        if (len >= 0)
+        {
           frame.Add(new Profile(y, x_off, z));
-        }else{
-          frame.Insert(0,new Profile(y, x_off, z));
+        }
+        else
+        {
+          frame.Insert(0, new Profile(y, x_off, z));
         }
       }
 
       return frame;
     }
 
+    public static double Mod(double x, double n) { return ((x % n) + n) % n; }
+    static float[] Convert(byte[] a)
+    {
+
+      ReadOnlySpan<byte> z_ptr = new(a);
+      var j = MemoryMarshal.Cast<byte, float>(z_ptr);
+      return j.ToArray();
+
+    }
+
+    public static (bool,float) RetrievePoint(string db, double y, long x)
+    {
+      if (!File.Exists(db)) {
+        return (true,0.0f);
+      }
+      
+      using var connection = new SqliteConnection("" +
+        new SqliteConnectionStringBuilder
+        {
+          Mode = SqliteOpenMode.ReadOnly,
+          DataSource = db,
+        });
+
+      if(connection is null) {
+        return (true,0.0f);
+      }
+
+      connection.Open();
+            
+      var command = connection.CreateCommand();      
+      
+      if(command is null) {
+        return (true,0.0f);
+      }
+
+      command.CommandText = $"select y from profile where y > 0 limit 1";
+
+      using var reader = command.ExecuteReader(CommandBehavior.SingleRow);
+      var y_res =  0.0;
+      
+      if(reader.Read()) {
+        y_res = reader.GetDouble(0);
+      }else {
+        return (true,0.0f);
+      }
+      reader.Close();
+
+      command.CommandText = $"select z from profile where rowid = @rowid";
+      command.Parameters.AddWithValue("@rowid", (int)(y / y_res));
+
+      using var reader2 = command.ExecuteReader(CommandBehavior.SingleRow);
+      
+      if(reader2 is null) {
+        return (true,0.0f);
+      }
+
+      if(reader2.Read()) {
+
+        byte[] z = (byte[])reader2[0];
+        var j = Convert(z);
+        var r = j[x];
+        return (false,r);
+      }else {
+        return (true,0.0f);
+      }
+
+    }
+
+
+
     public static async Task<List<Profile>> RetrieveFrameModular(string belt, double y_min, long len, long left)
     {
       var (min, max, cnt) = await BeltBoundaryAsync(belt);
       var beltLength = max + (max - min) / cnt;
       var fst = await RetrieveFrameModular(belt, y_min, -left);
-      
+
       fst.AddRange(await RetrieveFrameModular(belt, y_min, len));
 
       // Plotly requires y axis to be totally ordered, so need to change y near the belt end to negative numbers around origin
-      if(fst.Any()) {
-        var first = fst.First().y ;
-        if(first > fst.Last().y ) {
-          fst = fst.Select(e => {
-            if(e.y >= first) {
-              return new Profile(e.y - beltLength,e.x_off,e.z);
-            }else {
+      if (fst.Any())
+      {
+        var first = fst.First().y;
+        if (first > fst.Last().y)
+        {
+          fst = fst.Select(e =>
+          {
+            if (e.y >= first)
+            {
+              return new Profile(e.y - beltLength, e.x_off, e.z);
+            }
+            else
+            {
               return e;
             }
           }).ToList();
@@ -127,8 +211,6 @@ namespace cads_gui.Data
       }
       return fst;
     }
-
-    public static double Mod(double x, double y) { return ((x % y) + y) % y; }
 
     public static async Task<List<Profile>> RetrieveFrameModular(string belt, double y_min, long len)
     {
@@ -145,21 +227,30 @@ namespace cads_gui.Data
 
       if (fst.Count < len)
       {
-        if(sign > 0) {
+        if (sign > 0)
+        {
           fst.AddRange(await RetrieveFrameAsync(belt, origin, sign * (len - fst.Count)));
-        }else{
-          fst.InsertRange(0,await RetrieveFrameAsync(belt, origin, sign * (len - fst.Count)));
+        }
+        else
+        {
+          fst.InsertRange(0, await RetrieveFrameAsync(belt, origin, sign * (len - fst.Count)));
         }
       }
 
       // Plotly requires y axis to be totally ordered, so need to change y near the belt end to negative numbers around origin
-      if(fst.Any()) {
-        var first = fst.First().y ;
-        if(first > fst.Last().y ) {
-          fst = fst.Select(e => {
-            if(e.y >= first) {
-              return new Profile(e.y - beltLength,e.x_off,e.z);
-            }else {
+      if (fst.Any())
+      {
+        var first = fst.First().y;
+        if (first > fst.Last().y)
+        {
+          fst = fst.Select(e =>
+          {
+            if (e.y >= first)
+            {
+              return new Profile(e.y - beltLength, e.x_off, e.z);
+            }
+            else
+            {
               return e;
             }
           }).ToList();
@@ -232,6 +323,35 @@ namespace cads_gui.Data
       connection.Close();
 
       return (first, last, count, width);
+    }
+
+    
+    public static double BeltXOff(string belt)
+    {
+      double xOff = 0.0;
+
+      using var connection = new SqliteConnection("" +
+        new SqliteConnectionStringBuilder
+        {
+          Mode = SqliteOpenMode.ReadOnly,
+          DataSource = belt
+        });
+
+      connection.Open();
+      var command = connection.CreateCommand();
+
+      command.CommandText = @"SELECT x_off FROM PROFILE LIMIT 1";
+
+      using var reader = command.ExecuteReader();
+
+      while (reader.Read())
+      {
+        xOff = reader.GetDouble(0);
+      }
+
+      connection.Close();
+
+      return xOff;
     }
 
     public static async Task<(double, double, long)> BeltBoundaryAsync(string belt)

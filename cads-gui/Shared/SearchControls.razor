@@ -1,8 +1,7 @@
 @inject BeltService Beltservice
 
-
   <MudToolBar Class="d-flex flex-grow-0 ma-0" Style="width:50%">
-  <MudTooltip Text="Search">
+  <MudTooltip Text="Search belt for damage ">
   <MudButton Class="mud-theme-secondary" StartIcon="@Icons.Filled.ImageSearch" Size="Size.Large" OnClick="@Search" />
   </MudTooltip>
   <MudSelect @bind-Value="@selectedZDepthParams" T="SavedZDepthParams" Class="mud-palette-text-secondary mud-theme-secondary ma-0 flex-grow-0" Dense="true" SelectedValuesChanged="@SelectZDepthParams">
@@ -26,7 +25,6 @@
     </MudTooltip>
 
 
-  <MudTextField @bind-Value="TextValue" Label="Todo" Variant="Variant.Text"></MudTextField>
   <MudTooltip Text="Historical Scans">
   @if(_scanDate is not null) {
     <MudDatePicker Class="mud-theme-secondary" AdornmentColor="@Color.Primary" @bind-Date="@scanDate" IsDateDisabledFunc="@IsDateDisabledFunc" />
@@ -36,7 +34,7 @@
 
 
 @code {
-  public string TextValue { get; set; }
+
   protected DateTime? _scanDate = null;
 
   protected DateTime? scanDate { 
@@ -80,7 +78,7 @@
   {
     savedZDepthParams = await Task.Run(() => Beltservice.GetSavedZDepthParams(Belt) ?? new List<SavedZDepthParams>());
     _scanDate = (await Beltservice.GetBeltDatesAsync(Belt)).LastOrDefault(DateTime.Now);
-    
+  
     if(savedZDepthParams.Any()) {
         selectedZDepthParams = savedZDepthParams.First(); 
     }

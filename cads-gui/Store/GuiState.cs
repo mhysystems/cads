@@ -7,8 +7,7 @@ namespace Fluxor.Blazor.Store
 	{
 		public Belt Belt { get; }
     public double Y { get; }
-
-		private GuiState() { }
+    public GuiState(){}
 		public GuiState(Belt b, double y)
 		{
 			Belt = b;

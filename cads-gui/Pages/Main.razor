@@ -13,16 +13,18 @@
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <SiteHeader ShowDraw site="@site" conveyor="@conveyor">
-    <SearchControls SelectZDepthParams="@LoadZDepthParamsAsync" DateChanged="@DateChanged" Belt="@belt"
-      JumpTo="@JumpToAsync" StepBack="@StepBackward" StepForward="@StepForward" Search="@SearchBelt" />
+  <SearchControls SelectZDepthParams="@LoadZDepthParamsAsync" DateChanged="@DateChanged" Belt="@belt"
+    JumpTo="@JumpToAsync" StepBack="@StepBackward" StepForward="@StepForward" Search="@SearchBelt" />
 </SiteHeader>
 
 <MudContainer MaxWidth="MaxWidth.False" Class="ma-0 pa-0"
   Style="width:calc(100vw - var(--mud-drawer-width-mini-left));height:calc(100vh - var(--mud-appbar-height)">
   <MudGrid Class="ma-0" Style="height:100%" Spacing=0>
     <MudItem xs="12" Class="d-flex" Style="height:40%">
-      <DoughnutPlot @ref="doughnutPlot" Style="flex-shrink:2" Belt="@belt" Y="@UpdateYAsync" />
 
+      <MudTooltip Placement="Placement.End" Text="The circle represents the entire belt. Damage locations that match the search criteria are indicated in white. Clicking on the circle triggers the plot to jump to that location. If too many damage locations are found they are limited">
+      <DoughnutPlot @ref="doughnutPlot" Style="display:contents" Belt="@belt" Y="@UpdateYAsync" />
+        </MudTooltip> 
       <MudContainer Class="d-flex flex-column ">
         <ZDepthQuery @ref="zDepthQuery" Belt=@Beltservice.GetBelt(site,conveyor)></ZDepthQuery>
         <MudExpansionPanels Class="z-30">
@@ -65,13 +67,15 @@
   Ztable zDepthTabe;
 
   double _currentY = 0;
-  protected double currentY { 
-    get{ return _currentY;} 
-    set{ 
+  protected double currentY
+  {
+    get { return _currentY; }
+    set
+    {
       _currentY = value;
       var action = new YAction(value);
-		  Dispatcher.Dispatch(action);
-    } 
+      Dispatcher.Dispatch(action);
+    }
   }
   double progressPercentage = 0;
 
@@ -85,7 +89,7 @@
   {
     belt = Beltservice.GetBelt(site, conveyor);
     var action = new BeltAction(belt);
-		Dispatcher.Dispatch(action);
+    Dispatcher.Dispatch(action);
   }
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -104,10 +108,10 @@
     await zDepthQuery.LoadZDepthParamsAsync(xs);
   }
 
-  async Task UpdateProfilePlotAsync(ValueTuple<int,double> args)
+  async Task UpdateProfilePlotAsync(ValueTuple<int, double> args)
   {
-    var (yIndex,y) = args;
-		Dispatcher.Dispatch(new YAction(y));
+    var (yIndex, y) = args;
+    Dispatcher.Dispatch(new YAction(y));
     var plotDataPromise = await plotDataCache.InvokeAsync<IJSObjectReference>("getLastFetch");
     await profilePlot.UpdatePlotAsync(plotDataPromise, yIndex);
   }
@@ -210,7 +214,7 @@
   }
 
 
-  async Task SearchBelt()
+  async Task SearchBelt1()
   {
 
     var scan = zDepthQuery.SearchParameters;
@@ -261,20 +265,43 @@
       var fn = zDepthQuery.MakeAreaOfInterest();
       surfacePlot.HighlightSurface(fn);
 
-      /*
-      lowest = zmin;
-      z_depth_value = zDepth.SelectMany(i => i).OrderBy(i => i.y).Take(1024).ToList();
-      //z_depth_value.Sort((a, b) => {return a.y < b.y ? -1 : a.y == b.y ? 0 : 1;});
-      plot_query = query;
-      var s = (await Beltservice.get_color_range2(fn, BeltConstants, c_level)).ToArray();
-      await plotly.change_color_range4(s);
-      */
-
     }
 
     doughnutPlot.AnimateSearch = false;
 
   }
+
+  async Task SearchBelt()
+  {
+
+    doughnutPlot.AnimateSearch = true;
+
+    var limit = 64L;
+
+    try
+    {
+      var zDepth = await Beltservice.BeltScanAsync2(zDepthQuery.SearchParameters, belt, limit);
+      
+      if(zDepth.Count > limit) {
+        Snackbar.Add($"Too many results. Limited to {limit}", Severity.Warning);
+      }
+
+      doughnutPlot.data = zDepth.OrderBy(i => i.y).Take((int)limit).Select(d => new
+      PlotInfo(d.y, belt.FrameLength, d.z.z, "")).ToList();
+      
+      zDepthTabe.data = zDepth;
+      var fn = zDepthQuery.MakeAreaOfInterest();
+      surfacePlot.HighlightSurface(fn);
+
+    }
+    catch (Exception e)
+    {
+      logger.LogError(e.Message);
+    }
+
+    doughnutPlot.AnimateSearch = false;
+
+  } 
 
   public void Dispose() => selfReference?.Dispose();
 }

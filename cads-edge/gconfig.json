@@ -1,5 +1,7 @@
 {
   "data_source" : "gocator", 
+  "laser_fps" : 980,
+  "forever" : false,
   "y_max_length" : 930000,
   "y_max_upload" : 906000,
   "z_height" : 27.0,

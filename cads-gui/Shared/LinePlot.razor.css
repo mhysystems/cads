@@ -1,0 +1,13 @@
+plotly-container {
+  position: static;
+  display:block;
+  width:100%;
+  height:100%;
+}
+
+#container-profile {
+  width:99%;
+  height:100%;
+	margin:0;
+	padding:0;
+}

@@ -143,7 +143,7 @@ namespace cads
        
         if (barrel_cnt % 100 == 0)
         {
-          spdlog::get("cads")->info("Barrel Frequency(Hz): {}", 1000.0 / ((double)period * 2));
+          spdlog::get("cads")->debug("Barrel Frequency(Hz): {}", 1000.0 / ((double)period * 2));
           publish_PulleyOscillation(amplitude_extraction(bottom, true));
           publish_SurfaceSpeed(pully_circumfrence / (2 * period));
         }

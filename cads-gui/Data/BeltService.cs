@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
@@ -20,6 +21,8 @@ using System.Reactive.Linq;
 using SQLitePCL;
 using static SQLitePCL.raw;
 
+using cads_gui.BeltN;
+
 namespace cads_gui.Data
 {
   public record P3(double x, double y, double z);
@@ -27,17 +30,19 @@ namespace cads_gui.Data
   // ZDepth represents an area with origin x and y 
   // t is total z samples on belt found less than a certain number
   // z in the minimum z sample found in area before total threshold
-  public record ZDepth(double x, double y, double width, double length, long t, P3 z);
+  public record ZDepth(double x, double y, double width, double length, double t, P3 z);
 
   public class BeltService
   {
     private readonly IDbContextFactory<SQLiteDBContext> dBContext;
     private readonly ILogger<BeltService> _logger;
+    public readonly AppSettings _config;
 
-    public BeltService(IDbContextFactory<SQLiteDBContext> db, ILogger<BeltService> logger)
+    public BeltService(IDbContextFactory<SQLiteDBContext> db, ILogger<BeltService> logger, IOptions<AppSettings> config)
     {
       this.dBContext = db;
       this._logger = logger;
+      this._config = config.Value;
     }
 
     public IEnumerable<Conveyors> GetConveyors()
@@ -55,19 +60,6 @@ namespace cads_gui.Data
     public async Task<(double, double, double)> GetBeltBoundary(string belt)
     {
       return await NoAsp.BeltBoundaryAsync(belt);
-    }
-
-    public Task<IQueryable<BeltChart>> GetBeltChartAsync(Func<BeltOld, Boolean> w = null)
-    {
-
-      w = w ?? (_ => true);
-      using var context = dBContext.CreateDbContext();
-      var t = from a in context.anomalies.Where(w).OrderBy(row => row.z_depth).ThenByDescending(row => row.length)//.Take(64)
-              join b in context.chart on a.anomaly_ID equals b.anomaly_ID
-              select new BeltChart(a, b.visible);
-
-      return Task.FromResult(t.AsQueryable());
-
     }
 
     public Belt GetBelt(string site, string belt)
@@ -92,6 +84,16 @@ namespace cads_gui.Data
         return data.First();
       else
         return null;
+    }
+
+    public IEnumerable<Belt> GetBeltsAsync(string site, string conveyor)
+    {
+      using var context = dBContext.CreateDbContext();
+      var data = from a in context.belt orderby a.chrono where a.site == site && a.conveyor == conveyor select a;
+      
+      // context will be disposed without evaluation of data
+      return data.ToArray(); 
+
     }
 
     public async Task<IEnumerable<DateTime>> GetBeltDatesAsync(Belt belt)
@@ -175,26 +177,17 @@ namespace cads_gui.Data
 
     public async Task<(double, float[])> GetBeltProfileAsync(double y, long num_y_samples, Belt belt)
     {
-      var fs = await NoAsp.RetrieveFrameModular(belt.name, y, num_y_samples);
+      var dbpath = Path.GetFullPath(Path.Combine(_config.DBPath,belt.name));
+      var fs = await NoAsp.RetrieveFrameModular(dbpath, y, num_y_samples);
       return NoAsp.make_same_widthf(fs, belt.x_res);
     }
 
-    public void SetBeltAsync(BeltOld b)
-    {
-      using var context = dBContext.CreateDbContext();
-      context.anomalies.Update(b);
-      context.SaveChanges();
+    
+    public string AppendPath(string belt) {
+      return Path.GetFullPath(Path.Combine(_config.DBPath,belt));
     }
 
-    public void SetChartAsync(Chart b)
-    {
-      using var context = dBContext.CreateDbContext();
-      var r = context.chart.Find(b.anomaly_ID);
-      r.visible = b.visible;
-      //dBContext.CreateDbContext().chart.Update(b);
-      context.SaveChanges();
-    }
-
+    
     public List<SavedZDepthParams> GetSavedZDepthParams(Belt belt)
     {
       using var context = dBContext.CreateDbContext();
@@ -210,158 +203,7 @@ namespace cads_gui.Data
 
     }
 
-
-    public async Task<List<(double, string)>> get_color_range(string s, Belt BeltConstants, double cmin = Double.MinValue)
-    {
-
-
-      _logger.LogDebug($"get_color_range({s})");
-
-
-      List<(double, string)> colour_range = new List<(double, string)>();
-
-      var sw = Stopwatch.StartNew();
-      using JsonDocument doc = JsonDocument.Parse("{" + s + "}");
-      JsonElement root = doc.RootElement;
-      var sum = root.GetProperty("sum").GetDouble();
-      var area = root.GetProperty("area").GetDouble();
-      var query = $"z => {root.GetProperty("query").GetString()}";
-
-
-      Func<float, bool> fn;
-
-      try
-      {
-        var options = ScriptOptions.Default.AddReferences(typeof(cads_gui.Data.BeltOld).Assembly);
-        fn = await CSharpScript.EvaluateAsync<Func<float, bool>>(query, options);
-
-        float z_max = (float)BeltConstants.z_max;
-        float z_min = 0f;
-        var steps = 1000;
-
-        double red_acc = 25.0;
-        double red_scale = 1.0;
-        Func<float, bool, double> red_colour_range = (float z, bool b) =>
-        {
-          red_acc += red_scale * (b ? 1 : 0);
-          return red_acc;
-        };
-
-        double grey_acc = 0.0;
-        double grey_scale = 1.0;
-        Func<float, bool, double> grey_colour_range = (float z, bool b) =>
-        {
-          if (z >= cmin) grey_acc += grey_scale * (b ? 0 : 1);
-          return grey_acc;
-        };
-
-        double red_acc_tmp = 0.0;
-        double grey_acc_tmp = 0.0;
-        for (int n = 0; n < steps; n++)
-        {
-          var z = (z_max - z_min) * n / steps + z_min;
-          var b = fn(z);
-          red_acc_tmp = red_colour_range(z, b);
-          grey_acc_tmp = grey_colour_range(z, b);
-        }
-
-        red_acc = 25.0;
-        red_scale = 50 / (red_acc_tmp - red_acc);
-        grey_acc = 0.0;
-        grey_scale = 100 / grey_acc_tmp;
-
-        var r1 = red_colour_range(z_min, fn(z_min));
-        var g1 = grey_colour_range(z_min, fn(z_min));
-        bool is_red0 = fn(z_min);
-        bool is_grey0 = z_min >= cmin;
-        colour_range.Add((0, "hsl(240,100,50)"));
-        colour_range.Add(is_red0 ? (0.002, "hsl(0,100,25)") : (0.002, "hsl(0,0,100)"));
-
-        for (int n = 1; n < steps - 1; n++)
-        {
-          var z = (z_max - z_min) * n / steps + z_min;
-          var c_index = n / (double)steps;
-          var is_red1 = fn(z);
-          var is_grey1 = z >= cmin;
-          var r = red_colour_range(z, is_red1);
-          var g = grey_colour_range(z, is_red1);
-
-          if (is_red0 != is_red1)
-          {
-            if (is_red1)
-            {
-              colour_range.Add((c_index, $"hsl(0,0,{100 - (int)g})"));
-              colour_range.Add((c_index, $"hsl(0,100,{(int)r})"));
-            }
-            else
-            {
-              colour_range.Add((c_index, $"hsl(0,100,{(int)r})"));
-              colour_range.Add((c_index, $"hsl(0,0,{100 - (int)g})"));
-            }
-
-          }
-
-          if (!is_red1 && is_grey0 != is_grey1)
-          {
-
-            colour_range.Add((c_index, $"hsl(0,0,{100 - (int)g})"));
-
-          }
-
-          is_red0 = is_red1;
-          is_grey0 = is_grey1;
-        }
-
-        is_red0 = fn(z_max);
-        colour_range.Add(is_red0 ? (1.0, "hsl(0,100,75)") : (1.0, "hsl(0,0,0)"));
-
-      }
-      catch (CompilationErrorException)
-      {
-
-      }
-
-
-      _logger.LogDebug($"colour_range running time in ms: {sw.ElapsedMilliseconds}");
-
-      return colour_range;
-    }
-
-    public async IAsyncEnumerable<(List<ZDepth>, P3)> BeltScanAsync(string s, Belt BeltConstants, long offset, long y_len)
-    {
-
-      var sw = Stopwatch.StartNew();
-      using JsonDocument doc = JsonDocument.Parse("{" + s + "}");
-      JsonElement root = doc.RootElement;
-      var sum = root.GetProperty("sum").GetDouble();
-      var area = root.GetProperty("area").GetDouble();
-      var query = $"z => {root.GetProperty("query").GetString()}";
-
-
-      Func<float, bool> fn = (float x) => false;
-
-      try
-      {
-        var options = ScriptOptions.Default.AddReferences(typeof(cads_gui.Data.BeltOld).Assembly);
-        fn = await CSharpScript.EvaluateAsync<Func<float, bool>>(query, options);
-      }
-      catch (CompilationErrorException)
-      {
-        _logger.LogDebug($"CompilationErrorException");
-      }
-
-      var seg = Math.Sqrt(area); // Assume area is a square      
-
-      await foreach (var e in BeltScanAsync(seg, seg, sum, fn, BeltConstants, offset, y_len))
-      {
-        yield return e;
-      }
-
-
-    }
-
-
-
+    
     /// <summary>
     /// Search for areas of interest on a section of belt.
     /// </summary>
@@ -433,7 +275,7 @@ namespace cads_gui.Data
 
           if (total >= p)
           {
-            x_coord.Add(new ZDepth(x * dx + x_start, (y + offset) * dy, area_sample_x * dx, area_sample_y * dy, (long)total, pz));
+            x_coord.Add(new ZDepth(x * dx + x_start, (y + offset) * dy, area_sample_x * dx, area_sample_y * dy, (long)(total*100), pz));
           }
         }
 
@@ -445,7 +287,7 @@ namespace cads_gui.Data
 
           if (total >= p)
           {
-            x_coord.Add(new ZDepth(x * dx + x_start, (y + offset) * dy, area_sample_x * dx, area_sample_y * dy, (long)total, pz));
+            x_coord.Add(new ZDepth(x * dx + x_start, (y + offset) * dy, area_sample_x * dx, area_sample_y * dy, (long)(total*100), pz));
           }
         }
 
@@ -475,226 +317,49 @@ namespace cads_gui.Data
 
     }
 
-
-
-
-    /// <summary>
-    /// Search for areas of interest on a section of belt.
-    /// </summary>
-    /// <param name="X"> Length(mm) of area in X direction</param>
-    /// <param name="Y"> Length(mm) of area in Y direction</param>
-    /// <param name="p"> Percentage of points in area given true by fn</param>
-    /// <param name="fn"> Boolean function with z height as input.</param>
-    /// <returns></returns>
-    public async IAsyncEnumerable<(List<ZDepth>, P3)> BeltScanAsync(double X, double Y, double p, Func<float, bool> fn, Belt BeltConstants, long offset, long y_len)
-    {
-
+     public async Task<List<ZDepth>> BeltScanAsync2(ZDepthQueryParameters search, Belt belt, long limit) {
       
-      const double cut_y = 9.0;
+      var db = AppendPath(NoAsp.EndpointToSQliteDbName(belt.site,belt.conveyor,belt.chrono));
+      var xOff = - belt.Xmax / 2;
+      
+      var dx = belt.x_res;
+      var dy = belt.y_res;
 
-      var dx = BeltConstants.x_res;
-      var dy = BeltConstants.y_res;
+      var X = search.Width;
+      var Y = search.Length;
+      var Z = search.Depth;
+      var P = search.Percentage;
 
-      var area_sample_x = (long)Math.Ceiling(X / dx);
-      var area_sample_y = (long)Math.Ceiling(Y / dy);
+      var xMinIndex = (int)Math.Max(Math.Floor((search.XMin - xOff) / belt.x_res),0);
+      var xMaxIndex = (int)Math.Min(Math.Floor((search.XMax - xOff) / belt.x_res),belt.WidthN);
 
-      var sum = (long)Math.Ceiling(p * area_sample_x * area_sample_y);
-      var zy = y_len;
+      var columns = (int)Math.Ceiling(belt.Xmax / X);
+      var rows = (int)Math.Ceiling(belt.Ymax / Y);
 
-      var (x_start, zs) = await GetBeltProfileAsync(offset, y_len, BeltConstants);
-      var zx = zs.Length / zy;
-      area_sample_x = area_sample_x > zx ? zx : area_sample_x;
-
-
-      (long, P3) sub_area(long x, long y, long x_max, long y_max)
+      bool fz(float z) 
       {
-
-        long total = 0;
-
-
-        var zmin = new P3(0.0, 0.0, Double.MaxValue);
-
-        for (long j = 0; j < y_max; j++)
-        {
-          for (long i = 0; i < x_max; i++)
-          {
-            var z = zs[(y + j) * zx + i + x];
-            if (!float.IsNaN(z) && z > cut_y) zmin = zmin.z < z ? zmin : new P3((i + x) * dx + x_start, (j + y) * dy, z);
-
-            if (!float.IsNaN(z) && z > cut_y && fn(z))
-            {
-              total++;
-            }
-          }
-        }
-
-        return (total, zmin);
-
-      };
-
-
-      (List<ZDepth>, P3) shift_x(long y, long ry)
-      {
-
-        long x = 0;
-        var x_coord = new List<ZDepth>();
-        var zmin = new P3(0, 0, Double.MaxValue);
-
-        for (x = 0; (x + area_sample_x) <= zx; x += area_sample_x)
-        {
-          var (total, pz) = sub_area(x, y, area_sample_x, ry);
-          zmin = zmin.z < pz.z ? zmin : pz;
-
-          if (total >= sum)
-          {
-            x_coord.Add(new ZDepth(x * dx + x_start, (y + offset) * dy, area_sample_x * dx, area_sample_y * dy, total, pz));
-          }
-        }
-
-        if (x < zx)
-        {
-          long rx = zx - x;
-          var (total, pz) = sub_area(x, y, rx, ry);
-          zmin = zmin.z < pz.z ? zmin : pz;
-
-          if (total >= sum)
-          {
-            x_coord.Add(new ZDepth(x * dx + x_start, (y + offset) * dy, area_sample_x * dx, area_sample_y * dy, total, pz));
-          }
-        }
-
-        return (x_coord, zmin);
-      };
-
-      long y = 0;
-      var r = new List<ZDepth>();
-      var zmin = new P3(0, 0, Double.MaxValue);
-
-      for (y = 0; (y + area_sample_y) <= zy; y += area_sample_y)
-      {
-        var (xs, pz) = shift_x(y, area_sample_y);
-        zmin = zmin.z < pz.z ? zmin : pz;
-        r.AddRange(xs);
+        return z < Z;
       }
 
-      if (y < zy)
+      bool fp(Search.SearchResult p) 
       {
-        long ry = zy - y;
-        var (xs, pz) = shift_x(y, ry);
-        zmin = zmin.z < pz.z ? zmin : pz;
-        r.AddRange(xs);
+        return p.Percent > P;
       }
 
-      yield return (r, zmin); //Useless but will leave for now
+      bool xRange(int xIndex) {
+        return xMinIndex <= xIndex && xIndex < xMaxIndex;
+      }
+
+      var req = new List<ZDepth>();
+  
+      foreach (var r in await Search.SearchParallelAsync(db,columns,rows,(int)belt.WidthN,(long)belt.YmaxN,limit,xRange, fz, fp)) {
+        req.Add(new (r.Col*dx + xOff,r.Row*dy,r.Width*dx,r.Length*dy,r.Percent,new(r.ZMin.X*dx + xOff,r.ZMin.Y*dy,r.ZMin.Z)));
+      }
+
+      return req;
 
     }
-
-    public async Task<List<(double, string)>> GetColorRangeAsync(Func<float, bool> fn, Belt BeltConstants, double cmin = Double.MinValue)
-    {
-
-
-      _logger.LogDebug($"get_color_range2()");
-
-
-      var colour_range = new List<(double, string)>();
-
-      cmin = 0;
-
-      var sw = Stopwatch.StartNew();
-
-      try
-      {
-        float z_max = (float)BeltConstants.z_max;
-        float z_min = 0f;
-        var steps = 1000;
-
-        double red_acc = 25.0;
-        double red_scale = 1.0;
-        Func<float, bool, double> red_colour_range = (float z, bool b) =>
-        {
-          red_acc += red_scale * (b ? 1 : 0);
-          return red_acc;
-        };
-
-        double grey_acc = 0.0;
-        double grey_scale = 1.0;
-        Func<float, bool, double> grey_colour_range = (float z, bool b) =>
-        {
-          if (z >= cmin) grey_acc += grey_scale * (b ? 0 : 1);
-          return grey_acc;
-        };
-
-        double red_acc_tmp = 0.0;
-        double grey_acc_tmp = 0.0;
-        for (int n = 0; n < steps; n++)
-        {
-          var z = (z_max - z_min) * n / steps + z_min;
-          var b = fn(z);
-          red_acc_tmp = red_colour_range(z, b);
-          grey_acc_tmp = grey_colour_range(z, b);
-        }
-
-        red_acc = 25.0;
-        red_scale = 50 / (red_acc_tmp - red_acc);
-        grey_acc = 0.0;
-        grey_scale = 100 / grey_acc_tmp;
-
-        var r1 = red_colour_range(z_min, fn(z_min));
-        var g1 = grey_colour_range(z_min, fn(z_min));
-        bool is_red0 = fn(z_min);
-        bool is_grey0 = z_min >= cmin;
-        colour_range.Add((0, "hsl(240,100,50)"));
-        colour_range.Add(is_red0 ? (0.002, "hsl(0,100,25)") : (0.002, "hsl(0,0,100)"));
-
-        for (int n = 1; n < steps - 1; n++)
-        {
-          var z = (z_max - z_min) * n / steps + z_min;
-          var c_index = n / (double)steps;
-          var is_red1 = fn(z);
-          var is_grey1 = z >= cmin;
-          var r = red_colour_range(z, is_red1);
-          var g = grey_colour_range(z, is_red1);
-
-          if (is_red0 != is_red1)
-          {
-            if (is_red1)
-            {
-              colour_range.Add((c_index, $"hsl(0,0,{100 - (int)g})"));
-              colour_range.Add((c_index, $"hsl(0,100,{(int)r})"));
-            }
-            else
-            {
-              colour_range.Add((c_index, $"hsl(0,100,{(int)r})"));
-              colour_range.Add((c_index, $"hsl(0,0,{100 - (int)g})"));
-            }
-
-          }
-
-          if (!is_red1 && is_grey0 != is_grey1)
-          {
-
-            colour_range.Add((c_index, $"hsl(0,0,{100 - (int)g})"));
-
-          }
-
-          is_red0 = is_red1;
-          is_grey0 = is_grey1;
-        }
-
-        is_red0 = fn(z_max);
-        colour_range.Add(is_red0 ? (1.0, "hsl(0,100,75)") : (1.0, "hsl(0,0,0)"));
-
-      }
-      catch (CompilationErrorException)
-      {
-
-      }
-
-
-      _logger.LogDebug($"colour_range running time in ms: {sw.ElapsedMilliseconds}");
-      await Task.CompletedTask;
-      return colour_range;
-    }
+ 
 
     public async Task<double> GetLength(string belt)
     {

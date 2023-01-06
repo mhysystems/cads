@@ -1,18 +1,21 @@
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
 using Fluxor;
+using System.Globalization;
 
 using cads_gui.Data;
 using cads_gui.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+var pathString = builder.Configuration.GetSection("webgui").GetValue<string>("DBPath") ?? String.Empty;
+var dbpath = Path.GetFullPath(Path.Combine(pathString,"conveyors.db"));
 
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddSignalR();
 builder.Services.AddDbContextFactory<SQLiteDBContext>(options =>
-  options.UseSqlite("Data Source=conveyors.db; Mode=ReadWriteCreate")
+  options.UseSqlite($"Data Source={dbpath}; Mode=ReadWriteCreate")
 );
 
 builder.Services.AddFluxor(o => o.ScanAssemblies(typeof(Program).Assembly));
@@ -32,6 +35,10 @@ if (!app.Environment.IsDevelopment())
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
+
+var cultureInfo = new CultureInfo("en-AU");
+CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
+CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 
 app.UseHttpsRedirection();
 

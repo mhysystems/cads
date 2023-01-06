@@ -591,16 +591,87 @@ class PlotDataCache {
 
 }
 
+class LinePlot {
+  constructor(plotElement) {
+    this.plotElement = plotElement;
 
+    this.layout = {
+      title: {
+        text: "Wear Rate of Selected Point on Profile",
+        font : {
+          family : "Century Gothic",
+          size : 24
+        },
+        x : 0.05
+      },
+      autosize: true,
+      yaxis: {
+        range: [12, 36],
+        side: 'right'
+      },
+
+      xaxis: {},
+
+      margin: {
+        l: 40,
+        r: 40,
+        b: 40,
+        t: 40,
+      },
+
+      aspectratio: {
+        x: 1
+      },
+
+      hovermode : "closest"
+    };
+
+    this.config = {
+      displaylogo: false,
+      displayModeBar: true
+    };
+
+
+    const trace = {
+      type: 'scatter',
+      showlegend: false,
+      line: {
+        color: "#f77f00"
+      }
+    };
+
+    this.plotData = [trace];
+    
+  }
+
+  async updatePlot(x_axis,y_axis) {
+
+    this.layout.xaxis = [x_axis[0], x_axis[x_axis.length - 1]];
+
+    this.plotData[0].y = y_axis;
+    this.plotData[0].x = x_axis;
+    await Plotly.react(this.plotElement, this.plotData, this.layout, this.config);
+  }
+
+
+}
 
 
 class TrendPlot {
-  constructor(plotElement, x_res, z_min, z_max) {
+  constructor(plotElement, x_res, z_min, z_max, blazor) {
     this.plotElement = plotElement;
     this.xRes = x_res;
     this.zMax = z_max;
 
     this.layout = {
+      title: {
+        text: "Belt Cross Section Profile",
+        font : {
+          family : "Century Gothic",
+          size : 24
+        },
+      x : 0.05
+    },
       autosize: true,
       yaxis: {
         range: [z_min, z_max],
@@ -610,15 +681,17 @@ class TrendPlot {
       xaxis: {},
 
       margin: {
-        l: 20,
-        r: 20,
-        b: 20,
-        t: 20,
+        l: 40,
+        r: 40,
+        b: 40,
+        t: 40,
       },
 
       aspectratio: {
         x: 1
-      }
+      },
+
+      hovermode : "closest"
     };
 
     this.config = {
@@ -636,6 +709,12 @@ class TrendPlot {
     };
 
     this.plotData = [structuredClone(trace),structuredClone(trace),structuredClone(trace),structuredClone(trace)];
+    Plotly.react(this.plotElement, [], this.layout, this.config);
+
+    this.plotElement.on('plotly_click', function (e) {
+      const xIndex = e.points[0].pointNumber;
+      blazor.invokeMethodAsync('TrendPlotClicked', xIndex);
+    });
   }
 
   async updatePlot(index,xMin,z_profile,color) {
@@ -826,9 +905,24 @@ class SurfacePlot {
       } // end scene
     };
 
+
     this.config = {
       displaylogo: false,
-      displayModeBar: true
+      displayModeBar: true,
+      modeBarButtonsToAdd: [
+        {
+          name: 'Reset camera to default',
+          icon: Plotly.Icons.home,
+          direction: 'up',
+          surfacePlot : this,
+          click: function (gd) {
+            this.surfacePlot.layout.scene.camera.eye = { ...SurfacePlot.defaultEyePosition };
+            this.surfacePlot.layout.scene.camera.center = { x: 0, y: 0, z: 0 };
+            Plotly.relayout(gd, this.surfacePlot.layout);
+          }
+        }],
+
+      modeBarButtonsToRemove: ['resetCameraDefault3d', 'resetCameraLastSave3d']
     };
 
     this.plotData = [
@@ -947,7 +1041,8 @@ class SurfacePlot {
 
   }
 
-  async updatePlot(plotDataPromise) {
+  async updatePlot(plotDataPromise,xRes) {
+    this.xRes = xRes;
     const y = await this.updatePlotData(plotDataPromise);
     await this.generatePlot();
     return y;
@@ -974,14 +1069,20 @@ class SurfacePlot {
     
     const xyRatio = ((yArray[yLength - 1] - yArray[0]) / yLength) / ((xArray[xLength - 1] - xArray[0]) / xLength);
     const width = 50; // x axis
-    const length = Math.floor(xyRatio); // y axis
+    const length = Math.floor(width / xyRatio); // y axis
 
-    const yIndex = this.plotData[SurfacePlot.surfacePlotData].y.findIndex( y => zDepth.z.y < y*1000);
-    const xIndex = this.plotData[SurfacePlot.surfacePlotData].x.findIndex( x => zDepth.z.x < x*1000);
+    const yIndex = this.plotData[SurfacePlot.surfacePlotData].y.findIndex( y => zDepth.z.y <= y*1000);
+    const xIndex = this.plotData[SurfacePlot.surfacePlotData].x.findIndex( x => zDepth.z.x <= x*1000);
 
-    this.plotData[SurfacePlot.overlayPlotData].y = this.plotData[SurfacePlot.surfacePlotData].y.slice(yIndex - length,yIndex + length);
-    this.plotData[SurfacePlot.overlayPlotData].x = this.plotData[SurfacePlot.surfacePlotData].x.slice(xIndex - width,xIndex + width);
-    this.plotData[SurfacePlot.overlayPlotData].z = this.plotData[SurfacePlot.surfacePlotData].z.slice(yIndex - length,yIndex + length).map( x=> x.slice(xIndex - width,xIndex + width)).map(x => x.map( z => z+0.5)); 
+    const yMin = Math.max(yIndex - length,0);
+    const xMin = Math.max(xIndex - width,0);
+
+    const Y = this.plotData[SurfacePlot.surfacePlotData].y.slice(yMin,yIndex + length);
+    const X = this.plotData[SurfacePlot.surfacePlotData].x.slice(xMin,xIndex + width);
+    const Z = this.plotData[SurfacePlot.surfacePlotData].z.slice(yMin,yIndex + length).map( x=> x.slice(xMin,xIndex + width)).map(x => x.map( z => z+0.5)); 
+    this.plotData[SurfacePlot.overlayPlotData].y = Y;
+    this.plotData[SurfacePlot.overlayPlotData].x = X;
+    this.plotData[SurfacePlot.overlayPlotData].z = Z;
 
   }
 
@@ -1003,8 +1104,12 @@ export function mk_ProfilePlot(plotElement, x_res, z_min, z_max) {
   return new ProfilePlot(plotElement, x_res, z_min, z_max);
 }
 
-export function mk_TrendPlot(plotElement, x_res, z_min, z_max) {
-  return new TrendPlot(plotElement, x_res, z_min, z_max);
+export function mk_TrendPlot(plotElement, x_res, z_min, z_max,blazor) {
+  return new TrendPlot(plotElement, x_res, z_min, z_max,blazor);
+}
+
+export function mk_LinePlot(plotElement) {
+  return new LinePlot(plotElement);
 }
 
 export function mk_PlotDataCache(...args) {
