@@ -335,7 +335,7 @@ void http_post_realtime(double y_area, double value)
         }
 
         auto tmp_z = p.z | sr::views::transform([=](float e) -> int16_t
-                                                { return NaN<float>::isnan(e) ? NaN<int16_t>::value : int16_t(((double)e - z_offset) / z_resolution); });
+                                                { return std::isnan(e) ? std::numeric_limits<int16_t>::lowest() : int16_t(((double)e - z_offset) / z_resolution); });
         std::vector<int16_t> short_z{tmp_z.begin(), tmp_z.end()};
 
         profiles_flat.push_back(CadsFlatbuffers::CreateprofileDirect(builder, p.y, p.x_off, &short_z));

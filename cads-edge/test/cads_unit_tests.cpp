@@ -35,7 +35,7 @@ protected:
 
 TEST(cads, nan_filter)
 {
-  auto n = NaN<z_element>::value;
+  auto n = std::numeric_limits<z_element>::quiet_NaN();
   std::vector<z_element> a = {1, n, 2, n, 2, 1, n};
   nan_filter(a);
   std::vector<z_element> b{1, 1, 2, 2, 2, 1, 1};
@@ -44,7 +44,7 @@ TEST(cads, nan_filter)
 
 TEST(cads, find_profile_edges_nans_outer)
 {
-  auto n = NaN<z_type::value_type>::value;
+  auto n = std::numeric_limits<z_element>::quiet_NaN();
 
   auto a = find_profile_edges_nans_outer({1, 1, n, n, n, n, n, 1, 2, 2, 2, 1, n, n, n, n, n, 1, 1, 1}, 3);
   std::tuple<int, int> b{7, 12};
@@ -53,7 +53,7 @@ TEST(cads, find_profile_edges_nans_outer)
 
 TEST(cads, spike_filter)
 {
-  auto v = NaN<z_type::value_type>::value;
+  auto v = std::numeric_limits<z_element>::quiet_NaN();
   z_type in{1, v, 1, v, 1, 1, 1, v, 1, 1, 1, 1, v, 1, v, 1};
   spike_filter(in, 5);
   z_type out{1, v, v, v, v, v, v, v, 1, 1, 1, 1, v, v, v, 1};
@@ -63,9 +63,9 @@ TEST(cads, spike_filter)
   auto same = true;
   for (size_t i = 0; i < in.size(); ++i)
   {
-    if (NaN<z_type::value_type>::isnan(in[i]))
+    if (std::isnan(in[i]))
     {
-      same = same && NaN<z_type::value_type>::isnan(out[i]);
+      same = same && std::isnan(out[i]);
     }
     else
     {

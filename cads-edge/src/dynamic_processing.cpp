@@ -83,7 +83,7 @@ namespace cads
       std::throw_with_nested(std::runtime_error("lua_processing_coro: Width or height less than one"));
     }
     
-    auto window = std::vector<z_element>(size_t(width * height), 33.0/*NaN<z_element>::value*/);
+    auto window = std::vector<z_element>(size_t(width * height), 33.0/*std::numeric_limits<z_element>::quiet_NaN()*/);
 
     lua_State *L = luaL_newstate();
     luaL_openlibs(L);

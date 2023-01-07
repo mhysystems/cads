@@ -85,7 +85,7 @@ namespace cads
 
     for (auto z : ps)
     {
-      if (!NaN<z_element>::isnan(z))
+      if (!std::isnan(z))
       {
         z_min = std::min(z, z_min);
         z_max = std::max(z, z_max);
@@ -121,7 +121,7 @@ namespace cads
 
     for (auto z : ps)
     {
-      if (!NaN<z_element>::isnan(z))
+      if (!std::isnan(z))
       {
         int i = int((z - min) * dz);
         hist[i] = {((float)i + 2) * (1 / dz) + min, 1 + get<1>(hist[i])};

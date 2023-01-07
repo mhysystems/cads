@@ -19,7 +19,7 @@ namespace cads
     using namespace Eigen;
 
     auto r = yy | sr::views::take(right_edge_index) | sr::views::drop(left_edge_index) | sr::views::filter([](int16_t a)
-                                                                                                           { return !NaN<z_element>::isnan(a); });
+                                                                                                           { return !std::isnan(a); });
 
     std::vector<double> yr(r.begin(), r.end());
     auto y = Map<VectorXd>(yr.data(), yr.size());
@@ -39,7 +39,7 @@ namespace cads
 
     auto f = z | sr::views::take(right_edge_index) | sr::views::drop(left_edge_index);
     std::transform(f.begin(), f.end(), f.begin(), [gradient, i = 0](z_element v) mutable -> z_element
-                   { return v != NaN<z_element>::value ? v - (gradient * i++) : NaN<z_element>::value; });
+                   { return v != std::numeric_limits<z_element>::quiet_NaN() ? v - (gradient * i++) : std::numeric_limits<z_element>::quiet_NaN(); });
   }
 
 

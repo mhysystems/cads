@@ -29,7 +29,7 @@ namespace cads
   {
     z_type rtn;
     std::transform(z_start, z_end, std::back_inserter(rtn), [=](k16s e)
-                   { return e != k16S_NULL ? e * z_resolution + z_offset : cads::NaN<z_element>::value; });
+                   { return e != k16S_NULL ? e * z_resolution + z_offset : std::numeric_limits<z_element>::quiet_NaN(); });
 
     return rtn;
   }
