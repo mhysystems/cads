@@ -40,9 +40,15 @@ namespace cads {
     int id; 
   };
 
+  struct webapi {
+    std::string base_url;
+    std::string add_conveyor;
+  };
+
   extern constraints global_constraints;
   extern profile_parameters global_profile_parameters;
   extern conveyor_parameters global_conveyor_parameters;
+  extern webapi global_webapi;
   
   void init_config(std::string f);
   void drop_config();

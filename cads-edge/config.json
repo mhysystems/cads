@@ -56,6 +56,10 @@
     "cord_diameter" : 4.3,
     "top_cover" : 17.0     
   },
+  "webapi" : {
+    "base_url" : "http://localhost:5000/api/",
+    "add_conveyor" : "addconveyor"
+  },
   "nats_url" : "192.168.2.13",
   "upload_profile" : false, 
   "base_url" : "http://localhost:5000/api",

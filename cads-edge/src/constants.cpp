@@ -49,6 +49,20 @@ namespace cads {
     return conveyor_parameters{site,name,pulley_cover,cord_diameter,top_cover,id};
 
   }
+
+  auto mk_webapi(nlohmann::json config) {
+    using namespace std;
+    
+    auto trim_backslashes = []() {
+
+    };
+    
+    auto base_url = config["webapi"]["base_rul"].get<string>();
+    auto add_conveyor = config["webapi"]["add_conveyor"].get<string>();
+
+    return webapi{base_url,add_conveyor};
+
+  }
   
   void init_config(std::string f) {
     auto json = slurpfile(f);
@@ -56,6 +70,7 @@ namespace cads {
     global_constraints = mk_contraints(config);
     global_profile_parameters = mk_profile_parameters(config);
     global_conveyor_parameters = mk_conveyor_parameters(config);
+    global_webapi = mk_webapi(config);
     global_config = config;
   }
 
