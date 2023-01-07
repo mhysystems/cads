@@ -102,8 +102,8 @@ drop_msg:
     if (endpoint_url == "null")
       return endpoint_url;
 
-    auto site = global_config["site"].get<std::string>();
-    auto conveyor = global_config["conveyor"].get<std::string>();
+    auto site = global_conveyor_parameters.site;
+    auto conveyor = global_conveyor_parameters.name;
 
     return endpoint_url + '/' + site + '/' + conveyor + '/' + ts;
   }
@@ -115,8 +115,8 @@ drop_msg:
     if (endpoint_url == "null")
       return endpoint_url;
 
-    auto site = global_config["site"].get<std::string>();
-    auto conveyor = global_config["conveyor"].get<std::string>();
+    auto site = global_conveyor_parameters.site;
+    auto conveyor = global_conveyor_parameters.name;
 
     return fmt::format("{}/{}-{}-{}/{}/{}", endpoint_url, site, conveyor, ts, y, len);
   }
@@ -166,8 +166,8 @@ void http_post_realtime(double y_area, double value)
     auto ts = date::format("%FT%TZ", now);
     
     nlohmann::json params_json;
-    params_json["Site"] = global_config["site"].get<std::string>();
-    params_json["Conveyor"] = global_config["conveyor"].get<std::string>();
+    params_json["Site"] = global_conveyor_parameters.site;
+    params_json["Conveyor"] = global_conveyor_parameters.name;
     params_json["Time"] = ts;
     params_json["YArea"] = y_area;
     params_json["Value"] = value;
@@ -182,8 +182,8 @@ void http_post_realtime(double y_area, double value)
     if(isnan(value) || isinf(value)) return;
 
     nlohmann::json params_json;
-    params_json["Site"] = global_config["site"].get<std::string>();
-    params_json["Conveyor"] = global_config["conveyor"].get<std::string>();
+    params_json["Site"] = global_conveyor_parameters.site;
+    params_json["Conveyor"] = global_conveyor_parameters.name;
     params_json["Id"] = Id;
     params_json["Value"] = value;
     params_json["Valid"] = valid; 
@@ -231,8 +231,8 @@ void http_post_realtime(double y_area, double value)
     auto [params, err] = fetch_profile_parameters(db_name);
     auto [Ymin,Ymax,YmaxN,WidthN,err2] = fetch_belt_dimensions(revid,last_idx,db_name);
 
-    params_json["site"] = global_config["site"].get<std::string>();
-    params_json["conveyor"] = global_config["conveyor"].get<std::string>();
+    params_json["site"] = global_conveyor_parameters.site;
+    params_json["conveyor"] = global_conveyor_parameters.name;
     params_json["chrono"] = chrono;
     params_json["y_res"] = y_step;
     params_json["x_res"] = params.x_res;

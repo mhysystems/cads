@@ -9,6 +9,7 @@ namespace cads {
 
   constraints global_constraints;
   profile_parameters global_profile_parameters;
+  conveyor_parameters global_conveyor_parameters;
   
   auto mk_contraints(nlohmann::json config) {
     using namespace std;
@@ -27,20 +28,35 @@ namespace cads {
 
   auto mk_profile_parameters(nlohmann::json config) {
     using namespace std;
-    auto left_edge_nan = global_config["left_edge_nan"].get<int>();
-    auto right_edge_nan = global_config["right_edge_nan"].get<int>();
-    auto spike_filter = global_config["spike_filter"].get<int>();
-    auto sobel_filter = global_config["sobel_filter"].get<int>();
+    auto left_edge_nan = config["left_edge_nan"].get<int>();
+    auto right_edge_nan = config["right_edge_nan"].get<int>();
+    auto spike_filter = config["spike_filter"].get<int>();
+    auto sobel_filter = config["sobel_filter"].get<int>();
 
     return profile_parameters{left_edge_nan,right_edge_nan,spike_filter,sobel_filter};
+
+  }
+
+  auto mk_conveyor_parameters(nlohmann::json config) {
+    using namespace std;
+    auto site = config["conveyor"]["site"].get<string>();
+    auto name = config["conveyor"]["name"].get<string>();
+    auto pulley_cover = config["conveyor"]["pulley_cover"].get<double>();
+    auto cord_diameter = config["conveyor"]["cord_diameter"].get<double>();
+    auto top_cover = config["conveyor"]["top_cover"].get<double>();
+    auto id = config["conveyor"]["id"].get<int>();
+
+    return conveyor_parameters{site,name,pulley_cover,cord_diameter,top_cover,id};
 
   }
   
   void init_config(std::string f) {
     auto json = slurpfile(f);
-		global_config = nlohmann::json::parse(json);
-    global_constraints = mk_contraints(global_config);
-    global_profile_parameters = mk_profile_parameters(global_config);
+		auto config = nlohmann::json::parse(json);
+    global_constraints = mk_contraints(config);
+    global_profile_parameters = mk_profile_parameters(config);
+    global_conveyor_parameters = mk_conveyor_parameters(config);
+    global_config = config;
   }
 
   void drop_config() {

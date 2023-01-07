@@ -34,14 +34,15 @@ namespace cads {
   struct conveyor_parameters {
     std::string site;
     std::string name;
-    int id;
     double pulley_cover;
     double cord_diameter;
-    double top_cover;  
+    double top_cover; 
+    int id; 
   };
 
   extern constraints global_constraints;
   extern profile_parameters global_profile_parameters;
+  extern conveyor_parameters global_conveyor_parameters;
   
   void init_config(std::string f);
   void drop_config();
