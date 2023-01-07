@@ -5,24 +5,19 @@
 
 nlohmann::json global_config;
 
-namespace cads {  
-
-  constraints global_constraints;
-  profile_parameters global_profile_parameters;
-  conveyor_parameters global_conveyor_parameters;
-  
-  auto mk_contraints(nlohmann::json config) {
+namespace {
+    auto mk_contraints(nlohmann::json config) {
     using namespace std;
 
-    auto current_length = config["constraints"]["current_length"].get<constraints::value_type>();
-    auto surface_speed = config["constraints"]["surface_speed"].get<constraints::value_type>();
-    auto pulley_oscillation = config["constraints"]["pulley_oscillation"].get<constraints::value_type>();
-    auto cads_to_origin = config["constraints"]["cads_to_origin"].get<constraints::value_type>();
-    auto rotation_period = config["constraints"]["rotation_period"].get<constraints::value_type>();
-    auto barrel_height = config["constraints"]["barrel_height"].get<constraints::value_type>();
-    auto z_unbiased = config["constraints"]["z_unbiased"].get<constraints::value_type>();
+    auto current_length = config["constraints"]["current_length"].get<cads::constraints::value_type>();
+    auto surface_speed = config["constraints"]["surface_speed"].get<cads::constraints::value_type>();
+    auto pulley_oscillation = config["constraints"]["pulley_oscillation"].get<cads::constraints::value_type>();
+    auto cads_to_origin = config["constraints"]["cads_to_origin"].get<cads::constraints::value_type>();
+    auto rotation_period = config["constraints"]["rotation_period"].get<cads::constraints::value_type>();
+    auto barrel_height = config["constraints"]["barrel_height"].get<cads::constraints::value_type>();
+    auto z_unbiased = config["constraints"]["z_unbiased"].get<cads::constraints::value_type>();
 
-    return constraints{current_length,surface_speed,pulley_oscillation,cads_to_origin,rotation_period,barrel_height,z_unbiased};
+    return cads::constraints{current_length,surface_speed,pulley_oscillation,cads_to_origin,rotation_period,barrel_height,z_unbiased};
 
   }
 
@@ -33,7 +28,7 @@ namespace cads {
     auto spike_filter = config["spike_filter"].get<int>();
     auto sobel_filter = config["sobel_filter"].get<int>();
 
-    return profile_parameters{left_edge_nan,right_edge_nan,spike_filter,sobel_filter};
+    return cads::profile_parameters{left_edge_nan,right_edge_nan,spike_filter,sobel_filter};
 
   }
 
@@ -46,7 +41,7 @@ namespace cads {
     auto top_cover = config["conveyor"]["top_cover"].get<double>();
     auto id = config["conveyor"]["id"].get<int>();
 
-    return conveyor_parameters{site,name,pulley_cover,cord_diameter,top_cover,id};
+    return cads::conveyor_parameters{site,name,pulley_cover,cord_diameter,top_cover,id};
 
   }
 
@@ -60,9 +55,17 @@ namespace cads {
     auto base_url = config["webapi"]["base_rul"].get<string>();
     auto add_conveyor = config["webapi"]["add_conveyor"].get<string>();
 
-    return webapi{base_url,add_conveyor};
+    return cads::webapi{base_url,add_conveyor};
 
   }
+}
+
+namespace cads {  
+
+  constraints global_constraints;
+  profile_parameters global_profile_parameters;
+  conveyor_parameters global_conveyor_parameters;
+  webapi global_webapi;
   
   void init_config(std::string f) {
     auto json = slurpfile(f);
