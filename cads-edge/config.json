@@ -48,8 +48,14 @@
   "program_state_db_name" : "state.db",
   "use_encoder" : false,
   "belt_cross_correlation_threshold" : 0.4,
-  "site" : "whaleback",
-  "conveyor" : "cv405",
+  "conveyor" : {
+    "site" : "whaleback",
+    "name" : "cv405",
+    "id"   : 20220101,
+    "pulley_cover" : 6.0,
+    "cord_diameter" : 4.3,
+    "top_cover" : 17.0     
+  },
   "nats_url" : "192.168.2.13",
   "upload_profile" : false, 
   "base_url" : "http://localhost:5000/api",
