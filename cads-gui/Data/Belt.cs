@@ -43,6 +43,8 @@ namespace cads_gui.Data
         public string NatsUrl { get; set; } = "127.0.0.1";
         public string Authorization { get; set; } = String.Empty;
         public string DBPath {get; set;} = String.Empty;
+        public string ConnectionString {get; set;} = String.Empty;
+        public bool DoubleSided {get; set;} = false;
     }
 
 		public class Belt {

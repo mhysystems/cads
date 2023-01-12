@@ -150,20 +150,7 @@
 
   async Task UpdateYAsync(ZDepth zd)
   {
-    currentY = zd.y;
-    surfacePlot.Loading = true;
-    try
-    {
-      var plotDataPromise = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData", belt.name, currentY, 512, 512);
-
-      await surfacePlot.UpdatePlotWithOverlayAsync(plotDataPromise, zd);
-      await profilePlot.UpdatePlotAsync(plotDataPromise);
-    }
-    catch (Exception)
-    {
-      Snackbar.Add($"Problem retrieving data", Severity.Error);
-    }
-    surfacePlot.Loading = false;
+    await UpdateYAsync(zd.y);
   }
 
   async Task UpdateYAsync(double y)
@@ -172,10 +159,18 @@
     surfacePlot.Loading = true;
     try
     {
-      var plotDataPromise = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData", belt.name, currentY, 512, 512);
+      if(!Beltservice.IsDoubledSided()) {
+        var plotDataPromise = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData", belt.name, currentY, 512, 512);
 
-      await surfacePlot.UpdatePlotAsync(plotDataPromise);
-      await profilePlot.UpdatePlotAsync(plotDataPromise);
+        await surfacePlot.UpdatePlotAsync(plotDataPromise);
+        await profilePlot.UpdatePlotAsync(plotDataPromise);
+      }else {
+        var plotDataPromiseBottom = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData", belt.name, currentY+4000, 512, 512);
+        var plotDataPromiseTop = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData", belt.name, currentY, 512, 512);
+
+        await surfacePlot.UpdatePlotDoubleSidedAsync(plotDataPromiseTop,plotDataPromiseBottom);
+        await profilePlot.UpdatePlotAsync(plotDataPromiseTop);
+      }
     }
     catch (Exception)
     {

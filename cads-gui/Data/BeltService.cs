@@ -51,6 +51,11 @@ namespace cads_gui.Data
       return context.Conveyors.AsEnumerable();
     }
 
+    public bool IsDoubledSided()
+    {
+      return _config.DoubleSided;
+    }
+
     public IEnumerable<Conveyors> GetConveyors(string site)
     {
       using var context = dBContext.CreateDbContext();

@@ -22,6 +22,18 @@ function mk_2dArray(rows, columns) {
   return z_samples;
 }
 
+function mk_BottomSurface(top, bottom) {
+
+
+  for (let j = 0; j < top.length; j++) {
+    for (let i = 0; i < top[j].length; i++) {
+      bottom[j][i] -= top[j][i] + 1.0;
+    
+    }
+  }
+
+}
+
 function generate_ploty_y_axis(y_sample_start, num_plot_y_samples, num_y_samples, y_sample_len) {
 
   const mod = (x, y) => x; //(x,y) => ((x % y) + y) % y;
@@ -980,6 +992,62 @@ class SurfacePlot {
 
   }
 
+  async updatePlotDataDoubleSided(plotDataPromiseTop,plotDataPromiseBottom) {
+
+    const plotDataTop = await plotDataPromiseTop;
+    const plotDataBottom = await plotDataPromiseBottom;
+
+    const x_min = plotDataTop.xMin / 1000; //mm to m
+    const y_axis = plotDataTop.yAxis.map( y => y / 1000); //mm to m
+    const rows = plotDataTop.yAxis.length;
+    let columns = plotDataTop.zSurface.length / rows;
+    const x_resolution = this.xRes / 1000; // convert mm to m
+    const belt_width = columns * x_resolution;
+    const belt_length = y_axis[y_axis.length - 1] - y_axis[0];
+
+    if(Math.floor(columns) !== columns) {
+      console.error("Z samples not a multiple of y samples");
+      columns = Math.floor(columns);
+    }
+
+    const z_surfaceTop = generate_ploty_z_samples(plotDataTop.zSurface, columns);
+
+    const x_axis = [...Array(columns).keys()].map(x => x_min + x * x_resolution);
+
+    this.plotData[SurfacePlot.surfacePlotData].z = z_surfaceTop;
+    this.plotData[SurfacePlot.surfacePlotData].x = x_axis;
+    this.plotData[SurfacePlot.surfacePlotData].y = y_axis;
+
+    this.layout.scene.yaxis.range = [y_axis[0], y_axis[y_axis.length - 1]];
+    this.layout.scene.xaxis.range = [x_axis[0], x_axis[x_axis.length - 1]];
+    this.layout.scene.aspectratio.y = belt_length / belt_width;
+    this.layout.scene.aspectratio.z = this.zMax / (belt_width * 1000);
+    this.layout.scene.camera.eye = { ...SurfacePlot.defaultEyePosition };
+    this.layout.scene.camera.center = { x: 0, y: 0, z: 0 };
+
+    // Pull edges to zero to mimic 3d belt
+    for (let i = 0; i < rows; i++) {
+      z_surfaceTop[i][0] = 0.0;
+      z_surfaceTop[i][columns - 1] = 0.0;
+    }
+
+    for (let i = 0; i < columns; i++) {
+      z_surfaceTop[0][i] = 0.0;
+      z_surfaceTop[rows - 1][i] = 0.0;
+    }
+
+    const bottom_plane = generate_ploty_z_samples(plotDataBottom.zSurface, columns);
+    mk_BottomSurface(z_surfaceTop,bottom_plane);
+
+    this.plotData[SurfacePlot.floorPlotData].y = y_axis;
+    this.plotData[SurfacePlot.floorPlotData].x = x_axis;
+    this.plotData[SurfacePlot.floorPlotData].z = bottom_plane;
+
+    this.clearOverlay();
+    
+    return y_axis[y_axis.length - 1];
+  }
+
   async updatePlotData(plotDataPromise) {
 
     const plotData = await plotDataPromise;
@@ -1044,6 +1112,13 @@ class SurfacePlot {
   async updatePlot(plotDataPromise,xRes) {
     this.xRes = xRes;
     const y = await this.updatePlotData(plotDataPromise);
+    await this.generatePlot();
+    return y;
+  }
+
+  async updatePlotDoubleSided(plotDataPromiseTop,plotDataPromiseBottom,xRes) {
+    this.xRes = xRes;
+    const y = await this.updatePlotDataDoubleSided(plotDataPromiseTop,plotDataPromiseBottom);
     await this.generatePlot();
     return y;
   }
