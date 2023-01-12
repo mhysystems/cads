@@ -1,4 +1,5 @@
 #include <tuple>
+#include <algorithm> 
 
 #include <constants.h>
 #include <init.h>
@@ -33,29 +34,24 @@ namespace {
   }
 
   auto mk_conveyor_parameters(nlohmann::json config) {
-    using namespace std;
-    auto site = config["conveyor"]["site"].get<string>();
-    auto name = config["conveyor"]["name"].get<string>();
+
+    auto id = config["conveyor"]["id"].get<int>();
+    auto site = config["conveyor"]["site"].get<std::string>();
+    auto name = config["conveyor"]["name"].get<std::string>();
     auto pulley_cover = config["conveyor"]["pulley_cover"].get<double>();
     auto cord_diameter = config["conveyor"]["cord_diameter"].get<double>();
     auto top_cover = config["conveyor"]["top_cover"].get<double>();
-    auto id = config["conveyor"]["id"].get<int>();
 
-    return cads::conveyor_parameters{site,name,pulley_cover,cord_diameter,top_cover,id};
+    return cads::conveyor_parameters{id,site,name,pulley_cover,cord_diameter,top_cover};
 
   }
 
-  auto mk_webapi(nlohmann::json config) {
+  auto mk_webapi_urls(nlohmann::json config) {
     using namespace std;
     
-    auto trim_backslashes = []() {
+    auto add_conveyor = config["webapi_urls"]["add_conveyor"].get<cads::webapi_urls::value_type>();
 
-    };
-    
-    auto base_url = config["webapi"]["base_rul"].get<string>();
-    auto add_conveyor = config["webapi"]["add_conveyor"].get<string>();
-
-    return cads::webapi{base_url,add_conveyor};
+    return cads::webapi_urls{add_conveyor};
 
   }
 }
@@ -65,7 +61,7 @@ namespace cads {
   constraints global_constraints;
   profile_parameters global_profile_parameters;
   conveyor_parameters global_conveyor_parameters;
-  webapi global_webapi;
+  webapi_urls global_webapi;
   
   void init_config(std::string f) {
     auto json = slurpfile(f);
@@ -73,7 +69,7 @@ namespace cads {
     global_constraints = mk_contraints(config);
     global_profile_parameters = mk_profile_parameters(config);
     global_conveyor_parameters = mk_conveyor_parameters(config);
-    global_webapi = mk_webapi(config);
+    global_webapi = mk_webapi_urls(config);
     global_config = config;
   }
 
@@ -83,6 +79,20 @@ namespace cads {
 
   bool between(constraints::value_type range, double value) {
     return get<0>(range) <= value && value <= get<1>(range);  
+  }
+
+  conveyor_parameters::operator std::string() const {
+    
+    nlohmann::json params_json;
+    
+    params_json["Id"] = id;
+    params_json["Site"] = site;
+    params_json["Name"] = name;
+    params_json["PulleyCover"] = pulley_cover;
+    params_json["CordDiameter"] = cord_diameter;
+    params_json["TopCover"] = top_cover;
+
+    return params_json.dump();
   }
 
 

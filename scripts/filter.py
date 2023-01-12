@@ -3,6 +3,22 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import fft, ifft
 
+
+def dcfilter(x):
+    yn = 0
+    xn = 0
+    r = []
+    
+    for e in x:
+        y = e - xn + 0.95 * yn
+        xn = e
+        yn = y
+        r.append(y)
+    
+    return r 
+
+
+
 # Change dtype depending on source. Usually int of float
 # arr is the barrel height signal, 
 # arrf is the C++ iirfilter of above.   
@@ -18,8 +34,9 @@ sos = signal.iirfilter(19, 4, rs=120, btype='low',analog=False, ftype='cheby2', 
 #plt.plot(np.append([0 for x in range(1,228)],arr))
 #plt.plot(np.append([0 for x in range(1,20)],arr))
 plt.plot(arr)
+plt.plot(dcfilter(arr))
 
-plt.plot(arrf)
+#plt.plot(arrf)
 #plt.plot(signal.sosfilt(sos,arr))
 
 

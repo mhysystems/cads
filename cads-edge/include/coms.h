@@ -14,6 +14,7 @@
 #pragma GCC diagnostic pop
 
 #include <profile.h>
+#include <constants.h>
 
 namespace cads
 {
@@ -22,4 +23,5 @@ namespace cads
   void http_post_realtime(double y_area, double value);
   std::tuple<date::utc_clock::time_point,bool> http_post_whole_belt(int, int, double);
   std::vector<profile> http_get_frame(double y, int len, date::utc_clock::time_point chrono);
+  bool remote_addconveyor(conveyor_parameters params); 
 }

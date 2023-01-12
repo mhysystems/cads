@@ -54,8 +54,20 @@ using namespace moodycamel;
 using namespace std::chrono;
 using CadsMat = cv::UMat; // cv::cuda::GpuMat
 
-namespace cads
+
+namespace
 {
+  using namespace cads;
+
+  void upload_conveyor_parameters() {
+    
+    auto db = global_config["program_state_db_name"].get<std::string>();
+    auto [id,err] = fetch_conveyor_id(db);
+    
+    if(!err && id != global_conveyor_parameters.id && remote_addconveyor(global_conveyor_parameters)){
+      store_conveyor_id(global_conveyor_parameters.id,db);
+    }
+  }
 
   unique_ptr<GocatorReaderBase> mk_gocator(BlockingReaderWriterQueue<msg> &gocatorFifo, bool use_encoder = false)
   {
@@ -76,83 +88,11 @@ namespace cads
     }
   }
 
-  void upload_profile_only()
-  {
-    auto db_name = global_config["db_name"].get<std::string>();
-    auto y_max_length = global_config["y_max_length"].get<double>();
-    auto [Ymin,Ymax,YmaxN,WidthN,err2] = fetch_belt_dimensions(0,std::numeric_limits<int>::max(),db_name);
-    http_post_whole_belt(0, (int)YmaxN+1, y_max_length);
-  }
-
-  void store_profile_only()
-  {
-
-    auto db_name = global_config["db_name"].get<std::string>();
-    create_db(db_name);
-
-    BlockingReaderWriterQueue<msg> gocatorFifo;
-
-    auto gocator = mk_gocator(gocatorFifo);
-
-    gocator->Start();
-
-    cads::msg m;
-
-    gocatorFifo.wait_dequeue(m);
-
-    if (get<0>(m) != cads::msgid::resolutions)
-    {
-      std::throw_with_nested(std::runtime_error("First message must be resolutions"));
-    }
-
-    auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution] = get<resolutions_t>(get<1>(m));
-    store_profile_parameters({y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution, global_config["z_height"].get<double>()});
-
-    auto store_profile = store_profile_coro();
-
-    auto y_max_length = global_config["y_max_length"].get<double>();
-    double Y = 0.0;
-    int idx = 0;
-
-    do
-    {
-
-      gocatorFifo.wait_dequeue(m);
-      auto m_id = get<0>(m);
-
-      switch (m_id)
-      {
-      case cads::msgid::scan:
-      {
-        auto p = get<profile>(get<1>(m));
-        Y = p.y;
-        store_profile.resume({0, idx++, p});
-        break;
-      }
-      case cads::msgid::resolutions:
-      {
-        break;
-      }
-
-      case cads::msgid::finished:
-      {
-        continue;
-      }
-      default:
-        continue;
-      }
-
-    } while (get<0>(m) != msgid::finished && Y < 2 * y_max_length);
-
-    store_profile.terminate();
-
-    gocator->Stop();
-  }
-
   bool process_impl()
   {
     create_db(global_config["db_name"].get<std::string>().c_str());
     create_program_state_db(global_config["program_state_db_name"].get<std::string>());
+    std::jthread uploading_conveyor_parameters(upload_conveyor_parameters);
 
     BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
     BlockingReaderWriterQueue<msg> winFifo(4096 * 1024);
@@ -346,6 +286,89 @@ namespace cads
 
     return error;
   }
+
+}
+
+
+namespace cads
+{
+
+
+
+  void upload_profile_only()
+  {
+    auto db_name = global_config["db_name"].get<std::string>();
+    auto y_max_length = global_config["y_max_length"].get<double>();
+    auto [Ymin,Ymax,YmaxN,WidthN,err2] = fetch_belt_dimensions(0,std::numeric_limits<int>::max(),db_name);
+    http_post_whole_belt(0, (int)YmaxN+1, y_max_length);
+  }
+
+  void store_profile_only()
+  {
+
+    auto db_name = global_config["db_name"].get<std::string>();
+    create_db(db_name);
+
+    BlockingReaderWriterQueue<msg> gocatorFifo;
+
+    auto gocator = mk_gocator(gocatorFifo);
+
+    gocator->Start();
+
+    cads::msg m;
+
+    gocatorFifo.wait_dequeue(m);
+
+    if (get<0>(m) != cads::msgid::resolutions)
+    {
+      std::throw_with_nested(std::runtime_error("First message must be resolutions"));
+    }
+
+    auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution] = get<resolutions_t>(get<1>(m));
+    store_profile_parameters({y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution, global_config["z_height"].get<double>()});
+
+    auto store_profile = store_profile_coro();
+
+    auto y_max_length = global_config["y_max_length"].get<double>();
+    double Y = 0.0;
+    int idx = 0;
+
+    do
+    {
+
+      gocatorFifo.wait_dequeue(m);
+      auto m_id = get<0>(m);
+
+      switch (m_id)
+      {
+      case cads::msgid::scan:
+      {
+        auto p = get<profile>(get<1>(m));
+        Y = p.y;
+        store_profile.resume({0, idx++, p});
+        break;
+      }
+      case cads::msgid::resolutions:
+      {
+        break;
+      }
+
+      case cads::msgid::finished:
+      {
+        continue;
+      }
+      default:
+        continue;
+      }
+
+    } while (get<0>(m) != msgid::finished && Y < 2 * y_max_length);
+
+    store_profile.terminate();
+
+    gocator->Stop();
+  }
+
+  
 
   void process()
   {

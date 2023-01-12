@@ -1,5 +1,5 @@
 {
-  "data_source" : "../../profiles/rawprofile_2023-01-06.db", 
+  "data_source" : "../../profiles/rawprofile_beltstopped20230105_074930.db", 
   "laser_fps" : 980,
   "forever" : false,
   "y_max_length" : 301000,
@@ -49,16 +49,15 @@
   "use_encoder" : false,
   "belt_cross_correlation_threshold" : 0.4,
   "conveyor" : {
+    "id"   : 20220101,
     "site" : "whaleback",
     "name" : "cv405",
-    "id"   : 20220101,
     "pulley_cover" : 6.0,
     "cord_diameter" : 4.3,
     "top_cover" : 17.0     
   },
-  "webapi" : {
-    "base_url" : "http://localhost:5000/api/",
-    "add_conveyor" : "addconveyor"
+  "webapi_urls" : {
+    "add_conveyor" : ["http://localhost:5000/api/addconveyor",false]
   },
   "nats_url" : "192.168.2.13",
   "upload_profile" : false, 

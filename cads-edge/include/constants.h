@@ -32,26 +32,29 @@ namespace cads {
   };
 
   struct conveyor_parameters {
+    int id;
     std::string site;
     std::string name;
     double pulley_cover;
     double cord_diameter;
     double top_cover; 
-    int id; 
+
+    operator std::string() const;
   };
 
-  struct webapi {
-    std::string base_url;
-    std::string add_conveyor;
+  struct webapi_urls {
+    using value_type = std::tuple<std::string,bool>;
+    value_type add_conveyor;
   };
 
   extern constraints global_constraints;
   extern profile_parameters global_profile_parameters;
   extern conveyor_parameters global_conveyor_parameters;
-  extern webapi global_webapi;
+  extern webapi_urls global_webapi;
   
   void init_config(std::string f);
   void drop_config();
   bool between(constraints::value_type range, double value);
+  
 }
 

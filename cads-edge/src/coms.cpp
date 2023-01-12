@@ -31,6 +31,38 @@
 
 using namespace std;
 
+namespace {
+  
+  bool http_post_json(std::string endpoint_url, std::string json, int retry = 16, int retry_wait = 8)
+  {
+
+    cpr::Response r;
+    const cpr::Url endpoint{endpoint_url};
+
+    while (retry-- > 0)
+    {
+      r = cpr::Post(endpoint,
+                    cpr::Body{json},
+                    cpr::Header{{"Content-Type", "application/json"}});
+
+      if (cpr::ErrorCode::OK == r.error.code && cpr::status::HTTP_OK == r.status_code)
+      {
+        return false;
+      }
+      else
+      {
+        if(retry == 0) {
+          spdlog::get("upload")->error("http_post_json failed with http status code {}, body: {}, endpoint: {}", r.status_code,json,endpoint.str());
+        }else{
+          std::this_thread::sleep_for(std::chrono::seconds(retry_wait));
+        }
+      }
+    }
+
+    return true;
+  }
+}
+
 namespace cads
 {
   moodycamel::BlockingConcurrentQueue<std::tuple<std::string,std::string>> nats_queue;
@@ -94,6 +126,19 @@ drop_msg:
     }
     return subject;
   }
+
+
+  bool remote_addconveyor(conveyor_parameters params) {
+    auto [url,enable] = global_webapi.add_conveyor;
+    
+    if(enable) {
+      auto err = http_post_json(url,params);
+      return err;
+    }else {
+      return false;
+    }
+  }
+
 
   std::string mk_post_profile_url(std::string ts)
   {
