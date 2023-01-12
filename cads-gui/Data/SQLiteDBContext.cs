@@ -8,15 +8,20 @@ namespace cads_gui.Data
         public SQLiteDBContext(DbContextOptions<SQLiteDBContext> options)
             : base(options)
         {
-          Database.EnsureCreated();
+          //Database.EnsureCreated();
+          //Database.Migrate();
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder) {
 
-					modelBuilder.Entity<Belt>().ToTable("BELTINFO").HasKey(e => e.rowid);
-          modelBuilder.Entity<Belt>().ToTable("BELTINFO").Property(e => e.chrono).HasConversion(e => e, e => DateTime.SpecifyKind(e,DateTimeKind.Utc));
-					modelBuilder.Entity<SavedZDepthParams>().ToTable("SAVEDZDEPTHPARAMS").HasKey(e => e.rowid);
-					modelBuilder.Entity<Conveyors>().ToTable("conveyors").HasKey(e => e.rowid);
+					modelBuilder.Entity<Belt>().HasKey(e => e.rowid);
+          modelBuilder.Entity<Belt>().Property(b => b.rowid).ValueGeneratedOnAdd();
+          modelBuilder.Entity<Belt>().Ignore(b => b.ConveyorID);
+          modelBuilder.Entity<Belt>().Ignore(b => b.name);
+          modelBuilder.Entity<Belt>().Property(e => e.chrono).HasConversion(e => e, e => DateTime.SpecifyKind(e,DateTimeKind.Utc));
+					modelBuilder.Entity<SavedZDepthParams>().HasNoKey();
+					modelBuilder.Entity<Conveyors>().HasKey(e => e.rowid);
+          modelBuilder.Entity<Conveyors>().Property(b => b.rowid).ValueGeneratedOnAdd();
         }
 
 

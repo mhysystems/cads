@@ -8,14 +8,15 @@ using cads_gui.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 var pathString = builder.Configuration.GetSection("webgui").GetValue<string>("DBPath") ?? String.Empty;
-var dbpath = Path.GetFullPath(Path.Combine(pathString,"conveyors.db"));
+var connectionString = builder.Configuration.GetSection("webgui").GetValue<string>("ConnectionString") ?? String.Empty;
 
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddSignalR();
+
 builder.Services.AddDbContextFactory<SQLiteDBContext>(options =>
-  options.UseSqlite($"Data Source={dbpath}; Mode=ReadWriteCreate")
+  options.UseSqlite(connectionString)
 );
 
 builder.Services.AddFluxor(o => o.ScanAssemblies(typeof(Program).Assembly));

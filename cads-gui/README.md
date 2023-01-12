@@ -29,6 +29,17 @@ Runtime Stack : .Net Core 3.1
 Operating System: Linux (Because development is in Linux and WServer is Linux)
 Use Free version
 
+Migrations(Linux)
+Install Tools
+dotnet tool install --global dotnet-ef
+dotnet add package Microsoft.EntityFrameworkCore.Tools 
+Insure sqlite packages in csproj are the version as Microsoft.EntityFrameworkCore.Tools 
+Needs connection string to determine the database name. Migrations cannot handle computing the connection string, so read directly from appsettings.json
+
+Initial Database
+dotnet ef migrations add InitialCreate
+dotnet ef database update
+
 Deploy
 
 (async () => {

@@ -6,13 +6,13 @@ using System;
 namespace cads_gui.Data
 {
 		public record P4(double x, double y, double z, double z_off);
+    public enum SurfaceOrientation {Top, Bottom};
+
 
     public record ZDepthQueryParameters(double Width, double Length, double Depth, double Percentage, double XMin, double XMax); 
 
 		public class SavedZDepthParams{
 
-    	[DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-      public long rowid {get; set;} = 0;
 			public string Name {get;set;} = String.Empty;
       public string Site {get; set;} = String.Empty;
       public string Conveyor {get;set;} = String.Empty;
@@ -46,13 +46,14 @@ namespace cads_gui.Data
     }
 
 		public class Belt {
-    	[DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+
 			public long rowid {get; set;} = 0;
 			public string site {get; set;} = String.Empty;
-      [NotMapped]
       public string name {get{return NoAsp.EndpointToSQliteDbName(this.site,this.conveyor,this.chrono);} private set{}}
-      [NotMapped]
       public string ConveyorID {get{return NoAsp.GetConveyorID(this.site,this.conveyor);} private set{}}
+      //public long Revision {get; set;} = 0;
+      //public SurfaceOrientation Orientation {get; set;} = SurfaceOrientation.Top;
+      //public string FilePath {get; set;} = String.Empty;
 
 			public string conveyor {get; set;} = String.Empty;
       public DateTime chrono {get; set;} = DateTime.Now;
@@ -127,8 +128,7 @@ namespace cads_gui.Data
 
 		public class Conveyors 
 		{
-			[DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-			public long rowid {get; set;}
+			public long rowid {get; set;} = 0;
 			public string Site { get; set; } = String.Empty;
 			public string Belt { get; set; } = String.Empty;
 			public string Category {get; set;} = String.Empty;
