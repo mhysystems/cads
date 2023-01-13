@@ -125,7 +125,7 @@ namespace cads
 
     vector<string> tables{
       R"(CREATE TABLE IF NOT EXISTS STATE (DAILYUPLOAD TEXT NOT NULL, ConveyorId INTEGER NOT NULL))",
-      fmt::format(R"(INSERT INTO STATE(DAILYUPLOAD,ConveyorId) SELECT '{},{}' WHERE NOT EXISTS (SELECT * FROM STATE))", ts,0)
+      fmt::format(R"(INSERT INTO STATE(DAILYUPLOAD,ConveyorId) SELECT '{}',{} WHERE NOT EXISTS (SELECT * FROM STATE))", ts,0)
     };
 
     int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);

@@ -38,6 +38,7 @@ namespace cads {
     double pulley_cover;
     double cord_diameter;
     double top_cover; 
+    std::string timezone;
 
     operator std::string() const;
   };

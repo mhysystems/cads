@@ -1,6 +1,8 @@
 #include <tuple>
 #include <algorithm> 
 
+#include <date/tz.h>
+
 #include <constants.h>
 #include <init.h>
 
@@ -41,8 +43,9 @@ namespace {
     auto pulley_cover = config["conveyor"]["pulley_cover"].get<double>();
     auto cord_diameter = config["conveyor"]["cord_diameter"].get<double>();
     auto top_cover = config["conveyor"]["top_cover"].get<double>();
+    auto timezone =  date::current_zone()->name();
 
-    return cads::conveyor_parameters{id,site,name,pulley_cover,cord_diameter,top_cover};
+    return cads::conveyor_parameters{id,site,name,pulley_cover,cord_diameter,top_cover,timezone};
 
   }
 
@@ -91,6 +94,7 @@ namespace cads {
     params_json["PulleyCover"] = pulley_cover;
     params_json["CordDiameter"] = cord_diameter;
     params_json["TopCover"] = top_cover;
+    params_json["Timezone"] = timezone;
 
     return params_json.dump();
   }
