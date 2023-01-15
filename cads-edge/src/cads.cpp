@@ -64,8 +64,9 @@ namespace
     auto db = global_config["program_state_db_name"].get<std::string>();
     auto [id,err] = fetch_conveyor_id(db);
     
-    if(!err && id != global_conveyor_parameters.id && remote_addconveyor(global_conveyor_parameters)){
-      store_conveyor_id(global_conveyor_parameters.id,db);
+    if(!err && id == 0){
+      auto [new_id,err] = remote_addconveyor(global_conveyor_parameters);
+      store_conveyor_id(new_id,db);
     }
   }
 

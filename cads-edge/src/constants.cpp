@@ -1,5 +1,6 @@
 #include <tuple>
 #include <algorithm> 
+#include <sstream>
 
 #include <date/tz.h>
 
@@ -37,15 +38,19 @@ namespace {
 
   auto mk_conveyor_parameters(nlohmann::json config) {
 
-    auto id = config["conveyor"]["id"].get<int>();
-    auto site = config["conveyor"]["site"].get<std::string>();
-    auto name = config["conveyor"]["name"].get<std::string>();
-    auto pulley_cover = config["conveyor"]["pulley_cover"].get<double>();
-    auto cord_diameter = config["conveyor"]["cord_diameter"].get<double>();
-    auto top_cover = config["conveyor"]["top_cover"].get<double>();
-    auto timezone =  date::current_zone()->name();
+    auto Id = 0;
+    auto Site = config["conveyor"]["Site"].get<std::string>();
+    auto Name = config["conveyor"]["Name"].get<std::string>();
+    cads::DateTime Installed;
+    std::istringstream in(config["conveyor"]["Installed"].get<std::string>());
+    in >> date::parse("%FT%TZ", Installed);
+    auto Timezone =  date::current_zone()->name();
+    auto PulleyCover = config["conveyor"]["PulleyCover"].get<double>();
+    auto CordDiameter = config["conveyor"]["CordDiameter"].get<double>();
+    auto TopCover = config["conveyor"]["TopCover"].get<double>();
+    
 
-    return cads::conveyor_parameters{id,site,name,pulley_cover,cord_diameter,top_cover,timezone};
+    return cads::Conveyor{Id,Site,Name,Installed,Timezone,PulleyCover,CordDiameter,TopCover};
 
   }
 
@@ -63,7 +68,7 @@ namespace cads {
 
   constraints global_constraints;
   profile_parameters global_profile_parameters;
-  conveyor_parameters global_conveyor_parameters;
+  Conveyor global_conveyor_parameters;
   webapi_urls global_webapi;
   
   void init_config(std::string f) {
@@ -84,17 +89,19 @@ namespace cads {
     return get<0>(range) <= value && value <= get<1>(range);  
   }
 
-  conveyor_parameters::operator std::string() const {
+  Conveyor::operator std::string() const {
     
     nlohmann::json params_json;
-    
-    params_json["Id"] = id;
-    params_json["Site"] = site;
-    params_json["Name"] = name;
-    params_json["PulleyCover"] = pulley_cover;
-    params_json["CordDiameter"] = cord_diameter;
-    params_json["TopCover"] = top_cover;
-    params_json["Timezone"] = timezone;
+  
+    params_json["Id"] = Id;
+    params_json["Site"] = Site;
+    params_json["Name"] = Name;
+    params_json["Installed"] =  date::format("%FT%TZ", Installed);
+    params_json["Timezone"] = Timezone;
+    params_json["PulleyCover"] = PulleyCover;
+    params_json["CordDiameter"] = CordDiameter;
+    params_json["TopCover"] = TopCover;
+ 
 
     return params_json.dump();
   }

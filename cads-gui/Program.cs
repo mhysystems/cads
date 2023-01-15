@@ -2,6 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
 using Fluxor;
 using System.Globalization;
+// Since using controllers must use Mvc instead of Microsoft.AspNetCore.Http.Json;
+// to change JsonOptions
+using Microsoft.AspNetCore.Mvc; 
 
 using cads_gui.Data;
 using cads_gui.Services;
@@ -27,6 +30,15 @@ builder.Services.AddOptions();
 
 builder.Services.Configure<AppSettings>(builder.Configuration.GetSection("webgui"));
 
+builder.Services.Configure<JsonOptions>(options => 
+{
+    var t = new TimeZoneInfoConverter();
+    options.JsonSerializerOptions.Converters.Add(t);
+});
+
+//builder.WebHost.UseWebRoot("wwwroot");
+builder.WebHost.UseStaticWebAssets();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -41,7 +53,7 @@ var cultureInfo = new CultureInfo("en-AU");
 CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
 CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
 app.UseStaticFiles();
 

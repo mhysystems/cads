@@ -49,15 +49,15 @@
   "use_encoder" : false,
   "belt_cross_correlation_threshold" : 0.4,
   "conveyor" : {
-    "id"   : 20220101,
-    "site" : "whaleback",
-    "name" : "cv405",
-    "pulley_cover" : 6.0,
-    "cord_diameter" : 4.3,
-    "top_cover" : 17.0     
+    "Site" : "whaleback",
+    "Name" : "cv405",
+    "Installed" : "2023-01-14T00:00:00Z",
+    "PulleyCover" : 6.0,
+    "CordDiameter" : 4.3,
+    "TopCover" : 17.0     
   },
   "webapi_urls" : {
-    "add_conveyor" : ["http://localhost:5000/api/addconveyor",false]
+    "add_conveyor" : ["http://localhost:5000/api/conveyors",true]
   },
   "nats_url" : "192.168.2.13",
   "upload_profile" : false, 

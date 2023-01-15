@@ -27,6 +27,7 @@
     <PackageReference Include="MudBlazor" Version="6.0.12" />
     <PackageReference Include="NATS.Client" Version="1.0.1" />
     <PackageReference Include="System.Reactive" Version="5.0.0" />
+    <PackageReference Include="TimeZoneConverter" Version="6.0.1" />
   </ItemGroup>
   <ItemGroup>
     <FlatbufferSchemasCsharp Include="$(MSBuildProjectDirectory)\..\flatbuffers-schema\z-data.fbs $(MSBuildProjectDirectory)\..\flatbuffers-schema\plot-data.fbs" />

@@ -33,7 +33,7 @@ using namespace std;
 
 namespace {
   
-  bool http_post_json(std::string endpoint_url, std::string json, int retry = 16, int retry_wait = 8)
+  std::tuple<std::string,bool> http_post_json(std::string endpoint_url, std::string json, int retry = 16, int retry_wait = 8)
   {
 
     cpr::Response r;
@@ -47,7 +47,7 @@ namespace {
 
       if (cpr::ErrorCode::OK == r.error.code && cpr::status::HTTP_OK == r.status_code)
       {
-        return false;
+        return {r.text,false};
       }
       else
       {
@@ -59,7 +59,7 @@ namespace {
       }
     }
 
-    return true;
+    return {"",true};
   }
 }
 
@@ -128,14 +128,21 @@ drop_msg:
   }
 
 
-  bool remote_addconveyor(conveyor_parameters params) {
+  std::tuple<int,bool> remote_addconveyor(Conveyor params) {
     auto [url,enable] = global_webapi.add_conveyor;
     
     if(enable) {
-      auto err = http_post_json(url,params);
-      return err;
-    }else {
-      return false;
+      auto [text,err] = http_post_json(url,params);
+      auto json = nlohmann::json::parse(text,nullptr,false);
+      
+      if(json.is_number_integer()){
+        auto conveyor_id = json.get<int>();
+        return {conveyor_id,err};
+      }else{
+        return {0,true};
+      }
+    }else{
+      return {0,true};
     }
   }
 
@@ -147,8 +154,8 @@ drop_msg:
     if (endpoint_url == "null")
       return endpoint_url;
 
-    auto site = global_conveyor_parameters.site;
-    auto conveyor = global_conveyor_parameters.name;
+    auto site = global_conveyor_parameters.Site;
+    auto conveyor = global_conveyor_parameters.Name;
 
     return endpoint_url + '/' + site + '/' + conveyor + '/' + ts;
   }
@@ -160,8 +167,8 @@ drop_msg:
     if (endpoint_url == "null")
       return endpoint_url;
 
-    auto site = global_conveyor_parameters.site;
-    auto conveyor = global_conveyor_parameters.name;
+    auto site = global_conveyor_parameters.Site;
+    auto conveyor = global_conveyor_parameters.Name;
 
     return fmt::format("{}/{}-{}-{}/{}/{}", endpoint_url, site, conveyor, ts, y, len);
   }
@@ -211,8 +218,8 @@ void http_post_realtime(double y_area, double value)
     auto ts = date::format("%FT%TZ", now);
     
     nlohmann::json params_json;
-    params_json["Site"] = global_conveyor_parameters.site;
-    params_json["Conveyor"] = global_conveyor_parameters.name;
+    params_json["Site"] = global_conveyor_parameters.Site;
+    params_json["Conveyor"] = global_conveyor_parameters.Name;
     params_json["Time"] = ts;
     params_json["YArea"] = y_area;
     params_json["Value"] = value;
@@ -227,8 +234,8 @@ void http_post_realtime(double y_area, double value)
     if(isnan(value) || isinf(value)) return;
 
     nlohmann::json params_json;
-    params_json["Site"] = global_conveyor_parameters.site;
-    params_json["Conveyor"] = global_conveyor_parameters.name;
+    params_json["Site"] = global_conveyor_parameters.Site;
+    params_json["Conveyor"] = global_conveyor_parameters.Name;
     params_json["Id"] = Id;
     params_json["Value"] = value;
     params_json["Valid"] = valid; 
@@ -276,8 +283,8 @@ void http_post_realtime(double y_area, double value)
     auto [params, err] = fetch_profile_parameters(db_name);
     auto [Ymin,Ymax,YmaxN,WidthN,err2] = fetch_belt_dimensions(revid,last_idx,db_name);
 
-    params_json["site"] = global_conveyor_parameters.site;
-    params_json["conveyor"] = global_conveyor_parameters.name;
+    params_json["site"] = global_conveyor_parameters.Site;
+    params_json["conveyor"] = global_conveyor_parameters.Name;
     params_json["chrono"] = chrono;
     params_json["y_res"] = y_step;
     params_json["x_res"] = params.x_res;

@@ -66,32 +66,37 @@ namespace cadsgui.Migrations
                     b.ToTable("belt");
                 });
 
-            modelBuilder.Entity("cads_gui.Data.Conveyors", b =>
+            modelBuilder.Entity("cads_gui.Data.Conveyor", b =>
                 {
-                    b.Property<long>("rowid")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("Belt")
+                    b.Property<double>("CordDiameter")
+                        .HasColumnType("REAL");
+
+                    b.Property<DateTime>("Installed")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Cads")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Flow")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                    b.Property<double>("PulleyCover")
+                        .HasColumnType("REAL");
 
                     b.Property<string>("Site")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.HasKey("rowid");
+                    b.Property<string>("Timezone")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("TopCover")
+                        .HasColumnType("REAL");
+
+                    b.HasKey("Id");
 
                     b.ToTable("Conveyors");
                 });
