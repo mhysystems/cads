@@ -21,7 +21,7 @@
 			{		
         <MudItem xs="@(config.Value.ShowInstructions ? 8 : 4)">
           <MudCard>
-            <MudNavLink Href=@(SiteHasData(site) ? "site/dashboard/"+ site.ToLower() +"/" + FirstBelt(site) : "/")>
+            <MudNavLink Href=@(SiteHasData(site) ? "site/dashboard/"+ site +"/" + FirstBelt(site) : "/")>
               <MudCardMedia Image=@(imageUrl) Style=@(SiteHasData(site) ? "" : "filter: grayscale(1);") />
             </MudNavLink>
             <MudCardContent>
