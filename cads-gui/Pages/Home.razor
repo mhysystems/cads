@@ -53,7 +53,7 @@
   {
     if (SitesWithCads is not null)
     {
-      return SitesWithCads.Any(e => e.Item1 == site.ToLower());
+      return SitesWithCads.Any(e => e.Item1.ToLower() == site.ToLower());
     }
     else
     {
@@ -62,7 +62,7 @@
   }
   public string FirstBelt(string site)
   {
-    var siteEdges = SitesWithCads.Where(e => e.Item1 == site.ToLower());
+    var siteEdges = SitesWithCads.Where(e => e.Item1.ToLower() == site.ToLower());
     if (siteEdges.Count() > 0)
     {
       return siteEdges.First().Item2;
