@@ -45,7 +45,7 @@
       <SurfacePlot @ref="surfacePlot" Belt="@belt" YIndex="@UpdateProfilePlotAsync"></SurfacePlot>
     </MudItem>
     <MudItem xs="12" Style="height:10%">
-      <ProfilePlot @ref="profilePlot" Belt="@belt"></ProfilePlot>
+      <ProfilePlot @ref="profilePlot" Belt="@belt" DoubleSided="@(Beltservice.IsDoubledSided())"></ProfilePlot>
     </MudItem>
   </MudGrid>
 </MudContainer>
@@ -112,8 +112,9 @@
   {
     var (yIndex, y) = args;
     Dispatcher.Dispatch(new YAction(y));
-    var plotDataPromise = await plotDataCache.InvokeAsync<IJSObjectReference>("getLastFetch");
-    await profilePlot.UpdatePlotAsync(plotDataPromise, yIndex);
+    //var plotDataPromise = await plotDataCache.InvokeAsync<IJSObjectReference>("getLastFetch");
+    //await profilePlot.UpdatePlotAsync(plotDataPromise, yIndex);
+    profilePlot.UpdateY(yIndex);
   }
 
   async Task StepForward()
@@ -169,10 +170,10 @@
         var plotDataPromiseTop = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData", belt.name, currentY, 512, 512);
 
         await surfacePlot.UpdatePlotDoubleSidedAsync(plotDataPromiseTop,plotDataPromiseBottom);
-        await profilePlot.UpdatePlotAsync(plotDataPromiseTop);
+        await profilePlot.UpdatePlotDoubleSidedAsync(plotDataPromiseTop,plotDataPromiseBottom);
       }
     }
-    catch (Exception)
+    catch (Exception e)
     {
       Snackbar.Add($"Problem retrieving data", Severity.Error);
     }

@@ -17,15 +17,15 @@
   <MudContainer Class="d-flex flex-grow-1">
     <MudGrid Spacing="2">
 
-			@foreach (var (displayName, site) in config.Value.Sites)
+			@foreach (var (site, imageUrl) in config.Value.Sites)
 			{		
         <MudItem xs="@(config.Value.ShowInstructions ? 8 : 4)">
           <MudCard>
-            <MudNavLink Href=@(SiteHasData(site) ? "site/dashboard/"+ site +"/" + FirstBelt(site) : "/")>
-              <MudCardMedia Image=@(site) Style=@(SiteHasData(site) ? "" : "filter: grayscale(1);") />
+            <MudNavLink Href=@(SiteHasData(site) ? "site/dashboard/"+ site.ToLower() +"/" + FirstBelt(site) : "/")>
+              <MudCardMedia Image=@(imageUrl) Style=@(SiteHasData(site) ? "" : "filter: grayscale(1);") />
             </MudNavLink>
             <MudCardContent>
-              <MudText Typo="Typo.h4" Align="Align.Center" GutterBottom="true">@displayName</MudText>
+              <MudText Typo="Typo.h4" Align="Align.Center" GutterBottom="true">@site</MudText>
             </MudCardContent>
           </MudCard>
         </MudItem>
@@ -45,6 +45,7 @@
   List<(string, string)> SitesWithCads = Array.Empty<(string, string)>().ToList();
   protected override async Task OnInitializedAsync()
   {
+
     SitesWithCads = await Task.Run(() => Beltservice.GetSitesWithCads().ToList());
   }
 
@@ -52,7 +53,7 @@
   {
     if (SitesWithCads is not null)
     {
-      return SitesWithCads.Any(e => e.Item1 == site);
+      return SitesWithCads.Any(e => e.Item1 == site.ToLower());
     }
     else
     {
@@ -61,7 +62,7 @@
   }
   public string FirstBelt(string site)
   {
-    var siteEdges = SitesWithCads.Where(e => e.Item1 == site);
+    var siteEdges = SitesWithCads.Where(e => e.Item1 == site.ToLower());
     if (siteEdges.Count() > 0)
     {
       return siteEdges.First().Item2;

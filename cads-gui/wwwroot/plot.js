@@ -25,9 +25,9 @@ function mk_2dArray(rows, columns) {
 function mk_BottomSurface(top, bottom) {
 
 
-  for (let j = 0; j < top.length; j++) {
-    for (let i = 0; i < top[j].length; i++) {
-      bottom[j][i] -= top[j][i] + 1.0;
+  for (let j = 1; j < top.length-1; j++) {
+    for (let i = 1; i < top[j].length-1; i++) {
+      bottom[j][i] = Math.abs(bottom[j][i] - top[j][i] + 1.0);
     
     }
   }
@@ -846,6 +846,48 @@ class ProfilePlot {
     await Plotly.react(this.plotElement, this.plotData, this.layout, this.config);
   }
 
+  async updateY(yIndex) {
+    if(this.plotDataPromiseTop && this.plotDataPromiseBottom) {
+      await this.updatePlotDoubleSided(this.plotDataPromiseTop, this.plotDataPromiseBottom, yIndex);
+    }
+  }
+  
+  async updatePlotDoubleSided(plotDataPromiseTop, plotDataPromiseBottom, yIndex) {
+
+    this.plotDataPromiseTop = plotDataPromiseTop;
+    this.plotDataPromiseBottom = plotDataPromiseBottom;
+
+    const plotDataTop = await plotDataPromiseTop;
+    const plotDataBottom = await plotDataPromiseBottom;
+
+    yIndex = (yIndex || 0);
+
+    const x_min = plotDataTop.xMin / 1000; //convert mm to m
+    const rows = plotDataTop.yAxis.length;
+    const columns = plotDataTop.zSurface.length / rows;
+    const x_resolution = this.xRes / 1000; // convert mm to m
+    const belt_width = columns * x_resolution;
+
+    const z_surfaceTop = generate_ploty_z_samples(plotDataTop.zSurface, columns);
+    const z_surfaceBottom = generate_ploty_z_samples(plotDataBottom.zSurface, columns);
+
+    const x_axis = [...Array(columns).keys()].map(x => x_min + x * x_resolution);
+
+    this.layout.xaxis = [x_axis[0], x_axis[x_axis.length - 1]];
+
+    this.layout.shapes[0].x0 = this.layout.xaxis[0];
+    this.layout.shapes[0].x1 = this.layout.xaxis[1];
+    this.layout.aspectratio.y = this.zMax / (belt_width * 1000);
+
+    this.plotData[0].y = z_surfaceTop[yIndex];
+    this.plotData[0].x = x_axis;
+    this.plotData[1].y = z_surfaceBottom[yIndex];
+    this.plotData[1].x = x_axis;
+    this.plotData[1].fillcolor = '#ffffff';
+    this.plotData[1].line.color = '#ffffff';
+    await Plotly.react(this.plotElement, this.plotData, this.layout, this.config);
+  }
+
 
 }
 
@@ -1025,19 +1067,21 @@ class SurfacePlot {
     this.layout.scene.camera.eye = { ...SurfacePlot.defaultEyePosition };
     this.layout.scene.camera.center = { x: 0, y: 0, z: 0 };
 
+    const bottom_plane = generate_ploty_z_samples(plotDataBottom.zSurface, columns);
+    mk_BottomSurface(z_surfaceTop,bottom_plane);
+
     // Pull edges to zero to mimic 3d belt
     for (let i = 0; i < rows; i++) {
-      z_surfaceTop[i][0] = 0.0;
-      z_surfaceTop[i][columns - 1] = 0.0;
+      z_surfaceTop[i][0] = bottom_plane[i][0];
+      z_surfaceTop[i][columns - 1] = bottom_plane[i][columns - 1];
     }
 
     for (let i = 0; i < columns; i++) {
-      z_surfaceTop[0][i] = 0.0;
-      z_surfaceTop[rows - 1][i] = 0.0;
+      z_surfaceTop[0][i] = bottom_plane[0][i];
+      z_surfaceTop[rows - 1][i] = bottom_plane[rows - 1][i];
     }
 
-    const bottom_plane = generate_ploty_z_samples(plotDataBottom.zSurface, columns);
-    mk_BottomSurface(z_surfaceTop,bottom_plane);
+
 
     this.plotData[SurfacePlot.floorPlotData].y = y_axis;
     this.plotData[SurfacePlot.floorPlotData].x = x_axis;

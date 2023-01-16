@@ -168,7 +168,8 @@ namespace cads_gui.Data
       using var context = dBContext.CreateDbContext();
       // EFcore returns IQueryable which doesn't handle selecting tuples or order by very well, so convert to Enumerable
       var rows = (from a in context.belt orderby a.chrono select a).ToList();
-      return from r in rows group r by r.site into site select (site.Key, site.First().conveyor);
+      var sites = from r in rows group r by r.site into site select (site.Key, site.First().conveyor);
+      return sites;
     }
 
 

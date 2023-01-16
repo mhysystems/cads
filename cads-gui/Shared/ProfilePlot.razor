@@ -33,6 +33,9 @@ plotly-container-two {
 
   [Parameter]
 	public Belt Belt {get; set;}
+  [Parameter]
+	public bool DoubleSided {get; set;}
+
   
   protected IJSObjectReference jsProfilePlot;
   protected ElementReference jsPlot;  
@@ -41,13 +44,22 @@ plotly-container-two {
     if (firstRender)
     {
       var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
-      jsProfilePlot = await module.InvokeAsync<IJSObjectReference>("mk_ProfilePlot",jsPlot,Belt.x_res,Belt.z_min + 12,Belt.z_max);
+      var offset = DoubleSided ? Belt.z_min : Belt.z_min + 12;
+      jsProfilePlot = await module.InvokeAsync<IJSObjectReference>("mk_ProfilePlot",jsPlot,Belt.x_res,Belt.z_min + offset,Belt.z_max);
     }
 
   }
 
-   public async Task UpdatePlotAsync(IJSObjectReference plotDataPromise, int y = 1) {
+  public async Task UpdatePlotAsync(IJSObjectReference plotDataPromise, int y = 1) {
     await jsProfilePlot.InvokeVoidAsync("updatePlot",plotDataPromise, y);
+  }
+
+  public async Task UpdateY(int y = 1) {
+    await jsProfilePlot.InvokeVoidAsync("updateY", y);
+  }
+
+  public async Task UpdatePlotDoubleSidedAsync(IJSObjectReference plotDataPromiseTop, IJSObjectReference plotDataPromiseBottom, int y = 1) {
+    await jsProfilePlot.InvokeVoidAsync("updatePlotDoubleSided",plotDataPromiseTop, plotDataPromiseBottom, y);
   }
 
 }
