@@ -361,8 +361,18 @@ namespace cads_gui.Data
 
     public static string EndpointToSQliteDbName(string site, string belt, DateTime chronos)
     {
-
       return site + '-' + belt + '-' + chronos.ToString("yyyy-MM-dd-HHmms");
+    }
+
+    public static (string site, string belt, DateTime chronos) DecontructSQliteDbName(string filename)
+    {
+      var p = filename.Split("-");
+      var site = p[0];
+      var belt = p[1];
+      var c = string.Join("-",p[2..^1]);
+      var chrono = DateTime.ParseExact(c,"yyyy-MM-dd-HHmms",System.Globalization.CultureInfo.InvariantCulture);
+      
+      return (site,belt,chrono);
     }
 
     public static string GetConveyorID(string site, string belt)

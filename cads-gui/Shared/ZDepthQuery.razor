@@ -16,12 +16,12 @@
   </MudItem>
   <MudItem xs="12" Class="d-flex gap-0 ">
     <MudTooltip Text="X Range Minimum">
-      <MudNumericField HideSpinButtons="true" Immediate="true" Class="XMin queryInput mt-0" T="double" @bind-Value="@XMin"
-        Min="-Belt.Xmax / 2" Max="0" Variant="Variant.Text">
+      <MudNumericField HideSpinButtons="true" Immediate="true" Class="XMin queryInput mt-0" T="int" @bind-Value="@XMin"
+        Min="(int)(-Belt.Xmax / 2)" Max="0" Variant="Variant.Text">
       </MudNumericField>
     </MudTooltip>
     <MudTooltip Text="X Range Maximum">
-      <MudNumericField HideSpinButtons="true" Immediate="true" Class="XMax queryInput mt-0" T="double" @bind-Value="@XMax"
+      <MudNumericField HideSpinButtons="true" Immediate="true" Class="XMax queryInput mt-0" T="int" @bind-Value="@XMax"
         Min="0" Max="(int)Belt.Xmax" Variant="Variant.Text">
       </MudNumericField>
     </MudTooltip>

@@ -819,6 +819,7 @@ class ProfilePlot {
 
   async updatePlot(plotDataPromise, yIndex) {
 
+    this.plotDataPromiseTop = plotDataPromise;
     const plotData = await plotDataPromise;
 
     yIndex = (yIndex || 0);
@@ -849,6 +850,8 @@ class ProfilePlot {
   async updateY(yIndex) {
     if(this.plotDataPromiseTop && this.plotDataPromiseBottom) {
       await this.updatePlotDoubleSided(this.plotDataPromiseTop, this.plotDataPromiseBottom, yIndex);
+    }else if(this.plotDataPromiseTop) {
+      await this.updatePlot(this.plotDataPromiseTop, yIndex);
     }
   }
   

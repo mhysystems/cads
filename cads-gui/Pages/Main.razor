@@ -112,8 +112,6 @@
   {
     var (yIndex, y) = args;
     Dispatcher.Dispatch(new YAction(y));
-    //var plotDataPromise = await plotDataCache.InvokeAsync<IJSObjectReference>("getLastFetch");
-    //await profilePlot.UpdatePlotAsync(plotDataPromise, yIndex);
     profilePlot.UpdateY(yIndex);
   }
 
