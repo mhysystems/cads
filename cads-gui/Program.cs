@@ -2,20 +2,24 @@ using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
 using Fluxor;
 using System.Globalization;
+// Since using controllers must use Mvc instead of Microsoft.AspNetCore.Http.Json;
+// to change JsonOptions
+using Microsoft.AspNetCore.Mvc; 
 
 using cads_gui.Data;
 using cads_gui.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 var pathString = builder.Configuration.GetSection("webgui").GetValue<string>("DBPath") ?? String.Empty;
-var dbpath = Path.GetFullPath(Path.Combine(pathString,"conveyors.db"));
+var connectionString = builder.Configuration.GetSection("webgui").GetValue<string>("ConnectionString") ?? String.Empty;
 
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddSignalR();
+
 builder.Services.AddDbContextFactory<SQLiteDBContext>(options =>
-  options.UseSqlite($"Data Source={dbpath}; Mode=ReadWriteCreate")
+  options.UseSqlite(connectionString)
 );
 
 builder.Services.AddFluxor(o => o.ScanAssemblies(typeof(Program).Assembly));
@@ -25,6 +29,15 @@ builder.Services.AddHostedService<NatsConsumerHostedService>();
 builder.Services.AddOptions();
 
 builder.Services.Configure<AppSettings>(builder.Configuration.GetSection("webgui"));
+
+builder.Services.Configure<JsonOptions>(options => 
+{
+    var t = new TimeZoneInfoConverter();
+    options.JsonSerializerOptions.Converters.Add(t);
+});
+
+//builder.WebHost.UseWebRoot("wwwroot");
+builder.WebHost.UseStaticWebAssets();
 
 var app = builder.Build();
 
@@ -40,7 +53,7 @@ var cultureInfo = new CultureInfo("en-AU");
 CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
 CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
 app.UseStaticFiles();
 

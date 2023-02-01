@@ -1,5 +1,5 @@
 {
-  "data_source" : "../../profiles/rawprofile_2023-01-06.db", 
+  "data_source" : "../../profiles/rawprofile_beltstopped20230105_074930.db", 
   "laser_fps" : 980,
   "forever" : false,
   "y_max_length" : 301000,
@@ -48,8 +48,17 @@
   "program_state_db_name" : "state.db",
   "use_encoder" : false,
   "belt_cross_correlation_threshold" : 0.4,
-  "site" : "whaleback",
-  "conveyor" : "cv405",
+  "conveyor" : {
+    "Site" : "whaleback",
+    "Name" : "cv405",
+    "Installed" : "2023-01-14T00:00:00Z",
+    "PulleyCover" : 6.0,
+    "CordDiameter" : 4.3,
+    "TopCover" : 17.0     
+  },
+  "webapi_urls" : {
+    "add_conveyor" : ["http://localhost:5000/api/conveyors",true]
+  },
   "nats_url" : "192.168.2.13",
   "upload_profile" : false, 
   "base_url" : "http://localhost:5000/api",

@@ -5,6 +5,9 @@
 #include <limits>
 #include <string>
 
+
+#include <date/date.h>
+
 #include <nlohmann/json.hpp>
 #include <GoSdk/GoSdkDef.h>
 
@@ -12,6 +15,8 @@ extern nlohmann::json global_config;
 constexpr size_t buffer_warning_increment = 4092;
 
 namespace cads {
+
+  using DateTime = std::chrono::time_point<date::local_t,std::chrono::seconds>;
 
   struct constraints {
     using value_type = std::tuple<double,double>;
@@ -31,27 +36,32 @@ namespace cads {
     int sobel_filter;
   };
 
+  struct Conveyor {
+    int Id;
+    std::string Site;
+    std::string Name;
+    DateTime Installed;
+    std::string Timezone;
+    double PulleyCover;
+    double CordDiameter;
+    double TopCover; 
+
+    operator std::string() const;
+  };
+
+  struct webapi_urls {
+    using value_type = std::tuple<std::string,bool>;
+    value_type add_conveyor;
+  };
+
   extern constraints global_constraints;
   extern profile_parameters global_profile_parameters;
+  extern Conveyor global_conveyor_parameters;
+  extern webapi_urls global_webapi;
   
-  template<typename T> struct NaN;
-
-  template<> struct NaN<int16_t> {
-    static constexpr k16s value = k16S_NULL;
-    static bool isnan(k16s a) {
-      return a == value;
-    }
-  };
-
-  template<> struct NaN<float> {
-    static constexpr float value = std::numeric_limits<float>::quiet_NaN();
-    static bool isnan(float a) {
-      return std::isnan(a);
-    }
-  };
-
   void init_config(std::string f);
   void drop_config();
   bool between(constraints::value_type range, double value);
+  
 }
 

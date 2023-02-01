@@ -45,13 +45,18 @@ namespace cads_gui.Data
       this._config = config.Value;
     }
 
-    public IEnumerable<Conveyors> GetConveyors()
+    public IEnumerable<Conveyor> GetConveyors()
     {
       using var context = dBContext.CreateDbContext();
       return context.Conveyors.AsEnumerable();
     }
 
-    public IEnumerable<Conveyors> GetConveyors(string site)
+    public bool IsDoubledSided()
+    {
+      return _config.DoubleSided;
+    }
+
+    public IEnumerable<Conveyor> GetConveyors(string site)
     {
       using var context = dBContext.CreateDbContext();
       return from row in context.Conveyors where row.Site == site select row;
@@ -158,12 +163,13 @@ namespace cads_gui.Data
       }
     }
 
-    public IEnumerable<(string, string)> GetSites()
+    public IEnumerable<(string, string)> GetSitesWithCads()
     {
       using var context = dBContext.CreateDbContext();
       // EFcore returns IQueryable which doesn't handle selecting tuples or order by very well, so convert to Enumerable
       var rows = (from a in context.belt orderby a.chrono select a).ToList();
-      return from r in rows group r by r.site into site select (site.Key, site.First().conveyor);
+      var sites = from r in rows group r by r.site into site select (site.Key, site.First().conveyor);
+      return sites;
     }
 
 
@@ -173,6 +179,21 @@ namespace cads_gui.Data
       DateTime.SpecifyKind(entry.chrono,DateTimeKind.Utc);
       context.belt.Add(entry);
       await context.SaveChangesAsync();
+    }
+
+    public async Task<int> AddConveyorAsync(Conveyor entry)
+    {
+      using var context = dBContext.CreateDbContext();
+      var q = context.Conveyors.Where(e => e.Name == entry.Name && e.Site == entry.Site && e.Installed == entry.Installed);
+      
+      if(q.Any()) {
+        return q.First().Id;
+      }else {
+        context.Conveyors.Add(entry);
+        await context.SaveChangesAsync(); 
+        return entry.Id;
+      }
+      
     }
 
     public async Task<(double, float[])> GetBeltProfileAsync(double y, long num_y_samples, Belt belt)

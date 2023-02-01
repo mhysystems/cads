@@ -27,6 +27,10 @@ namespace cads
 
   std::chrono::time_point<date::local_t, std::chrono::seconds> fetch_daily_upload(std::string name);
   int store_daily_upload(std::chrono::time_point<date::local_t, std::chrono::seconds> date, std::string name);
+  
+  std::tuple<int,bool> fetch_conveyor_id(std::string name);
+  void store_conveyor_id(int id, std::string name);
+  
   bool create_program_state_db(std::string name);
 
 }

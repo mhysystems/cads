@@ -5,45 +5,6 @@ using System.Linq;
 namespace cads_gui.Data
 {
 
-  public static class NoEFCore
-  {
-    public static IEnumerable<(DateTime,string)> RetrieveConveyorScanAsync(string site, string conveyor, string db = "conveyors.db")
-    {
-
-      using var connection = new SqliteConnection("" +
-        new SqliteConnectionStringBuilder
-        {
-          Mode = SqliteOpenMode.ReadOnly,
-          DataSource = db
-        });
-
-      connection.Open();
-      var query = $"select chrono from BELTINFO where site = @site and conveyor = @conveyor order by chrono";
-      var command = connection.CreateCommand();
-      command.CommandText = query;
-      command.Parameters.AddWithValue("@site", site);
-      command.Parameters.AddWithValue("@conveyor", conveyor);
-      command.Prepare();
-
-
-      using var reader = command.ExecuteReader();
-
-      List<(DateTime,string)> rtn = new();
-
-      while (reader.Read())
-      {
-        var chronos = reader.GetString(0);
-        var chrono = DateTime.Parse(chronos);
-
-        rtn.Add((chrono,NoAsp.EndpointToSQliteDbName(site, conveyor, chrono)));
-
-      }
-
-      return rtn.AsEnumerable();
-
-    }
-  }
-
   class ProfileData : IDisposable
   {
     protected bool disposed = false;

@@ -19,10 +19,15 @@
     <PackageReference Include="fluxor.Blazor.Web" Version="5.5.0" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="6.0.9" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="3.11.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.sqlite" Version="5.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.sqlite" Version="7.0.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="7.0.2">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="MudBlazor" Version="6.0.12" />
     <PackageReference Include="NATS.Client" Version="1.0.1" />
     <PackageReference Include="System.Reactive" Version="5.0.0" />
+    <PackageReference Include="TimeZoneConverter" Version="6.0.1" />
   </ItemGroup>
   <ItemGroup>
     <FlatbufferSchemasCsharp Include="$(MSBuildProjectDirectory)\..\flatbuffers-schema\z-data.fbs $(MSBuildProjectDirectory)\..\flatbuffers-schema\plot-data.fbs" />

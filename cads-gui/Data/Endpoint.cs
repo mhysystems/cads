@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Linq;
 using Microsoft.AspNetCore.SignalR;
@@ -63,6 +64,14 @@ namespace cads_gui.Data
     {
       await beltservice.StoreBeltConstantsAsync(json);
       return Ok();
+    }
+
+    [Route("/api/conveyors")]
+    [HttpPost]
+    public async Task<IActionResult> Post_ConveyorsAsync([FromBody] Conveyor json)
+    {
+      var Id = await beltservice.AddConveyorAsync(json);
+      return new JsonResult(Id);
     }
 
 

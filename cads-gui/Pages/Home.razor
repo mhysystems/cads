@@ -3,49 +3,57 @@
 @using System
 @using cads_gui.Data;
 @using System.Linq;
+@using Microsoft.Extensions.Options;
 
 @inject BeltService Beltservice
+@inject IOptions<AppSettings> config
 
 <SiteHeader>
   <MudSpacer/>
 </SiteHeader>
-<MudContainer>
+<MudContainer  MaxWidth="MaxWidth.False" Class="d-flex flex-column ma-0 pa-0"
+  Style="height:calc(100vh - var(--mud-appbar-height)">
 		<MudText Typo="Typo.h3" Align="Align.Center" GutterBottom="true">Conveyor Anomaly Detection System</MudText>
+  <MudContainer Class="d-flex flex-grow-1">
     <MudGrid Spacing="2">
 
-			@foreach (var (displayName, site) in sites)
+			@foreach (var (site, imageUrl) in config.Value.Sites)
 			{		
-        <MudItem xs="4">
+        <MudItem xs="@(config.Value.ShowInstructions ? 8 : 4)">
           <MudCard>
             <MudNavLink Href=@(SiteHasData(site) ? "site/dashboard/"+ site +"/" + FirstBelt(site) : "/")>
-              <MudCardMedia Image=@("https://cadswebsite.blob.core.windows.net/wwwroot/" + site + ".png") Style=@(SiteHasData(site) ? "" : "filter: grayscale(1);") />
+              <MudCardMedia Image=@(imageUrl) Style=@(SiteHasData(site) ? "" : "filter: grayscale(1);") />
             </MudNavLink>
             <MudCardContent>
-              <MudText Typo="Typo.h4" Align="Align.Center" GutterBottom="true">@displayName</MudText>
+              <MudText Typo="Typo.h4" Align="Align.Center" GutterBottom="true">@site</MudText>
             </MudCardContent>
           </MudCard>
         </MudItem>
 			}
 		
     </MudGrid>
-
+    @if(config.Value.ShowInstructions) {
+<object data="https://cadswebsite.blob.core.windows.net/wwwroot/demo-instructions.pdf" type="application/pdf" style="width:50vw;height:100%" />
+    }
+</MudContainer>
 </MudContainer>
 
 
 
 @code {
 
-  List<(string, string)> SitesWithCads;
+  List<(string, string)> SitesWithCads = Array.Empty<(string, string)>().ToList();
   protected override async Task OnInitializedAsync()
   {
-    SitesWithCads = await Task.Run(() => Beltservice.GetSites().ToList());
+
+    SitesWithCads = await Task.Run(() => Beltservice.GetSitesWithCads().ToList());
   }
 
   public bool SiteHasData(string site)
   {
     if (SitesWithCads is not null)
     {
-      return SitesWithCads.Any(e => e.Item1 == site);
+      return SitesWithCads.Any(e => e.Item1.ToLower() == site.ToLower());
     }
     else
     {
@@ -54,7 +62,7 @@
   }
   public string FirstBelt(string site)
   {
-    var siteEdges = SitesWithCads.Where(e => e.Item1 == site);
+    var siteEdges = SitesWithCads.Where(e => e.Item1.ToLower() == site.ToLower());
     if (siteEdges.Count() > 0)
     {
       return siteEdges.First().Item2;
@@ -64,14 +72,5 @@
       return "";
     }
   }
-
-  (string, string)[] sites = {
-("Eastern Ridge","easternridge"),
-("Whaleback","whaleback"),
-("Mining Area C","miningareac"),
-("Jimblebar","jimblebar"),
-("Yandi","yandi"),
-("Port Hedland","porthedland")
-};
 
 }

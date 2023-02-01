@@ -22,16 +22,16 @@ namespace cads
     for (auto i = 0; i < z_size - 3; i++)
     {
 
-      if (!NaN<z_element>::isnan(z[i]))
+      if (!std::isnan(z[i]))
         continue;
 
       for (auto j = 3; j <= std::min(z_size - i, max_window_size); j++)
       {
-        if (NaN<z_element>::isnan(z[i + j - 1]))
+        if (std::isnan(z[i + j - 1]))
         {
           for (auto k = i + 1; k < i + j; ++k)
           {
-            z[k] = NaN<z_element>::value;
+            z[k] = std::numeric_limits<z_element>::quiet_NaN();
           }
           i += j - 1 - 1; // Extra -1 is due to for(...,i++)
           break;
@@ -51,14 +51,14 @@ namespace cads
     namespace sr = std::ranges;
 
     auto prev_value_it = sr::find_if(z, [](z_element a)
-                                     { return !NaN<z_element>::isnan(a); });
-    z_element prev_value = prev_value_it != z.end() ? *prev_value_it : NaN<z_element>::value;
+                                     { return !std::isnan(a); });
+    z_element prev_value = prev_value_it != z.end() ? *prev_value_it : std::numeric_limits<z_element>::quiet_NaN();
 
     int mid = (int)(z.size() / 2);
 
     for (auto &&e : z | sr::views::take(mid))
     {
-      if (!NaN<z_element>::isnan(e))
+      if (!std::isnan(e))
       {
         prev_value = e;
       }
@@ -69,12 +69,12 @@ namespace cads
     }
 
     auto prev_value_it2 = sr::find_if(z | sr::views::reverse, [](z_element a)
-                                      { return !NaN<z_element>::isnan(a); });
-    prev_value = prev_value_it2 != z.rend() ? *prev_value_it2 : NaN<z_element>::value;
+                                      { return !std::isnan(a); });
+    prev_value = prev_value_it2 != z.rend() ? *prev_value_it2 : std::numeric_limits<z_element>::quiet_NaN();
 
     for (auto &&e : z | sr::views::reverse | sr::views::take(mid + 1))
     {
-      if (!NaN<z_element>::isnan(e))
+      if (!std::isnan(e))
       {
         prev_value = e;
       }

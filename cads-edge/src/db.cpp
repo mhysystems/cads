@@ -18,6 +18,7 @@
 
 using namespace moodycamel;
 
+
 namespace cads
 {
 
@@ -123,8 +124,8 @@ namespace cads
     }
 
     vector<string> tables{
-      R"(CREATE TABLE IF NOT EXISTS STATE (DAILYUPLOAD TEXT NOT NULL))",
-      fmt::format(R"(INSERT INTO STATE(DAILYUPLOAD) SELECT '{}' WHERE NOT EXISTS (SELECT * FROM STATE))", ts)
+      R"(CREATE TABLE IF NOT EXISTS STATE (DAILYUPLOAD TEXT NOT NULL, ConveyorId INTEGER NOT NULL))",
+      fmt::format(R"(INSERT INTO STATE(DAILYUPLOAD,ConveyorId) SELECT '{}',{} WHERE NOT EXISTS (SELECT * FROM STATE))", ts,0)
     };
 
     int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);
@@ -190,6 +191,46 @@ namespace cads
     in >> date::parse("%FT%T", date);
 
     return date; 
+  }
+
+  
+  void store_conveyor_id(int id, std::string name)
+  {
+    auto query = R"(UPDATE STATE SET ConveyorId = ? WHERE ROWID = 1)"s;
+    auto [stmt,db] = prepare_query(name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
+    
+    auto err = sqlite3_bind_int(stmt.get(), 1, id);
+
+    if (err != SQLITE_OK)
+    {
+      spdlog::get("db")->error("store_conveyor_id: SQLite Error Code:{}", err);
+    }
+
+    tie(err, stmt) = db_step(move(stmt));
+
+    if (err != SQLITE_DONE)
+    {
+      spdlog::get("db")->error("db_step: SQLite Error Code:{}", err);
+    }
+  }
+
+  std::tuple<int,bool> fetch_conveyor_id(std::string name)
+  {
+    auto query = R"(SELECT ConveyorId FROM STATE WHERE ROWID = 1)"s;
+    auto [stmt,db] = prepare_query(name, query);
+    auto err = SQLITE_OK;
+
+    tie(err, stmt) = db_step(move(stmt));
+    
+    if (err != SQLITE_ROW)
+    {
+      spdlog::get("db")->error("db_step: SQLite Error Code:{}", err);
+      return {0,true};
+    }
+    
+    int r = sqlite3_column_int(stmt.get(), 0);
+
+    return {r,false}; 
   }
 
   
@@ -302,6 +343,7 @@ namespace cads
 
     return rtn;
   }
+
 
   std::tuple<double, double, double, double, int> fetch_belt_dimensions(int revid, int idx, std::string name)
   {
