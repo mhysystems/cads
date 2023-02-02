@@ -17,11 +17,11 @@
   <MudContainer Class="d-flex flex-grow-1">
     <MudGrid Spacing="2">
 
-			@foreach (var (site, imageUrl) in config.Value.Sites)
+			@foreach (var (site, url, imageUrl) in config.Value.Sites)
 			{		
         <MudItem xs="@(config.Value.ShowInstructions ? 8 : 4)">
           <MudCard>
-            <MudNavLink Href=@(SiteHasData(site) ? "site/dashboard/"+ site +"/" + FirstBelt(site) : "/")>
+            <MudNavLink Href=@(SiteHasData(site) ? "site/dashboard/"+ url +"/" + FirstBelt(site) : "/")>
               <MudCardMedia Image=@(imageUrl) Style=@(SiteHasData(site) ? "" : "filter: grayscale(1);") />
             </MudNavLink>
             <MudCardContent>

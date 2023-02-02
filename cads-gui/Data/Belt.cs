@@ -43,15 +43,18 @@ namespace cads_gui.Data
 
   public class SiteName
   {
+    public string DisplayName { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string Url { get; set; } = string.Empty;
     public SiteName() { }
-    public SiteName(string Name, string Url) { 
+    public SiteName(string DisplayName, string Name, string Url) { 
+      this.DisplayName = DisplayName;
       this.Name = Name;
       this.Url = Url;
     }
-    public void Deconstruct(out string Name, out string Url)
+    public void Deconstruct(out string DisplayName, out string Name, out string Url)
     {
+      DisplayName = this.DisplayName;
       Name = this.Name;
       Url = this.Url;
     }
