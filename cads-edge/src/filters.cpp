@@ -182,4 +182,16 @@ namespace cads
     };
   }
 
+  std::function<cads::z_element(cads::z_element)> dcfilter(){
+    cads::z_element yn = 0, xn = 0;
+    // https://www.embedded.com/dsp-tricks-dc-removal/
+    return [=](cads::z_element x) mutable
+    {
+        auto y = x - xn + 0.95f * yn;
+        xn = x;
+        yn = y;
+        return y;
+    };
+  }
+
 } // namespace cads
