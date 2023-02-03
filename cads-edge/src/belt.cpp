@@ -45,7 +45,7 @@ namespace cads
     auto pully_circumfrence = global_conveyor_parameters.PulleyCircumference; // In mm
     auto trigger_distance = pully_circumfrence / 2;
     double schmitt1 = 1.0, schmitt0 = -1.0;
-    auto schmitt_trigger = mk_schmitt_trigger(0.001f);
+    auto schmitt_trigger = mk_schmitt_trigger();
 
     return [=](double pulley_height) mutable -> std::tuple<bool, double>
     {
@@ -151,7 +151,7 @@ namespace cads
     auto pully_circumfrence = global_conveyor_parameters.PulleyCircumference; // In mm
     double schmitt1 = 1.0, schmitt0 = -1.0;
     auto amplitude_extraction = mk_amplitude_extraction();
-    auto schmitt_trigger = mk_schmitt_trigger(0.001f);
+    auto schmitt_trigger = mk_schmitt_trigger();
     long barrel_cnt = 0;
 
     return [=](double bottom) mutable -> long
@@ -184,9 +184,10 @@ namespace cads
   std::function<double(double)> mk_pulley_speed(double init)
   {
     using namespace std::placeholders; 
-
-    auto T0 = global_conveyor_parameters.PulleyCircumference / std::get<0>(global_constraints.SurfaceSpeed);
-    auto T1 = 3 * T0;
+    
+    auto avg_speed = (std::get<0>(global_constraints.SurfaceSpeed) + std::get<0>(global_constraints.SurfaceSpeed)) / 2;
+    auto T0 = global_conveyor_parameters.PulleyCircumference / avg_speed; // in ms
+    auto T1 = 3 * T0; // in ms
     auto barrel_origin_time = std::chrono::high_resolution_clock::now();
     double speed = init;
     double period = 1.0;

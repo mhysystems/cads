@@ -136,8 +136,8 @@ namespace
 
     auto start = std::chrono::high_resolution_clock::now();
 
-    auto schmitt_trigger = mk_schmitt_trigger(0.1f);
-    auto differentiation = mk_differentiation(-32.5);
+    auto schmitt_trigger = mk_schmitt_trigger();
+    auto differentiation = mk_dc_filter(); //mk_differentiation(-32.5);
     auto pulley_frequency = mk_pulley_frequency();
     auto profiles_align = mk_profiles_align(width_n);
     auto pulley_speed = mk_pulley_speed();
@@ -228,9 +228,9 @@ namespace
 
       if (!between(global_constraints.SurfaceSpeed,speed))
       {
-        spdlog::get("cads")->error("Speed outside range");
-        error = true;
-        break;
+      //  spdlog::get("cads")->error("Speed outside range");
+      //  error = true;
+      //  break;
       }
 
       auto [delayed, dd] = delay({iy, ix, iz, ileft_edge_index, iright_edge_index});
@@ -421,7 +421,7 @@ namespace cads
 
     cads::msg m;
 
-    auto differentiation = mk_differentiation(0);
+    auto differentiation = mk_dc_filter(); //mk_differentiation(0);
 
     std::ofstream filt("filt.txt");
 
@@ -448,7 +448,7 @@ namespace cads
 
         auto bottom_filtered = iirfilter(bottom_avg);
 
-        filt << bottom_avg << "," << bottom_filtered << '\n';
+        filt << bottom_avg << "," << differentiation(bottom_filtered) << '\n';
         filt.flush();
 
         auto [delayed, dd] = delay({iy, ix, iz, 0, 0});
@@ -565,8 +565,8 @@ namespace cads
 
     auto start = std::chrono::high_resolution_clock::now();
 
-    auto schmitt_trigger = mk_schmitt_trigger(0.1f);
-    auto differentiation = mk_differentiation(-32.5);
+    auto schmitt_trigger = mk_schmitt_trigger();
+    auto differentiation = mk_dc_filter(); //mk_differentiation(-32.5);
     auto profiles_align = mk_profiles_align(width_n);
 
     long drop_profiles = global_config["iirfilter"]["skip"]; // Allow for iir fillter too stablize

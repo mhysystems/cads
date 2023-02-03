@@ -18,6 +18,11 @@
 
 using namespace moodycamel;
 
+namespace
+{
+
+
+}
 
 namespace cads
 {
@@ -25,6 +30,20 @@ namespace cads
   using namespace std;
   using sqlite3_t = std::unique_ptr<sqlite3, decltype(&sqlite3_close)>;
   using sqlite3_stmt_t = std::unique_ptr<sqlite3_stmt, decltype(&sqlite3_finalize)>;
+  
+  cads::sqlite3_stmt_t prepare_query(sqlite3 *db, std::string query)
+  {
+
+    sqlite3_stmt *stmt_raw = nullptr;
+    auto err = sqlite3_prepare_v2(db, query.c_str(), (int)query.size(), &stmt_raw, NULL);
+
+    if (err != SQLITE_OK)
+    {
+      std::throw_with_nested(std::runtime_error("prepare_query:sqlite3_prepare_v2"));
+    }
+
+    return cads::sqlite3_stmt_t(stmt_raw, &sqlite3_finalize);
+  }
 
   tuple<sqlite3_stmt_t,sqlite3_t> prepare_query(string name, string query, int flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX)
   {
@@ -258,7 +277,8 @@ namespace cads
         R"(DROP TABLE IF EXISTS PARAMETERS;)"s,
         R"(VACUUM;)"s,
         fmt::format(R"(CREATE TABLE IF NOT EXISTS PROFILE (revid INTEGER NOT NULL, idx INTEGER NOT NULL,y {} NOT NULL, x_off REAL NOT NULL, z BLOB NOT NULL, PRIMARY KEY (revid,idx));)", ytype),
-        R"(CREATE TABLE IF NOT EXISTS PARAMETERS (y_res REAL NOT NULL, x_res REAL NOT NULL, z_res REAL NOT NULL, z_off REAL NOT NULL, encoder_res REAL NOT NULL, z_max REAL NOT NULL))"s};
+        R"(CREATE TABLE IF NOT EXISTS PARAMETERS (y_res REAL NOT NULL, x_res REAL NOT NULL, z_res REAL NOT NULL, z_off REAL NOT NULL, encoder_res REAL NOT NULL, z_max REAL NOT NULL))"s,
+        R"(CREATE TABLE IF NOT EXISTS  transients (y REAL NOT NULL))"s};
 
     std::filesystem::remove(name);
     std::filesystem::remove(name + "-shm");
@@ -313,6 +333,24 @@ namespace cads
 
     return err;
   }
+
+  int store_transients_parameters(transient params, std::string name)
+  {
+    auto query = R"(INSERT OR REPLACE INTO transients (y) VALUES (?) where rowid = 1)"s;
+    auto [stmt,db] = prepare_query(name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
+
+    auto err = sqlite3_bind_double(stmt.get(), 1, params.y);
+
+    tie(err, stmt) = db_step(move(stmt));
+
+    if (err != SQLITE_DONE)
+    {
+      spdlog::get("db")->error("store_transients_parameters: SQLite Error Code:{}", err);
+    }
+
+    return err;
+  }
+
 
   std::tuple<profile_params, int> fetch_profile_parameters(std::string name)
   {
@@ -400,7 +438,9 @@ namespace cads
   {
 
     auto query = R"(INSERT OR REPLACE INTO PROFILE (revid,idx,y,x_off,z) VALUES (?,?,?,?,?))"s;
+    auto q =  R"(INSERT OR REPLACE INTO transients (rowid,y) VALUES (1,?))"s;
     auto [stmt,db] = prepare_query(name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
+    auto stmt2 = prepare_query(db.get(), q);
 
     auto query2 = R"(PRAGMA synchronous=OFF)"s;
     char *errmsg;
@@ -443,11 +483,23 @@ namespace cads
         std::throw_with_nested(std::runtime_error("z data size greater than sqlite limits"));
       }
       err = sqlite3_bind_blob(stmt.get(), 5, p.z.data(), (int)n, SQLITE_STATIC);
-
+     
       // Run once, retrying not effective, too slow and causes buffers to fill
       err = sqlite3_step(stmt.get());
 
       sqlite3_reset(stmt.get());
+
+      if (err != SQLITE_DONE)
+      {
+        spdlog::get("db")->error("SQLite Error Code:{}, revid:{}, idx:{}", err, rev, idx);
+      }
+
+      err = sqlite3_bind_double(stmt2.get(), 1, p.y);
+      
+      // Run once, retrying not effective, too slow and causes buffers to fill
+      err = sqlite3_step(stmt2.get());
+
+      sqlite3_reset(stmt2.get());
 
       if (err != SQLITE_DONE)
       {

@@ -9,7 +9,7 @@ namespace cads
 {
   std::atomic<bool> GocatorReaderBase::terminate = false;
 
-  void GocatorReaderBase::sigint_handler(int s) {
+  void GocatorReaderBase::sigint_handler([[maybe_unused]]int s) {
     terminate = true;
   }
 

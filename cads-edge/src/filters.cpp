@@ -158,6 +158,11 @@ namespace cads
     };
   }
 
+  std::function<cads::z_element(cads::z_element)> mk_schmitt_trigger()
+  {
+    return mk_schmitt_trigger(global_filters.SchmittThreshold);
+  }
+
   std::function<cads::z_element(cads::z_element,bool)> mk_amplitude_extraction()
   {
     cads::z_element min = std::numeric_limits<cads::z_element>::max();
@@ -182,12 +187,12 @@ namespace cads
     };
   }
 
-  std::function<cads::z_element(cads::z_element)> dcfilter(){
+  std::function<double(double)> mk_dc_filter(){
     cads::z_element yn = 0, xn = 0;
     // https://www.embedded.com/dsp-tricks-dc-removal/
-    return [=](cads::z_element x) mutable
+    return [=](double x) mutable
     {
-        auto y = x - xn + 0.95f * yn;
+        auto y = x - xn + 0.995f * yn;
         xn = x;
         yn = y;
         return y;

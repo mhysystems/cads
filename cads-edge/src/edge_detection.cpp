@@ -59,7 +59,7 @@ std::tuple<int,int> find_profile_edges_nans_outer(const z_type& z, int len) {
   auto cl = std::find_if(z.begin()+l,z.end(),[](z_element z) {return !std::isnan(z);});
   l = std::distance(z.begin(),cl);
 
-  if(l >= z.size() / 2) {
+  if(l >= (int)z.size() / 2) {
     l = 0;
   }
 
@@ -67,7 +67,7 @@ std::tuple<int,int> find_profile_edges_nans_outer(const z_type& z, int len) {
   auto rl = std::find_if(z.rbegin()+r,z.rend(),[](z_element z) {return !std::isnan(z);});
   r = z.size() - std::distance(z.rbegin(),rl);
   
-  if(r >= z.size()) {
+  if(r >= (int)z.size()) {
     r = z.size();
   }
 
@@ -86,10 +86,10 @@ std::tuple<int,int> find_profile_edges_sobel(const z_type& z, int len) {
   int left = 0; // Left edge of belt
   int right = 0; // Right edge of belt
 
-  for(int i = 0; i < z.size() - win.size(); i++) {
+  for(int i = 0; i < (int)(z.size() - win.size()); i++) {
 
     double sum = 0.0;
-    for(int j = 0; j < win.size(); j++) {
+    for(int j = 0; j < (int)win.size(); j++) {
       sum += win[j] * z[i+j];
     }
 

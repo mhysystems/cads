@@ -48,9 +48,9 @@ namespace {
     auto PulleyCover = config["conveyor"]["PulleyCover"].get<double>();
     auto CordDiameter = config["conveyor"]["CordDiameter"].get<double>();
     auto TopCover = config["conveyor"]["TopCover"].get<double>();
-    auto PulleyCircumfrence = config["conveyor"]["PulleyCircumfrence"].get<double>();
+    auto PulleyCircumference = config["conveyor"]["PulleyCircumference"].get<double>();
 
-    return cads::Conveyor{Id,Site,Name,Installed,Timezone,PulleyCover,CordDiameter,TopCover,PulleyCircumfrence};
+    return cads::Conveyor{Id,Site,Name,Installed,Timezone,PulleyCover,CordDiameter,TopCover,PulleyCircumference};
 
   }
 
@@ -62,6 +62,15 @@ namespace {
     return cads::webapi_urls{add_conveyor};
 
   }
+
+  auto mk_filters(nlohmann::json config) {
+    
+    auto SchmittThreshold = config["filters"]["SchmittThreshold"].get<double>();
+
+    return cads::Filters{SchmittThreshold};
+
+  }
+
 }
 
 namespace cads {  
@@ -70,6 +79,8 @@ namespace cads {
   profile_parameters global_profile_parameters;
   Conveyor global_conveyor_parameters;
   webapi_urls global_webapi;
+  Filters global_filters;
+
   
   void init_config(std::string f) {
     auto json = slurpfile(f);
@@ -78,6 +89,7 @@ namespace cads {
     global_profile_parameters = mk_profile_parameters(config);
     global_conveyor_parameters = mk_conveyor_parameters(config);
     global_webapi = mk_webapi_urls(config);
+    global_filters = mk_filters(config);
     global_config = config;
   }
 
@@ -101,6 +113,7 @@ namespace cads {
     params_json["PulleyCover"] = PulleyCover;
     params_json["CordDiameter"] = CordDiameter;
     params_json["TopCover"] = TopCover;
+    params_json["PulleyCircumference"] = PulleyCircumference;
  
 
     return params_json.dump();

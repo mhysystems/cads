@@ -56,7 +56,7 @@ namespace cads
     auto c = 0;
     auto r = std::numeric_limits<float>::max();
 
-    for (int i = 0; i <= ds; ++i)
+    for (size_t i = 0; i <= ds; ++i)
     {
       auto cr = std::abs((va(seq(i, i + bs)) - vb).sum());
       if (cr < r)
@@ -163,7 +163,7 @@ void belt_model(Eigen::VectorXf &z, float height, float x_offset, float z_offset
     functor.belt_z = Eigen::Map<Eigen::VectorXf>(z.data(), z.size());
 
     Eigen::LevenbergMarquardt<LMFunctor, float> lm(functor);
-    int status = lm.minimize(parameters);
+    lm.minimize(parameters);
     return {(double)parameters(belt_height),(double)parameters(x_offset),(double)parameters(z_offset)};
   };
 
