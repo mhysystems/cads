@@ -1,5 +1,5 @@
 {
-  "data_source" : "../../profiles/rawprofile_beltstopped20230105_074930.db", 
+  "data_source" : "../../profiles/rawprofile-2022-18-23.db", 
   "laser_fps" : 980,
   "forever" : false,
   "y_max_length" : 301000,
@@ -14,7 +14,6 @@
   "fiducial_x" : 50,
   "fiducial_y" : 67,
   "fiducial_gap" : 78,
-  "pulley_circumfrence" : 2613.8,
   "daily_upload" : false,
   "daily_start_time" : "12:45",
   "log_lengthMiB" : 128, 
@@ -37,7 +36,7 @@
   },
   "constraints" : {
     "current_length" : [895000,910000],
-    "surface_speed" : [4.5,5.9],
+    "surface_speed" : [4.5,18885.9],
     "pulley_oscillation" : [0,5],
     "cads_to_origin" : [0,307000],
     "rotation_period" : [46666,70000],
@@ -48,13 +47,19 @@
   "program_state_db_name" : "state.db",
   "use_encoder" : false,
   "belt_cross_correlation_threshold" : 0.4,
+
+  "filters" : {
+    "SchmittThreshold" : 0.05
+  },
+
   "conveyor" : {
     "Site" : "whaleback",
     "Name" : "cv405",
     "Installed" : "2023-01-14T00:00:00Z",
     "PulleyCover" : 6.0,
     "CordDiameter" : 4.3,
-    "TopCover" : 17.0     
+    "TopCover" : 17.0,
+    "PulleyCircumference" : 2613.8     
   },
   "webapi_urls" : {
     "add_conveyor" : ["http://localhost:5000/api/conveyors",true]

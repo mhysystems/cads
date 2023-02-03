@@ -163,6 +163,8 @@ namespace cads
         break;
         case msgid::finished:
           loop = false;
+          next_fifo.enqueue(m);
+          continue;
         default: // Passthrough
           next_fifo.enqueue(m);
           continue;

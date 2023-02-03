@@ -45,6 +45,7 @@ namespace cads {
     double PulleyCover;
     double CordDiameter;
     double TopCover; 
+    double PulleyCircumference;
 
     operator std::string() const;
   };
@@ -54,10 +55,16 @@ namespace cads {
     value_type add_conveyor;
   };
 
+  struct Filters {
+    double SchmittThreshold;
+  };
+
+
   extern constraints global_constraints;
   extern profile_parameters global_profile_parameters;
   extern Conveyor global_conveyor_parameters;
   extern webapi_urls global_webapi;
+  extern Filters global_filters;
   
   void init_config(std::string f);
   void drop_config();

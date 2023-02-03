@@ -35,8 +35,6 @@ namespace cads
       return in / 1e3;
     }
 
-    const k16s InvalidRange16Bit = 0x8000;
-
     auto CreateGoSdk()
     {
       kAssembly assembly = kNULL;
@@ -229,12 +227,12 @@ namespace cads
     spdlog::get("gocator")->info("Stopped Gocator");
   }
 
-  kStatus GocatorReader::OnSystem(GoSystem system, GoDataSet dataset)
+  kStatus GocatorReader::OnSystem([[maybe_unused]] GoSystem system, GoDataSet dataset)
   {
-    for (auto i = 0; i < GoDataSet_Count(dataset); ++i)
+    for (kSize i = 0; i < GoDataSet_Count(dataset); ++i)
     {
       GoHealthMsg message = GoDataSet_At(dataset, i);
-      for (auto k = 0; k < GoHealthMsg_Count(message); k++)
+      for (kSize k = 0; k < GoHealthMsg_Count(message); k++)
       {
         auto healthIndicator = GoHealthMsg_At(message, k);
         if (healthIndicator->id == GO_HEALTH_ENCODER_VALUE)
@@ -261,7 +259,7 @@ namespace cads
     double xOffset = 0.0;
     double zOffset = 0.0;
 
-    for (auto i = 0; i < GoDataSet_Count(dataset); ++i)
+    for (kSize i = 0; i < GoDataSet_Count(dataset); ++i)
     {
       auto message = GoDataSet_At(dataset, i);
 
@@ -269,7 +267,7 @@ namespace cads
       {
       case GO_DATA_MESSAGE_TYPE_STAMP:
       {
-        for (auto j = 0; j < GoStampMsg_Count(message); ++j)
+        for (kSize j = 0; j < GoStampMsg_Count(message); ++j)
         {
           GoStamp *goStamp = GoStampMsg_At(message, j);
           frame = (double)goStamp->frameIndex;
@@ -280,7 +278,7 @@ namespace cads
       case GO_DATA_MESSAGE_TYPE_UNIFORM_PROFILE:
       {
         auto num = GoUniformProfileMsg_Count(message);
-        for (auto j = 0; j < num; ++j)
+        for (kSize j = 0; j < num; ++j)
         {
           profile = GoUniformProfileMsg_At(message, j);
           profileWidth = GoUniformProfileMsg_Width(message);
@@ -313,13 +311,13 @@ namespace cads
 
     // Trim invalid values
     k16s *profile_end = profile + profileWidth - 1;
-    for (; profile_end >= profile && *profile_end == InvalidRange16Bit; --profile_end)
+    for (; profile_end >= profile && *profile_end == k16S_NULL; --profile_end)
     {
     }
     profile_end++;
 
     auto profile_begin = profile;
-    for (; profile_begin < profile_end && *profile_begin == InvalidRange16Bit; ++profile_begin)
+    for (; profile_begin < profile_end && *profile_begin == k16S_NULL; ++profile_begin)
     {
     }
 

@@ -187,7 +187,7 @@ namespace cads
   {
 
     cads::msg m;
-    auto pully_circumfrence = global_config["pulley_circumfrence"].get<double>();
+    auto pully_circumfrence = global_conveyor_parameters.PulleyCircumference;
     auto start = std::chrono::high_resolution_clock::now();
     int64_t cnt = 0;
     auto buffer_size_warning = buffer_warning_increment;
@@ -217,6 +217,10 @@ namespace cads
             auto [op,valid] = result;
 
             if(valid) {
+
+              
+
+
               if(op.y == 0) {
                 
                 if(origin_sequence_cnt == 0) {
