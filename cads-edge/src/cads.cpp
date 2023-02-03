@@ -228,9 +228,9 @@ namespace
 
       if (!between(global_constraints.SurfaceSpeed,speed))
       {
-      //  spdlog::get("cads")->error("Speed outside range");
-      //  error = true;
-      //  break;
+        spdlog::get("cads")->error("Speed outside range");
+        error = true;
+        break;
       }
 
       auto [delayed, dd] = delay({iy, ix, iz, ileft_edge_index, iright_edge_index});
