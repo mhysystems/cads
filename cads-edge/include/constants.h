@@ -45,6 +45,7 @@ namespace cads {
     double PulleyCover;
     double CordDiameter;
     double TopCover; 
+    double PulleyCircumference;
 
     operator std::string() const;
   };

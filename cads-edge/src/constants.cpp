@@ -48,9 +48,9 @@ namespace {
     auto PulleyCover = config["conveyor"]["PulleyCover"].get<double>();
     auto CordDiameter = config["conveyor"]["CordDiameter"].get<double>();
     auto TopCover = config["conveyor"]["TopCover"].get<double>();
-    
+    auto PulleyCircumfrence = config["conveyor"]["PulleyCircumfrence"].get<double>();
 
-    return cads::Conveyor{Id,Site,Name,Installed,Timezone,PulleyCover,CordDiameter,TopCover};
+    return cads::Conveyor{Id,Site,Name,Installed,Timezone,PulleyCover,CordDiameter,TopCover,PulleyCircumfrence};
 
   }
 
