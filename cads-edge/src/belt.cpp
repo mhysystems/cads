@@ -221,7 +221,7 @@ namespace cads
         root_cnt++;  
       }
       
-      return speed*adjust(period);
+      return speed*(root_cnt > 0 ? adjust(period) : 1.0);
     };
   }
 
