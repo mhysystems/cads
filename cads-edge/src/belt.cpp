@@ -169,6 +169,7 @@ namespace cads
           spdlog::get("cads")->debug("Barrel Frequency(Hz): {}", 1000.0 / ((double)period * 2));
           publish_PulleyOscillation(amplitude_extraction(bottom, true));
           publish_SurfaceSpeed(pully_circumfrence / (2 * period));
+          spdlog::get("cads")->debug("Surface Speed(Hz): {}", pully_circumfrence / (2 * period));
         }
         
 
@@ -201,13 +202,18 @@ namespace cads
       
       auto now = std::chrono::high_resolution_clock::now();
       std::chrono::duration<double,std::milli> dt = now - barrel_origin_time;
-      period = dt.count() + 1.0;
+      period = dt.count();
 
       if (root && root_cnt > 0)
       {
         speed = root_distance / period;
         barrel_origin_time = now;
+        root_cnt++; 
 
+        if (root_cnt % 100 == 0)
+        {
+          spdlog::get("cads")->debug("Surface Speed2(Hz): {},{}", speed,speed*adjust(period));
+        }
       }
 
       if(root && root_cnt == 0) {

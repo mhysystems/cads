@@ -89,10 +89,13 @@ namespace
     }
   }
 
-  bool process_impl()
+  bool process_impl(bool createdb = true)
   {
-    create_db(global_config["db_name"].get<std::string>().c_str());
-    create_program_state_db(global_config["program_state_db_name"].get<std::string>());
+    if(createdb) {
+      create_db(global_config["db_name"].get<std::string>().c_str());
+      create_program_state_db(global_config["program_state_db_name"].get<std::string>());
+    }
+    
     std::jthread uploading_conveyor_parameters(upload_conveyor_parameters);
 
     BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
@@ -226,9 +229,9 @@ namespace
 
       auto speed = pulley_speed(removed_dc_bias);
 
-      if (!between(global_constraints.SurfaceSpeed,speed))
+      if (speed == 0)
       {
-        spdlog::get("cads")->error("Speed outside range");
+        spdlog::get("cads")->error("Belt proabaly stopped.");
         error = true;
         break;
       }
@@ -373,12 +376,14 @@ namespace cads
 
   void process()
   {
+    bool error = false;
+
     for (int sleep_wait = 1;;)
     {
       
       auto start = std::chrono::high_resolution_clock::now();
 
-      bool error = process_impl();
+      error = process_impl(!error);
 
       auto now = std::chrono::high_resolution_clock::now();
       auto period = std::chrono::duration_cast<std::chrono::seconds>(now - start).count();

@@ -35,7 +35,7 @@
             [ 1.00000000e+00, -1.99933782e+00, 1.00000000e+00, 1.00000000e+00, -1.99752113e+00, 9.97907883e-01]]   
   },
   "constraints" : {
-    "current_length" : [895000,910000],
+    "current_length" : [895000,930000],
     "surface_speed" : [4.5,18885.9],
     "pulley_oscillation" : [0,5],
     "cads_to_origin" : [0,307000],

@@ -134,6 +134,7 @@ namespace cads
     struct global_t
     {
       cads::coro<int, std::tuple<int, int, cads::profile>, 1> store_profile = store_profile_coro();
+      coro<int, double,1> store_last_y = store_last_y_coro();
       coro<long, std::tuple<long, double>, 1> daily_upload = daily_upload_coro(0);
       long revid = 0;
       long idx = 0;
@@ -157,6 +158,8 @@ namespace cads
           {
             // error
           }
+
+          global.store_last_y.resume(e.value.y);
         };
 
         const auto complete_belt_action = [](global_t &global, const complete_belt_t &e)
