@@ -184,7 +184,7 @@ namespace cads
 
       if (rslt > 0)
       {
-        spdlog::get("cads")->info("Belt damage found around y: {}", p.y);
+        spdlog::get("cads")->debug("Belt damage found around y: {}", p.y);
       }
 
       if (profile_fifo.size_approx() > buffer_size_warning)
