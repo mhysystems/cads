@@ -257,6 +257,10 @@ namespace
 
       barrel_height_compensate(z, -bottom_filtered, clip_height);
 
+      if(z.size() < size_t(left_edge_index + width_n)) {
+        const auto cnt = left_edge_index + width_n - z.size();
+        z.insert(z.end(),cnt,0);
+      }
       auto f = z | views::take(left_edge_index + width_n) | views::drop(left_edge_index);
 
       if(use_encoder) 

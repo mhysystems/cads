@@ -115,6 +115,11 @@ namespace cads
       case msgid::scan:
       {
         auto p = get<profile>(get<1>(m));
+
+        if((int)p.z.size() != width) {
+          spdlog::get("cads")->error("Profile width {} != window width {}",p.z.size(),width);
+          break;
+        }
         memmove(window.data() + width, window.data(), size_t(width*(height-1))*sizeof(z_element)); // shift 2d array by one row
         memcpy(window.data(), p.z.data(), size_t(width)*sizeof(z_element));
         
