@@ -1,5 +1,5 @@
 {
-  "data_source" : "../../profiles/rawprofile-2022-18-23.db", 
+  "data_source" : "../../profiles/rawprofile_2023-02-08.db", 
   "laser_fps" : 980,
   "forever" : false,
   "y_max_length" : 930000,
@@ -16,10 +16,9 @@
   "fiducial_gap" : 78,
   "daily_upload" : false,
   "daily_start_time" : "12:45",
-  "log_lengthMiB" : 128, 
   "spike_filter" : 5,
   "sobel_filter" : 5,
-  "nan_%" : 0.17,
+  "nan_%" : 0.1,
   "iirfilter" : {
     "skip" : 4000,
     "delay" : 10,
@@ -35,13 +34,13 @@
             [ 1.00000000e+00, -1.99933782e+00, 1.00000000e+00, 1.00000000e+00, -1.99752113e+00, 9.97907883e-01]]   
   },
   "constraints" : {
-    "current_length" : [895000,930000],
-    "surface_speed" : [4.5,18885.9],
+    "current_length" : [903000,907000],
+    "surface_speed" : [4.5,30.0],
     "pulley_oscillation" : [0,5],
-    "cads_to_origin" : [0,307000],
-    "rotation_period" : [46666,70000],
-    "barrel_height" : [-34,-31.0],
-    "z_unbiased" : [-34.0,4.0]
+    "cads_to_origin" : [0,907000],
+    "rotation_period" : [140000,210000],
+    "barrel_height" : [-36.5,-31.0],
+    "z_unbiased" : [-37.0,4.0]
   },
   "profile_db_name" : "profile.db",
   "state_db_name" : "state.db",
@@ -68,6 +67,6 @@
   "nats_url" : "192.168.2.13",
   "upload_profile" : false, 
   "base_url" : "http://localhost:5000/api",
-  "lua_window_height" : 10,
-  "lua_fn" : "function process(width,height)\nlocal sum = 0\nfor i = 1,width do\nfor j = 0,height-1 do\nsum = sum + (win[j*width + i] < 25 and 1 or 0)\nend\nend\nreturn (sum / (width * height)) > 0.2 and sum or 0\nend"
+  "lua_window_height" : 2,
+  "lua_fn" : "function process(width,height)\nlocal sum = 0\nfor i = 1+50,width-50 do\nfor j = 0,height-1 do\nsum = sum + ((win[j*width + i] <= 25 and win[j*width + i] > 10)and 1 or 0)\nend\nend\nreturn (sum / (width * height)) > 0.001 and sum or 0\nend"
 }
