@@ -86,7 +86,7 @@ TEST_F(CadsTest, spike_filter2)
   auto fetch_profile = fetch_belt_coro(0, std::numeric_limits<int>::max(), 256, "test/demo.db");
   const int nan_num = global_config["left_edge_nan"].get<int>();
   const int spike_window_size = 25;
-  create_db("spike_filter2.db");
+  create_profile_db("spike_filter2.db");
   auto store_profile = store_profile_coro("spike_filter2.db");
   
   while (true)
@@ -111,7 +111,7 @@ TEST_F(CadsTest, upload_belt)
 {
   using namespace std;
 
-  ASSERT_EQ(create_db(), true);
+  ASSERT_EQ(create_profile_db(), true);
   store_profile_parameters({0.5, 0.5, 0.5, 0.5, 0.5, 30});
   auto store_profile = store_profile_coro();
 

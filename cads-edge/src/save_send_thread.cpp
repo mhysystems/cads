@@ -32,7 +32,7 @@ namespace cads
     using namespace std;
  
     auto daily_upload = global_config["daily_upload"].get<bool>();
-    auto program_state_db_name = global_config["program_state_db_name"].get<std::string>();
+    auto program_state_db_name = global_config["state_db_name"].get<std::string>();
 
     auto write_revid = read_revid;
 

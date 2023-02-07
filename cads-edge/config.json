@@ -2,8 +2,8 @@
   "data_source" : "../../profiles/rawprofile-2022-18-23.db", 
   "laser_fps" : 980,
   "forever" : false,
-  "y_max_length" : 301000,
-  "y_max_upload" : 300000,
+  "y_max_length" : 930000,
+  "y_max_upload" : 906000,
   "z_height" : 27.0,
   "x_width"  : 1500,
   "width_n" : 1820,
@@ -43,8 +43,9 @@
     "barrel_height" : [-34,-31.0],
     "z_unbiased" : [-34.0,4.0]
   },
-  "db_name" : "profile.db",
-  "program_state_db_name" : "state.db",
+  "profile_db_name" : "profile.db",
+  "state_db_name" : "state.db",
+  "transient_db_name" : "transient.db",
   "use_encoder" : false,
   "belt_cross_correlation_threshold" : 0.4,
 
@@ -62,7 +63,7 @@
     "PulleyCircumference" : 2613.8     
   },
   "webapi_urls" : {
-    "add_conveyor" : ["http://localhost:5000/api/conveyors",true]
+    "add_conveyor" : ["http://localhost:5000/api/conveyors",false]
   },
   "nats_url" : "192.168.2.13",
   "upload_profile" : false, 
