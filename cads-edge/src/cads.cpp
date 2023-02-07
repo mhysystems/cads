@@ -258,7 +258,7 @@ namespace
       barrel_height_compensate(z, -bottom_filtered, clip_height);
 
       if(z.size() < size_t(left_edge_index_aligned + width_n)) {
-        spdlog::get("cads")->error("Belt width({})[{},{}] less than required. Filled with zeros",z.size(),left_edge_index_aligned,right_edge_index);
+        spdlog::get("cads")->error("Belt width({})[la - {}, l- {}, r - {}] less than required. Filled with zeros",z.size(),left_edge_index_aligned,left_edge_index,right_edge_index);
         store_errored_profile(raw_z);
         const auto cnt = left_edge_index_aligned + width_n - z.size();
         z.insert(z.end(),cnt,0);
