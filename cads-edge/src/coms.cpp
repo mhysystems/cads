@@ -20,7 +20,6 @@
 #include <z_data_generated.h>
 #include <plot_data_generated.h>
 #include <nats.h>
-#include <blockingconcurrentqueue.h>
 #include <coms.h>
 
 #pragma GCC diagnostic pop
@@ -67,7 +66,7 @@ namespace cads
 {
   moodycamel::BlockingConcurrentQueue<std::tuple<std::string,std::string>> nats_queue;
 
-  void remote_control_thread(bool& terminate) {
+  void remote_control_thread(moodycamel::BlockingConcurrentQueue<int> &nats_queue, bool& terminate) {
     
     auto endpoint_url = global_config["nats_url"].get<std::string>();
     
@@ -86,13 +85,13 @@ namespace cads
       status = natsConnection_Connect(&conn, opts);
       if(status != NATS_OK) goto cleanup_opts;
 
-      status = natsConnection_SubscribeSync(&sub, conn, "foo");
+      status = natsConnection_SubscribeSync(&sub, conn, "originReset");
       if(status != NATS_OK) goto cleanup_opts;
 
       for(auto loop = true;loop && !terminate;) {
         
         natsMsg *msg  = nullptr;
-        auto s = natsSubscription_NextMsg(&msg, sub, 5000);
+        auto s = natsSubscription_NextMsg(&msg, sub, 500);
 
         if(s == NATS_TIMEOUT) {
 
@@ -100,9 +99,10 @@ namespace cads
           loop = false; 
         }
         else if(s == NATS_OK) {
-          
+          std::string sub(natsMsg_GetSubject(msg));
           std::string msg_string(natsMsg_GetData(msg),natsMsg_GetDataLength(msg));
           natsMsg_Destroy(msg); 
+          nats_queue.enqueue(0);
         }
       }
         

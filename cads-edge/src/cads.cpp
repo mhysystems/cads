@@ -315,11 +315,10 @@ namespace cads
 
   void store_profile_only()
   {
-
-    auto db_name = global_config["profile_db_name"].get<std::string>();
-    create_profile_db(db_name);
-
+    auto terminate_subscribe = false;
+    moodycamel::BlockingConcurrentQueue<int> nats_queue;
     BlockingReaderWriterQueue<msg> gocatorFifo;
+    std::jthread remote_control(remote_control_thread,std::ref(nats_queue),std::ref(terminate_subscribe));
 
     auto gocator = mk_gocator(gocatorFifo);
 
@@ -342,6 +341,7 @@ namespace cads
     auto y_max_length = global_config["y_max_length"].get<double>();
     double Y = 0.0;
     int idx = 0;
+    double reset_y = 0.0;
 
     do
     {
@@ -355,6 +355,13 @@ namespace cads
       {
         auto p = get<profile>(get<1>(m));
         Y = p.y;
+        p.y -= reset_y;
+        int ignore = 0;
+        if(nats_queue.try_dequeue(ignore)) {
+          reset_y = p.y;
+          p.y = 0;
+        }
+        
         store_profile.resume({0, idx++, p});
         break;
       }
@@ -374,6 +381,7 @@ namespace cads
     } while (get<0>(m) != msgid::finished && Y < 2 * y_max_length);
 
     store_profile.terminate();
+    terminate_subscribe = true;
 
     gocator->Stop();
   }

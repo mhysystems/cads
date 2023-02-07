@@ -10,6 +10,7 @@
 
 #include <date/date.h>
 #include <date/tz.h>
+#include <blockingconcurrentqueue.h>
 
 #pragma GCC diagnostic pop
 
@@ -19,6 +20,7 @@
 namespace cads
 {
   void realtime_publish_thread(bool&);
+  void remote_control_thread(moodycamel::BlockingConcurrentQueue<int> &,bool&);
   void publish_meta_realtime(std::string Id, double value, bool valid);
   void http_post_realtime(double y_area, double value);
   std::tuple<date::utc_clock::time_point,bool> http_post_whole_belt(int, int, double);
