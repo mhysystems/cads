@@ -391,9 +391,8 @@ namespace cads
     auto db_config_name = name.empty() ? global_config["transient_db_name"].get<std::string>() : name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
 
-    auto query2 = R"(PRAGMA synchronous=OFF)"s;
-    char *errmsg;
-    auto err = sqlite3_exec(db.get(), query2.c_str(), nullptr, nullptr, &errmsg);
+    char *errmsg = nullptr;
+    auto err = sqlite3_exec(db.get(), R"(PRAGMA synchronous=OFF)"s.c_str(), nullptr, nullptr, &errmsg);
 
     if (err != SQLITE_OK)
     {
@@ -538,7 +537,15 @@ namespace cads
     auto query = R"(INSERT OR REPLACE INTO PROFILE (revid,idx,y,x_off,z) VALUES (?,?,?,?,?))"s;
     auto db_config_name = name.empty() ? global_config["profile_db_name"].get<std::string>() : name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
-    int err = SQLITE_OK;
+
+    char *errmsg = nullptr;
+    auto err = sqlite3_exec(db.get(), R"(PRAGMA synchronous=OFF)"s.c_str(), nullptr, nullptr, &errmsg);
+
+    if (err != SQLITE_OK)
+    {
+      spdlog::get("db")->error("store_profile_coro:sqlite3_exec, Error Code:{}, query:{}, sqlite error msg:{}", err, query, errmsg);
+      sqlite3_free(errmsg);
+    }
 
     while (true)
     {

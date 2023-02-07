@@ -218,9 +218,6 @@ namespace cads
 
             if(valid) {
 
-              
-
-
               if(op.y == 0) {
                 
                 if(origin_sequence_cnt == 0) {

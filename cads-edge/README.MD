@@ -36,20 +36,20 @@ sudo apt update && sudo apt upgrade -y
   ## Load newer gcc in Env ##
   . ./env.sh	
 
+
   ## Compile with Meson ##
   This will statically link the gocator api into cads
-  meson setup debug --buildtype debug
+  meson setup bin --buildtype debugoptimized
   cd debug
   ninja
 
-  ### Release
-  meson setup release --buildtype release
-  cd release
-  ninja
 
-
+# Memory Leaks
 Valgrind
 valgrind --tool=memcheck --leak-check=full --show-leak-kinds=all --log-file="val.log" ./cads -c ../config.json 
+
+GCC Address Sanitzer
+Uncomment meson.build
 
 
 
