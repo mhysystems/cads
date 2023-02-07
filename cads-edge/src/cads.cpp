@@ -89,7 +89,8 @@ namespace
     }
   }
 
-  bool process_impl()
+  enum class Process_Status {Error, Finished, Stopped};
+  Process_Status process_impl()
   {
    
     std::jthread uploading_conveyor_parameters(upload_conveyor_parameters);
@@ -142,7 +143,7 @@ namespace
     auto pulley_speed = mk_pulley_speed();
 
     long drop_profiles = global_config["iirfilter"]["skip"]; // Allow for iir fillter too stablize
-    bool error = false;
+    Process_Status status = Process_Status::Finished;
 
     auto csp = [&](const profile &p) {
       winFifo.enqueue({msgid::scan, p});
@@ -173,14 +174,14 @@ namespace
       if (iz.size()*x_resolution < size_t(x_width * 0.75))
       {
         spdlog::get("cads")->error("Gocator sending profiles with widths less than 0.75 of expected width");
-        error = true;
+        status = Process_Status::Error;
         break;
       }
 
       if (iz.size() < (size_t)width_n)
       {
         spdlog::get("cads")->error("Gocator sending profiles with sample number {} less than {}", iz.size(), width_n);
-        error = true;
+        status = Process_Status::Error;
         break;
       }
 
@@ -190,7 +191,7 @@ namespace
       if ((nan_cnt / iz.size()) > nan_percentage )
       {
         spdlog::get("cads")->error("Percentage of nan({}) in profile > {}%", nan_cnt,nan_percentage * 100);
-        error = true;
+        status = Process_Status::Error;
         break;
       }
       constraint_substitute(iz,z_min_unbiased,z_max_unbiased);
@@ -210,7 +211,7 @@ namespace
       }
       else if(std::isnan(pulley_left) && std::isnan(pulley_right)) {
         spdlog::get("cads")->error("Cannot find either belt edge");
-        error = true;
+        status = Process_Status::Error;
         break;
       }
       
@@ -228,8 +229,8 @@ namespace
       if (speed == 0)
       {
         spdlog::get("cads")->error("Belt proabaly stopped.");
-        //error = true;
-        //break;
+        status = Process_Status::Stopped;
+        break;
       }
 
       auto [delayed, dd] = delay({iy, ix, iz, ileft_edge_index, iright_edge_index});
@@ -249,23 +250,24 @@ namespace
       regression_compensate(z, 0, z.size(), gradient);
 
       nan_filter(z);
-      left_edge_index = profiles_align(z, left_edge_index, right_edge_index);
+      auto left_edge_index_aligned = profiles_align(z, left_edge_index, right_edge_index);
 
       barrel_height_compensate(z, -bottom_filtered, clip_height);
 
-      if(z.size() < size_t(left_edge_index + width_n)) {
-        const auto cnt = left_edge_index + width_n - z.size();
+      if(z.size() < size_t(left_edge_index_aligned + width_n)) {
+        spdlog::get("cads")->error("Belt width({})[{},{}] less than required. Filled with zeros",z.size(),left_edge_index_aligned,right_edge_index);
+        const auto cnt = left_edge_index_aligned + width_n - z.size();
         z.insert(z.end(),cnt,0);
       }
-      auto f = z | views::take(left_edge_index + width_n) | views::drop(left_edge_index);
+      auto f = z | views::take(left_edge_index_aligned + width_n) | views::drop(left_edge_index_aligned);
 
       if(use_encoder) 
       {
-        winFifo.enqueue({msgid::scan, cads::profile{y, x + left_edge_index * x_resolution, {f.begin(), f.end()}}});
+        winFifo.enqueue({msgid::scan, cads::profile{y, x + left_edge_index_aligned * x_resolution, {f.begin(), f.end()}}});
       }
       else 
       {
-        fn.resume({removed_dc_bias,cads::profile{y, x + left_edge_index * x_resolution, {f.begin(), f.end()}}});
+        fn.resume({removed_dc_bias,cads::profile{y, x + left_edge_index_aligned * x_resolution, {f.begin(), f.end()}}});
       }
 
     } while (std::get<0>(m) != msgid::finished);
@@ -288,7 +290,7 @@ namespace
     realtime_publish.join();
     spdlog::get("cads")->info("Realtime publishing Thread Stopped");
 
-    return error;
+    return status;
   }
 
 }
@@ -376,14 +378,12 @@ namespace cads
 
   void process()
   {
-    bool error = false;
-
     for (int sleep_wait = 1;;)
     {
       
       auto start = std::chrono::high_resolution_clock::now();
 
-      error = process_impl();
+      auto status = process_impl();
 
       auto now = std::chrono::high_resolution_clock::now();
       auto period = std::chrono::duration_cast<std::chrono::seconds>(now - start).count();
@@ -393,7 +393,7 @@ namespace cads
         sleep_wait = 1;
       }
 
-      if (error)
+      if (status == Process_Status::Error)
       {
         spdlog::get("cads")->info("Sleeping for {} minutes",sleep_wait);
         std::this_thread::sleep_for(std::chrono::seconds(sleep_wait * 60));
@@ -402,6 +402,9 @@ namespace cads
         {
           sleep_wait *= 2;
         }
+      }
+      else if(status == Process_Status::Stopped) {
+        std::this_thread::sleep_for(std::chrono::seconds(15));
       }
       else
       {
