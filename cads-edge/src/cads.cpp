@@ -89,13 +89,9 @@ namespace
     }
   }
 
-  bool process_impl(bool createdb = true)
+  bool process_impl()
   {
-    if(createdb) {
-      create_profile_db(global_config["db_name"].get<std::string>().c_str());
-      create_program_state_db(global_config["program_state_db_name"].get<std::string>());
-    }
-    
+   
     std::jthread uploading_conveyor_parameters(upload_conveyor_parameters);
 
     BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
@@ -387,7 +383,7 @@ namespace cads
       
       auto start = std::chrono::high_resolution_clock::now();
 
-      error = process_impl(!error);
+      error = process_impl();
 
       auto now = std::chrono::high_resolution_clock::now();
       auto period = std::chrono::duration_cast<std::chrono::seconds>(now - start).count();

@@ -8,6 +8,7 @@
 #include <constants.h>
 #include <cads.h>
 #include <init.h>
+#include <db.h>
 
 
 namespace po = boost::program_options;
@@ -53,7 +54,7 @@ int main(int argn, char **argv)
   if(vm["stop"].as<bool>()) {
     using namespace std;
     cout << "Only stopping gocator" << endl;
-    init_logs(5 * 1024 * 1024,60);
+    init_logs(60);
     stop_gocator();
     drop_logs();
     return 0;
@@ -72,11 +73,8 @@ int main(int argn, char **argv)
 		return EXIT_FAILURE;
 	}
 
-  if(global_config.find("log_lengthMiB") != global_config.end()) {
-    init_logs(global_config["log_lengthMiB"].get<size_t>() * 1024 * 1024,60);
-  }else {
-    init_logs(5 * 1024 * 1024,60);
-  }
+  init_logs(60);
+  create_default_dbs();
 
   if(vm.count("level") > 0) {
     std::string l = vm["level"].as<std::string>();

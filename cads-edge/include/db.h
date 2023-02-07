@@ -17,6 +17,10 @@ namespace cads
 {
 
   bool create_profile_db(std::string name = "");
+  bool create_program_state_db(std::string name = "");
+  bool create_transient_db(std::string name = "");
+  void create_default_dbs();
+
   coro<int, std::tuple<int, int, profile>, 1> store_profile_coro(std::string name = "");
   coro<int, double, 1> store_last_y_coro(std::string name = "");
   coro<std::tuple<int, profile>> fetch_belt_coro(int revid, int last_idx, int size = 256, std::string name = "");
@@ -32,6 +36,6 @@ namespace cads
   std::tuple<int,bool> fetch_conveyor_id(std::string name);
   void store_conveyor_id(int id, std::string name);
   
-  bool create_program_state_db(std::string name);
+
 
 }

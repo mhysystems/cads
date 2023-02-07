@@ -297,8 +297,8 @@ namespace cads
     }
 
     vector<string> tables{
-      R"(CREATE TABLE IF NOT EXISTS STATE (DAILYUPLOAD TEXT NOT NULL, ConveyorId INTEGER NOT NULL, LastY REAL NOT NULL))",
-      fmt::format(R"(INSERT INTO STATE(DAILYUPLOAD,ConveyorId,LastY) SELECT '{}',{},{} WHERE NOT EXISTS (SELECT * FROM STATE))", ts,0,-1.0)
+      R"(CREATE TABLE IF NOT EXISTS STATE (DAILYUPLOAD TEXT NOT NULL, ConveyorId INTEGER NOT NULL))",
+      fmt::format(R"(INSERT INTO STATE(DAILYUPLOAD,ConveyorId) SELECT '{}',{} WHERE NOT EXISTS (SELECT * FROM STATE))", ts,0)
     };
 
     int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);
@@ -316,8 +316,48 @@ namespace cads
 
     sqlite3_close(db);
     return error;
-
   }
+
+  bool create_transient_db(std::string name)
+  {
+    using namespace date;
+    using namespace std::chrono;
+
+    sqlite3 *db = nullptr;
+    bool error = false;
+    auto db_name_string = name.empty() ? global_config["transient_db_name"].get<std::string>() : name;
+    
+    const char *db_name = db_name_string.c_str();
+    
+
+    vector<string> tables{
+      R"(CREATE TABLE IF NOT EXISTS Transients (LastY REAL NOT NULL))",
+      fmt::format(R"(INSERT INTO Transients(LastY) SELECT {} WHERE NOT EXISTS (SELECT * FROM Transients))",-1.0)
+    };
+
+    int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);
+    
+    if (err == SQLITE_OK)
+    {
+      error = db_exec_seq(db,tables);
+    }
+    else
+    {
+      sqlite3_close(db);
+      spdlog::get("db")->error("create_transient_db:sqlite3_open_v2 Error Code:{}", err);
+      std::throw_with_nested(std::runtime_error("create_transient_db:sqlite3_open_v2"));
+    }
+
+    sqlite3_close(db);
+    return error;
+  }
+
+   void create_default_dbs() {
+    create_profile_db();
+    create_program_state_db();
+    create_transient_db();
+   }
+
 
   int store_profile_parameters(profile_params params, std::string name)
   {
@@ -345,8 +385,8 @@ namespace cads
   coro<int, double,1> store_last_y_coro(std::string name)
   {
 
-    auto query =  R"(UPDATE state set LastY = ? where rowid = 1)"s;
-    auto db_config_name = name.empty() ? global_config["program_state_db_name"].get<std::string>() : name;
+    auto query =  R"(UPDATE Transients set LastY = ? where rowid = 1)"s;
+    auto db_config_name = name.empty() ? global_config["transient_db_name"].get<std::string>() : name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
 
     auto query2 = R"(PRAGMA synchronous=OFF)"s;
