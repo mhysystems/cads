@@ -151,7 +151,7 @@ namespace
 
     auto fn = encoder_distance_estimation(csp);
     const auto [z_min_unbiased,z_max_unbiased] = global_constraints.ZUnbiased;
-    
+
     do
     {
 
@@ -416,6 +416,7 @@ namespace cads
         }
       }
       else if(status == Process_Status::Stopped) {
+        spdlog::get("cads")->info("Sleeping for {} seconds",15);
         std::this_thread::sleep_for(std::chrono::seconds(15));
       }
       else
