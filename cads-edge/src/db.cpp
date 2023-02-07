@@ -331,7 +331,9 @@ namespace cads
     
 
     vector<string> tables{
+      R"(PRAGMA journal_mode=WAL)"s,
       R"(CREATE TABLE IF NOT EXISTS Transients (LastY REAL NOT NULL))",
+      R"(CREATE TABLE IF NOT EXISTS ErroredProfile (z BLOB NOT NULL))",
       fmt::format(R"(INSERT INTO Transients(LastY) SELECT {} WHERE NOT EXISTS (SELECT * FROM Transients))",-1.0)
     };
 
@@ -427,6 +429,20 @@ namespace cads
 
     spdlog::get("db")->info("store_last_y finished");
     co_return err;
+  }
+
+  void store_errored_profile(const cads::z_type &z, std::string name)
+  {
+    auto query = R"(INSERT INTO ErroredProfile (z) VALUES (?))"s;
+    auto db_config_name = name.empty() ? global_config["transient_db_name"].get<std::string>() : name;
+    auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
+    
+    sqlite3_exec(db.get(), R"(PRAGMA synchronous=OFF)"s.c_str(), nullptr, nullptr, nullptr);
+    
+    auto n = z.size() * sizeof(z_element);
+    sqlite3_bind_blob(stmt.get(), 1, z.data(), (int)n, SQLITE_STATIC);
+
+    sqlite3_step(stmt.get());
   }
 
 

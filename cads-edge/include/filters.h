@@ -13,7 +13,7 @@ namespace cads
   void barrel_height_compensate(z_type& z, z_element z_off, z_element z_max);
   void constraint_clipping(z_type& z, z_element z_off, z_element z_max);
   std::function<double(double)> mk_iirfilterSoS();
-  std::function<std::tuple<bool,std::tuple<y_type,double,z_type,int,int>>(std::tuple<y_type,double,z_type,int,int>)> mk_delay(size_t len);
+  std::function<std::tuple<bool,std::tuple<y_type,double,z_type,int,int,z_type>>(std::tuple<y_type,double,z_type,int,int,z_type>)> mk_delay(size_t len);
   std::function<cads::z_element(cads::z_element)> mk_schmitt_trigger(cads::z_element ref);
   std::function<cads::z_element(cads::z_element)> mk_schmitt_trigger();
   std::function<cads::z_element(cads::z_element,bool)> mk_amplitude_extraction();

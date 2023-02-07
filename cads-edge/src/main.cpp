@@ -30,7 +30,6 @@ int main(int argn, char **argv)
     ("upload,u", po::bool_switch(), "Upload Profile Only")
     ("signal,e", po::bool_switch(), "Generate signal for input into python filter parameter creation")
     ("params,p", po::value<long>(), "Generate belt paramaters to be used in cads config")
-    ("direct,t", po::bool_switch(), "Bypass origin and realtime detection")
     ("go-log,g", po::bool_switch(), "Dump Gocator Log")
     ("level,l", po::value<std::string>(), "Logging Level");
 
@@ -98,8 +97,6 @@ int main(int argn, char **argv)
     generate_signal();
   }else if(vm.count("params") > 0) {
     generate_belt_parameters(vm["params"].as<long>());
-  }else if(vm["direct"].as<bool>()) {
-    direct_process();
   }else if(vm["go-log"].as<bool>()) {
     dump_gocator_log();
   }else{

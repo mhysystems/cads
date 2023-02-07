@@ -35,7 +35,7 @@ namespace cads
   
   std::tuple<int,bool> fetch_conveyor_id(std::string name);
   void store_conveyor_id(int id, std::string name);
-  
+  void store_errored_profile(const cads::z_type &z, std::string name ="");
 
 
 }
