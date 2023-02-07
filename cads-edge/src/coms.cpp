@@ -67,6 +67,58 @@ namespace cads
 {
   moodycamel::BlockingConcurrentQueue<std::tuple<std::string,std::string>> nats_queue;
 
+  void remote_control_thread(bool& terminate) {
+    
+    auto endpoint_url = global_config["nats_url"].get<std::string>();
+    
+    natsConnection  *conn  = nullptr;
+    natsOptions *opts = nullptr;
+    natsSubscription *sub  = nullptr;
+    
+
+    for(;!terminate;) {
+      auto status = natsOptions_Create(&opts);
+      if(status != NATS_OK) goto drop_msg;
+      
+      natsOptions_SetAllowReconnect(opts,true);
+      natsOptions_SetURL(opts,endpoint_url.c_str());
+
+      status = natsConnection_Connect(&conn, opts);
+      if(status != NATS_OK) goto cleanup_opts;
+
+      status = natsConnection_SubscribeSync(&sub, conn, "foo");
+      if(status != NATS_OK) goto cleanup_opts;
+
+      for(auto loop = true;loop && !terminate;) {
+        
+        natsMsg *msg  = nullptr;
+        auto s = natsSubscription_NextMsg(&msg, sub, 5000);
+
+        if(s == NATS_TIMEOUT) {
+
+        }else if(s == NATS_CONNECTION_CLOSED) {
+          loop = false; 
+        }
+        else if(s == NATS_OK) {
+          
+          std::string msg_string(natsMsg_GetData(msg),natsMsg_GetDataLength(msg));
+          natsMsg_Destroy(msg); 
+        }
+      }
+        
+    }
+
+      natsConnection_Destroy(conn);
+cleanup_opts:
+      natsOptions_Destroy(opts);
+drop_msg:
+    nats_Close();
+  }
+
+
+
+
+
   void realtime_publish_thread(bool& terminate) {
     
     auto endpoint_url = global_config["nats_url"].get<std::string>();
