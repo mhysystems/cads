@@ -114,7 +114,7 @@ namespace cads
   int store_daily_upload(std::chrono::time_point<date::local_t, std::chrono::seconds> date, std::string name)
   {
     auto query = R"(UPDATE STATE SET DAILYUPLOAD = ? WHERE ROWID = 1)"s;
-    auto db_config_name = name.empty() ? global_config["db_name"].get<std::string>() : name;
+    auto db_config_name = name.empty() ? global_config["state_db_name"].get<std::string>() : name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
     
     auto ts = date::format("%FT%T", date);
@@ -139,7 +139,7 @@ namespace cads
   std::chrono::time_point<date::local_t, std::chrono::seconds> fetch_daily_upload(std::string name)
   {
     auto query = R"(SELECT DAILYUPLOAD FROM STATE WHERE ROWID = 1)"s;
-    auto db_config_name = name.empty() ? global_config["db_name"].get<std::string>() : name;
+    auto db_config_name = name.empty() ? global_config["state_db_name"].get<std::string>() : name;
     auto [stmt,db] = prepare_query(db_config_name, query);
     auto err = SQLITE_OK;
 
@@ -166,7 +166,7 @@ namespace cads
   void store_conveyor_id(int id, std::string name)
   {
     auto query = R"(UPDATE STATE SET ConveyorId = ? WHERE ROWID = 1)"s;
-    auto db_config_name = name.empty() ? global_config["db_name"].get<std::string>() : name;
+    auto db_config_name = name.empty() ? global_config["state_db_name"].get<std::string>() : name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
     
     auto err = sqlite3_bind_int(stmt.get(), 1, id);
@@ -187,7 +187,7 @@ namespace cads
   std::tuple<int,bool> fetch_conveyor_id(std::string name)
   {
     auto query = R"(SELECT ConveyorId FROM STATE WHERE ROWID = 1)"s;
-    auto db_config_name = name.empty() ? global_config["db_name"].get<std::string>() : name;
+    auto db_config_name = name.empty() ? global_config["state_db_name"].get<std::string>() : name;
     auto [stmt,db] = prepare_query(db_config_name, query);
     auto err = SQLITE_OK;
 
@@ -209,7 +209,7 @@ namespace cads
   {
     sqlite3 *db = nullptr;
     bool r = true;
-    auto db_name_string = name.empty() ? global_config["db_name"].get<std::string>() : name;
+    auto db_name_string = name.empty() ? global_config["profile_db_name"].get<std::string>() : name;
     const char *db_name = db_name_string.c_str();
 
     string ytype;
@@ -272,7 +272,7 @@ namespace cads
     sqlite3 *db = nullptr;
     bool error = false;
     auto sts = global_config["daily_start_time"].get<std::string>();
-    auto db_name_string = name.empty() ? global_config["program_state_db_name"].get<std::string>() : name;
+    auto db_name_string = name.empty() ? global_config["state_db_name"].get<std::string>() : name;
     
     const char *db_name = db_name_string.c_str();
     
@@ -362,7 +362,7 @@ namespace cads
   int store_profile_parameters(profile_params params, std::string name)
   {
     auto query = R"(INSERT OR REPLACE INTO PARAMETERS (rowid,y_res,x_res,z_res,z_off,encoder_res,z_max) VALUES (1,?,?,?,?,?,?))"s;
-    auto db_config_name = name.empty() ? global_config["db_name"].get<std::string>() : name;
+    auto db_config_name = name.empty() ? global_config["profile_db_name"].get<std::string>() : name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
 
     auto err = sqlite3_bind_double(stmt.get(), 1, params.y_res);
@@ -435,7 +435,7 @@ namespace cads
   {
 
     auto query = R"(SELECT * FROM PARAMETERS WHERE ROWID = 1)"s;
-    auto db_config_name = name.empty() ? global_config["db_name"].get<std::string>() : name;
+    auto db_config_name = name.empty() ? global_config["profile_db_name"].get<std::string>() : name;
     auto [stmt,db] = prepare_query(db_config_name, query);
     auto err = SQLITE_OK;
 
@@ -467,7 +467,7 @@ namespace cads
   {
 
     auto query = R"(SELECT MIN(Y),MAX(Y),COUNT(Y),LENGTH(Z) FROM PROFILE WHERE REVID = ? AND IDX < ? LIMIT 1)"s;
-    auto db_config_name = name.empty() ? global_config["db_name"].get<std::string>() : name;
+    auto db_config_name = name.empty() ? global_config["profile_db_name"].get<std::string>() : name;
     auto [stmt,db] = prepare_query(db_config_name, query);
 
     auto err = sqlite3_bind_int(stmt.get(), 1, revid);
@@ -501,7 +501,7 @@ namespace cads
 
   long count_with_width_n(string name, int revid, int width_n) {
     auto query = fmt::format(R"(SELECT count(idx) FROM PROFILE WHERE REVID = {} AND LENGTH(z) = ?)", revid);
-    auto db_config_name = name.empty() ? global_config["db_name"].get<std::string>() : name;
+    auto db_config_name = name.empty() ? global_config["profile_db_name"].get<std::string>() : name;
     auto [stmt,db] = prepare_query(db_config_name, query);
     auto err = sqlite3_bind_int(stmt.get(), 1, width_n);
 
@@ -520,7 +520,7 @@ namespace cads
   {
 
     auto query = R"(INSERT OR REPLACE INTO PROFILE (revid,idx,y,x_off,z) VALUES (?,?,?,?,?))"s;
-    auto db_config_name = name.empty() ? global_config["db_name"].get<std::string>() : name;
+    auto db_config_name = name.empty() ? global_config["profile_db_name"].get<std::string>() : name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
     int err = SQLITE_OK;
 
@@ -617,7 +617,7 @@ namespace cads
   coro<std::tuple<int, profile>> fetch_belt_coro(int revid, int last_idx, int size, std::string name)
   {
     auto query = fmt::format(R"(SELECT idx,y,x_off,z FROM PROFILE WHERE REVID = {} AND IDX >= ? AND IDX < ? ORDER BY Y)", revid);
-    auto db_config_name = name.empty() ? global_config["db_name"].get<std::string>() : name;
+    auto db_config_name = name.empty() ? global_config["profile_db_name"].get<std::string>() : name;
     auto [stmt,db] = prepare_query(db_config_name, query);
 
     for (int i = 0; i < last_idx; i += size)

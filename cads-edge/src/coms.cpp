@@ -279,7 +279,7 @@ void http_post_realtime(double y_area, double value)
   void http_post_profile_properties(int revid, int last_idx, std::string chrono, double belt_length, double y_step)
   {
     nlohmann::json params_json;
-    auto db_name = global_config["db_name"].get<std::string>();
+    auto db_name = global_config["profile_db_name"].get<std::string>();
     auto [params, err] = fetch_profile_parameters(db_name);
     auto [Ymin,Ymax,YmaxN,WidthN,err2] = fetch_belt_dimensions(revid,last_idx,db_name);
 
@@ -305,7 +305,7 @@ void http_post_realtime(double y_area, double value)
     using namespace flatbuffers;
 
     auto now = chrono::floor<chrono::seconds>(date::utc_clock::now()); // Default sends to much decimal precision for asp.net core
-    auto db_name = global_config["db_name"].get<std::string>();
+    auto db_name = global_config["profile_db_name"].get<std::string>();
     auto endpoint_url = global_config["base_url"].get<std::string>();
     auto y_max_length = global_config["y_max_length"].get<double>();
     auto y_max_upload = global_config["y_max_upload"].get<double>();
@@ -429,7 +429,7 @@ void http_post_realtime(double y_area, double value)
 
     spdlog::get("upload")->info("ZMAX: {}, SIZE: {}, DUR:{}, RATE(Kb/s):{} ", belt_z_max, size, duration, size / (1000 * duration));
     spdlog::get("upload")->info("Leaving http_post_thread_bulk");
-    auto program_state_db_name = global_config["program_state_db_name"].get<std::string>();
+    auto program_state_db_name = global_config["state_db_name"].get<std::string>();
     auto next_upload_date = fetch_daily_upload(program_state_db_name);
     next_upload_date += std::chrono::days(1);
     store_daily_upload(next_upload_date,program_state_db_name);

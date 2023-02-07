@@ -61,7 +61,7 @@ namespace
 
   void upload_conveyor_parameters() {
     
-    auto db = global_config["program_state_db_name"].get<std::string>();
+    auto db = global_config["state_db_name"].get<std::string>();
     auto [id,err] = fetch_conveyor_id(db);
     
     if(!err && id == 0){
@@ -301,7 +301,7 @@ namespace cads
 
   void upload_profile_only()
   {
-    auto db_name = global_config["db_name"].get<std::string>();
+    auto db_name = global_config["profile_db_name"].get<std::string>();
     auto y_max_length = global_config["y_max_length"].get<double>();
     auto [Ymin,Ymax,YmaxN,WidthN,err2] = fetch_belt_dimensions(0,std::numeric_limits<int>::max(),db_name);
     http_post_whole_belt(0, (int)YmaxN+1, y_max_length);
@@ -310,7 +310,7 @@ namespace cads
   void store_profile_only()
   {
 
-    auto db_name = global_config["db_name"].get<std::string>();
+    auto db_name = global_config["profile_db_name"].get<std::string>();
     create_profile_db(db_name);
 
     BlockingReaderWriterQueue<msg> gocatorFifo;
@@ -531,8 +531,6 @@ namespace cads
 
   bool direct_process()
   {
-    create_profile_db(global_config["db_name"].get<std::string>().c_str());
-    create_program_state_db(global_config["program_state_db_name"].get<std::string>());
 
     BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
     BlockingReaderWriterQueue<msg> winFifo(4096 * 1024);
