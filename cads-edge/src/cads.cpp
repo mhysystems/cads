@@ -92,7 +92,7 @@ namespace
   bool process_impl(bool createdb = true)
   {
     if(createdb) {
-      create_db(global_config["db_name"].get<std::string>().c_str());
+      create_profile_db(global_config["db_name"].get<std::string>().c_str());
       create_program_state_db(global_config["program_state_db_name"].get<std::string>());
     }
     
@@ -232,8 +232,8 @@ namespace
       if (speed == 0)
       {
         spdlog::get("cads")->error("Belt proabaly stopped.");
-        error = true;
-        break;
+        //error = true;
+        //break;
       }
 
       auto [delayed, dd] = delay({iy, ix, iz, ileft_edge_index, iright_edge_index});
@@ -315,7 +315,7 @@ namespace cads
   {
 
     auto db_name = global_config["db_name"].get<std::string>();
-    create_db(db_name);
+    create_profile_db(db_name);
 
     BlockingReaderWriterQueue<msg> gocatorFifo;
 
@@ -535,7 +535,7 @@ namespace cads
 
   bool direct_process()
   {
-    create_db(global_config["db_name"].get<std::string>().c_str());
+    create_profile_db(global_config["db_name"].get<std::string>().c_str());
     create_program_state_db(global_config["program_state_db_name"].get<std::string>());
 
     BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);

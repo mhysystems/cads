@@ -45,6 +45,7 @@
   },
   "db_name" : "profile.db",
   "program_state_db_name" : "state.db",
+  "transient_db_name" : "transient.db",
   "use_encoder" : false,
   "belt_cross_correlation_threshold" : 0.4,
 

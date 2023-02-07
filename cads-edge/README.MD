@@ -49,7 +49,7 @@ sudo apt update && sudo apt upgrade -y
 
 
 Valgrind
-valgrind --tool=memcheck --log-file="val.log" ./cads -c ../config.json 
+valgrind --tool=memcheck --leak-check=full --show-leak-kinds=all --log-file="val.log" ./cads -c ../config.json 
 
 
 
