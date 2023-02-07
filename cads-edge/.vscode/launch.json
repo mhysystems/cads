@@ -49,11 +49,11 @@
 			"miDebuggerPath": "/usr/bin/gdb"
 		},
     {
-			"name": "(gdb) gocator Launch",
+			"name": "(gdb) Dump Raw",
 			"type": "cppdbg",
 			"request": "launch",
 			"program": "${workspaceFolder}/debug/cads",
-			"args": ["-c", "${workspaceFolder}/gconfig.json"],
+			"args": ["-d", "-c", "${workspaceFolder}/config.json"],
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}/debug",
 			"environment": [],
