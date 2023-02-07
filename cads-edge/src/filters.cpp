@@ -124,17 +124,17 @@ namespace cads
     };
   }
 
-  std::function<std::tuple<bool, std::tuple<y_type, double, z_type,int,int>>(std::tuple<y_type, double, z_type,int,int>)> mk_delay(size_t len)
+  std::function<std::tuple<bool, std::tuple<y_type, double, z_type,int,int,z_type>>(std::tuple<y_type, double, z_type,int,int,z_type>)> mk_delay(size_t len)
   {
 
-    std::deque<std::tuple<y_type, double, z_type,int,int>> delay;
-    return [=](std::tuple<y_type, double, z_type,int,int> p) mutable
+    std::deque<std::tuple<y_type, double, z_type,int,int,z_type>> delay;
+    return [=](std::tuple<y_type, double, z_type,int,int,z_type> p) mutable
     {
       delay.push_back(p);
 
       if (delay.size() < len)
       {
-        return std::tuple{false, std::tuple<y_type, double, z_type,int,int>()};
+        return std::tuple{false, std::tuple<y_type, double, z_type,int,int,z_type>()};
       }
 
       auto rn = delay.front();
