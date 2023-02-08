@@ -1,3 +1,5 @@
+@inject NavigationManager MyNavigationManager
+
 <MudAppBar Elevation="0" Class="d-flex">
   <MudText Typo="Typo.h2">CADS</MudText>
     <MudText Typo="Typo.h2" Class="ml-4">@site</MudText>
@@ -5,7 +7,7 @@
     <MudSpacer/>
       @ChildContent
     <MudSpacer/>
-  <MudImage Style="height:100%" ObjectFit="ObjectFit.ScaleDown" Src="https://cadswebsite.blob.core.windows.net/wwwroot/MHY Systems Logo.png" Alt="MHY Logo" />
+  <MudImage Style="height:100%" ObjectFit="ObjectFit.ScaleDown" Src="@logo" Alt="Logo" />
 </MudAppBar>
 
 @if (ShowDraw)
@@ -32,6 +34,17 @@
   public bool ShowDraw {get; set;} = false;
   [Parameter]
   public string site { get; set; } = ""
-;  [Parameter]
+; [Parameter]
   public string conveyor { get; set; } = "";
+
+  public string logo = "https://cadswebsite.blob.core.windows.net/wwwroot/MHY Systems Logo.png";
+
+  protected override async Task OnInitializedAsync()
+  {
+    if(MyNavigationManager.BaseUri.ToLower().Contains("miniotec")) {
+      logo = "https://cadswebsite.blob.core.windows.net/wwwroot/miniow.png";
+    }
+  }
+
+
 }
