@@ -79,7 +79,14 @@ namespace cads
 
     if (kIsError(status))
     {
-      throw runtime_error{"GoSensor_Stop: "s + to_string(status)};
+      spdlog::get("gocator")->error("GoSensor_Stop(m_sensor) -> {}", status);
+    }
+    
+    status = GoSensor_Stop(m_system);
+
+    if (kIsError(status))
+    {
+      spdlog::get("gocator")->error("GoSensor_Stop(m_system) -> {}", status);
     }
   }
 
