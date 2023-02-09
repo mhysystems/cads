@@ -70,6 +70,8 @@ namespace cads
     if (kIsError(status))
     {
       throw runtime_error{"GoSensor_Start: "s + to_string(status)};
+    }else{
+      spdlog::get("gocator")->info("GoSensor Starting");
     }
   }
 
@@ -80,6 +82,8 @@ namespace cads
     if (kIsError(status))
     {
       spdlog::get("gocator")->error("GoSensor_Stop(m_sensor) -> {}", status);
+    } else {
+      spdlog::get("gocator")->info("GoSensor Stopped");
     }
     
   }
@@ -202,7 +206,10 @@ namespace cads
     if(!terminate) {
       return me->OnData(sensor, dataset);
     }else {
-      me->m_gocatorFifo.enqueue({msgid::finished, 0});
+      if(me->m_loop) {
+        me->m_gocatorFifo.enqueue({msgid::finished, 0});
+        me->m_loop = false;
+      }
       GoDestroy(dataset);
       return kOK;
     }
