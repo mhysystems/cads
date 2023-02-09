@@ -297,7 +297,11 @@ namespace cads
     {
       m_first_frame = false;
       spdlog::get("gocator")->info("First frame recieved from gocator");
-      m_yOffset = encoder;
+      if(m_use_encoder) {
+        m_yOffset = encoder;
+      }else {
+        m_yOffset = frame;
+      }
       m_gocatorFifo.enqueue({msgid::resolutions, resolutions_t{m_yResolution, xResolution, zResolution, zOffset, m_encoder_resolution}});
     }
 
@@ -307,7 +311,7 @@ namespace cads
     }
     else
     {
-      y = frame * m_yResolution;
+      y = (frame - m_yOffset) * m_encoder_resolution;
     }
 
     // Trim invalid values
