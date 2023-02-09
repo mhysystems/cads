@@ -280,12 +280,14 @@ namespace
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    origin_dectection.join();
+
     auto rate = duration != 0 ? (double)cnt / duration : 0;
     spdlog::get("cads")->info("CADS - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, rate);
 
     gocator->Stop();
-    spdlog::get("cads")->info("Gocator Stopped");
+  
+    origin_dectection.join();
+    spdlog::get("cads")->info("Origin Detection Stopped");
 
     save_send.join();
     spdlog::get("cads")->info("Upload Thread Stopped");
