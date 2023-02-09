@@ -82,12 +82,6 @@ namespace cads
       spdlog::get("gocator")->error("GoSensor_Stop(m_sensor) -> {}", status);
     }
     
-    status = GoSensor_Stop(m_system);
-
-    if (kIsError(status))
-    {
-      spdlog::get("gocator")->error("GoSensor_Stop(m_system) -> {}", status);
-    }
   }
 
   void GocatorReader::Log() {
