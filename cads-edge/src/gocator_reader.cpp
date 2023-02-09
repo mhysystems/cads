@@ -197,7 +197,15 @@ namespace cads
 
   kStatus kCall GocatorReader::OnData(kPointer context, GoSensor sensor, GoDataSet dataset)
   {
-    return static_cast<GocatorReader *>(context)->OnData(sensor, dataset);
+    auto me = static_cast<GocatorReader *>(context);
+    
+    if(!terminate) {
+      return me->OnData(sensor, dataset);
+    }else {
+      me->m_gocatorFifo.enqueue({msgid::finished, 0});
+      GoDestroy(dataset);
+      return kOK;
+    }
   }
 
   kStatus kCall GocatorReader::OnSystem(kPointer context, GoSystem system, GoDataSet data)
@@ -296,12 +304,13 @@ namespace cads
     if (m_first_frame)
     {
       m_first_frame = false;
-      spdlog::get("gocator")->info("First frame recieved from gocator");
+
       if(m_use_encoder) {
         m_yOffset = encoder;
       }else {
         m_yOffset = frame;
       }
+      spdlog::get("gocator")->info("First frame recieved from gocator. y :{}, x : {}, z : {}, zoff : {}, enc : {}, 1st : {}",m_yResolution, xResolution, zResolution, zOffset, m_encoder_resolution,m_yOffset);
       m_gocatorFifo.enqueue({msgid::resolutions, resolutions_t{m_yResolution, xResolution, zResolution, zOffset, m_encoder_resolution}});
     }
 
@@ -311,7 +320,7 @@ namespace cads
     }
     else
     {
-      y = (frame - m_yOffset) * m_encoder_resolution;
+      y = (frame - m_yOffset) * m_yResolution;
     }
 
     // Trim invalid values
@@ -341,11 +350,6 @@ namespace cads
     {
       spdlog::get("gocator")->error("Cads Showing signs of not being able to keep up with data source. Size {}", m_buffer_size_warning);
       m_buffer_size_warning += 4096;
-    }
-
-    if (terminate)
-    {
-      m_gocatorFifo.enqueue({msgid::finished, 0});
     }
 
     return kOK;
