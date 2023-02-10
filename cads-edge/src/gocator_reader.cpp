@@ -71,6 +71,7 @@ namespace cads
     {
       throw runtime_error{"GoSensor_Start: "s + to_string(status)};
     }else{
+      m_stopped = false;
       spdlog::get("gocator")->info("GoSensor Starting");
     }
   }
@@ -83,6 +84,7 @@ namespace cads
     {
       spdlog::get("gocator")->error("GoSensor_Stop(m_sensor) -> {}", status);
     } else {
+      m_stopped = true;
       spdlog::get("gocator")->info("GoSensor Stopped");
     }
     
@@ -223,7 +225,9 @@ namespace cads
   GocatorReader::~GocatorReader()
   {
     m_loop = false;
-    Stop();
+    if(!m_stopped) {
+      Stop();
+    }
     GoDestroy(m_system);
     GoDestroy(m_assembly);
   }
