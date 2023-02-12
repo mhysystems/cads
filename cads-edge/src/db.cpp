@@ -637,13 +637,13 @@ namespace cads
   }
 
   
-  coro<std::tuple<int, profile>> fetch_belt_coro(int revid, int last_idx, int size, std::string name)
+  coro<std::tuple<int, profile>> fetch_belt_coro(int revid, int last_idx, int first_index, int size, std::string name)
   {
     auto query = fmt::format(R"(SELECT idx,y,x_off,z FROM PROFILE WHERE REVID = {} AND IDX >= ? AND IDX < ? ORDER BY Y)", revid);
     auto db_config_name = name.empty() ? global_config["profile_db_name"].get<std::string>() : name;
     auto [stmt,db] = prepare_query(db_config_name, query);
 
-    for (int i = 0; i < last_idx; i += size)
+    for (int i = first_index; i < last_idx; i += size)
     {
       auto iend = i + size; 
       if(iend > last_idx) iend = last_idx;

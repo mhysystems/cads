@@ -352,7 +352,7 @@ void http_post_realtime(double y_area, double value)
     }
   }
 
-  std::tuple<date::utc_clock::time_point,bool> http_post_whole_belt(int revid, int last_idx, double belt_length)
+  std::tuple<date::utc_clock::time_point,bool> http_post_whole_belt(int revid, int last_idx, int first_idx)
   {
     using namespace flatbuffers;
 
@@ -360,11 +360,9 @@ void http_post_realtime(double y_area, double value)
     auto db_name = global_config["profile_db_name"].get<std::string>();
     auto endpoint_url = global_config["base_url"].get<std::string>();
     auto y_max_length = global_config["y_max_length"].get<double>();
-    auto y_max_upload = global_config["y_max_upload"].get<double>();
+    auto belt_length = global_config["y_max_upload"].get<double>();
     auto upload_profile = global_config["upload_profile"].get<bool>();
 
-    //override belt_length
-    belt_length = y_max_upload;
 
     if (endpoint_url == "null")
     {
@@ -487,6 +485,132 @@ void http_post_realtime(double y_area, double value)
     store_daily_upload(next_upload_date,program_state_db_name);
     return {now,failure};
   }
+
+
+
+std::tuple<date::utc_clock::time_point,bool> http_post_belt(int revid, int last_idx, int first_idx, std::string db_name)
+  {
+    using namespace flatbuffers;
+
+    auto now = chrono::floor<chrono::seconds>(date::utc_clock::now()); // Default sends to much decimal precision for asp.net core
+    auto endpoint_url = global_config["base_url"].get<std::string>();
+    auto y_max_length = global_config["y_max_length"].get<double>();
+    auto belt_length = global_config["y_max_upload"].get<double>();
+    auto upload_profile = global_config["upload_profile"].get<bool>();
+
+
+    if (endpoint_url == "null")
+    {
+      spdlog::get("upload")->info("http_post_whole_belt set to null. Belt not uploaded");
+      return {now,true};
+    }
+
+    auto fetch_profile = fetch_belt_coro(revid, last_idx,first_idx,256,db_name);
+
+    FlatBufferBuilder builder(4096 * 128);
+    std::vector<flatbuffers::Offset<CadsFlatbuffers::profile>> profiles_flat;
+
+    auto ts = date::format("%FT%TZ", now);
+    cpr::Url endpoint{mk_post_profile_url(ts)};
+
+    auto [params, err] = fetch_profile_parameters(db_name);
+    auto [Ymin,Ymax,YmaxN,WidthN,err2] = fetch_belt_dimensions(revid,last_idx,db_name);
+    
+    if (err != 0)
+    {
+      spdlog::get("upload")->error("Unable to fetch profile parameters from DB. Revid: {}", revid);
+      return {now,true};
+    }
+
+    auto z_resolution = params.z_res;
+    auto z_offset =  params.z_off;
+    auto y_step = belt_length / (YmaxN);
+
+    if(std::floor(y_max_length * 0.75 / params.y_res) > last_idx) {
+      spdlog::get("upload")->error("Belt less than 0.75 of max belt length. Length of {}, revid: {}", belt_length, revid);
+      return {now,true};
+    }
+
+    auto cnt_width_n = count_with_width_n(db_name, revid, WidthN);
+
+    if(cnt_width_n < 0 && cnt_width_n != YmaxN) {
+      spdlog::get("upload")->error("Profiles of belt not same number of samples. revid: {}", revid);
+      return {now,true};
+    }
+
+    if((last_idx-1) != (int)YmaxN) {
+      spdlog::get("upload")->error("Database doesn't contain the number of profiles requested. revid: {}, requested: {}, retrieved:{}", revid, last_idx-1, YmaxN);
+      return {now,true};
+    }
+
+    int64_t size = 0;
+    int64_t frame_idx = -1;
+    double belt_z_max = 0; 
+    double y_adjustment = 0.0;
+    int final_idx = 0;
+
+    while (true)
+    {
+      auto [co_terminate, cv] = fetch_profile.resume(0);
+      auto [idx, p] = cv;
+
+      if (frame_idx < 0)
+        frame_idx = (int64_t)idx;
+
+      if (!co_terminate)
+      {
+        namespace sr = std::ranges;
+
+        p.y = y_adjustment;
+        y_adjustment += y_step;
+
+        auto max_iter = max_element(p.z.begin(), p.z.end());
+        
+        if(max_iter != p.z.end()) {
+          belt_z_max = max(belt_z_max, (double)*max_iter);
+        }
+
+        auto tmp_z = p.z | sr::views::transform([=](float e) -> int16_t
+                                                { return std::isnan(e) ? std::numeric_limits<int16_t>::lowest() : int16_t(((double)e - z_offset) / z_resolution); });
+        std::vector<int16_t> short_z{tmp_z.begin(), tmp_z.end()};
+
+        profiles_flat.push_back(CadsFlatbuffers::CreateprofileDirect(builder, p.y, p.x_off, &short_z));
+
+        if (profiles_flat.size() == 256)
+        {
+          size += send_flatbuffer_array(builder, z_resolution, z_offset, frame_idx, profiles_flat, endpoint, upload_profile);
+          frame_idx = -1;
+        }
+      }
+      else
+      {
+        if (profiles_flat.size() > 0)
+        {
+          size += send_flatbuffer_array(builder, z_resolution, z_offset, frame_idx, profiles_flat, endpoint, upload_profile);
+        }
+        final_idx = idx;
+        break;
+      }
+    }
+
+    y_adjustment -= y_step;
+
+    if(std::abs((y_adjustment / belt_length) - 1) > 0.001 ) {
+      spdlog::get("upload")->error("Uploaded belt length validation failed. revid: {}, requested: {}, retrieved:{}", revid, belt_length, y_adjustment);
+      return {now,true};
+    }
+
+    bool failure = false;
+    if(final_idx == last_idx-1) {
+      http_post_profile_properties(revid,last_idx,ts,y_adjustment,y_step);
+    }else{
+      failure = true;
+      spdlog::get("upload")->error("Number of profiles sent {} not matching idx of {}. Revid id: {}", final_idx+1,last_idx, revid);
+    }
+
+    return {now,failure};
+  }
+
 
   std::vector<profile> http_get_frame(double y, int len, date::utc_clock::time_point chrono)
   {

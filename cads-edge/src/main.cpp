@@ -20,6 +20,7 @@ int main(int argn, char **argv)
 	using namespace cads;
 
 	po::options_description desc("Allowed options");
+  po::positional_options_description pos_desc;
 
 	desc.add_options()
 		("help,h", "produce help message")
@@ -27,17 +28,20 @@ int main(int argn, char **argv)
     ("savedb,d", po::bool_switch(), "Only save one approx belt")
     ("once,o", po::bool_switch(), "Run once")
     ("stop,s", po::bool_switch(), "Stop Gocator")
-    ("upload,u", po::bool_switch(), "Upload Profile Only")
+    ("upload,u", po::value<std::string>()->implicit_value(""), "Upload Profile Only")
     ("signal,e", po::bool_switch(), "Generate signal for input into python filter parameter creation")
     ("params,p", po::value<long>(), "Generate belt paramaters to be used in cads config")
     ("go-log,g", po::bool_switch(), "Dump Gocator Log")
-    ("level,l", po::value<std::string>(), "Logging Level");
+    ("level,l", po::value<std::string>(), "Logging Level")
+    ("db-name", po::value<std::string>(), "db file");
+
+  pos_desc.add("db-name", 1);
 
 	po::variables_map vm;
 
 	try
 	{
-		po::store(po::command_line_parser(argn, argv).options(desc).run(), vm);
+		po::store(po::command_line_parser(argn, argv).options(desc).positional(pos_desc).run(), vm);
 		po::notify(vm);
 	}
 	catch (std::exception &e)
@@ -87,8 +91,9 @@ int main(int argn, char **argv)
 
   }
   
-  if(vm["upload"].as<bool>()) {
-    upload_profile_only();
+  if(vm.count("upload")) {
+    auto dbname = vm.count("db-name") ? vm["db-name"].as<std::string>() : "";
+    upload_profile_only(vm["upload"].as<std::string>(),dbname);
   }else if(vm["savedb"].as<bool>()) {
     store_profile_only();
   }else if(vm["once"].as<bool>()) {

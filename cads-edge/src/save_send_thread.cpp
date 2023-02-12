@@ -36,7 +36,7 @@ namespace cads
 
     auto write_revid = read_revid;
 
-    std::future<std::invoke_result_t<decltype(http_post_whole_belt), int, int, double>> fut;
+    std::future<std::invoke_result_t<decltype(http_post_whole_belt), int, int, int>> fut;
     bool terminate = false;
     long idx = 0;
     double belt_length = 0;
@@ -67,7 +67,7 @@ namespace cads
         {
         case no_shedule:
         {
-          fut = std::async(http_post_whole_belt, read_revid, idx, belt_length);
+          fut = std::async(http_post_whole_belt, read_revid, idx, 0);
           write_revid++;
           spdlog::get("cads")->info("Posting a belt. Writing data to revid: {}", write_revid);
           state = uploading;
@@ -81,7 +81,7 @@ namespace cads
           if (now > next_upload_date)
           {
 
-              fut = std::async(http_post_whole_belt, read_revid, idx, belt_length);
+              fut = std::async(http_post_whole_belt, read_revid, idx, 0);
               write_revid++;
               state = uploading;
               spdlog::get("cads")->info("Posting a belt. Writing data to revid: {}. Reading data from revid: {}", write_revid, read_revid);

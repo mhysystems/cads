@@ -307,12 +307,18 @@ namespace cads
 
 
 
-  void upload_profile_only()
+  void upload_profile_only(std::string params, std::string db_name)
   {
-    auto db_name = global_config["profile_db_name"].get<std::string>();
-    auto y_max_length = global_config["y_max_length"].get<double>();
-    auto [Ymin,Ymax,YmaxN,WidthN,err2] = fetch_belt_dimensions(0,std::numeric_limits<int>::max(),db_name);
-    http_post_whole_belt(0, (int)YmaxN+1, y_max_length);
+    auto db = db_name.empty() ? global_config["profile_db_name"].get<std::string>() : db_name;
+    if(params == "") {
+      auto [Ymin,Ymax,YmaxN,WidthN,err2] = fetch_belt_dimensions(0,std::numeric_limits<int>::max(),db);
+      http_post_whole_belt(0, (int)YmaxN+1, 0);
+    }else {
+      auto args = nlohmann::json::parse(params);
+      auto [first_idx,last_idx] = args.get<std::tuple<int,int>>();
+      http_post_whole_belt(0, last_idx, first_idx);
+
+    }
   }
 
   void store_profile_only()
@@ -386,6 +392,7 @@ namespace cads
     terminate_subscribe = true;
 
     gocator->Stop();
+    spdlog::get("cads")->info("Sleeping for {} seconds",15);
   }
 
   

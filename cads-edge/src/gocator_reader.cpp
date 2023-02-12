@@ -205,7 +205,7 @@ namespace cads
   {
     auto me = static_cast<GocatorReader *>(context);
     
-    if(!terminate) {
+    if(!me->terminate) {
       return me->OnData(sensor, dataset);
     }else {
       if(me->m_loop) {
