@@ -314,9 +314,45 @@ namespace cads
       auto [Ymin,Ymax,YmaxN,WidthN,err2] = fetch_belt_dimensions(0,std::numeric_limits<int>::max(),db);
       http_post_whole_belt(0, (int)YmaxN+1, 0);
     }else {
+      
       auto args = nlohmann::json::parse(params);
       auto [first_idx,last_idx] = args.get<std::tuple<int,int>>();
-      http_post_whole_belt(0, last_idx, first_idx);
+      auto fetch_belt = fetch_belt_coro(0,last_idx,first_idx,256,db);
+      meta m;
+
+      auto [params, err] = fetch_profile_parameters(db);
+      auto [Ymin,Ymax,YmaxN,WidthN,err2] = fetch_belt_dimensions(first_idx,last_idx,db);
+      auto now = chrono::floor<chrono::seconds>(date::utc_clock::now()); // Default sends to much decimal precision for asp.net core
+      auto ts = date::format("%FT%TZ", now);
+      
+      m.chrono = ts;
+      m.conveyor = global_conveyor_parameters.Name;
+      m.site = global_conveyor_parameters.Site;
+      m.WidthN = WidthN;
+      m.x_res = params.x_res;
+      m.y_res = params.y_res;
+      m.Ymax = Ymax;
+      m.YmaxN = YmaxN;
+      m.z_off = params.z_off;
+      m.z_res = params.z_res;
+
+      auto post_profile = post_profiles_coro(m);
+
+      while (true)
+      {
+        auto [co_terminate, cv] = fetch_belt.resume(0);
+        auto [idx, p] = cv;
+
+        if (co_terminate)
+        {
+          break;
+        }
+
+        auto f = p.z | views::take(WidthN);
+        post_profile.resume(cads::profile{p.y,p.x_off,{f.begin(), f.end()}});
+
+
+      }
 
     }
   }

@@ -62,7 +62,9 @@
     "PulleyCircumference" : 2613.8     
   },
   "webapi_urls" : {
-    "add_conveyor" : ["http://localhost:5000/api/conveyors",false]
+    "add_conveyor" : ["http://localhost:5000/api/conveyors",false],
+    "add_meta" : ["http://localhost:5000/api/meta",false],
+    "add_belt" : ["http://localhost:5000/api/belt",false]
   },
   "nats_url" : "192.168.2.13",
   "upload_profile" : false, 

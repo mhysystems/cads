@@ -28,12 +28,32 @@
         }
       ]
     },
-		{
+    {
 			"name": "(gdb) Playback",
 			"type": "cppdbg",
 			"request": "launch",
 			"program": "${workspaceFolder}/debug/cads",
-			"args": ["-u","[0,1]" ,"-l", "debug", "-c", "${workspaceFolder}/config.json", "don"],
+			"args": ["-l", "debug", "-c", "${workspaceFolder}/config.json"],
+			"stopAtEntry": false,
+			"cwd": "${workspaceFolder}/debug",
+			"environment": [],
+			"externalConsole": false,
+			"MIMode": "gdb",
+			"setupCommands": [
+				{
+					"description": "Enable pretty-printing for gdb",
+					"text": "-enable-pretty-printing",
+					"ignoreFailures": true
+				}
+			],
+			"miDebuggerPath": "/usr/bin/gdb"
+		},
+		{
+			"name": "(gdb) Upload",
+			"type": "cppdbg",
+			"request": "launch",
+			"program": "${workspaceFolder}/debug/cads",
+			"args": ["-u","[0,100]" ,"-l", "debug", "-c", "${workspaceFolder}/config.json", "profile.db"],
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}/debug",
 			"environment": [],
