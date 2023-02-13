@@ -422,7 +422,7 @@ namespace cads
       case cads::msgid::finished:
       {
         spdlog::get("cads")->info("Received finished msg");
-        continue;
+        break;
       }
       default:
         continue;
