@@ -348,6 +348,11 @@ namespace cads
           break;
         }
 
+        if(p.z.size() < size_t(WidthN)) {
+          const auto cnt = WidthN - p.z.size();
+          p.z.insert(p.z.end(),cnt,0);
+        }
+
         auto f = p.z | views::take(WidthN);
         post_profile.resume(cads::profile{p.y,p.x_off,{f.begin(), f.end()}});
 

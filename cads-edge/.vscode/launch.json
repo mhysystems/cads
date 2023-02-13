@@ -53,7 +53,7 @@
 			"type": "cppdbg",
 			"request": "launch",
 			"program": "${workspaceFolder}/debug/cads",
-			"args": ["-u","[0,100]" ,"-l", "debug", "-c", "${workspaceFolder}/config.json", "profile.db"],
+			"args": ["-u","[0,1000]" ,"-l", "debug", "-c", "${workspaceFolder}/config.json", "profile_up.db"],
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}/debug",
 			"environment": [],

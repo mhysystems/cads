@@ -11,12 +11,12 @@ function generate_ploty_z_samples(typedArray, columns) {
   return z_samples;
 }
 
-function mk_2dArray(rows, columns) {
+function mk_2dArray(rows, columns, zMin) {
 
   const z_samples = [];
 
   for (let i = 0; i < rows; i++) {
-    z_samples.push(new Array(columns).fill(0));
+    z_samples.push(new Array(columns).fill(zMin));
   }
 
   return z_samples;
@@ -318,16 +318,16 @@ export function init(
 
     // Pull edges to zero to mimic 3d belt
     for (let i = 0; i < rows; i++) {
-      z_surface[i][0] = 0.0;
-      z_surface[i][columns - 1] = 0.0;
+      z_surface[i][0] = this.zMIn;
+      z_surface[i][columns - 1] = this.zMin;
     }
 
     for (let i = 0; i < columns; i++) {
-      z_surface[0][i] = 0.0;
-      z_surface[rows - 1][i] = 0.0;
+      z_surface[0][i] = this.zMin;
+      z_surface[rows - 1][i] = this.zMin;
     }
 
-    const bottom_plane = mk_2dArray(rows, columns);
+    const bottom_plane = mk_2dArray(rows, columns,this.zMin);
 
     data[1].y = y_axis;
     data[1].x = x_axis;
@@ -674,6 +674,7 @@ class TrendPlot {
     this.plotElement = plotElement;
     this.xRes = x_res;
     this.zMax = z_max;
+    this.zMin = z_min;
 
     this.layout = {
       title: {
@@ -739,7 +740,7 @@ class TrendPlot {
 
     this.layout.xaxis = [x_axis[0], x_axis[x_axis.length - 1]];
 
-    this.layout.aspectratio.y = this.zMax / (belt_width * 1000);
+    this.layout.aspectratio.y = (this.zMax - this.zMin) / (belt_width * 1000);
 
     this.plotData[index].y = z_profile;
     this.plotData[index].x = x_axis;
@@ -755,6 +756,7 @@ class ProfilePlot {
     this.plotElement = plotElement;
     this.xRes = x_res;
     this.zMax = z_max;
+    this.zMin = z_min;
 
     this.layout = {
       autosize: true,
@@ -838,7 +840,7 @@ class ProfilePlot {
 
     this.layout.shapes[0].x0 = this.layout.xaxis[0];
     this.layout.shapes[0].x1 = this.layout.xaxis[1];
-    this.layout.aspectratio.y = this.zMax / (belt_width * 1000);
+    this.layout.aspectratio.y = (this.zMax - this.zMin)  / (belt_width * 1000);
 
     this.plotData[0].y = z_surface[yIndex];
     this.plotData[0].x = x_axis;
@@ -880,7 +882,7 @@ class ProfilePlot {
 
     this.layout.shapes[0].x0 = this.layout.xaxis[0];
     this.layout.shapes[0].x1 = this.layout.xaxis[1];
-    this.layout.aspectratio.y = this.zMax / (belt_width * 1000);
+    this.layout.aspectratio.y = (this.zMax - this.zMin)  / (belt_width * 1000);
 
     this.plotData[0].y = z_surfaceTop[yIndex];
     this.plotData[0].x = x_axis;
@@ -918,6 +920,7 @@ class SurfacePlot {
     this.plotElement = plotElement;
     this.xRes = x_res;
     this.zMax = z_max;
+    this.zMin = z_min;
     this.colorScale = typeof (color_scale) == 'string' ? color_scale : color_scale.map(({ item1, item2 }) => [item1, item2]);
 
     this.layout = {
@@ -1066,7 +1069,7 @@ class SurfacePlot {
     this.layout.scene.yaxis.range = [y_axis[0], y_axis[y_axis.length - 1]];
     this.layout.scene.xaxis.range = [x_axis[0], x_axis[x_axis.length - 1]];
     this.layout.scene.aspectratio.y = belt_length / belt_width;
-    this.layout.scene.aspectratio.z = this.zMax / (belt_width * 1000);
+    this.layout.scene.aspectratio.z = (this.zMax - this.zMin)  / (belt_width * 1000);
     this.layout.scene.camera.eye = { ...SurfacePlot.defaultEyePosition };
     this.layout.scene.camera.center = { x: 0, y: 0, z: 0 };
 
@@ -1122,22 +1125,22 @@ class SurfacePlot {
     this.layout.scene.yaxis.range = [y_axis[0], y_axis[y_axis.length - 1]];
     this.layout.scene.xaxis.range = [x_axis[0], x_axis[x_axis.length - 1]];
     this.layout.scene.aspectratio.y = belt_length / belt_width;
-    this.layout.scene.aspectratio.z = this.zMax / (belt_width * 1000);
+    this.layout.scene.aspectratio.z = (this.zMax - this.zMin) / (belt_width * 1000);
     this.layout.scene.camera.eye = { ...SurfacePlot.defaultEyePosition };
     this.layout.scene.camera.center = { x: 0, y: 0, z: 0 };
 
     // Pull edges to zero to mimic 3d belt
     for (let i = 0; i < rows; i++) {
-      z_surface[i][0] = 0.0;
-      z_surface[i][columns - 1] = 0.0;
+      z_surface[i][0] = this.zMin;
+      z_surface[i][columns - 1] = this.zMin;
     }
 
     for (let i = 0; i < columns; i++) {
-      z_surface[0][i] = 0.0;
-      z_surface[rows - 1][i] = 0.0;
+      z_surface[0][i] = this.zMin;
+      z_surface[rows - 1][i] = this.zMin;
     }
 
-    const bottom_plane = mk_2dArray(rows, columns);
+    const bottom_plane = mk_2dArray(rows, columns,this.zMin);
 
     this.plotData[SurfacePlot.floorPlotData].y = y_axis;
     this.plotData[SurfacePlot.floorPlotData].x = x_axis;

@@ -387,6 +387,7 @@ namespace cads
     params_json["z_res"] = meta.z_res;
     params_json["z_off"] = meta.z_off;
     params_json["z_max"] = meta.z_max;
+    params_json["z_min"] = meta.z_min;
     params_json["Ymax"] = meta.Ymax;
     params_json["YmaxN"] = meta.YmaxN;
     params_json["WidthN"] = meta.WidthN;
@@ -541,7 +542,7 @@ namespace cads
   {
     using namespace flatbuffers;
 
-    auto [endpoint_url, enable] = global_webapi.add_conveyor;
+    auto [endpoint_url, enable] = global_webapi.add_belt;
 
     FlatBufferBuilder builder(4096 * 128);
     std::vector<flatbuffers::Offset<CadsFlatbuffers::profile>> profiles_flat;
