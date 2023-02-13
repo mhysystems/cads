@@ -208,9 +208,9 @@ namespace cads
     if(!me->terminate) {
       return me->OnData(sensor, dataset);
     }else {
-      if(me->m_loop) {
+      if(me->m_stopped) {
         me->m_gocatorFifo.enqueue({msgid::finished, 0});
-        me->m_loop = false;
+        me->m_stopped = false;
       }
       GoDestroy(dataset);
       return kOK;

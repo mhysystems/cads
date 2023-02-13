@@ -7,6 +7,7 @@
 #include <limits>
 #include <functional>
 #include <chrono>
+#include <string>
 
 namespace cads
 {

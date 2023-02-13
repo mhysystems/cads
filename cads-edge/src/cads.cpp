@@ -353,7 +353,7 @@ namespace cads
           p.z.insert(p.z.end(),cnt,0);
         }
 
-        auto f = p.z | views::take(WidthN);
+        auto f = p.z | views::take(int(WidthN));
         post_profile.resume(cads::profile{p.y,p.x_off,{f.begin(), f.end()}});
 
 
@@ -421,6 +421,7 @@ namespace cads
 
       case cads::msgid::finished:
       {
+        spdlog::get("cads")->info("Received finished msg");
         continue;
       }
       default:
