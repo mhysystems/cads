@@ -32,6 +32,7 @@ protected:
   bool m_use_encoder = true;
   std::atomic<k64s> m_yOffset = 0;
   std::atomic<size_t> m_buffer_size_warning = 4096;
+  std::atomic<bool> m_sent_final_msg = false;
   
 	static kStatus OnData(kPointer context, GoSensor sensor, GoDataSet dataset);
   static kStatus OnSystem(kPointer context, GoSystem system, GoDataSet data);
@@ -40,7 +41,6 @@ protected:
 
 public:
 
-  void RunForever();
 	void Start();
 	void Stop();
   void Log();

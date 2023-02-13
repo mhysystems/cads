@@ -208,9 +208,9 @@ namespace cads
     if(!me->terminate) {
       return me->OnData(sensor, dataset);
     }else {
-      if(!me->m_stopped) {
+      if(!me->m_sent_final_msg) {
         me->m_gocatorFifo.enqueue({msgid::finished, 0});
-        me->m_stopped = true;
+        me->m_sent_final_msg = true;
       }
       GoDestroy(dataset);
       return kOK;
@@ -224,28 +224,11 @@ namespace cads
 
   GocatorReader::~GocatorReader()
   {
-    m_loop = false;
-    if(!m_stopped) {
-      Stop();
-    }
+    Stop();
     GoDestroy(m_system);
     GoDestroy(m_assembly);
   }
 
-  void GocatorReader::RunForever()
-  {
-    Start();
-    spdlog::get("gocator")->info("Started Gocator");
-
-    while (m_loop)
-    {
-      unique_lock<mutex> lock(m_mutex);
-      m_condition.wait(lock);
-    }
-
-    Stop();
-    spdlog::get("gocator")->info("Stopped Gocator");
-  }
 
   kStatus GocatorReader::OnSystem([[maybe_unused]] GoSystem system, GoDataSet dataset)
   {
@@ -351,11 +334,6 @@ namespace cads
     m_gocatorFifo.enqueue({msgid::scan, cads::profile{y, xOffset + samples_width * xResolution, std::move(z)}});
 
     GoDestroy(dataset);
-
-    {
-      unique_lock<mutex> lock(m_mutex);
-      m_condition.notify_all();
-    }
 
     if (m_gocatorFifo.size_approx() > m_buffer_size_warning)
     {

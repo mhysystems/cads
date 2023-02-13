@@ -380,6 +380,10 @@ namespace cads
     if (get<0>(m) != cads::msgid::resolutions)
     {
       std::throw_with_nested(std::runtime_error("First message must be resolutions"));
+    }else {
+      auto now = chrono::floor<chrono::milliseconds>(date::utc_clock::now()); 
+      auto ts = date::format("%FT%TZ", now);
+      spdlog::get("cads")->info("Let's go! - {}",ts);
     }
 
     auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution] = get<resolutions_t>(get<1>(m));
@@ -409,6 +413,9 @@ namespace cads
         if(nats_queue.try_dequeue(ignore)) {
           reset_y = p.y;
           p.y = 0;
+          auto now = chrono::floor<chrono::milliseconds>(date::utc_clock::now()); 
+          auto ts = date::format("%FT%TZ", now);
+          spdlog::get("cads")->info("Y reset! - {}",ts);
         }
         
         store_profile.resume({0, idx++, p});
@@ -421,7 +428,6 @@ namespace cads
 
       case cads::msgid::finished:
       {
-        spdlog::get("cads")->info("Received finished msg");
         break;
       }
       default:
@@ -434,7 +440,7 @@ namespace cads
     terminate_subscribe = true;
 
     gocator->Stop();
-    spdlog::get("cads")->info("Sleeping for {} seconds",15);
+    spdlog::get("cads")->info("Cads raw data dumping finished");
   }
 
   

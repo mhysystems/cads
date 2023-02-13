@@ -30,10 +30,7 @@ protected:
   std::atomic<double> m_yResolution = 1.0;
   std::atomic<double> m_encoder_resolution = 1.0;
   std::atomic<double> m_frame_rate = 1.0;
-  std::condition_variable m_condition;
-  std::mutex m_mutex;
-  std::atomic<bool> m_loop;
-  std::atomic<bool> m_stopped = false;
+  std::atomic<bool> m_stopped = true;
   std::atomic<bool> m_first_frame = true;
   static std::atomic<bool> terminate;
   
@@ -42,7 +39,6 @@ protected:
 
 public:
 
-  virtual void RunForever() = 0;
 	virtual void Start() = 0;
 	virtual void Stop() = 0;
 

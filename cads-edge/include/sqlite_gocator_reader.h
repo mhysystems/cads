@@ -29,7 +29,6 @@ protected:
 
 public:
 
-  void RunForever();
 	void Start();
 	void Stop();
   SqliteGocatorReader(moodycamel::BlockingReaderWriterQueue<msg>&, double, bool);
