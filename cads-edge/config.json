@@ -1,5 +1,5 @@
 {
-  "data_source" : "gocator", 
+  "data_source" : "../../profiles/rawprofile_2023-02-08.db", 
   "laser_fps" : 980,
   "forever" : false,
   "y_max_length" : 930000,
@@ -53,8 +53,8 @@
   },
 
   "conveyor" : {
-    "Site" : "whaleback",
-    "Name" : "cv405",
+    "Site" : "localdev",
+    "Name" : "test",
     "Installed" : "2023-01-14T00:00:00Z",
     "PulleyCover" : 6.0,
     "CordDiameter" : 4.3,
@@ -63,12 +63,12 @@
   },
   "webapi_urls" : {
     "add_conveyor" : ["http://localhost:5000/api/conveyors",false],
-    "add_meta" : ["https://dev.mhysystems.com/api/meta",true],
-    "add_belt" : ["https://dev.mhysystems.com/api/belt",true]
+    "add_meta" : ["http://localhost:5000/api/meta",false],
+    "add_belt" : ["http://localhost:5000/api/belt",false]
   },
   "nats_url" : "192.168.2.13",
-  "upload_profile" : true, 
-  "base_url" : "https://dev.mhysystems.com/api",
+  "upload_profile" : false, 
+  "base_url" : "http://localhost:5000/api",
   "lua_window_height" : 2,
   "lua_fn" : "function process(width,height)\nlocal sum = 0\nfor i = 1+50,width-50 do\nfor j = 0,height-1 do\nsum = sum + ((win[j*width + i] <= 25 and win[j*width + i] > 10)and 1 or 0)\nend\nend\nreturn (sum / (width * height)) > 0.001 and sum or 0\nend"
 }

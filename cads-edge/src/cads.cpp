@@ -70,11 +70,11 @@ namespace
     }
   }
 
-  unique_ptr<GocatorReaderBase> mk_gocator(BlockingReaderWriterQueue<msg> &gocatorFifo, bool use_encoder = false)
+  unique_ptr<GocatorReaderBase> mk_gocator(BlockingReaderWriterQueue<msg> &gocatorFifo, bool force_gocator = false, bool use_encoder = false)
   {
     auto data_src = global_config["data_source"].get<std::string>();
 
-    if (data_src == "gocator"s)
+    if (data_src == "gocator"s || force_gocator)
     {
       bool connect_via_ip = global_config.contains("gocator_ip");
       spdlog::get("cads")->debug("Using gocator as data source");
@@ -90,7 +90,7 @@ namespace
   }
 
   enum class Process_Status {Error, Finished, Stopped};
-  Process_Status process_impl()
+  Process_Status process_impl(bool force_gocator)
   {
    
     std::jthread uploading_conveyor_parameters(upload_conveyor_parameters);
@@ -104,7 +104,7 @@ namespace
     const auto clip_height = global_config["clip_height"].get<z_element>();
     const auto use_encoder = global_config["use_encoder"].get<bool>();
 
-    auto gocator = mk_gocator(gocatorFifo,use_encoder);
+    auto gocator = mk_gocator(gocatorFifo,force_gocator,use_encoder);
     gocator->Start();
 
     cads::msg m;
@@ -445,14 +445,14 @@ namespace cads
 
   
 
-  void process()
+  void process(bool force_gocator)
   {
     for (int sleep_wait = 1;;)
     {
       
       auto start = std::chrono::high_resolution_clock::now();
 
-      auto status = process_impl();
+      auto status = process_impl(force_gocator);
 
       auto now = std::chrono::high_resolution_clock::now();
       auto period = std::chrono::duration_cast<std::chrono::seconds>(now - start).count();

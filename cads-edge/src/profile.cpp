@@ -213,13 +213,4 @@ namespace cads
     } 
   }
 
-  std::function<profile(profile)> mk_adjust_y(const cads::z_element ref)
-  {
-    return [=](cads::profile p) 
-    {
-      p.y = 0;
-      return p;
-    };
-  }
-
 } // namespace cads

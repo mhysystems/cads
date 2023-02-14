@@ -26,12 +26,12 @@ int main(int argn, char **argv)
 		("help,h", "produce help message")
 		("config,c", po::value<std::string>(), "Config JSON file.")
     ("savedb,d", po::bool_switch(), "Only save one approx belt")
-    ("once,o", po::bool_switch(), "Run once")
     ("stop,s", po::bool_switch(), "Stop Gocator")
     ("upload,u", po::value<std::string>()->implicit_value(""), "Upload Profile Only")
     ("signal,e", po::bool_switch(), "Generate signal for input into python filter parameter creation")
     ("params,p", po::value<long>(), "Generate belt paramaters to be used in cads config")
     ("go-log,g", po::bool_switch(), "Dump Gocator Log")
+    ("force-gocator,f", po::bool_switch(), "Force gocator usage")
     ("level,l", po::value<std::string>(), "Logging Level")
     ("db-name", po::value<std::string>(), "db file");
 
@@ -96,8 +96,6 @@ int main(int argn, char **argv)
     upload_profile_only(vm["upload"].as<std::string>(),dbname);
   }else if(vm["savedb"].as<bool>()) {
     store_profile_only();
-  }else if(vm["once"].as<bool>()) {
-    process();
   }else if(vm["signal"].as<bool>()) {
     generate_signal();
   }else if(vm.count("params") > 0) {
@@ -105,7 +103,7 @@ int main(int argn, char **argv)
   }else if(vm["go-log"].as<bool>()) {
     dump_gocator_log();
   }else{
-	  process();
+	  process(vm["force-gocator"].as<bool>());
   }
 
 	return 0;

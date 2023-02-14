@@ -5,9 +5,7 @@
 #include <limits>
 #include <string>
 
-
 #include <date/date.h>
-
 #include <nlohmann/json.hpp>
 #include <GoSdk/GoSdkDef.h>
 
