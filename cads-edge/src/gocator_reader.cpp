@@ -229,6 +229,7 @@ namespace cads
   GocatorReader::~GocatorReader()
   {
     Stop();
+    GoSensor_Disconnect(m_sensor);
     GoDestroy(m_system);
     GoDestroy(m_assembly);
   }
