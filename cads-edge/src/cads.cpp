@@ -111,6 +111,10 @@ namespace
     gocatorFifo.wait_dequeue(m);
     auto m_id = get<0>(m);
 
+    if(m_id == cads::msgid::finished) {
+      return Process_Status::Finished;
+    }
+
     if (m_id != cads::msgid::resolutions)
     {
       std::throw_with_nested(std::runtime_error("preprocessing:First message must be resolutions"));
