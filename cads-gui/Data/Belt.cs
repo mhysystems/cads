@@ -100,7 +100,7 @@ namespace cads_gui.Data
     [NotMapped]
     public double FrameLength { get { return 4000; } private set { } }
 
-    public Belt(long rowid, string site, string conveyor, DateTime chrono, double x_res, double y_res, double z_res, double z_off, double z_max)
+    public Belt(long rowid, string site, string conveyor, DateTime chrono, double x_res, double y_res, double z_res, double z_off, double z_max, double z_min)
     {
       this.rowid = rowid;
       this.site = site;
@@ -111,6 +111,7 @@ namespace cads_gui.Data
       this.z_res = z_res;
       this.z_off = z_off;
       this.z_max = z_max;
+      this.z_min = z_min;
     }
 
     public Belt(Belt bc)
@@ -124,6 +125,7 @@ namespace cads_gui.Data
       z_res = bc.z_res;
       z_off = bc.z_off;
       z_max = bc.z_max;
+      z_min = bc.z_min;
     }
 
     // Required for JSON Deserialization

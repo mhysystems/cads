@@ -8,11 +8,15 @@ cads-edge/subprojects/**/
 cads-edge/**/*.log
 cads-edge/release/**/*
 cads-edge/debug/**/*
+cads-edge/bin/**/*
 **/bin
 **/obj
 cads-gui/flatbuffers-typescript/node_modules/
 cads-gui/flatbuffers-typescript/cads-flatbuffers/
 cads-gui/wwwroot/*.*
+cads-gui/scans/**
+cads-gui/scans
+cads-gui/Migrations**
 cads-gui/CadsFlatbuffers/*.*
 *.db
 *.out

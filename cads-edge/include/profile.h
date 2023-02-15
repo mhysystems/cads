@@ -6,6 +6,8 @@
 #include <deque>
 #include <limits>
 #include <functional>
+#include <chrono>
+#include <string>
 
 namespace cads
 {
@@ -20,6 +22,23 @@ namespace cads
   const cads::profile null_profile{std::numeric_limits<cads::y_type>::max(),std::numeric_limits<double>::max(),{}};
 
   struct profile_params{double y_res; double x_res; double z_res; double z_off; double encoder_res; double z_max;};
+  
+  struct meta {
+    std::string site = "";
+    std::string conveyor = "";
+    std::string chrono  = "";
+    double x_res = 0;
+    double y_res = 0;
+    double z_res = 0;
+    double z_off = 0;
+    double z_max = 0;
+    double z_min = 0;
+    double Ymax = 0;
+    double YmaxN = 0;
+    double WidthN = 0;
+  };
+  
+  
   struct transient{double y;};
 
   bool compare_samples(const profile& a, const profile& b, int threshold); 

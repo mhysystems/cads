@@ -23,7 +23,7 @@ namespace cads
 
   coro<int, std::tuple<int, int, profile>, 1> store_profile_coro(std::string name = "");
   coro<int, double, 1> store_last_y_coro(std::string name = "");
-  coro<std::tuple<int, profile>> fetch_belt_coro(int revid, int last_idx, int size = 256, std::string name = "");
+  coro<std::tuple<int, profile>> fetch_belt_coro(int revid, int last_idx, int first_idx = 0, int size = 256, std::string name = "");
   long count_with_width_n(std::string name, int revid, int width_n);
   int store_profile_parameters(profile_params p, std::string name = "");
   std::tuple<profile_params, int> fetch_profile_parameters(std::string name);

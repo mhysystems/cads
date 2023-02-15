@@ -1,5 +1,6 @@
 {
   "files.associations": {
+    "*.embeddedhtml": "html",
     "chrono": "cpp",
     "cmath": "cpp",
     "complex": "cpp",
@@ -86,7 +87,9 @@
     "gohealth.h": "c",
     "*.inc": "cpp",
     "*.ipp": "cpp",
-    "hash_set": "cpp"
+    "hash_set": "cpp",
+    "alignedvector3": "cpp",
+    "nonlinearoptimization": "cpp"
   },
   "cmake.configureOnOpen": false
 }

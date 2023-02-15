@@ -41,7 +41,7 @@
     </MudTooltip>
     <MudTooltip Text="Z">
       <MudNumericField HideSpinButtons="true" Immediate="true" Class="Z queryInput mt-0" T="int" @bind-Value="@Z"
-        Min="0" Max="(int)Belt.z_max" Variant="Variant.Text">
+        Min="(int)Belt.z_min" Max="(int)Belt.z_max" Variant="Variant.Text">
       </MudNumericField>
     </MudTooltip>
     <MudTooltip Text="%">
@@ -95,7 +95,7 @@
     if (firstRender)
     {
       module = await JS.InvokeAsync<IJSObjectReference>("import", "./querybuilder.js");
-      await module.InvokeVoidAsync("initThree", Belt.Xmax, Belt.FrameLength, Belt.z_max);
+      await module.InvokeVoidAsync("initThree", Belt.Xmax, Belt.FrameLength, Belt.z_max - Belt.z_min);
       await module.InvokeVoidAsync("update", X, Y, Z);
     }
 

@@ -70,11 +70,11 @@ namespace
     }
   }
 
-  unique_ptr<GocatorReaderBase> mk_gocator(BlockingReaderWriterQueue<msg> &gocatorFifo, bool use_encoder = false)
+  unique_ptr<GocatorReaderBase> mk_gocator(BlockingReaderWriterQueue<msg> &gocatorFifo, bool force_gocator = false, bool use_encoder = false)
   {
     auto data_src = global_config["data_source"].get<std::string>();
 
-    if (data_src == "gocator"s)
+    if (data_src == "gocator"s || force_gocator)
     {
       bool connect_via_ip = global_config.contains("gocator_ip");
       spdlog::get("cads")->debug("Using gocator as data source");
@@ -90,7 +90,7 @@ namespace
   }
 
   enum class Process_Status {Error, Finished, Stopped};
-  Process_Status process_impl()
+  Process_Status process_impl(bool force_gocator)
   {
    
     std::jthread uploading_conveyor_parameters(upload_conveyor_parameters);
@@ -104,7 +104,7 @@ namespace
     const auto clip_height = global_config["clip_height"].get<z_element>();
     const auto use_encoder = global_config["use_encoder"].get<bool>();
 
-    auto gocator = mk_gocator(gocatorFifo,use_encoder);
+    auto gocator = mk_gocator(gocatorFifo,force_gocator,use_encoder);
     gocator->Start();
 
     cads::msg m;
@@ -126,7 +126,13 @@ namespace
     std::jthread realtime_publish(realtime_publish_thread, std::ref(terminate_publish));
     std::jthread save_send(save_send_thread, std::ref(db_fifo));
     std::jthread dynamic_processing(dynamic_processing_thread, std::ref(dynamic_processing_fifo), std::ref(db_fifo), width_n);
-    std::jthread origin_dectection(window_processing_thread, x_resolution, y_resolution, width_n, std::ref(winFifo), std::ref(dynamic_processing_fifo));
+    
+    std::jthread origin_dectection;
+    if(global_config.contains("origin_detector") && global_config["origin_detector"] == "bypass") {
+      origin_dectection = std::jthread(bypass_fiducial_detection_thread,std::ref(winFifo), std::ref(dynamic_processing_fifo));
+    }else {
+      origin_dectection = std::jthread(window_processing_thread, x_resolution, y_resolution, width_n, std::ref(winFifo), std::ref(dynamic_processing_fifo));
+    }
 
     auto iirfilter_left = mk_iirfilterSoS();
     auto iirfilter_right = mk_iirfilterSoS();
@@ -305,14 +311,59 @@ namespace
 namespace cads
 {
 
-
-
-  void upload_profile_only()
+  void upload_profile_only(std::string params, std::string db_name)
   {
-    auto db_name = global_config["profile_db_name"].get<std::string>();
-    auto y_max_length = global_config["y_max_length"].get<double>();
-    auto [Ymin,Ymax,YmaxN,WidthN,err2] = fetch_belt_dimensions(0,std::numeric_limits<int>::max(),db_name);
-    http_post_whole_belt(0, (int)YmaxN+1, y_max_length);
+    auto db = db_name.empty() ? global_config["profile_db_name"].get<std::string>() : db_name;
+    if(params == "") {
+      auto [Ymin,Ymax,YmaxN,WidthN,err2] = fetch_belt_dimensions(0,std::numeric_limits<int>::max(),db);
+      http_post_whole_belt(0, (int)YmaxN+1, 0);
+    }else {
+      
+      auto args = nlohmann::json::parse(params);
+      auto [first_idx,last_idx] = args.get<std::tuple<int,int>>();
+      auto fetch_belt = fetch_belt_coro(0,last_idx,first_idx,256,db);
+      meta m;
+
+      auto [params, err] = fetch_profile_parameters(db);
+      auto [Ymin,Ymax,YmaxN,WidthN,err2] = fetch_belt_dimensions(first_idx,last_idx,db);
+      auto now = chrono::floor<chrono::seconds>(date::utc_clock::now()); // Default sends to much decimal precision for asp.net core
+      auto ts = date::format("%FT%TZ", now);
+      
+      m.chrono = ts;
+      m.conveyor = global_conveyor_parameters.Name;
+      m.site = global_conveyor_parameters.Site;
+      m.WidthN = WidthN;
+      m.x_res = params.x_res;
+      m.y_res = params.y_res;
+      m.Ymax = Ymax;
+      m.YmaxN = YmaxN;
+      m.z_off = params.z_off;
+      m.z_res = params.z_res;
+
+      auto post_profile = post_profiles_coro(m);
+
+      while (true)
+      {
+        auto [co_terminate, cv] = fetch_belt.resume(0);
+        auto [idx, p] = cv;
+
+        if (co_terminate)
+        {
+          break;
+        }
+
+        if(p.z.size() < size_t(WidthN)) {
+          const auto cnt = WidthN - p.z.size();
+          p.z.insert(p.z.end(),cnt,0);
+        }
+
+        auto f = p.z | views::take(int(WidthN));
+        post_profile.resume(cads::profile{p.y,p.x_off,{f.begin(), f.end()}});
+
+
+      }
+
+    }
   }
 
   void store_profile_only()
@@ -333,6 +384,10 @@ namespace cads
     if (get<0>(m) != cads::msgid::resolutions)
     {
       std::throw_with_nested(std::runtime_error("First message must be resolutions"));
+    }else {
+      auto now = chrono::floor<chrono::milliseconds>(date::utc_clock::now()); 
+      auto ts = date::format("%FT%TZ", now);
+      spdlog::get("cads")->info("Let's go! - {}",ts);
     }
 
     auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution] = get<resolutions_t>(get<1>(m));
@@ -362,6 +417,9 @@ namespace cads
         if(nats_queue.try_dequeue(ignore)) {
           reset_y = p.y;
           p.y = 0;
+          auto now = chrono::floor<chrono::milliseconds>(date::utc_clock::now()); 
+          auto ts = date::format("%FT%TZ", now);
+          spdlog::get("cads")->info("Y reset! - {}",ts);
         }
         
         store_profile.resume({0, idx++, p});
@@ -374,7 +432,7 @@ namespace cads
 
       case cads::msgid::finished:
       {
-        continue;
+        break;
       }
       default:
         continue;
@@ -386,18 +444,19 @@ namespace cads
     terminate_subscribe = true;
 
     gocator->Stop();
+    spdlog::get("cads")->info("Cads raw data dumping finished");
   }
 
   
 
-  void process()
+  void process(bool force_gocator)
   {
     for (int sleep_wait = 1;;)
     {
       
       auto start = std::chrono::high_resolution_clock::now();
 
-      auto status = process_impl();
+      auto status = process_impl(force_gocator);
 
       auto now = std::chrono::high_resolution_clock::now();
       auto period = std::chrono::duration_cast<std::chrono::seconds>(now - start).count();

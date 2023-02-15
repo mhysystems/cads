@@ -58,8 +58,10 @@ namespace {
     using namespace std;
     
     auto add_conveyor = config["webapi_urls"]["add_conveyor"].get<cads::webapi_urls::value_type>();
+    auto add_meta = config["webapi_urls"]["add_meta"].get<cads::webapi_urls::value_type>();
+    auto add_belt = config["webapi_urls"]["add_belt"].get<cads::webapi_urls::value_type>();
 
-    return cads::webapi_urls{add_conveyor};
+    return cads::webapi_urls{add_conveyor,add_meta,add_belt};
 
   }
 

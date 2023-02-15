@@ -101,5 +101,6 @@ namespace cads
       if (!coro_hnd.done())
         coro_hnd.resume(); // Eventually calls await_resume
     }
+
   };
 } // namespace cads

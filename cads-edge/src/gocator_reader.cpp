@@ -65,29 +65,33 @@ namespace cads
 
   void GocatorReader::Start()
   {
-    auto status = GoSensor_Start(m_sensor);
+    if(m_stopped) {
+      auto status = GoSensor_Start(m_sensor);
 
-    if (kIsError(status))
-    {
-      throw runtime_error{"GoSensor_Start: "s + to_string(status)};
-    }else{
-      m_stopped = false;
-      spdlog::get("gocator")->info("GoSensor Starting");
+      if (kIsError(status))
+      {
+        throw runtime_error{"GoSensor_Start: "s + to_string(status)};
+      }else{
+        m_stopped = false;
+        spdlog::get("gocator")->info("GoSensor Starting");
+      }
     }
   }
 
   void GocatorReader::Stop()
   {
-    auto status = GoSensor_Stop(m_sensor);
-
-    if (kIsError(status))
-    {
-      spdlog::get("gocator")->error("GoSensor_Stop(m_sensor) -> {}", status);
-    } else {
-      m_stopped = true;
-      spdlog::get("gocator")->info("GoSensor Stopped");
-    }
     
+    if(!m_stopped) {
+      auto status = GoSensor_Stop(m_sensor);
+
+      if (kIsError(status))
+      {
+        spdlog::get("gocator")->error("GoSensor_Stop(m_sensor) -> {}", status);
+      } else {
+        m_stopped = true;
+        spdlog::get("gocator")->info("GoSensor Stopped");
+      }
+    }
   }
 
   void GocatorReader::Log() {
@@ -205,12 +209,12 @@ namespace cads
   {
     auto me = static_cast<GocatorReader *>(context);
     
-    if(!terminate) {
+    if(!me->terminate) {
       return me->OnData(sensor, dataset);
     }else {
-      if(me->m_loop) {
+      if(!me->m_sent_final_msg) {
         me->m_gocatorFifo.enqueue({msgid::finished, 0});
-        me->m_loop = false;
+        me->m_sent_final_msg = true;
       }
       GoDestroy(dataset);
       return kOK;
@@ -224,28 +228,11 @@ namespace cads
 
   GocatorReader::~GocatorReader()
   {
-    m_loop = false;
-    if(!m_stopped) {
-      Stop();
-    }
+    Stop();
     GoDestroy(m_system);
     GoDestroy(m_assembly);
   }
 
-  void GocatorReader::RunForever()
-  {
-    Start();
-    spdlog::get("gocator")->info("Started Gocator");
-
-    while (m_loop)
-    {
-      unique_lock<mutex> lock(m_mutex);
-      m_condition.wait(lock);
-    }
-
-    Stop();
-    spdlog::get("gocator")->info("Stopped Gocator");
-  }
 
   kStatus GocatorReader::OnSystem([[maybe_unused]] GoSystem system, GoDataSet dataset)
   {
@@ -351,11 +338,6 @@ namespace cads
     m_gocatorFifo.enqueue({msgid::scan, cads::profile{y, xOffset + samples_width * xResolution, std::move(z)}});
 
     GoDestroy(dataset);
-
-    {
-      unique_lock<mutex> lock(m_mutex);
-      m_condition.notify_all();
-    }
 
     if (m_gocatorFifo.size_approx() > m_buffer_size_warning)
     {

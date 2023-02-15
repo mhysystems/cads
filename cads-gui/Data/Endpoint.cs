@@ -94,7 +94,8 @@ namespace cads_gui.Data
       var (zmaxInit, err) = beltservice.SelectBeltPropertyZmax(site, belt, chrono);
       double zmax = err == 0 ? zmaxInit : 0;
 
-      using var db = new ProfileData(NoAsp.EndpointToSQliteDbName(site, belt, chrono));
+      var dbname = Path.Combine(beltservice._config.DBPath,NoAsp.EndpointToSQliteDbName(site, belt, chrono));
+      using var db = new ProfileData(dbname);
 
       while (cnt++ < pa.Count)
       {

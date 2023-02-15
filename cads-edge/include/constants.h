@@ -5,9 +5,7 @@
 #include <limits>
 #include <string>
 
-
 #include <date/date.h>
-
 #include <nlohmann/json.hpp>
 #include <GoSdk/GoSdkDef.h>
 
@@ -53,6 +51,8 @@ namespace cads {
   struct webapi_urls {
     using value_type = std::tuple<std::string,bool>;
     value_type add_conveyor;
+    value_type add_meta;
+    value_type add_belt;
   };
 
   struct Filters {
