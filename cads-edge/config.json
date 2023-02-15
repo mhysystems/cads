@@ -19,6 +19,7 @@
   "spike_filter" : 5,
   "sobel_filter" : 5,
   "nan_%" : 0.1,
+  "origin_detector" : "bypass",
   "iirfilter" : {
     "skip" : 4000,
     "delay" : 10,

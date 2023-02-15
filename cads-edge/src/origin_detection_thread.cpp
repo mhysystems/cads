@@ -266,4 +266,73 @@ namespace cads
     next_fifo.enqueue({msgid::finished, 0});
     spdlog::get("cads")->info("window_processing_thread");
   }
+
+  void bypass_fiducial_detection_thread(BlockingReaderWriterQueue<msg> &profile_fifo, BlockingReaderWriterQueue<msg> &next_fifo)
+  {
+
+    cads::msg m;
+    auto pully_circumfrence = global_conveyor_parameters.PulleyCircumference;
+    auto start = std::chrono::high_resolution_clock::now();
+    int64_t cnt = 0;
+    auto buffer_size_warning = buffer_warning_increment;
+
+    long barrel_rotation_cnt = 0;
+    long barrel_rotation_offset = 0;
+
+    long origin_sequence_cnt = 0;
+
+    for (auto loop = true;loop;++cnt)
+    {
+      
+      profile_fifo.wait_dequeue(m);
+
+      switch(std::get<0>(m)) {
+        case msgid::barrel_rotation_cnt:
+        barrel_rotation_cnt = get<long>(get<1>(m));
+        break;
+
+        case msgid::scan: {
+          auto op = get<profile>(get<1>(m));
+          
+          if(op.y == 0) {
+            
+            if(origin_sequence_cnt == 0) {
+              next_fifo.enqueue({msgid::begin_sequence, origin_sequence_cnt});
+            }
+
+            if(origin_sequence_cnt > 0) {
+              auto estimated_belt_length = pully_circumfrence * (double(barrel_rotation_cnt - barrel_rotation_offset) / 2.0);
+              spdlog::get("cads")->info("Barrel rotation count : {} Estimated Belt Length: {}",barrel_rotation_cnt - barrel_rotation_offset, estimated_belt_length / 1000);
+              publish_CurrentLength(estimated_belt_length);
+              next_fifo.enqueue({msgid::complete_belt, estimated_belt_length});
+            }
+            
+            barrel_rotation_offset = barrel_rotation_cnt;
+            origin_sequence_cnt++;
+          }
+          
+          next_fifo.enqueue({msgid::scan, op});
+        
+          break;
+        }
+
+        default:
+          loop = false;
+      }
+
+      if (profile_fifo.size_approx() > buffer_size_warning)
+      {
+        spdlog::get("cads")->warn("Cads Origin Detection showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
+        buffer_size_warning += buffer_warning_increment;
+      }
+    }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    auto rate = duration != 0 ? (double)cnt / duration : 0;
+    spdlog::get("cads")->info("ORIGIN DETECTION - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, rate);
+
+    next_fifo.enqueue({msgid::finished, 0});
+    spdlog::get("cads")->info("bypass_fiducial_detection_thread");
+  }
 }

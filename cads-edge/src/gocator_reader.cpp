@@ -65,29 +65,33 @@ namespace cads
 
   void GocatorReader::Start()
   {
-    auto status = GoSensor_Start(m_sensor);
+    if(m_stopped) {
+      auto status = GoSensor_Start(m_sensor);
 
-    if (kIsError(status))
-    {
-      throw runtime_error{"GoSensor_Start: "s + to_string(status)};
-    }else{
-      m_stopped = false;
-      spdlog::get("gocator")->info("GoSensor Starting");
+      if (kIsError(status))
+      {
+        throw runtime_error{"GoSensor_Start: "s + to_string(status)};
+      }else{
+        m_stopped = false;
+        spdlog::get("gocator")->info("GoSensor Starting");
+      }
     }
   }
 
   void GocatorReader::Stop()
   {
-    auto status = GoSensor_Stop(m_sensor);
-
-    if (kIsError(status))
-    {
-      spdlog::get("gocator")->error("GoSensor_Stop(m_sensor) -> {}", status);
-    } else {
-      m_stopped = true;
-      spdlog::get("gocator")->info("GoSensor Stopped");
-    }
     
+    if(!m_stopped) {
+      auto status = GoSensor_Stop(m_sensor);
+
+      if (kIsError(status))
+      {
+        spdlog::get("gocator")->error("GoSensor_Stop(m_sensor) -> {}", status);
+      } else {
+        m_stopped = true;
+        spdlog::get("gocator")->info("GoSensor Stopped");
+      }
+    }
   }
 
   void GocatorReader::Log() {
