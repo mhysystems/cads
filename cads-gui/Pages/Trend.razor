@@ -12,7 +12,7 @@
 
 <SiteHeader ShowDraw site="@site" conveyor="@conveyor">
   <MudSpacer/>
-    <TrendControls DateChanged="@DateChanged" Belt="@GuiState.Value.Belt" />
+    <TrendControls @ref="trendControls" DateChanged="@DateChanged" Scan="belt" />
   <MudSpacer/>
 </SiteHeader>
 
@@ -22,7 +22,7 @@
   <MudGrid Class="ma-0" Style="height:100%" Spacing=0>
 
 <MudItem xs="12"  Style="height:46%">
-<TrendPlot @ref="trendPlot" Belt="@GuiState.Value.Belt" XIndex="@UpdateWearPlot"></TrendPlot>
+<TrendPlot @ref="trendPlot" Belt="belt" XIndex="@UpdateWearPlot"></TrendPlot>
 </MudItem>
     <MudItem xs="12" Style="height:46%">
     <LinePlot @ref="wearPlot" ></LinePlot>
@@ -35,8 +35,11 @@
   
   protected TrendPlot trendPlot;
   protected LinePlot wearPlot;
+  
+  protected TrendControls trendControls;
 
-  protected int XIndex = 0;
+  protected Belt belt {get; set;} = new Belt();
+  protected double yCoord;
 
   [Parameter]
   public string site { get; set; }
@@ -46,15 +49,27 @@
   [Inject]
   private IState<GuiState> GuiState { get; set; }
 
+  protected override async Task OnInitializedAsync()
+  {
+    if(GuiState.Value.Belt.HasData) {
+      belt = GuiState.Value.Belt;
+      yCoord = GuiState.Value.Y;
+    }else {
+      belt = Beltservice.GetBelts(site, conveyor).Last();
+    }
+  }
+
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
     if (firstRender)
     {
-      var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
-      await DateChanged((GuiState.Value.Belt.chrono,0,Colors.Orange.Accent3));
+      var (XOffset,z) = await Beltservice.GetBeltProfileAsync(yCoord, 1, belt);
+      var color = trendControls.DatePickerColor[0];
+      await trendPlot.UpdatePlotAsync(0,z,color);
       await UpdateWearPlot(1000);
     }
   }
+
 
   async Task DateChanged(ValueTuple<DateTime?, int, string> arg)
   {
@@ -64,16 +79,14 @@
       return;
     }
 
-    var belt = Beltservice.GetBelt(site, conveyor, date.Value);
     var Y = GuiState?.Value.Y ?? 0;
 
     if(belt is not null) {
       var (XOffset,z) = await Beltservice.GetBeltProfileAsync(Y, 1, belt);
-      await trendPlot.UpdatePlotAsync(index,XOffset,z,color);
+      await trendPlot.UpdatePlotAsync(index,z,color);
     }else{
       Snackbar.Add($"No data for selected date", Severity.Error);
     }
-
   }
 
   async Task UpdateWearPlot(int x_index) {

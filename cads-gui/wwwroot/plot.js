@@ -670,9 +670,8 @@ class LinePlot {
 
 
 class TrendPlot {
-  constructor(plotElement, x_res, z_min, z_max, blazor) {
+  constructor(plotElement, z_min, z_max, blazor) {
     this.plotElement = plotElement;
-    this.xRes = x_res;
     this.zMax = z_max;
     this.zMin = z_min;
 
@@ -730,17 +729,13 @@ class TrendPlot {
     });
   }
 
-  async updatePlot(index,xMin,z_profile,color) {
+  async updatePlot(index,x_axis,z_profile,color) {
 
-    const x_min = xMin / 1000; //convert mm to m
-    const x_resolution = this.xRes / 1000; // convert mm to m
-    const belt_width = z_profile.length * x_resolution;
-
-    const x_axis = [...Array(z_profile.length).keys()].map(x => x_min + x * x_resolution);
+    const belt_width = Math.abs(x_axis[x_axis.length - 1] - x_axis[0]);
 
     this.layout.xaxis = [x_axis[0], x_axis[x_axis.length - 1]];
 
-    this.layout.aspectratio.y = (this.zMax - this.zMin) / (belt_width * 1000);
+    this.layout.aspectratio.y = (this.zMax - this.zMin) / belt_width;
 
     this.plotData[index].y = z_profile;
     this.plotData[index].x = x_axis;

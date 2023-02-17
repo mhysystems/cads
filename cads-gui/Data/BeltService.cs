@@ -67,28 +67,20 @@ namespace cads_gui.Data
       return await NoAsp.BeltBoundaryAsync(belt);
     }
 
-    public Belt GetBelt(string site, string belt)
+    public IEnumerable<Belt> GetBelts(string site, string belt)
     {
       using var context = dBContext.CreateDbContext();
       var data = from a in context.belt orderby a.chrono where a.site == site && a.conveyor == belt select a;
       
-      if (data.Count() > 1)
-        return data.Last();
-      else
-        return data.First();
+      return data.ToList();
     }
 
-    public Belt GetBelt(string site, string belt, DateTime chrono)
+    public IEnumerable<Belt> GetBelts(string site, string belt, DateTime chrono)
     {
       using var context = dBContext.CreateDbContext();
       var data = from a in context.belt orderby a.chrono where a.site == site && a.conveyor == belt && a.chrono.Date == chrono.Date select a;
       
-      if (data.Count() > 1)
-        return data.Last();
-      else if (data.Count() == 1)
-        return data.First();
-      else
-        return null;
+      return data.ToList();
     }
 
     public IEnumerable<Belt> GetBeltsAsync(string site, string conveyor)
@@ -247,10 +239,9 @@ namespace cads_gui.Data
       var area_sample_x = (long)Math.Ceiling(X / dx);
       var area_sample_y = (long)Math.Ceiling(Y / dy);
 
-      var sum = (long)Math.Ceiling(p * area_sample_x * area_sample_y);
       var zy = y_len;
 
-      var (x_start, zs) = await GetBeltProfileAsync(offset, y_len, BeltConstants);
+      (double x_start, float[] zs) = await GetBeltProfileAsync(offset, y_len, BeltConstants);
       var zx = zs.Length / zy;
       area_sample_x = area_sample_x > zx ? zx : area_sample_x;
 
@@ -285,7 +276,7 @@ namespace cads_gui.Data
       (List<ZDepth>, P3) shift_x(long y, long ry)
       {
 
-        long x = 0;
+        long x;
         var x_coord = new List<ZDepth>();
         var zmin = new P3(0, 0, Double.MaxValue);
 
@@ -315,7 +306,7 @@ namespace cads_gui.Data
         return (x_coord, zmin);
       };
 
-      long y = 0;
+      long y;
       var r = new List<ZDepth>();
       var zmin = new P3(0, 0, Double.MaxValue);
 

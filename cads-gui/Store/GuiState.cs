@@ -5,9 +5,9 @@ namespace Fluxor.Blazor.Store
 	[FeatureState]
 	public class GuiState
 	{
-		public Belt Belt { get; }
+		public Belt Belt { get; } = new Belt();
     public double Y { get; }
-    public GuiState(){}
+    private GuiState(){}
 		public GuiState(Belt b, double y)
 		{
 			Belt = b;

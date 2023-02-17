@@ -204,20 +204,14 @@
   private IJSObjectReference module;
   private ElementReference svgElement;
 
-  protected Dictionary<string, object> _SvgAttr =
+  const double r = 290;
+
+  [Parameter]
+  public Dictionary<string, object> SvgAttr { get; set; } = 
   new Dictionary<string, object>()
   {
 {"height","100%"}
   };
-
-  const double r = 290;
-
-  [Parameter]
-  public Dictionary<string, object> SvgAttr
-  {
-    get { return _SvgAttr; }
-    set { value.ToList().ForEach(x => _SvgAttr[x.Key] = x.Value); }
-  }
 
   [Parameter]
   public string Style { get; set; } = String.Empty;
@@ -236,7 +230,7 @@
   }
 
   [Parameter]
-  public Belt Belt { get; set; }
+  public required Belt Belt { get; set; }
 
   protected IEnumerable<PlotInfo> _data = new List<PlotInfo>().AsEnumerable();
   public IEnumerable<PlotInfo> data

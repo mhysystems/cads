@@ -94,6 +94,45 @@ namespace cads
     }
   }
 
+  void GocatorReader::Start_thread()
+  {
+    if (m_stopped)
+    {
+      m_stopped = false;
+      m_thread = std::jthread{&GocatorReader::OnData_thread, this};
+    }
+  }
+
+  void GocatorReader::Stop_thread()
+  {
+    if(!m_stopped) {
+      m_gocatorFifo.enqueue({msgid::finished, 0});
+      m_stopped = true;
+      m_thread.join();
+    }
+  }
+
+  void GocatorReader::OnData_thread()
+  {
+    
+    GoDataSet dataset = kNULL;
+    while (!m_stopped)
+    {
+      if (GoSystem_ReceiveData(m_sensor, &dataset, 2000000) == kOK)
+      {
+        OnData(m_sensor, dataset);
+        GoDestroy(dataset);
+      }   
+
+      if (terminate)
+      {
+        m_stopped = true;
+      }
+    }
+    GoSystem_Stop(m_sensor);
+  }
+
+
   void GocatorReader::Log() {
     
     kObj(GoSensor, m_sensor);
@@ -230,6 +269,7 @@ namespace cads
   {
     Stop();
     GoSensor_Disconnect(m_sensor);
+    GoDestroy(m_sensor);
     GoDestroy(m_system);
     GoDestroy(m_assembly);
   }

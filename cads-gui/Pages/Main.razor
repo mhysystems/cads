@@ -26,7 +26,7 @@
       <DoughnutPlot @ref="doughnutPlot" Style="display:contents" Belt="@belt" Y="@UpdateYAsync" />
         </MudTooltip> 
       <MudContainer Class="d-flex flex-column ">
-        <ZDepthQuery @ref="zDepthQuery" Belt=@Beltservice.GetBelt(site,conveyor)></ZDepthQuery>
+        <ZDepthQuery @ref="zDepthQuery" Belt="belt"></ZDepthQuery>
         <MudExpansionPanels Class="z-30">
           <MudExpansionPanel Class="overflow-auto" Dense="true" MaxHeight="270" Text="Search Results">
             <Ztable @ref="@zDepthTabe" selectedRow="@UpdateYAsync"></Ztable>
@@ -53,12 +53,12 @@
 @code {
 
   [Parameter]
-  public string site { get; set; }
+  public required string site { get; set; }
   [Parameter]
-  public string conveyor { get; set; }
+  public string conveyor { get; set; } = String.Empty;
 
   // Bindings
-  private DotNetObjectReference<Main> selfReference;
+  private DotNetObjectReference<Main>? selfReference;
   SurfacePlot surfacePlot;
   ProfilePlot profilePlot;
   ZDepthQuery zDepthQuery;
@@ -80,16 +80,19 @@
   double progressPercentage = 0;
 
   protected Belt belt { get; set; }
-  protected IJSObjectReference plotDataCache;
-  protected IJSObjectReference plotData;
+  protected IJSObjectReference? plotDataCache;
+  protected IJSObjectReference? plotData;
   [Inject]
-  public IDispatcher Dispatcher { get; set; }
+  public IDispatcher Dispatcher { get; set; } = default!;
 
   protected override async Task OnInitializedAsync()
   {
-    belt = Beltservice.GetBelt(site, conveyor);
-    var action = new BeltAction(belt);
-    Dispatcher.Dispatch(action);
+    var b = Beltservice.GetBelts(site, conveyor);
+    if(b.Any()) {
+      belt = b.Last();
+      var action = new BeltAction(belt);
+      Dispatcher?.Dispatch(action);
+    }
   }
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -192,12 +195,12 @@
     }
 
 
-    var b = Beltservice.GetBelt(site, conveyor, date.Value);
+    var b = Beltservice.GetBelts(site, conveyor, date.Value);
 
-    if (b is not null)
+    if (b.Any())
     {
       Snackbar.Add($"Loading belt scan on {DateOnly.FromDateTime(date.Value)}", Severity.Info);
-      belt = b;
+      belt = b.Last();
       await UpdateYAsync(currentY);
       StateHasChanged();
     }

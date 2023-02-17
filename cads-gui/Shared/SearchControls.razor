@@ -56,7 +56,7 @@
   public EventCallback<IEnumerable<SavedZDepthParams>> SelectZDepthParams {get; set;}
 
   [Parameter]
-  public Belt Belt {get; set;}
+  public required Belt Belt {get; set;}
   
   [Parameter]
   public EventCallback<int> StepBack {get; set;}

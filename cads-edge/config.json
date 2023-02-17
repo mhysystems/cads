@@ -14,12 +14,11 @@
   "fiducial_x" : 50,
   "fiducial_y" : 67,
   "fiducial_gap" : 78,
-  "daily_upload" : false,
+  "daily_upload" : true,
   "daily_start_time" : "12:45",
   "spike_filter" : 5,
   "sobel_filter" : 5,
   "nan_%" : 0.1,
-  "origin_detector" : "bypass",
   "iirfilter" : {
     "skip" : 4000,
     "delay" : 10,
@@ -64,11 +63,11 @@
   },
   "webapi_urls" : {
     "add_conveyor" : ["http://localhost:5000/api/conveyors",false],
-    "add_meta" : ["http://localhost:5000/api/meta",false],
-    "add_belt" : ["http://localhost:5000/api/belt",false]
+    "add_meta" : ["http://localhost:5000/api/meta",true],
+    "add_belt" : ["http://localhost:5000/api/belt",true]
   },
   "nats_url" : "192.168.2.13",
-  "upload_profile" : false, 
+  "upload_profile" : true, 
   "base_url" : "http://localhost:5000/api",
   "lua_window_height" : 2,
   "lua_fn" : "function process(width,height)\nlocal sum = 0\nfor i = 1+50,width-50 do\nfor j = 0,height-1 do\nsum = sum + ((win[j*width + i] <= 25 and win[j*width + i] > 10)and 1 or 0)\nend\nend\nreturn (sum / (width * height)) > 0.001 and sum or 0\nend"
