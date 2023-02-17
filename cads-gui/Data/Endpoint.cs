@@ -15,7 +15,7 @@ namespace cads_gui.Data
   [ApiController]
   public class EndpointController : ControllerBase
   {
-    private BeltService beltservice = null;
+    private readonly BeltService beltservice;
 
     public EndpointController(BeltService helper)
     {
@@ -99,10 +99,15 @@ namespace cads_gui.Data
 
       while (cnt++ < pa.Count)
       {
-        var p = pa.Profiles((int)cnt - 1).Value;
-        var z = p.GetZSamplesArray().Select(e => e != -32768 ? (float)(e * pa.ZRes + pa.ZOff) : float.NaN).ToArray();
-        zmax = Math.Max(zmax, z.Max());
-        db.Save(pa.Idx + cnt - 1, p.Y, p.XOff, z);
+        var pc = pa.Profiles((int)cnt - 1);
+        if(pc.HasValue) {
+          var p = pc.Value;
+          var z = p.GetZSamplesArray().Select(e => e != -32768 ? (float)(e * pa.ZRes + pa.ZOff) : float.NaN).ToArray();
+          zmax = Math.Max(zmax, z.Max());
+          db.Save(pa.Idx + cnt - 1, p.Y, p.XOff, z);
+        }else {
+          ArgumentNullException.ThrowIfNull(pc);
+        }
       }
 
       if (zmax > zmaxInit)

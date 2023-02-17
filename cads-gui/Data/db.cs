@@ -8,8 +8,8 @@ namespace cads_gui.Data
   class ProfileData : IDisposable
   {
     protected bool disposed = false;
-    protected SqliteConnection connection;
-    protected SqliteCommand command;
+    protected readonly SqliteConnection connection;
+    protected readonly SqliteCommand command;
 
     public ProfileData(string name)
     {
@@ -63,7 +63,7 @@ namespace cads_gui.Data
 
         if (disposing)
         {
-          command.Transaction.Commit();
+          command.Transaction?.Commit();
           connection.Dispose();
         }
 

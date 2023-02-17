@@ -232,34 +232,43 @@ namespace cads
         R"(CREATE TABLE IF NOT EXISTS PARAMETERS (y_res REAL NOT NULL, x_res REAL NOT NULL, z_res REAL NOT NULL, z_off REAL NOT NULL, encoder_res REAL NOT NULL, z_max REAL NOT NULL))"s
         };
 
-    std::filesystem::remove(name);
-    std::filesystem::remove(name + "-shm");
-    std::filesystem::remove(name + "-wal");
-    int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);
 
-    if (err == SQLITE_OK)
-    {
+    for(int retry = 2; retry > 0; --retry) {
+      int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);
 
-      for (auto query : tables)
+      if (err == SQLITE_OK)
       {
 
-        char *errmsg;
-        err = sqlite3_exec(db, query.c_str(), nullptr, nullptr, &errmsg);
-
-        if (err != SQLITE_OK)
+        for (auto query : tables)
         {
-          spdlog::get("db")->error("create_profile_db:sqlite3_exec, Error Code:{}, query:{}, sqlite error msg:{}", err, query, errmsg);
-          sqlite3_free(errmsg);
+
+          char *errmsg;
+          err = sqlite3_exec(db, query.c_str(), nullptr, nullptr, &errmsg);
+
+          if (err != SQLITE_OK)
+          {
+            spdlog::get("db")->error("create_profile_db:sqlite3_exec, Error Code:{}, query:{}, sqlite error msg:{}", err, query, errmsg);
+            sqlite3_free(errmsg);
+          }
+        }
+
+        retry = 0;
+      }
+      else
+      {
+
+        if(retry > 1) {
+          std::filesystem::remove(db_name_string);
+          std::filesystem::remove(db_name_string + "-shm");
+          std::filesystem::remove(db_name_string + "-wal");
+        }else {
+          spdlog::get("db")->error("create_profile_db:sqlite3_open_v2 Error Code:{}", err);
+          std::throw_with_nested(std::runtime_error("create_profile_db:sqlite3_open_v2"));
         }
       }
-    }
-    else
-    {
-      spdlog::get("db")->error("create_profile_db:sqlite3_open_v2 Error Code:{}", err);
-      std::throw_with_nested(std::runtime_error("create_profile_db:sqlite3_open_v2"));
-    }
 
-    sqlite3_close(db);
+      sqlite3_close(db);
+    }
 
     return r;
   }
@@ -639,7 +648,7 @@ namespace cads
   
   coro<std::tuple<int, profile>> fetch_belt_coro(int revid, int last_idx, int first_index, int size, std::string name)
   {
-    auto query = fmt::format(R"(SELECT idx,y,x_off,z FROM PROFILE WHERE REVID = {} AND IDX >= ? AND IDX < ? ORDER BY Y)", revid);
+    auto query = fmt::format(R"(SELECT idx,y,x_off,z FROM PROFILE WHERE REVID = {} AND IDX >= ? AND IDX < ?)", revid);
     auto db_config_name = name.empty() ? global_config["profile_db_name"].get<std::string>() : name;
     auto [stmt,db] = prepare_query(db_config_name, query);
 

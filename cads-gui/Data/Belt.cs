@@ -71,7 +71,7 @@ namespace cads_gui.Data
     public List<SiteName> Sites { get; set; } = Array.Empty<SiteName>().ToList();
   }
 
-  public class Belt
+  public sealed class Belt
   {
 
     public long rowid { get; set; } = 0;
@@ -83,7 +83,7 @@ namespace cads_gui.Data
     //public string FilePath {get; set;} = String.Empty;
 
     public string conveyor { get; set; } = String.Empty;
-    public DateTime chrono { get; set; } = DateTime.Now;
+    public DateTime chrono { get; set; } = DateTime.UnixEpoch;
     public double x_res { get; set; } = 0;
     public double y_res { get; set; } = 0;
     public double z_res { get; set; } = 0;
@@ -99,6 +99,10 @@ namespace cads_gui.Data
     public double Xmax { get { return WidthN * x_res; } private set { } }
     [NotMapped]
     public double FrameLength { get { return 4000; } private set { } }
+    [NotMapped]
+    public bool HasData { get { return x_res != 0; } private set { } }
+    [NotMapped]
+    public (double,double) XBegin{ get { return (-WidthN * x_res / 2, x_res) ; } private set { } }
 
     public Belt(long rowid, string site, string conveyor, DateTime chrono, double x_res, double y_res, double z_res, double z_off, double z_max, double z_min)
     {
@@ -128,7 +132,7 @@ namespace cads_gui.Data
       z_min = bc.z_min;
     }
 
-    // Required for JSON Deserialization
+    // Required for ASP ApiController JSON Deserialization 
     public Belt() { }
 
   }

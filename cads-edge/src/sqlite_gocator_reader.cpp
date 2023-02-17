@@ -44,7 +44,7 @@ namespace cads
   SqliteGocatorReader::SqliteGocatorReader(moodycamel::BlockingReaderWriterQueue<msg> &gocatorFifo, double fps, bool forever) : GocatorReaderBase(gocatorFifo), m_fps(fps), m_forever(forever)
   {
   }
-
+  
   void SqliteGocatorReader::OnData()
   {
     auto data_src = global_config["data_source"].get<std::string>();
