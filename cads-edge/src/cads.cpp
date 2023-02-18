@@ -481,8 +481,8 @@ namespace cads
         }
       }
       else if(status == Process_Status::Stopped) {
-        spdlog::get("cads")->info("Sleeping for {} seconds",15);
-        std::this_thread::sleep_for(std::chrono::seconds(15));
+        spdlog::get("cads")->info("Sleeping for {} seconds",30);
+        std::this_thread::sleep_for(std::chrono::seconds(30));
       }
       else
       {
