@@ -187,7 +187,7 @@ namespace cads
     using namespace std::placeholders; 
     
     auto avg_speed = (std::get<0>(global_constraints.SurfaceSpeed) + std::get<0>(global_constraints.SurfaceSpeed)) / 2;
-    auto T0 = global_conveyor_parameters.PulleyCircumference / avg_speed; // in ms
+    auto T0 = 2 * global_conveyor_parameters.PulleyCircumference / avg_speed; // in ms
     auto T1 = 3 * T0; // in ms
     auto barrel_origin_time = std::chrono::high_resolution_clock::now();
     double speed = init;
