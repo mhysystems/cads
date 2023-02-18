@@ -499,9 +499,6 @@ namespace cads
     auto gocator = mk_gocator(gocatorFifo);
     gocator->Start();
 
-    const int nan_num = global_config["left_edge_nan"].get<int>();
-    const int spike_window_size = nan_num * 2;
-
     auto iirfilter = mk_iirfilterSoS();
     auto delay = mk_delay(global_config["iirfilter"]["delay"]);
 
@@ -510,7 +507,7 @@ namespace cads
     auto differentiation = mk_dc_filter(); //mk_differentiation(0);
 
     std::ofstream filt("filt.txt");
-
+    const auto [z_min_unbiased,z_max_unbiased] = global_constraints.ZUnbiased;
     do
     {
 
@@ -525,16 +522,30 @@ namespace cads
         auto ix = p.x_off;
         auto iz = p.z;
 
-        spike_filter(iz, spike_window_size);
-        auto [ileft_edge_index, iright_edge_index] = find_profile_edges_nans_outer(iz);
-        //auto gradient = barrel_gradient(iz, ileft_edge_index, iright_edge_index);
-        //regression_compensate(iz, 0, iz.size(), gradient);
-        auto [bottom_avg, right_mean] = pulley_left_right_mean(iz, ileft_edge_index, iright_edge_index);
-        //auto bottom_avg = barrel_mean(iz, ileft_edge_index, iright_edge_index);
+        constraint_substitute(iz,z_min_unbiased,z_max_unbiased);
+        iz = trim_nan(iz);
 
+        spike_filter(iz);
+        auto z_nan_filtered = nan_filter_pure(iz);
+        auto [ileft_edge_index, iright_edge_index] = find_profile_edges_sobel(z_nan_filtered);
+        auto [pulley_left, pulley_right] = pulley_left_right_mean(iz, ileft_edge_index, iright_edge_index);
+        
+        
+        if(std::isnan(pulley_left) && !std::isnan(pulley_right)) {
+          pulley_left = pulley_right;
+        }
+        else if(!std::isnan(pulley_left) && std::isnan(pulley_right)) {
+          pulley_right = pulley_left;
+        }
+        else if(std::isnan(pulley_left) && std::isnan(pulley_right)) {
+          spdlog::get("cads")->error("Cannot find either belt edge");
+          continue;
+        }
+
+        auto bottom_avg = pulley_left;
         auto bottom_filtered = iirfilter(bottom_avg);
 
-        filt << bottom_avg << "," << differentiation(bottom_filtered) << '\n';
+        filt << bottom_avg << "," << bottom_filtered << '\n';
         filt.flush();
 
         auto [delayed, dd] = delay({iy, ix, iz, 0, 0,p.z});

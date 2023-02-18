@@ -65,73 +65,28 @@ namespace cads
 
   void GocatorReader::Start()
   {
-    if(m_stopped) {
-      auto status = GoSensor_Start(m_sensor);
+    auto status = GoSensor_Start(m_sensor);
 
-      if (kIsError(status))
-      {
-        throw runtime_error{"GoSensor_Start: "s + to_string(status)};
-      }else{
-        m_stopped = false;
-        spdlog::get("gocator")->info("GoSensor Starting");
-      }
+    if (kIsError(status))
+    {
+      throw runtime_error{"GoSensor_Start: "s + to_string(status)};
+    }else{
+      spdlog::get("gocator")->info("GoSensor Starting");
     }
   }
 
   void GocatorReader::Stop()
   {
     
-    if(!m_stopped) {
-      auto status = GoSensor_Stop(m_sensor);
+    auto status = GoSensor_Stop(m_sensor);
 
-      if (kIsError(status))
-      {
-        spdlog::get("gocator")->error("GoSensor_Stop(m_sensor) -> {}", status);
-      } else {
-        m_stopped = true;
-        spdlog::get("gocator")->info("GoSensor Stopped");
-      }
-    }
-  }
-
-  void GocatorReader::Start_thread()
-  {
-    if (m_stopped)
+    if (kIsError(status))
     {
-      m_stopped = false;
-      m_thread = std::jthread{&GocatorReader::OnData_thread, this};
+      spdlog::get("gocator")->error("GoSensor_Stop(m_sensor) -> {}", status);
+    } else {
+      spdlog::get("gocator")->info("GoSensor Stopped");
     }
   }
-
-  void GocatorReader::Stop_thread()
-  {
-    if(!m_stopped) {
-      m_gocatorFifo.enqueue({msgid::finished, 0});
-      m_stopped = true;
-      m_thread.join();
-    }
-  }
-
-  void GocatorReader::OnData_thread()
-  {
-    
-    GoDataSet dataset = kNULL;
-    while (!m_stopped)
-    {
-      if (GoSystem_ReceiveData(m_sensor, &dataset, 2000000) == kOK)
-      {
-        OnData(m_sensor, dataset);
-        GoDestroy(dataset);
-      }   
-
-      if (terminate)
-      {
-        m_stopped = true;
-      }
-    }
-    GoSystem_Stop(m_sensor);
-  }
-
 
   void GocatorReader::Log() {
     
@@ -251,13 +206,17 @@ namespace cads
     if(!me->terminate) {
       return me->OnData(sensor, dataset);
     }else {
-      if(!me->m_sent_final_msg) {
         me->m_gocatorFifo.enqueue({msgid::finished, 0});
-        me->m_sent_final_msg = true;
-      }
-      GoDestroy(dataset);
-      return kOK;
     }
+    
+    GoDestroy(dataset);
+    if (me->m_gocatorFifo.size_approx() > me->m_buffer_size_warning)
+    {
+      spdlog::get("gocator")->error("Cads Showing signs of not being able to keep up with data source. Size {}", me->m_buffer_size_warning);
+      me->m_buffer_size_warning += 4096;
+    }
+
+    return kOK;
   }
 
   kStatus kCall GocatorReader::OnSystem(kPointer context, GoSystem system, GoDataSet data)
@@ -268,8 +227,8 @@ namespace cads
   GocatorReader::~GocatorReader()
   {
     Stop();
+    GoSensor_EnableData(m_sensor,kFALSE);
     GoSensor_Disconnect(m_sensor);
-    GoDestroy(m_sensor);
     GoDestroy(m_system);
     GoDestroy(m_assembly);
   }
@@ -378,13 +337,6 @@ namespace cads
     auto z = GocatorReaderBase::k16sToFloat(profile_begin, profile_end, zResolution, zOffset);
     m_gocatorFifo.enqueue({msgid::scan, cads::profile{y, xOffset + samples_width * xResolution, std::move(z)}});
 
-    GoDestroy(dataset);
-
-    if (m_gocatorFifo.size_approx() > m_buffer_size_warning)
-    {
-      spdlog::get("gocator")->error("Cads Showing signs of not being able to keep up with data source. Size {}", m_buffer_size_warning);
-      m_buffer_size_warning += 4096;
-    }
 
     return kOK;
   }
