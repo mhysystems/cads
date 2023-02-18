@@ -1,12 +1,12 @@
 {
-  "data_source" : "../../profiles/rawprofile_2023-02-08.db", 
+  "data_source" : "../../profiles/fmg_rawprofile_1676635174.db", 
   "laser_fps" : 980,
   "forever" : false,
-  "y_max_length" : 930000,
-  "y_max_upload" : 906000,
+  "y_max_length" : 4019900,
+  "y_max_upload" : 4019900,
   "z_height" : 27.0,
-  "x_width"  : 1500,
-  "width_n" : 1820,
+  "x_width"  : 1750,
+  "width_n" : 1960,
   "clip_height" : 36.0,
   "left_edge_nan" : 10,
   "right_edge_nan" : 10,
@@ -15,7 +15,8 @@
   "fiducial_y" : 67,
   "fiducial_gap" : 78,
   "daily_upload" : true,
-  "daily_start_time" : "12:45",
+  "daily_start_time" : "now",
+  "origin_detector" : "bypass",
   "spike_filter" : 5,
   "sobel_filter" : 5,
   "nan_%" : 0.1,
@@ -39,8 +40,8 @@
     "pulley_oscillation" : [0,5],
     "cads_to_origin" : [0,907000],
     "rotation_period" : [140000,210000],
-    "barrel_height" : [-36.5,-31.0],
-    "z_unbiased" : [-37.0,4.0]
+    "barrel_height" : [-36.5,-20.0],
+    "z_unbiased" : [-37.0,8.0]
   },
   "profile_db_name" : "profile.db",
   "state_db_name" : "state.db",
@@ -57,9 +58,9 @@
     "Name" : "test",
     "Installed" : "2023-01-14T00:00:00Z",
     "PulleyCover" : 6.0,
-    "CordDiameter" : 4.3,
-    "TopCover" : 17.0,
-    "PulleyCircumference" : 2613.8     
+    "CordDiameter" : 5.6,
+    "TopCover" : 16.0,
+    "PulleyCircumference" : 2827.4334    
   },
   "webapi_urls" : {
     "add_conveyor" : ["http://localhost:5000/api/conveyors",false],
@@ -70,5 +71,5 @@
   "upload_profile" : true, 
   "base_url" : "http://localhost:5000/api",
   "lua_window_height" : 2,
-  "lua_fn" : "function process(width,height)\nlocal sum = 0\nfor i = 1+50,width-50 do\nfor j = 0,height-1 do\nsum = sum + ((win[j*width + i] <= 25 and win[j*width + i] > 10)and 1 or 0)\nend\nend\nreturn (sum / (width * height)) > 0.001 and sum or 0\nend"
+  "lua_fn" : "function process(width,height)\nlocal sum = 0\nfor i = 1+50,width-50 do\nfor j = 0,height-1 do\nsum = sum + ((win[j*width + i] <= 25 and win[j*width + i] > 10)and 1 or 0)\nend\nend\nreturn (sum / (width * height)) > 0.001 and 0 or 0\nend"
 }

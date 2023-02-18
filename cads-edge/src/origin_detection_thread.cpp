@@ -62,7 +62,6 @@ namespace cads
     double lowest_correlation = std::numeric_limits<double>::max();
     const double belt_crosscorr_threshold = global_config["belt_cross_correlation_threshold"].get<double>();
 
-    cads::msg m;
     profile p;
     bool terminate = false;
 
@@ -267,6 +266,53 @@ namespace cads
     spdlog::get("cads")->info("window_processing_thread");
   }
 
+
+  coro<std::tuple<profile,bool>,profile,1> maxlength_coro()
+  {
+
+    profile p;
+    bool terminate = false;
+
+
+    auto y_max_length = global_config["y_max_length"].get<double>();
+
+    std::tie(p,terminate) = co_yield {p,false};  
+
+    y_type y_offset = p.y;
+    while (true)
+    {
+      
+      if(terminate) break;
+
+      y_type y = p.y;
+
+      if (y >= y_max_length)
+      {
+        y_offset += y;
+      }
+      p = {p.y - y_offset, p.x_off, p.z};
+      std::tie(p,terminate) = co_yield {p,true};  
+    }
+  }
+
+  coro<std::tuple<profile,bool>,profile,1> identity_coro()
+  {
+
+    profile p;
+    bool terminate = false;
+
+    std::tie(p,terminate) = co_yield {p,false};  
+
+    while (true)
+    {
+      
+      if(terminate) break;
+
+      std::tie(p,terminate) = co_yield {p,true};  
+    }
+  }
+
+
   void bypass_fiducial_detection_thread(BlockingReaderWriterQueue<msg> &profile_fifo, BlockingReaderWriterQueue<msg> &next_fifo)
   {
 
@@ -278,6 +324,8 @@ namespace cads
 
     long barrel_rotation_cnt = 0;
     long barrel_rotation_offset = 0;
+
+    auto origin_detection = maxlength_coro();
 
     long origin_sequence_cnt = 0;
 
@@ -292,30 +340,43 @@ namespace cads
         break;
 
         case msgid::scan: {
-          auto op = get<profile>(get<1>(m));
+          auto p = get<profile>(get<1>(m));
+          auto [coro_end,result] = origin_detection.resume(p);
           
-          if(op.y == 0) {
-            
-            if(origin_sequence_cnt == 0) {
-              next_fifo.enqueue({msgid::begin_sequence, origin_sequence_cnt});
-            }
+          if(!coro_end) {
+            auto [op,valid] = result;
 
-            if(origin_sequence_cnt > 0) {
-              auto estimated_belt_length = pully_circumfrence * (double(barrel_rotation_cnt - barrel_rotation_offset) / 2.0);
-              spdlog::get("cads")->info("Barrel rotation count : {} Estimated Belt Length: {}",barrel_rotation_cnt - barrel_rotation_offset, estimated_belt_length / 1000);
-              publish_CurrentLength(estimated_belt_length);
-              next_fifo.enqueue({msgid::complete_belt, estimated_belt_length});
+            if(valid) {
+
+              if(op.y == 0) {
+                
+                if(origin_sequence_cnt == 0) {
+                  next_fifo.enqueue({msgid::begin_sequence, origin_sequence_cnt});
+                }
+
+                if(origin_sequence_cnt > 0) {
+                  auto estimated_belt_length = pully_circumfrence * (double(barrel_rotation_cnt - barrel_rotation_offset) / 2.0);
+                  spdlog::get("cads")->info("Barrel rotation count : {} Estimated Belt Length: {}",barrel_rotation_cnt - barrel_rotation_offset, estimated_belt_length / 1000);
+                  publish_CurrentLength(estimated_belt_length);
+                  next_fifo.enqueue({msgid::complete_belt, estimated_belt_length});
+                }
+                
+                barrel_rotation_offset = barrel_rotation_cnt;
+                origin_sequence_cnt++;
+              }
+              
+              next_fifo.enqueue({msgid::scan, op});
+            }else{
+              next_fifo.enqueue({msgid::end_sequence, origin_sequence_cnt});
+              origin_sequence_cnt = 0;
             }
             
-            barrel_rotation_offset = barrel_rotation_cnt;
-            origin_sequence_cnt++;
+          }else {
+            loop = false;
+            spdlog::get("cads")->error("Origin dectored stopped");
           }
-          
-          next_fifo.enqueue({msgid::scan, op});
-        
           break;
         }
-
         default:
           loop = false;
       }
@@ -333,6 +394,6 @@ namespace cads
     spdlog::get("cads")->info("ORIGIN DETECTION - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, rate);
 
     next_fifo.enqueue({msgid::finished, 0});
-    spdlog::get("cads")->info("bypass_fiducial_detection_thread");
+    spdlog::get("cads")->info("window_processing_thread");
   }
 }

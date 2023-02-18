@@ -25,6 +25,7 @@ def dcfilter(x):
 arr,arrf = np.loadtxt("../cads-edge/debug/filt.txt",
                  delimiter=",", dtype=float, unpack=True, usecols=(0,1))
 
+#Whaleback CV405
 sos = signal.iirfilter(19, 4, rs=120, btype='low',analog=False, ftype='cheby2', fs=980, output='sos')
 
 # Uncomment to get filter parameters 
@@ -36,7 +37,6 @@ sos = signal.iirfilter(19, 4, rs=120, btype='low',analog=False, ftype='cheby2', 
 plt.plot(arr)
 plt.plot(arrf)
 
-#plt.plot(arrf)
 #plt.plot(signal.sosfilt(sos,arr))
 
 
