@@ -31,7 +31,6 @@ int main(int argn, char **argv)
     ("signal,e", po::bool_switch(), "Generate signal for input into python filter parameter creation")
     ("params,p", po::value<long>(), "Generate belt paramaters to be used in cads config")
     ("go-log,g", po::bool_switch(), "Dump Gocator Log")
-    ("force-gocator,f", po::bool_switch(), "Force gocator usage")
     ("level,l", po::value<std::string>(), "Logging Level")
     ("db-name", po::value<std::string>(), "db file");
 
@@ -103,7 +102,7 @@ int main(int argn, char **argv)
   }else if(vm["go-log"].as<bool>()) {
     dump_gocator_log();
   }else{
-	  process(vm["force-gocator"].as<bool>());
+	  process();
   }
 
 	return 0;
