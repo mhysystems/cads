@@ -1,5 +1,5 @@
 {
-  "data_source" : "../../profiles/fmg_rawprofile_1676635174.db", 
+  "data_source" : "../../profiles/fmg_rawprofile_1676661736.db", 
   "laser_fps" : 980,
   "forever" : false,
   "y_max_length" : 4019900,
@@ -19,7 +19,7 @@
   "origin_detector" : "bypass",
   "spike_filter" : 5,
   "sobel_filter" : 5,
-  "nan_%" : 0.1,
+  "nan_%" : 0.15,
   "iirfilter" : {
     "skip" : 4000,
     "delay" : 10,

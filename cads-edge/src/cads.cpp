@@ -143,6 +143,8 @@ namespace
 
     auto iirfilter_left = mk_iirfilterSoS();
     auto iirfilter_right = mk_iirfilterSoS();
+    auto iirfilter_left_edge = mk_iirfilterSoS();
+    auto iirfilter_right_edge = mk_iirfilterSoS();
     auto delay = mk_delay(global_config["iirfilter"]["delay"]);
 
     int64_t cnt = 0;
@@ -250,6 +252,9 @@ namespace
       auto pulley_left_filtered = (z_element)iirfilter_left(pulley_left);
       auto pulley_right_filtered = (z_element)iirfilter_right(pulley_right);
       
+      auto left_edge_filtered = (z_element)iirfilter_left_edge(ileft_edge_index);
+      auto right_edge_filtered = (z_element)iirfilter_right_edge(iright_edge_index);
+      
       
       auto bottom_filtered = pulley_left_filtered;
       auto removed_dc_bias = differentiation(bottom_filtered);
@@ -270,7 +275,7 @@ namespace
         }
       }
 
-      auto [delayed, dd] = delay({iy, ix, iz, ileft_edge_index, iright_edge_index,p.z});
+      auto [delayed, dd] = delay({iy, ix, iz, (int)left_edge_filtered, (int)right_edge_filtered,p.z});
 
       if (!delayed)
         continue;
