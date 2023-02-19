@@ -169,7 +169,7 @@ namespace cads
           spdlog::get("cads")->debug("Barrel Frequency(Hz): {}", 1000.0 / ((double)period * 2));
           publish_PulleyOscillation(amplitude_extraction(bottom, true));
           publish_SurfaceSpeed(pully_circumfrence / (2 * period));
-          spdlog::get("cads")->debug("Surface Speed(Hz): {}", pully_circumfrence / (2 * period));
+          spdlog::get("cads")->debug("Surface Speed(m/s): {}", pully_circumfrence / (2 * period));
         }
         
 
@@ -212,7 +212,7 @@ namespace cads
 
         if (root_cnt % 100 == 0)
         {
-          spdlog::get("cads")->debug("Surface Speed2(Hz): {},{}", speed,speed*adjust(period));
+          spdlog::get("cads")->debug("Surface Speed2(m/s): {},{}", speed,speed*adjust(period));
         }
       }
 

@@ -147,7 +147,7 @@ namespace
     auto start = std::chrono::high_resolution_clock::now();
 
     auto schmitt_trigger = mk_schmitt_trigger();
-    auto differentiation = mk_dc_filter(); //mk_differentiation(-32.5);
+    auto differentiation = mk_dc_filter(); 
     auto pulley_frequency = mk_pulley_frequency();
     auto profiles_align = mk_profiles_align(width_n);
     auto pulley_speed = mk_pulley_speed();
