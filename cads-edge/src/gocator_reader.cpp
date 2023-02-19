@@ -129,7 +129,7 @@ namespace cads
       if (kIsError(status))
       {
         throw runtime_error{"Illformed Ip Address: "s + to_string(status)};
-      }
+      }else
 
       status = GoSystem_FindSensorByIpAddress(m_system, &gocator_ip, &m_sensor);
 
@@ -149,6 +149,7 @@ namespace cads
     {
       throw runtime_error{"GoSensor_Connect: "s + to_string(status)};
     }
+    
     if (kIsError(status = GoSensor_Stop(m_sensor)))
     {
       throw runtime_error{"GoSensor_Stop: "s + to_string(status)};
@@ -204,9 +205,9 @@ namespace cads
     auto me = static_cast<GocatorReader *>(context);
     
     if(!me->terminate) {
-      return me->OnData(sensor, dataset);
+      me->OnData(sensor, dataset);
     }else {
-        me->m_gocatorFifo.enqueue({msgid::finished, 0});
+      me->m_gocatorFifo.enqueue({msgid::finished, 0});
     }
     
     GoDestroy(dataset);
@@ -228,9 +229,13 @@ namespace cads
   {
     Stop();
     GoSensor_EnableData(m_sensor,kFALSE);
+    spdlog::get("gocator")->debug("GoSensor_EnableData Disabled");
     GoSensor_Disconnect(m_sensor);
+    spdlog::get("gocator")->debug("GoSensor_Disconnect");
     GoDestroy(m_system);
+    spdlog::get("gocator")->debug("GoDestroy system");
     GoDestroy(m_assembly);
+    spdlog::get("gocator")->debug("GoDestroy assembly");
   }
 
 
