@@ -131,13 +131,14 @@ namespace
     bool terminate_publish = false;
     std::jthread realtime_publish(realtime_publish_thread, std::ref(terminate_publish));
     std::jthread save_send(save_send_thread, std::ref(db_fifo));
-    std::jthread dynamic_processing(dynamic_processing_thread, std::ref(dynamic_processing_fifo), std::ref(db_fifo), width_n);
     
+    std::jthread dynamic_processing;
     std::jthread origin_dectection;
     if(global_config.contains("origin_detector") && global_config["origin_detector"] == "bypass") {
-      origin_dectection = std::jthread(bypass_fiducial_detection_thread,std::ref(winFifo), std::ref(dynamic_processing_fifo));
+      origin_dectection = std::jthread(bypass_fiducial_detection_thread,std::ref(winFifo), std::ref(db_fifo));
     }else {
       origin_dectection = std::jthread(window_processing_thread, x_resolution, y_resolution, width_n, std::ref(winFifo), std::ref(dynamic_processing_fifo));
+      dynamic_processing = std::jthread(dynamic_processing_thread, std::ref(dynamic_processing_fifo), std::ref(db_fifo), width_n);
     }
 
     auto iirfilter_left = mk_iirfilterSoS();
