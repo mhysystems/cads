@@ -70,7 +70,7 @@ namespace
     }
   }
 
-  unique_ptr<GocatorReaderBase> mk_gocator(BlockingReaderWriterQueue<msg> &gocatorFifo, bool force_gocator = false, bool use_encoder = false)
+  std::tuple<unique_ptr<GocatorReaderBase>,bool> mk_gocator(BlockingReaderWriterQueue<msg> &gocatorFifo, bool force_gocator = false, bool use_encoder = false)
   {
     auto data_src = global_config["data_source"].get<std::string>();
 
@@ -78,19 +78,21 @@ namespace
     {
       bool connect_via_ip = global_config.contains("gocator_ip");
       spdlog::get("cads")->debug("Using gocator as data source");
-      return connect_via_ip ? make_unique<GocatorReader>(gocatorFifo, use_encoder, global_config.at("gocator_ip"s).get<std::string>()) : make_unique<GocatorReader>(gocatorFifo,use_encoder);
+      auto gocator = connect_via_ip ? make_unique<GocatorReader>(gocatorFifo, use_encoder, global_config.at("gocator_ip"s).get<std::string>()) : make_unique<GocatorReader>(gocatorFifo,use_encoder);
+      return {std::move(gocator),true};
     }
     else
     {
       spdlog::get("cads")->debug("Using sqlite as data source");
       auto fps = global_config["laser_fps"].get<double>();
       auto forever = global_config["forever"].get<bool>();
-      return make_unique<SqliteGocatorReader>(gocatorFifo,fps,forever);
+      auto sqlite = make_unique<SqliteGocatorReader>(gocatorFifo,fps,forever);
+      return {std::move(sqlite),false};
     }
   }
 
   enum class Process_Status {Error, Finished, Stopped};
-  Process_Status process_impl(bool force_gocator)
+  Process_Status process_impl()
   {
    
     std::jthread uploading_conveyor_parameters(upload_conveyor_parameters);
@@ -104,7 +106,7 @@ namespace
     const auto clip_height = global_config["clip_height"].get<z_element>();
     const auto use_encoder = global_config["use_encoder"].get<bool>();
 
-    auto gocator = mk_gocator(gocatorFifo,force_gocator,use_encoder);
+    auto [gocator,is_gocator] = mk_gocator(gocatorFifo,use_encoder);
     gocator->Start();
 
     cads::msg m;
@@ -184,15 +186,23 @@ namespace
       if (iz.size()*x_resolution < size_t(x_width * 0.75))
       {
         spdlog::get("cads")->error("Gocator sending profiles with widths less than 0.75 of expected width");
-        status = Process_Status::Error;
-        break;
+        if(is_gocator) {
+          status = Process_Status::Error;
+          break;
+        }else {
+          continue;
+        }
       }
 
       if (iz.size() < (size_t)width_n)
       {
         spdlog::get("cads")->error("Gocator sending profiles with sample number {} less than {}", iz.size(), width_n);
-        status = Process_Status::Error;
-        break;
+        if(is_gocator) {
+          status = Process_Status::Error;
+          break;
+        }else {
+          continue;
+        }
       }
 
       double nan_cnt = std::count_if(iz.begin(), iz.end(), [](z_element z)
@@ -201,8 +211,12 @@ namespace
       if ((nan_cnt / iz.size()) > nan_percentage )
       {
         spdlog::get("cads")->error("Percentage of nan({}) in profile > {}%", nan_cnt,nan_percentage * 100);
-        status = Process_Status::Error;
-        break;
+        if(is_gocator) {
+          status = Process_Status::Error;
+          break;
+        }else {
+          continue;
+        }
       }
       constraint_substitute(iz,z_min_unbiased,z_max_unbiased);
       iz = trim_nan(iz);
@@ -224,8 +238,12 @@ namespace
       else if(std::isnan(pulley_left) && std::isnan(pulley_right)) {
         spdlog::get("cads")->error("Cannot find either belt edge");
         store_errored_profile(p.z);
-        status = Process_Status::Error;
-        break;
+        if(is_gocator) {
+          status = Process_Status::Error;
+          break;
+        }else {
+          continue;
+        }
       }
       
       auto pulley_left_filtered = (z_element)iirfilter_left(pulley_left);
@@ -242,8 +260,13 @@ namespace
       if (speed == 0)
       {
         spdlog::get("cads")->error("Belt proabaly stopped.");
-        status = Process_Status::Stopped;
-        break;
+        
+        if(is_gocator) {
+          status = Process_Status::Stopped;
+          break;
+        }else {
+          continue;
+        }
       }
 
       auto [delayed, dd] = delay({iy, ix, iz, ileft_edge_index, iright_edge_index,p.z});
@@ -377,7 +400,7 @@ namespace cads
     BlockingReaderWriterQueue<msg> gocatorFifo;
     std::jthread remote_control(remote_control_thread,std::ref(nats_queue),std::ref(terminate_subscribe));
 
-    auto gocator = mk_gocator(gocatorFifo);
+    auto [gocator, is_gocator] = mk_gocator(gocatorFifo);
 
     gocator->Start();
 
@@ -453,14 +476,14 @@ namespace cads
 
   
 
-  void process(bool force_gocator)
+  void process()
   {
     for (int sleep_wait = 1;;)
     {
       
       auto start = std::chrono::high_resolution_clock::now();
 
-      auto status = process_impl(force_gocator);
+      auto status = process_impl();
 
       auto now = std::chrono::high_resolution_clock::now();
       auto period = std::chrono::duration_cast<std::chrono::seconds>(now - start).count();
@@ -496,7 +519,7 @@ namespace cads
 
     BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
 
-    auto gocator = mk_gocator(gocatorFifo);
+    auto [gocator,is_gocator] = mk_gocator(gocatorFifo);
     gocator->Start();
 
     auto iirfilter = mk_iirfilterSoS();
@@ -565,7 +588,7 @@ namespace cads
   {
     BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
 
-    auto gocator = mk_gocator(gocatorFifo);
+    auto [gocator,is_gocator] = mk_gocator(gocatorFifo);
     gocator->Start();
 
     const int nan_num = global_config["left_edge_nan"].get<int>();
