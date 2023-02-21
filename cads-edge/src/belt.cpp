@@ -194,7 +194,7 @@ namespace cads
 
     auto avg_speed = (std::get<0>(global_constraints.SurfaceSpeed) + std::get<0>(global_constraints.SurfaceSpeed)) / 2;
     auto T0 = global_conveyor_parameters.PulleyCircumference / avg_speed; // in ms
-    auto T1 = 5 * T0;                                                     // in ms
+    auto T1 = 2 * T0;                                                     // in ms
     auto barrel_origin_time = std::chrono::high_resolution_clock::now();
     double speed = init;
     double period = 1.0;
@@ -251,8 +251,8 @@ namespace cads
       }
       else
       {
-        //auto f = z | sr::views::take(left_edge_index + width_n) | sr::views::drop(left_edge_index);
-        //prev_z = {f.begin(), f.end()};
+        auto f = z | sr::views::take(left_edge_index + width_n) | sr::views::drop(left_edge_index);
+        prev_z = {f.begin(), f.end()};
         return left_edge_index;
       }
     };

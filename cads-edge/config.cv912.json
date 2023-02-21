@@ -1,5 +1,5 @@
 {
-  "data_source" : "../../profiles/fmg_rawprofile_1676635174.db", 
+  "data_source" : "../../profiles/fmg_rawprofile_1676661736.db", 
   "laser_fps" : 980,
   "forever" : false,
   "y_max_length" : 4019900,
@@ -19,7 +19,7 @@
   "origin_detector" : "bypass",
   "spike_filter" : 5,
   "sobel_filter" : 5,
-  "nan_%" : 0.1,
+  "nan_%" : 0.15,
   "iirfilter" : {
     "skip" : 4000,
     "delay" : 10,
@@ -35,10 +35,10 @@
             [ 1.00000000e+00, -1.99933782e+00, 1.00000000e+00, 1.00000000e+00, -1.99752113e+00, 9.97907883e-01]]   
   },
   "constraints" : {
-    "current_length" : [903000,907000],
+    "current_length" : [4000000,4030000],
     "surface_speed" : [4.5,30.0],
     "pulley_oscillation" : [0,5],
-    "cads_to_origin" : [0,907000],
+    "cads_to_origin" : [0,4030000],
     "rotation_period" : [140000,210000],
     "barrel_height" : [-36.5,-20.0],
     "z_unbiased" : [-37.0,8.0]
@@ -55,7 +55,7 @@
 
   "conveyor" : {
     "Site" : "FMG",
-    "Name" : "cv912",
+    "Name" : "CV912",
     "Installed" : "2023-01-14T00:00:00Z",
     "PulleyCover" : 6.0,
     "CordDiameter" : 5.6,
@@ -64,12 +64,12 @@
   },
   "webapi_urls" : {
     "add_conveyor" : ["http://localhost:5000/api/conveyors",false],
-    "add_meta" : ["https://dev.mhysystems.com/api/meta",true],
-    "add_belt" : ["https://dev.mhysystems.com/api/belt",true]
+    "add_meta" : ["https://fmgcads.mhysystems.com/api/meta",true],
+    "add_belt" : ["https://fmgcads.mhysystems.com/api/belt",true]
   },
-  "nats_url" : "10.9.1.1",
+  "nats_url" : "192.168.2.13",
   "upload_profile" : true, 
-  "base_url" : "https://dev.mhysystems.com/api",
+  "base_url" : "https://fmgcads.mhysystems.com/api",
   "lua_window_height" : 2,
   "lua_fn" : "function process(width,height)\nlocal sum = 0\nfor i = 1+50,width-50 do\nfor j = 0,height-1 do\nsum = sum + ((win[j*width + i] <= 25 and win[j*width + i] > 10)and 1 or 0)\nend\nend\nreturn (sum / (width * height)) > 0.001 and 0 or 0\nend"
 }

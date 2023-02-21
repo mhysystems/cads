@@ -1,9 +1,23 @@
 @inject NavigationManager MyNavigationManager
+@inject BeltService BeltApi;
 
 <MudAppBar Elevation="0" Class="d-flex">
   <MudText Typo="Typo.h2">CADS</MudText>
     <MudText Typo="Typo.h2" Class="ml-4">@site</MudText>
-    <MudText Typo="Typo.h2" Class="ml-4">@conveyor</MudText>
+    @if(conveyors.Any()) {
+      <MudText Typo="Typo.h2" Class="ml-4">@conveyor</MudText>
+      @if(conveyors.Count() > 0) {
+        
+        <MudMenu Icon="@Icons.Material.Filled.MoreVert" Color="Color.Primary" Size="Size.Small"  Class="mud-theme-secondary" Dense="true" Option="Origin.TopLeft">
+          @foreach (var item in conveyors)
+          {
+            if(item != conveyor) {
+              <MudMenuItem OnClick="@(e => MyNavigationManager.NavigateTo($"/site/dashboard/{site}/{item}",true))">@item</MudMenuItem>
+            }
+          }
+        </MudMenu>
+      }
+    }
     <MudSpacer/>
       @ChildContent
     <MudSpacer/>
@@ -37,10 +51,14 @@
 ; [Parameter]
   public string conveyor { get; set; } = "";
 
+  protected IEnumerable<string> conveyors = Array.Empty<string>();
+
   public string logo = "https://cadswebsite.blob.core.windows.net/wwwroot/MHY Systems Logo.png";
 
   protected override async Task OnInitializedAsync()
   {
+    conveyors = BeltApi.GetConveyorsString(site);
+    
     if(MyNavigationManager.BaseUri.ToLower().Contains("miniotec")) {
       logo = "https://cadswebsite.blob.core.windows.net/wwwroot/miniow.png";
     }

@@ -5,6 +5,7 @@
 #include <window.hpp>
 
 #include <Iir.h>
+#include <spline.h>
 
 namespace cads
 {
@@ -46,7 +47,29 @@ namespace cads
     return z;
   }
 
-  void nan_filter(z_type &z)
+  void nan_filter(z_type &z) {
+    
+    std::vector<double> x,y;
+    
+    double cnt = 0;
+    for(auto i : z) {
+      if(!std::isnan(i)) {
+        x.push_back(cnt);
+        y.push_back(i);
+      }
+
+      ++cnt;
+    }
+
+    tk::spline s(x,y);
+
+    for(double i = 0; i < (double)z.size(); ++i) {
+      z[(int)i] = s(i);
+    }
+    
+  }
+
+  void nan_filter2(z_type &z)
   {
     namespace sr = std::ranges;
 

@@ -154,7 +154,6 @@ namespace
     auto schmitt_trigger = mk_schmitt_trigger();
     auto differentiation = mk_dc_filter(); 
     auto pulley_frequency = mk_pulley_frequency();
-    auto profiles_align = mk_profiles_align(width_n);
     auto pulley_speed = mk_pulley_speed();
 
     long drop_profiles = global_config["iirfilter"]["skip"]; // Allow for iir fillter too stablize
@@ -224,7 +223,7 @@ namespace
       constraint_substitute(iz,z_min_unbiased,z_max_unbiased);
       iz = trim_nan(iz);
 
-      spike_filter(iz);
+      //spike_filter(iz);
       auto z_nan_filtered = nan_filter_pure(iz);
       auto [ileft_edge_index, iright_edge_index] = find_profile_edges_sobel(z_nan_filtered);
       auto [pulley_left, pulley_right] = pulley_left_right_mean(iz, ileft_edge_index, iright_edge_index);
@@ -292,7 +291,7 @@ namespace
       regression_compensate(z, 0, z.size(), gradient);
 
       nan_filter(z);
-      auto left_edge_index_aligned = profiles_align(z, left_edge_index, right_edge_index);
+      auto left_edge_index_aligned = left_edge_index;
 
       barrel_height_compensate(z, -bottom_filtered, clip_height);
 

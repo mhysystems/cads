@@ -62,6 +62,14 @@ namespace cads_gui.Data
       return from row in context.Conveyors where row.Site == site select row;
     }
 
+    public IEnumerable<string> GetConveyorsString(string site)
+    {
+      using var context = dBContext.CreateDbContext();
+      var data = from row in context.belt where row.site == site select row.conveyor;
+
+      return data.Distinct().ToList();
+    }
+
     public async Task<(double, double, double)> GetBeltBoundary(string belt)
     {
       return await NoAsp.BeltBoundaryAsync(belt);

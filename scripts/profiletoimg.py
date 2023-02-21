@@ -10,12 +10,12 @@ def process_belt(db) :
     cur = conn.cursor()
     m = 99999999999
     rowcnt = 1    
-    ss = np.vectorize(lambda x :x if not np.isnan(x) else -33.0 ) 
+    ss = np.vectorize(lambda x :x if not np.isnan(x) else -25.0 ) 
     yindex = 0
     while rowcnt > 0:
         rowcnt = 0
         b = []
-        for row in cur.execute(f"SELECT z from PROFILE where revid = 1 and idx >= ? order by idx asc limit ?",(yindex,maxrows)):
+        for row in cur.execute(f"SELECT z from PROFILE where revid = 0 and idx >= ? order by idx asc limit ?",(yindex,maxrows)):
             rowcnt = rowcnt + 1
             z = np.frombuffer(row[0],dtype='f')
             m = min(m,len(z))
