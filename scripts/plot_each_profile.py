@@ -2,7 +2,7 @@ import profile_generator as pg
 import matplotlib.pyplot as plt
 import numpy as np
 import argparse
-
+from scipy.interpolate import CubicSpline
 
 
 if __name__ == "__main__":
@@ -17,9 +17,14 @@ if __name__ == "__main__":
     for z0 in pg.process_profile(args.db,args.y,args.i):
         if not args.hist:
             z = np.copy(z0)
-            z[np.isnan(z)] = args.s
-            plt.plot(z)
+            x = np.arange(len(z))
+            x2 = x[~np.isnan(z)]
+            z2 = z[~np.isnan(z)]
+            cs = CubicSpline(x2,z2)
+            #z[np.isnan(z)] = args.s
+            plt.plot(cs(x))
         else:
-            plt.hist(z0[~np.isnan(z0)] ,bins=100)
+            z = z0[~np.isnan(z0)]
+            plt.hist(z ,bins=100)
         plt.show()
         #input()

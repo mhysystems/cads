@@ -20,7 +20,9 @@ namespace cads_gui.Data
     public double Width { get; set; } = 0;
     public double Length { get; set; } = 0;
     public double Depth { get; set; } = 0;
-    public double Percentage { get; set; } = 0;
+    public double Percentage { get; set; } = 1;
+    public double XMin { get; set; } = 0;
+    public double XMax { get; set; } = 0;
   };
 
   public class Realtime

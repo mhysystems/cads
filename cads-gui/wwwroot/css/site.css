@@ -8,6 +8,10 @@
   position: relative;
 }
 
+.overload-mud-list-item-secondary .mud-selected-item p{
+  color : var(--mud-palette-text-primary)
+}
+
 .mud-input {
   color: currentColor;
 }

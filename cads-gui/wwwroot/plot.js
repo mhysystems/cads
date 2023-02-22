@@ -762,17 +762,6 @@ class ProfilePlot {
 
       xaxis: {},
 
-      shapes: [{
-        type: 'line',
-        y0: 29.5,
-        y1: 29.5,
-        line: {
-          color: 'rgb(50, 171, 96)',
-          width: 2
-        }
-
-      }],
-
       margin: {
         l: 20,
         r: 20,
@@ -833,13 +822,11 @@ class ProfilePlot {
 
     this.layout.xaxis = [x_axis[0], x_axis[x_axis.length - 1]];
 
-    this.layout.shapes[0].x0 = this.layout.xaxis[0];
-    this.layout.shapes[0].x1 = this.layout.xaxis[1];
     this.layout.aspectratio.y = (this.zMax - this.zMin)  / (belt_width * 1000);
 
     this.plotData[0].y = z_surface[yIndex];
     this.plotData[0].x = x_axis;
-    this.plotData[1].y = this.plotData[0].y.map(y => 16.2 * (y > 9.0));
+    this.plotData[1].y = this.plotData[0].y.map(y => 0 * (y > 9.0));
     this.plotData[1].x = x_axis;
     await Plotly.react(this.plotElement, this.plotData, this.layout, this.config);
   }
@@ -875,8 +862,6 @@ class ProfilePlot {
 
     this.layout.xaxis = [x_axis[0], x_axis[x_axis.length - 1]];
 
-    this.layout.shapes[0].x0 = this.layout.xaxis[0];
-    this.layout.shapes[0].x1 = this.layout.xaxis[1];
     this.layout.aspectratio.y = (this.zMax - this.zMin)  / (belt_width * 1000);
 
     this.plotData[0].y = z_surfaceTop[yIndex];

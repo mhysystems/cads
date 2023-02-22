@@ -26,7 +26,7 @@ namespace cads_gui.Data
           modelBuilder.Entity<Belt>().Ignore(b => b.ConveyorID);
           modelBuilder.Entity<Belt>().Ignore(b => b.name);
           modelBuilder.Entity<Belt>().Property(e => e.chrono).HasConversion(e => e, e => DateTime.SpecifyKind(e,DateTimeKind.Utc));
-					modelBuilder.Entity<SavedZDepthParams>().HasNoKey();
+					modelBuilder.Entity<SavedZDepthParams>().HasKey( e => new{e.Site,e.Conveyor,e.Name});
 					modelBuilder.Entity<Conveyor>().HasKey(e => e.Id);
           modelBuilder.Entity<Conveyor>().Property(b => b.Id).ValueGeneratedOnAdd();
           modelBuilder.Entity<Conveyor>().Property(e => e.Timezone).HasConversion(

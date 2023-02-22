@@ -62,6 +62,14 @@ namespace cads_gui.Data
       return from row in context.Conveyors where row.Site == site select row;
     }
 
+    public IEnumerable<string> GetConveyorsString(string site)
+    {
+      using var context = dBContext.CreateDbContext();
+      var data = from row in context.belt where row.site == site select row.conveyor;
+
+      return data.Distinct().ToList();
+    }
+
     public async Task<(double, double, double)> GetBeltBoundary(string belt)
     {
       return await NoAsp.BeltBoundaryAsync(belt);
@@ -208,10 +216,15 @@ namespace cads_gui.Data
       return rtn.ToList();
     }
 
-    public void AddDamage(SavedZDepthParams d)
+    public void AddDamage(SavedZDepthParams entry)
     {
       using var context = dBContext.CreateDbContext();
-      context.SavedZDepthParams.Add(d);
+      var q = context.SavedZDepthParams.Where(e => e.Name == entry.Name && e.Site == entry.Site && e.Conveyor == entry.Conveyor);
+      if(q.Any()) {
+        context.SavedZDepthParams.Update(entry);
+      }else{
+        context.SavedZDepthParams.Add(entry);
+      }
       context.SaveChanges();
 
     }

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using cads_gui.Data;
 
@@ -10,9 +11,11 @@ using cads_gui.Data;
 namespace cadsgui.Migrations
 {
     [DbContext(typeof(SQLiteDBContext))]
-    partial class SQLiteDBContextModelSnapshot : ModelSnapshot
+    [Migration("20230113034518_alterConveyors")]
+    partial class alterConveyors
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "7.0.2");
@@ -75,9 +78,6 @@ namespace cadsgui.Migrations
                     b.Property<double>("CordDiameter")
                         .HasColumnType("REAL");
 
-                    b.Property<DateTime>("Installed")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -103,13 +103,8 @@ namespace cadsgui.Migrations
 
             modelBuilder.Entity("cads_gui.Data.SavedZDepthParams", b =>
                 {
-                    b.Property<string>("Site")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Conveyor")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<double>("Depth")
@@ -118,19 +113,19 @@ namespace cadsgui.Migrations
                     b.Property<double>("Length")
                         .HasColumnType("REAL");
 
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<double>("Percentage")
                         .HasColumnType("REAL");
 
+                    b.Property<string>("Site")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<double>("Width")
                         .HasColumnType("REAL");
-
-                    b.Property<double>("XMax")
-                        .HasColumnType("REAL");
-
-                    b.Property<double>("XMin")
-                        .HasColumnType("REAL");
-
-                    b.HasKey("Site", "Conveyor", "Name");
 
                     b.ToTable("SavedZDepthParams");
                 });

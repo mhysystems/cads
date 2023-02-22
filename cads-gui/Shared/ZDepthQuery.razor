@@ -62,10 +62,10 @@
   protected double XMin = 0;
   protected double XMax = 0;
 
-  protected List<SavedZDepthParams> savedZDepthParams = new List<SavedZDepthParams>();
+  protected SavedZDepthParams savedZDepthParams = new();
 
   [Parameter]
-  public required Belt Belt { get; set; }
+  public Belt Belt { get; set; }
 
   public ZDepthQueryParameters SearchParameters { get { return new ZDepthQueryParameters(X, Y, Z, P / 100, XMin, XMax); } private set { } }
 
@@ -79,14 +79,6 @@
     Z = (int)Belt.z_max;
     XMin = -Belt.Xmax/2;
     XMax = Belt.Xmax/2;
-
-    savedZDepthParams = await Task.Run(() => Beltservice.GetSavedZDepthParams(Belt).ToList()) ?? new
-    List<SavedZDepthParams>();
-
-  }
-
-  protected override async Task OnParametersSetAsync()
-  {
 
   }
 
@@ -107,6 +99,8 @@
     Y = (int)d.Length;
     Z = (int)d.Depth;
     P = d.Percentage * 100;
+    XMin = d.XMin;
+    XMax = d.XMax;
 
     if (module is not null)
     {
@@ -123,16 +117,13 @@
   }
 
 
-  public async Task LoadZDepthParamsAsync(IEnumerable<SavedZDepthParams> xs)
+  public async Task LoadZDepthParamsAsync(SavedZDepthParams x)
   {
-    if (xs.Count() > 1)
+    if (x is not null)
     {
-      logger.LogError("Expected 1 SavedZDepthParams. Received {}", xs.Count());
-    }
-
-    if (xs.Any())
-    {
-      await LoadDamageAsync(xs.First());
+      await LoadDamageAsync(x);
+    }else {
+      logger.LogError("Expected 1 SavedZDepthParams. Received 0");
     }
   }
 
