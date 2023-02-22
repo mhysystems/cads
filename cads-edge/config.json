@@ -1,12 +1,12 @@
 {
-  "data_source" : "../../profiles/fmg_rawprofile_1676552476.db", 
+  "data_source" : "../../profiles/rawprofile_2023-02-08.db", 
   "laser_fps" : 980,
   "forever" : false,
-  "y_max_length" : 4019900,
-  "y_max_upload" : 4019900,
+  "y_max_length" : 903000,
+  "y_max_upload" : 906000,
   "z_height" : 27.0,
-  "x_width"  : 1750,
-  "width_n" : 1960,
+  "x_width"  : 1500,
+  "width_n" : 1820,
   "clip_height" : 36.0,
   "left_edge_nan" : 10,
   "right_edge_nan" : 10,
@@ -60,7 +60,7 @@
     "PulleyCover" : 6.0,
     "CordDiameter" : 5.6,
     "TopCover" : 16.0,
-    "PulleyCircumference" : 2827.4334    
+    "PulleyCircumference" : 2613.8   
   },
   "webapi_urls" : {
     "add_conveyor" : ["http://localhost:5000/api/conveyors",false],

@@ -16,7 +16,6 @@ cads-gui/flatbuffers-typescript/cads-flatbuffers/
 cads-gui/wwwroot/*.*
 cads-gui/scans/**
 cads-gui/scans
-cads-gui/Migrations**
 cads-gui/CadsFlatbuffers/*.*
 *.db
 *.out

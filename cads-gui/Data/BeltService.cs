@@ -216,10 +216,15 @@ namespace cads_gui.Data
       return rtn.ToList();
     }
 
-    public void AddDamage(SavedZDepthParams d)
+    public void AddDamage(SavedZDepthParams entry)
     {
       using var context = dBContext.CreateDbContext();
-      context.SavedZDepthParams.Add(d);
+      var q = context.SavedZDepthParams.Where(e => e.Name == entry.Name && e.Site == entry.Site && e.Conveyor == entry.Conveyor);
+      if(q.Any()) {
+        context.SavedZDepthParams.Update(entry);
+      }else{
+        context.SavedZDepthParams.Add(entry);
+      }
       context.SaveChanges();
 
     }

@@ -826,7 +826,7 @@ class ProfilePlot {
 
     this.plotData[0].y = z_surface[yIndex];
     this.plotData[0].x = x_axis;
-    this.plotData[1].y = this.plotData[0].y.map(y => 16.2 * (y > 9.0));
+    this.plotData[1].y = this.plotData[0].y.map(y => 0 * (y > 9.0));
     this.plotData[1].x = x_axis;
     await Plotly.react(this.plotElement, this.plotData, this.layout, this.config);
   }

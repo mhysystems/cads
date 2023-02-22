@@ -223,7 +223,7 @@ namespace
       constraint_substitute(iz,z_min_unbiased,z_max_unbiased);
       iz = trim_nan(iz);
 
-      //spike_filter(iz);
+      spike_filter(iz);
       auto z_nan_filtered = nan_filter_pure(iz);
       auto [ileft_edge_index, iright_edge_index] = find_profile_edges_sobel(z_nan_filtered);
       auto [pulley_left, pulley_right] = pulley_left_right_mean(iz, ileft_edge_index, iright_edge_index);

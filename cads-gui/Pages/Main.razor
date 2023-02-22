@@ -14,7 +14,7 @@
 
 <SiteHeader ShowDraw site="@site" conveyor="@conveyor">
   <SearchControls SelectZDepthParams="@LoadZDepthParamsAsync" DateChanged="@DateChanged" Belt="@belt"
-    JumpTo="@JumpToAsync" StepBack="@StepBackward" StepForward="@StepForward" Search="@SearchBelt" />
+    JumpTo="@JumpToAsync" StepBack="@StepBackward" StepForward="@StepForward" Search="@SearchBelt" SaveZQueryParams="SaveZQueryParams" savedZDepthParams="savedZDepthParams"/>
 </SiteHeader>
 
 <MudContainer MaxWidth="MaxWidth.False" Class="ma-0 pa-0"
@@ -53,7 +53,7 @@
 @code {
 
   [Parameter]
-  public required string site { get; set; }
+  public string site { get; set; }
   [Parameter]
   public string conveyor { get; set; } = String.Empty;
 
@@ -64,6 +64,9 @@
   ZDepthQuery zDepthQuery;
   DoughnutPlot doughnutPlot;
 
+  List<SavedZDepthParams> savedZDepthParams;
+
+  
   Ztable zDepthTabe;
 
   double _currentY = 0;
@@ -92,6 +95,7 @@
       belt = b.Last();
       var action = new BeltAction(belt);
       Dispatcher?.Dispatch(action);
+      savedZDepthParams = await Task.Run(() => Beltservice.GetSavedZDepthParams(belt) ?? new List<SavedZDepthParams>());
     }
   }
 
@@ -106,9 +110,9 @@
     }
   }
 
-  async Task LoadZDepthParamsAsync(IEnumerable<SavedZDepthParams> xs)
+  async Task LoadZDepthParamsAsync(SavedZDepthParams x)
   {
-    await zDepthQuery.LoadZDepthParamsAsync(xs);
+    await zDepthQuery.LoadZDepthParamsAsync(x);
   }
 
   async Task UpdateProfilePlotAsync(ValueTuple<int, double> args)
@@ -268,6 +272,24 @@
 
   }
 
+  async Task SaveZQueryParams(string name){
+    var s = new SavedZDepthParams{
+      Name = name,
+      Site = belt.site,
+      Conveyor = belt.conveyor,
+      Width = zDepthQuery.SearchParameters.Width,
+      Length = zDepthQuery.SearchParameters.Length,
+      Depth = zDepthQuery.SearchParameters.Depth,
+      Percentage = zDepthQuery.SearchParameters.Percentage,
+      XMin = zDepthQuery.SearchParameters.XMin,
+      XMax = zDepthQuery.SearchParameters.XMax
+    };
+
+    await zDepthQuery.LoadZDepthParamsAsync(s);
+    Beltservice.AddDamage(s);
+    savedZDepthParams = Beltservice.GetSavedZDepthParams(belt);
+    StateHasChanged();
+  }
   async Task SearchBelt()
   {
 

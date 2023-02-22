@@ -47,7 +47,7 @@ namespace cads
     return z;
   }
 
-  void nan_filter(z_type &z) {
+  void nan_filter_spline(z_type &z) {
     
     std::vector<double> x,y;
     
@@ -69,7 +69,7 @@ namespace cads
     
   }
 
-  void nan_filter2(z_type &z)
+  void nan_filter(z_type &z)
   {
     namespace sr = std::ranges;
 
