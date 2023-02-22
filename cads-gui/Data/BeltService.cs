@@ -83,7 +83,7 @@ namespace cads_gui.Data
       return data.ToList();
     }
 
-    public IEnumerable<Belt> GetBelts(string site, string belt, DateTime chrono)
+    public List<Belt> GetBelts(string site, string belt, DateTime chrono)
     {
       using var context = dBContext.CreateDbContext();
       var data = from a in context.belt orderby a.chrono where a.site == site && a.conveyor == belt && a.chrono.Date == chrono.Date select a;

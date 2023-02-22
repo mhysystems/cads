@@ -33,12 +33,18 @@ Migrations(Linux)
 Install Tools
 dotnet tool install --global dotnet-ef
 dotnet add package Microsoft.EntityFrameworkCore.Tools 
+export PATH="$PATH:$HOME/.dotnet/tools/"
 Insure sqlite packages in csproj are the version as Microsoft.EntityFrameworkCore.Tools 
 Needs connection string to determine the database name. Migrations cannot handle computing the connection string, so read directly from appsettings.json
+
+
 
 Initial Database
 dotnet ef migrations add InitialCreate
 dotnet ef database update
+dotnet ef database update -- --environment fmg
+
+
 
 Deploy
 
