@@ -80,9 +80,10 @@
     }
 
     var Y = GuiState?.Value.Y ?? 0;
+    List<Belt> b = Beltservice.GetBelts(site, conveyor, date.Value);
 
-    if(belt is not null) {
-      var (XOffset,z) = await Beltservice.GetBeltProfileAsync(Y, 1, belt);
+    if(b is not null && b.Any()) {
+      var (XOffset,z) = await Beltservice.GetBeltProfileAsync(Y, 1, b.First());
       await trendPlot.UpdatePlotAsync(index,z,color);
     }else{
       Snackbar.Add($"No data for selected date", Severity.Error);
