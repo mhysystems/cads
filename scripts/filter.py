@@ -29,15 +29,15 @@ arr,arrf = np.loadtxt("../cads-edge/debug/filt.txt",
 sos = signal.iirfilter(19, 4, rs=120, btype='low',analog=False, ftype='cheby2', fs=880, output='sos')
 
 # Uncomment to get filter parameters 
-print(sos)
+#print(sos)
 
 # Insert delay in front using usless data.
 #plt.plot(np.append([0 for x in range(1,228)],arr))
 #plt.plot(np.append([0 for x in range(1,20)],arr))
 plt.plot(arr)
-plt.plot(arrf)
+#plt.plot(arrf)
 
-#plt.plot(signal.sosfilt(sos,arr))
+plt.plot(signal.sosfilt(sos,arr))
 
 
 

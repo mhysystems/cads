@@ -18,7 +18,8 @@ cadsSrc += files(
   'origin_detection_thread.cpp',
   'intermessage.cpp',
   'belt.cpp',
-  'lua_interface.cpp'
+  'lua_interface.cpp',
+  'interpolation.cpp'
 )
 
 cadsEntry += files('main.cpp')

@@ -8,8 +8,6 @@
 namespace cads
 {
   void spike_filter(z_type& z, int window_size = global_profile_parameters.spike_filter);
-  void nan_filter(z_type& z);
-  z_type nan_filter_pure(z_type z);
   void barrel_height_compensate(z_type& z, z_element z_off, z_element z_max);
   void constraint_clipping(z_type& z, z_element z_off, z_element z_max);
   std::function<double(double)> mk_iirfilterSoS();
@@ -18,6 +16,7 @@ namespace cads
   std::function<cads::z_element(cads::z_element)> mk_schmitt_trigger();
   std::function<cads::z_element(cads::z_element,bool)> mk_amplitude_extraction();
   std::function<double(double)> mk_dc_filter();
+  void gaussian(z_type& z);
 
 
 } // namespace cads

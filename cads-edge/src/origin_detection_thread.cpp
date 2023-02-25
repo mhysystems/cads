@@ -14,6 +14,7 @@
 #include <constants.h>
 #include <coro.hpp>
 #include <intermessage.h>
+#include <filters.h>
 
 using namespace moodycamel;
 
@@ -286,11 +287,12 @@ namespace cads
 
       y_type y = p.y;
 
-      if (y >= y_max_length)
+      if (y >= y_max_length + y_offset)
       {
-        y_offset += y;
+        y_offset = y;
       }
       p = {p.y - y_offset, p.x_off, p.z};
+      gaussian(p.z);
       std::tie(p,terminate) = co_yield {p,true};  
     }
   }

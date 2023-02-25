@@ -48,6 +48,7 @@
 #include <origin_detection_thread.h>
 #include <intermessage.h>
 #include <belt.h>
+#include <interpolation.h>
 
 using namespace std;
 using namespace moodycamel;
@@ -92,7 +93,8 @@ namespace
   }
 
   enum class Process_Status {Error, Finished, Stopped};
-  Process_Status process_impl()
+
+  Process_Status process_impl2()
   {
    
     std::jthread uploading_conveyor_parameters(upload_conveyor_parameters);
@@ -224,7 +226,9 @@ namespace
       iz = trim_nan(iz);
 
       spike_filter(iz);
-      auto z_nan_filtered = nan_filter_pure(iz);
+      auto z_nan_filtered = iz;
+      nan_interpolation_last(z_nan_filtered);
+
       auto [ileft_edge_index, iright_edge_index] = find_profile_edges_sobel(z_nan_filtered);
       auto [pulley_left, pulley_right] = pulley_left_right_mean(iz, ileft_edge_index, iright_edge_index);
       
@@ -290,13 +294,261 @@ namespace
       auto gradient = (pulley_right_filtered - pulley_left_filtered) / (double)z.size();
       regression_compensate(z, 0, z.size(), gradient);
 
-      nan_filter(z);
+      nan_interpolation_last(z);
       auto left_edge_index_aligned = left_edge_index;
 
       barrel_height_compensate(z, -bottom_filtered, clip_height);
 
       if(z.size() < size_t(left_edge_index_aligned + width_n)) {
-        spdlog::get("cads")->debug("Belt width({})[la - {}, l- {}, r - {}] less than required. Filled with zeros",z.size(),left_edge_index_aligned,left_edge_index,right_edge_index);
+        //spdlog::get("cads")->debug("Belt width({})[la - {}, l- {}, r - {}] less than required. Filled with zeros",z.size(),left_edge_index_aligned,left_edge_index,right_edge_index);
+        //store_errored_profile(raw_z);
+        const auto cnt = left_edge_index_aligned + width_n - z.size();
+        z.insert(z.end(),cnt,0);
+      }
+      auto f = z | views::take(left_edge_index_aligned + width_n) | views::drop(left_edge_index_aligned);
+
+      if(use_encoder) 
+      {
+        winFifo.enqueue({msgid::scan, cads::profile{y, x + left_edge_index_aligned * x_resolution, {f.begin(), f.end()}}});
+      }
+      else 
+      {
+        fn.resume({removed_dc_bias,cads::profile{y, x + left_edge_index_aligned * x_resolution, {f.begin(), f.end()}}});
+      }
+
+    } while (std::get<0>(m) != msgid::finished);
+
+    winFifo.enqueue({msgid::finished, 0});
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
+    auto rate = duration != 0 ? (double)cnt / duration : 0;
+    spdlog::get("cads")->info("CADS - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, rate);
+
+    gocator->Stop();
+  
+    origin_dectection.join();
+    spdlog::get("cads")->info("Origin Detection Stopped");
+
+    save_send.join();
+    spdlog::get("cads")->info("Upload Thread Stopped");
+
+    terminate_publish = true;
+    realtime_publish.join();
+    spdlog::get("cads")->info("Realtime publishing Thread Stopped");
+
+    return status;
+  }
+
+
+  Process_Status process_impl()
+  {
+   
+    std::jthread uploading_conveyor_parameters(upload_conveyor_parameters);
+
+    BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
+    BlockingReaderWriterQueue<msg> winFifo(4096 * 1024);
+
+    const auto x_width = global_config["x_width"].get<int>();
+    const auto nan_percentage = global_config["nan_%"].get<double>();
+    const auto width_n = global_config["width_n"].get<int>();
+    const auto clip_height = global_config["clip_height"].get<z_element>();
+    const auto use_encoder = global_config["use_encoder"].get<bool>();
+
+    auto [gocator,is_gocator] = mk_gocator(gocatorFifo,use_encoder);
+    gocator->Start();
+
+    cads::msg m;
+    gocatorFifo.wait_dequeue(m);
+    auto m_id = get<0>(m);
+
+    if(m_id == cads::msgid::finished) {
+      return Process_Status::Finished;
+    }
+
+    if (m_id != cads::msgid::resolutions)
+    {
+      std::throw_with_nested(std::runtime_error("preprocessing:First message must be resolutions"));
+    }
+
+    auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution] = get<resolutions_t>(get<1>(m));
+    store_profile_parameters({y_resolution, x_resolution, z_resolution, 33.0, encoder_resolution, clip_height});
+
+    BlockingReaderWriterQueue<msg> db_fifo;
+    BlockingReaderWriterQueue<msg> dynamic_processing_fifo;
+
+    bool terminate_publish = false;
+    std::jthread realtime_publish(realtime_publish_thread, std::ref(terminate_publish));
+    std::jthread save_send(save_send_thread, std::ref(db_fifo));
+    
+    std::jthread dynamic_processing;
+    std::jthread origin_dectection;
+    if(global_config.contains("origin_detector") && global_config["origin_detector"] == "bypass") {
+      origin_dectection = std::jthread(bypass_fiducial_detection_thread,std::ref(winFifo), std::ref(db_fifo));
+    }else {
+      origin_dectection = std::jthread(window_processing_thread, x_resolution, y_resolution, width_n, std::ref(winFifo), std::ref(dynamic_processing_fifo));
+      dynamic_processing = std::jthread(dynamic_processing_thread, std::ref(dynamic_processing_fifo), std::ref(db_fifo), width_n);
+    }
+
+    auto iirfilter_left = mk_iirfilterSoS();
+    auto iirfilter_right = mk_iirfilterSoS();
+    auto iirfilter_left_edge = mk_iirfilterSoS();
+    auto iirfilter_right_edge = mk_iirfilterSoS();
+    auto delay = mk_delay(global_config["iirfilter"]["delay"]);
+
+    int64_t cnt = 0;
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    auto schmitt_trigger = mk_schmitt_trigger();
+    auto differentiation = mk_dc_filter(); 
+    auto pulley_frequency = mk_pulley_frequency();
+    auto pulley_speed = mk_pulley_speed();
+
+    long drop_profiles = global_config["iirfilter"]["skip"]; // Allow for iir fillter too stablize
+    Process_Status status = Process_Status::Finished;
+
+    auto csp = [&](const profile &p) {
+      winFifo.enqueue({msgid::scan, p});
+    };
+
+    auto fn = encoder_distance_id(csp);
+    const auto [z_min_unbiased,z_max_unbiased] = global_constraints.ZUnbiased;
+
+    do
+    {
+
+      gocatorFifo.wait_dequeue(m);
+      auto m_id = get<0>(m);
+
+      if (m_id != cads::msgid::scan)
+      {
+        break;
+      }
+
+      auto p = get<profile>(get<1>(m));
+      auto iy = p.y;
+      auto ix = p.x_off;
+      auto iz = p.z;
+      ++cnt;
+
+      
+
+      if (iz.size()*x_resolution < size_t(x_width * 0.75))
+      {
+        spdlog::get("cads")->error("Gocator sending profiles with widths less than 0.75 of expected width");
+        if(is_gocator) {
+          status = Process_Status::Error;
+          break;
+        }else {
+          continue;
+        }
+      }
+
+      if (iz.size() < (size_t)width_n)
+      {
+        spdlog::get("cads")->error("Gocator sending profiles with sample number {} less than {}", iz.size(), width_n);
+        if(is_gocator) {
+          status = Process_Status::Error;
+          break;
+        }else {
+          continue;
+        }
+      }
+
+      double nan_cnt = std::count_if(iz.begin(), iz.end(), [](z_element z)
+                                   { return std::isnan(z); });
+
+      if ((nan_cnt / iz.size()) > nan_percentage )
+      {
+        spdlog::get("cads")->error("Percentage of nan({}) in profile > {}%", nan_cnt,nan_percentage * 100);
+        if(is_gocator) {
+          status = Process_Status::Error;
+          break;
+        }else {
+          continue;
+        }
+      }
+      constraint_substitute(iz,z_min_unbiased,z_max_unbiased);
+      iz = trim_nan(iz);
+
+      spike_filter(iz);
+      auto z_nan_filtered = iz;
+      nan_interpolation_last(z_nan_filtered);
+
+      auto [ileft_edge_index, iright_edge_index] = find_profile_edges_sobel(z_nan_filtered);
+      auto [pulley_left, pulley_right] = pulley_left_right_mean(iz, ileft_edge_index, iright_edge_index);
+      
+      
+      if(std::isnan(pulley_left) && !std::isnan(pulley_right)) {
+        pulley_left = pulley_right;
+        store_errored_profile(p.z);
+      }
+      else if(!std::isnan(pulley_left) && std::isnan(pulley_right)) {
+        pulley_right = pulley_left;
+        store_errored_profile(p.z);
+      }
+      else if(std::isnan(pulley_left) && std::isnan(pulley_right)) {
+        spdlog::get("cads")->error("Cannot find either belt edge");
+        store_errored_profile(p.z);
+        if(is_gocator) {
+          status = Process_Status::Error;
+          break;
+        }else {
+          continue;
+        }
+      }
+      
+      auto pulley_left_filtered = (z_element)iirfilter_left(pulley_left);
+      auto pulley_right_filtered = (z_element)iirfilter_right(pulley_right);
+      
+      auto left_edge_filtered = (z_element)iirfilter_left_edge(ileft_edge_index);
+      auto right_edge_filtered = (z_element)iirfilter_right_edge(iright_edge_index);
+      
+      
+      auto bottom_filtered = pulley_left_filtered;
+      auto removed_dc_bias = differentiation(bottom_filtered);
+      auto barrel_cnt = pulley_frequency(removed_dc_bias);
+      winFifo.enqueue({msgid::barrel_rotation_cnt, barrel_cnt});
+
+      auto speed = pulley_speed(removed_dc_bias);
+
+      if (speed == 0)
+      {
+        spdlog::get("cads")->error("Belt proabaly stopped.");
+        
+        if(is_gocator) {
+          status = Process_Status::Stopped;
+          break;
+        }else {
+          continue;
+        }
+      }
+
+      auto [delayed, dd] = delay({iy, ix, iz, (int)left_edge_filtered, (int)right_edge_filtered,p.z});
+
+      if (!delayed)
+        continue;
+
+      if (drop_profiles > 0)
+      {
+        --drop_profiles;
+        continue;
+      }
+
+      auto [y, x, z, left_edge_index, right_edge_index, raw_z] = dd;
+
+      auto gradient = (pulley_right_filtered - pulley_left_filtered) / (double)z.size();
+      regression_compensate(z, 0, z.size(), gradient);
+
+      nan_interpolation_last(z);
+      auto left_edge_index_aligned = left_edge_index;
+
+      barrel_height_compensate(z, -bottom_filtered, clip_height);
+
+      if(z.size() < size_t(left_edge_index_aligned + width_n)) {
+        //spdlog::get("cads")->debug("Belt width({})[la - {}, l- {}, r - {}] less than required. Filled with zeros",z.size(),left_edge_index_aligned,left_edge_index,right_edge_index);
         //store_errored_profile(raw_z);
         const auto cnt = left_edge_index_aligned + width_n - z.size();
         z.insert(z.end(),cnt,0);
@@ -554,7 +806,9 @@ namespace cads
         iz = trim_nan(iz);
 
         spike_filter(iz);
-        auto z_nan_filtered = nan_filter_pure(iz);
+        auto z_nan_filtered = iz;
+        nan_interpolation_last(z_nan_filtered);
+        
         auto [ileft_edge_index, iright_edge_index] = find_profile_edges_sobel(z_nan_filtered);
         auto [pulley_left, pulley_right] = pulley_left_right_mean(iz, ileft_edge_index, iright_edge_index);
         

@@ -45,6 +45,7 @@ namespace cads
     return cads::sqlite3_stmt_t(stmt_raw, &sqlite3_finalize);
   }
 
+
   tuple<sqlite3_stmt_t,sqlite3_t> prepare_query(string db_config_name, string query, int flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX)
   {
 
@@ -645,7 +646,6 @@ namespace cads
     return {rtn, std::move(stmt)};
   }
 
-  
   coro<std::tuple<int, profile>> fetch_belt_coro(int revid, int last_idx, int first_index, int size, std::string name)
   {
     auto query = fmt::format(R"(SELECT idx,y,x_off,z FROM PROFILE WHERE REVID = {} AND IDX >= ? AND IDX < ?)", revid);
