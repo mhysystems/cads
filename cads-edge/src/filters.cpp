@@ -5,7 +5,13 @@
 #include <window.hpp>
 
 #include <Iir.h>
-#include <spline.h>
+
+#include <gsl/gsl_math.h>
+#include <gsl/gsl_filter.h>
+#include <gsl/gsl_rng.h>
+#include <gsl/gsl_randist.h>
+#include <gsl/gsl_vector.h>
+
 
 namespace cads
 {
@@ -42,72 +48,6 @@ namespace cads
   }
 
 
-  z_type nan_filter_pure(z_type z) {
-    nan_filter(z);
-    return z;
-  }
-
-  void nan_filter_spline(z_type &z) {
-    
-    std::vector<double> x,y;
-    
-    double cnt = 0;
-    for(auto i : z) {
-      if(!std::isnan(i)) {
-        x.push_back(cnt);
-        y.push_back(i);
-      }
-
-      ++cnt;
-    }
-
-    tk::spline s(x,y);
-
-    for(double i = 0; i < (double)z.size(); ++i) {
-      z[(int)i] = s(i);
-    }
-    
-  }
-
-  void nan_filter(z_type &z)
-  {
-    namespace sr = std::ranges;
-
-    auto prev_value_it = sr::find_if(z, [](z_element a)
-                                     { return !std::isnan(a); });
-    z_element prev_value = prev_value_it != z.end() ? *prev_value_it : std::numeric_limits<z_element>::quiet_NaN();
-
-    int mid = (int)(z.size() / 2);
-
-    for (auto &&e : z | sr::views::take(mid))
-    {
-      if (!std::isnan(e))
-      {
-        prev_value = e;
-      }
-      else
-      {
-        e = prev_value;
-      }
-    }
-
-    auto prev_value_it2 = sr::find_if(z | sr::views::reverse, [](z_element a)
-                                      { return !std::isnan(a); });
-    prev_value = prev_value_it2 != z.rend() ? *prev_value_it2 : std::numeric_limits<z_element>::quiet_NaN();
-
-    for (auto &&e : z | sr::views::reverse | sr::views::take(mid + 1))
-    {
-      if (!std::isnan(e))
-      {
-        prev_value = e;
-      }
-      else
-      {
-        e = prev_value;
-      }
-    }
-  }
-
   void barrel_height_compensate(z_type &z, z_element z_off, z_element z_max)
   {
     const auto z_max_compendated = z_max + z_off;
@@ -132,6 +72,29 @@ namespace cads
           e = z_max;
       }
     } 
+  }
+
+  void gaussian(z_type& z) 
+  {
+    gsl_vector *x = gsl_vector_alloc(z.size());
+    gsl_vector *yv = gsl_vector_alloc(z.size());
+    gsl_filter_gaussian_workspace *gauss_p = gsl_filter_gaussian_alloc(51);
+
+    for(auto i=0; i < z.size(); i++) {
+      gsl_vector_set(x, i,z[i]);
+    }
+
+    gsl_filter_gaussian(GSL_FILTER_END_PADVALUE, 10.0, 0, x, yv, gauss_p);
+
+    for(auto i=0; i < z.size(); i++) {
+      if(!std::isnan(z[i])) {
+        z[i] = gsl_vector_get(yv, i);
+      }
+    }
+
+    gsl_vector_free(x);
+    gsl_vector_free(yv);
+    gsl_filter_gaussian_free(gauss_p);
   }
 
   std::function<double(double)> mk_iirfilterSoS()

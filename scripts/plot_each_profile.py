@@ -10,19 +10,20 @@ if __name__ == "__main__":
     parser.add_argument("db", help="Sqlite belt profiles")
     parser.add_argument("--y", help="Y start", default=0)
     parser.add_argument("--i", help="Index start", default=0)
-    parser.add_argument("--s", help="Sub NaN with", default=-32.75)
+    parser.add_argument("--s", help="Sub NaN with", default=-40.00)
     parser.add_argument("--hist","-t", help="Histogram plot", action='store_true')
 
     args = parser.parse_args()
     for z0 in pg.process_profile(args.db,args.y,args.i):
         if not args.hist:
             z = np.copy(z0)
-            x = np.arange(len(z))
-            x2 = x[~np.isnan(z)]
-            z2 = z[~np.isnan(z)]
-            cs = CubicSpline(x2,z2)
-            #z[np.isnan(z)] = args.s
-            plt.plot(cs(x))
+            #x = np.arange(len(z))
+            #x2 = x[~np.isnan(z)]
+            #z2 = z[~np.isnan(z)]
+            #cs = CubicSpline(x2,z2)
+            #plt.plot(cs(x))
+            z[np.isnan(z)] = args.s
+            plt.plot(z)
         else:
             z = z0[~np.isnan(z0)]
             plt.hist(z ,bins=100)

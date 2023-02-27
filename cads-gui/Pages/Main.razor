@@ -156,11 +156,18 @@
 
   async Task UpdateYAsync(ZDepth zd)
   {
-    await UpdateYAsync(zd.y);
+    Func<IJSObjectReference,Task<double>> fn = x => surfacePlot.UpdatePlotWithOverlayAsync(x,zd);
+    await UpdateYAsync(zd.y,fn);
   }
 
   async Task UpdateYAsync(double y)
   {
+    await UpdateYAsync(y,surfacePlot.UpdatePlotAsync);
+  }
+
+  async Task UpdateYAsync(double y, Func<IJSObjectReference,Task<double>> fn)
+  {
+    
     currentY = y;
     surfacePlot.Loading = true;
     try
@@ -168,7 +175,7 @@
       if(!Beltservice.IsDoubledSided()) {
         var plotDataPromise = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData", belt.name, currentY, 512, 512);
 
-        await surfacePlot.UpdatePlotAsync(plotDataPromise);
+        await fn(plotDataPromise);
         await profilePlot.UpdatePlotAsync(plotDataPromise);
       }else {
         var plotDataPromiseBottom = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData", belt.name, currentY+4000, 512, 512);

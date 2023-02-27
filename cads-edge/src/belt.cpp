@@ -151,6 +151,24 @@ namespace cads
     }
   }
 
+  coro<int, std::tuple<double, profile>> encoder_distance_id(std::function<void(profile)> next)
+  {
+
+    auto args_in = std::tuple<double, profile>{};
+
+    for (auto terminate = false; !terminate;)
+    {
+      std::tie(args_in, terminate) = co_yield 0;
+      auto [pully_height, p] = args_in;
+
+      if (terminate)
+        continue;
+
+      next(p);
+    }
+  }
+
+
   std::function<long(double)> mk_pulley_frequency()
   {
 
