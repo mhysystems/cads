@@ -17,12 +17,13 @@ if __name__ == "__main__":
     for z0 in pg.process_profile(args.db,args.y,args.i):
         if not args.hist:
             z = np.copy(z0)
-            x = np.arange(len(z))
-            x2 = x[~np.isnan(z)]
-            z2 = z[~np.isnan(z)]
-            cs = CubicSpline(x2,z2)
-            #z[np.isnan(z)] = args.s
-            plt.plot(cs(x))
+            #x = np.arange(len(z))
+            #x2 = x[~np.isnan(z)]
+            #z2 = z[~np.isnan(z)]
+            #cs = CubicSpline(x2,z2)
+            #plt.plot(cs(x))
+            z[np.isnan(z)] = args.s
+            plt.plot(z)
         else:
             z = z0[~np.isnan(z0)]
             plt.hist(z ,bins=100)

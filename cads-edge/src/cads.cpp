@@ -428,6 +428,11 @@ namespace
       }
 
       auto p = get<profile>(get<1>(m));
+      auto dbscan = -22.18;// dbscan_test(p.z);
+      p.z.insert(p.z.begin(),20,(float)dbscan);
+      p.z.insert(p.z.end(),20,(float)dbscan);
+
+
       auto iy = p.y;
       auto ix = p.x_off;
       auto iz = p.z;
@@ -478,6 +483,7 @@ namespace
       nan_interpolation_last(z_nan_filtered);
 
       auto [ileft_edge_index, iright_edge_index] = find_profile_edges_sobel(z_nan_filtered);
+      ileft_edge_index -= 20;
       auto [pulley_left, pulley_right] = pulley_left_right_mean(iz, ileft_edge_index, iright_edge_index);
       
       
@@ -500,14 +506,15 @@ namespace
         }
       }
       
-      auto pulley_left_filtered = (z_element)iirfilter_left(pulley_left);
-      auto pulley_right_filtered = (z_element)iirfilter_right(pulley_right);
+      pulley_left = dbscan;
+      auto pulley_left_filtered = -22.18; (z_element)iirfilter_left(pulley_left);
+      auto pulley_right_filtered = -22.18; (z_element)iirfilter_right(pulley_right);
       
       auto left_edge_filtered = (z_element)iirfilter_left_edge(ileft_edge_index);
       auto right_edge_filtered = (z_element)iirfilter_right_edge(iright_edge_index);
       
       
-      auto bottom_filtered = pulley_left_filtered;
+      auto bottom_filtered =  pulley_left_filtered;
       auto removed_dc_bias = differentiation(bottom_filtered);
       auto barrel_cnt = pulley_frequency(removed_dc_bias);
       winFifo.enqueue({msgid::barrel_rotation_cnt, barrel_cnt});
@@ -526,7 +533,7 @@ namespace
         }
       }
 
-      auto [delayed, dd] = delay({iy, ix, iz, (int)left_edge_filtered, (int)right_edge_filtered,p.z});
+      auto [delayed, dd] = delay({iy, ix, iz, (int)left_edge_filtered, (int)pulley_left_filtered,p.z});
 
       if (!delayed)
         continue;
@@ -802,6 +809,8 @@ namespace cads
         auto ix = p.x_off;
         auto iz = p.z;
 
+        auto tt = dbscan_test(p.z);
+
         constraint_substitute(iz,z_min_unbiased,z_max_unbiased);
         iz = trim_nan(iz);
 
@@ -827,7 +836,7 @@ namespace cads
         auto bottom_avg = pulley_left;
         auto bottom_filtered = iirfilter(bottom_avg);
 
-        filt << bottom_avg << "," << bottom_filtered << '\n';
+        filt << bottom_avg << "," << tt << '\n';
         filt.flush();
 
         auto [delayed, dd] = delay({iy, ix, iz, 0, 0,p.z});
