@@ -177,7 +177,8 @@
       {
         @foreach (var (start, length, info, title) in _data)
         {
-          var l = (length) < 2.0 ? 2.0 : (length);
+          var fudgeFactor =  Belt.Ymax < 1000000 ? 1.0 : Belt.Ymax / 1000000;
+          var l = ((length) < 2.0 ? 2.0 : (length)) * fudgeFactor;
           var th = l * (2 * Math.PI) / Belt.Ymax;
           var s = (start) * (2 * Math.PI) / Belt.Ymax;
           var g = th > Math.PI ? 1 : 0;
