@@ -94,7 +94,7 @@ namespace
 
   enum class Process_Status {Error, Finished, Stopped};
 
-  Process_Status process_impl2()
+  Process_Status process_impl()
   {
    
     std::jthread uploading_conveyor_parameters(upload_conveyor_parameters);
@@ -342,7 +342,7 @@ namespace
   }
 
 
-  Process_Status process_impl()
+  Process_Status process_impl2()
   {
    
     std::jthread uploading_conveyor_parameters(upload_conveyor_parameters);
