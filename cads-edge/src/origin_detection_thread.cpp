@@ -292,7 +292,7 @@ namespace cads
         y_offset = y;
       }
       p = {p.y - y_offset, p.x_off, p.z};
-      gaussian(p.z);
+
       std::tie(p,terminate) = co_yield {p,true};  
     }
   }

@@ -6,13 +6,6 @@
 
 #include <Iir.h>
 
-#include <gsl/gsl_math.h>
-#include <gsl/gsl_filter.h>
-#include <gsl/gsl_rng.h>
-#include <gsl/gsl_randist.h>
-#include <gsl/gsl_vector.h>
-
-
 namespace cads
 {
   void spike_filter(z_type &z, int max_window_size)
@@ -74,28 +67,6 @@ namespace cads
     } 
   }
 
-  void gaussian(z_type& z) 
-  {
-    gsl_vector *x = gsl_vector_alloc(z.size());
-    gsl_vector *yv = gsl_vector_alloc(z.size());
-    gsl_filter_gaussian_workspace *gauss_p = gsl_filter_gaussian_alloc(51);
-
-    for(auto i=0; i < z.size(); i++) {
-      gsl_vector_set(x, i,z[i]);
-    }
-
-    gsl_filter_gaussian(GSL_FILTER_END_PADVALUE, 10.0, 0, x, yv, gauss_p);
-
-    for(auto i=0; i < z.size(); i++) {
-      if(!std::isnan(z[i])) {
-        z[i] = gsl_vector_get(yv, i);
-      }
-    }
-
-    gsl_vector_free(x);
-    gsl_vector_free(yv);
-    gsl_filter_gaussian_free(gauss_p);
-  }
 
   std::function<double(double)> mk_iirfilterSoS()
   {
@@ -186,3 +157,36 @@ namespace cads
   }
 
 } // namespace cads
+
+
+#if 0
+
+  #include <gsl/gsl_math.h>
+  #include <gsl/gsl_filter.h>
+  #include <gsl/gsl_rng.h>
+  #include <gsl/gsl_randist.h>
+  #include <gsl/gsl_vector.h>
+
+  void gaussian(z_type& z) 
+  {
+    gsl_vector *x = gsl_vector_alloc(z.size());
+    gsl_vector *yv = gsl_vector_alloc(z.size());
+    gsl_filter_gaussian_workspace *gauss_p = gsl_filter_gaussian_alloc(51);
+
+    for(auto i=0; i < z.size(); i++) {
+      gsl_vector_set(x, i,z[i]);
+    }
+
+    gsl_filter_gaussian(GSL_FILTER_END_PADVALUE, 10.0, 0, x, yv, gauss_p);
+
+    for(auto i=0; i < z.size(); i++) {
+      if(!std::isnan(z[i])) {
+        z[i] = gsl_vector_get(yv, i);
+      }
+    }
+
+    gsl_vector_free(x);
+    gsl_vector_free(yv);
+    gsl_filter_gaussian_free(gauss_p);
+  }
+#endif

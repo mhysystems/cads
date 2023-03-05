@@ -16,7 +16,5 @@ namespace cads
   std::function<cads::z_element(cads::z_element)> mk_schmitt_trigger();
   std::function<cads::z_element(cads::z_element,bool)> mk_amplitude_extraction();
   std::function<double(double)> mk_dc_filter();
-  void gaussian(z_type& z);
-
 
 } // namespace cads

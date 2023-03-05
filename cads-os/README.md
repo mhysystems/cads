@@ -1,6 +1,5 @@
 
 #To create image
-make source
 make jetson_nano_defconfig
 make
 

@@ -57,7 +57,7 @@ cadsInc = include_directories('include')
 cadsSrc = []
 cadsEntry = []
 
-libdep = [opencv, tbb, thread, boost, sqlite, http_stuff,log_stuff, flatbuffers, fmt_dep, nlohmann_json_dep,date_dep,tz_dep,iir1_dep,lua_dep,eigen_dep, natsc_dep, gsl]
+libdep = [opencv, tbb, thread, boost, sqlite, http_stuff,log_stuff, flatbuffers, fmt_dep, nlohmann_json_dep,date_dep,tz_dep,iir1_dep,lua_dep,eigen_dep, natsc_dep]
 # Returns z_config 
 # Represents header files
 subdir('flatbuffers')
