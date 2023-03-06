@@ -85,9 +85,7 @@ namespace
     else
     {
       spdlog::get("cads")->debug("Using sqlite as data source");
-      auto fps = global_config["laser_fps"].get<double>();
-      auto forever = global_config["forever"].get<bool>();
-      auto sqlite = make_unique<SqliteGocatorReader>(gocatorFifo,fps,forever);
+      auto sqlite = make_unique<SqliteGocatorReader>(gocatorFifo);
       return {std::move(sqlite),false};
     }
   }

@@ -16,6 +16,13 @@ namespace cads {
 
   using DateTime = std::chrono::time_point<date::local_t,std::chrono::seconds>;
 
+  struct SqliteGocatorConfig {
+    using range_type = std::tuple<long,long>;
+    range_type range;
+    double fps;
+    bool forever;
+  };
+  
   struct constraints {
     using value_type = std::tuple<double,double>;
     value_type CurrentLength;
@@ -65,6 +72,7 @@ namespace cads {
   extern Conveyor global_conveyor_parameters;
   extern webapi_urls global_webapi;
   extern Filters global_filters;
+  extern SqliteGocatorConfig sqlite_gocator_config;
   
   void init_config(std::string f);
   void drop_config();

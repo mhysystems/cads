@@ -6,6 +6,7 @@
 #include <thread>
 
 #include "gocator_reader_base.h"
+#include <constants.h>
 
 namespace cads
 {
@@ -22,8 +23,7 @@ class SqliteGocatorReader : public GocatorReaderBase
 protected:
 	std::atomic<bool> m_loop = false;
   std::jthread m_thread;
-  double m_fps;
-  bool m_forever;
+  SqliteGocatorConfig m_config;
 	
   void OnData();
 
@@ -31,7 +31,8 @@ public:
 
 	void Start();
 	void Stop();
-  SqliteGocatorReader(moodycamel::BlockingReaderWriterQueue<msg>&, double, bool);
+  SqliteGocatorReader(moodycamel::BlockingReaderWriterQueue<msg>&, SqliteGocatorConfig);
+  SqliteGocatorReader(moodycamel::BlockingReaderWriterQueue<msg>&);
 	virtual ~SqliteGocatorReader() = default;
 };
 

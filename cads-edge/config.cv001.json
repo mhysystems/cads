@@ -1,7 +1,10 @@
 {
   "data_source" : "../../profiles/rawprofile_cv001.db",
-  "laser_fps" : 980,
-  "forever" : false,
+  "sqlite_gocator" : {
+    "range" : [0,9007199254740991],
+    "laser_fps" : 980,
+    "forever" : false
+  },
   "y_max_length" : 11000000,
   "y_max_upload" : 11000000,
   "z_height" : 27.0,
