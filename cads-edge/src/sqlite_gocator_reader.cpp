@@ -79,6 +79,11 @@ namespace cads
 
       m_gocatorFifo.enqueue({msgid::scan, profile{p.y, p.x_off, z_type(first, last.base())}});
 
+      if(m_gocatorFifo.size_approx() > 1000000)
+      {
+        std::this_thread::sleep_for(std::chrono::seconds(10));
+      }
+
       if (terminate)
       {
         m_gocatorFifo.enqueue({msgid::finished, 0});

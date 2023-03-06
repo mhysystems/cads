@@ -5,6 +5,7 @@
 #include <tuple>
 #include <algorithm>
 #include <numeric>
+#include <bit>
 
 #include <profile.h>
 #include <constants.h>
@@ -134,119 +135,211 @@ namespace cads
     return hist;
   }
 
+  using zrange = std::tuple<z_type::const_iterator,z_type::const_iterator>;
   
-  std::tuple<z_type,size_t> cluster(const z_type &z, z_element origin)
+  auto mk_zrange(const z_type &z) {
+    return zrange{z.cbegin(),z.cend()};
+  }
+
+  auto size(zrange r) {
+     return std::distance(std::get<0>(r),std::get<1>(r));
+  }
+  
+  auto empty(zrange r) {
+    return 0 == size(r);
+  }
+
+  auto begin(zrange r) {
+    return std::get<0>(r);
+  }
+
+  auto end(zrange r) {
+    return std::get<1>(r);
+  }
+
+  auto average(zrange r) {
+    
+    double size = 0;
+    double sum = 0;
+    
+    for(auto i = begin(r); i < end(r); ++i)
+    {
+      if(!std::isnan(*i)){
+        sum += *i;
+        size++;
+      };
+    }
+
+    return sum / size;
+  }
+
+  auto sumr(zrange r) {
+    
+    double size = 0;
+    double sum = 0;
+    
+    for(auto i = begin(r); i < end(r); ++i)
+    {
+      if(!std::isnan(*i)){
+        sum += *i;
+        size++;
+      };
+    }
+
+    return std::make_tuple(sum,size);
+  }
+
+ 
+  auto average(const std::vector<zrange>& a) {
+    
+    double size = 0;
+    double sum = 0;
+    for(auto r : a) {
+      auto [s,l] = sumr(r);
+      sum += s;
+      size += l;
+    }
+
+    return sum / size;
+
+  }
+
+  // Return sequence of clustered z values and offset into profile
+  // Input is a slice of profile, hence tracking offset
+  std::tuple<zrange,size_t> cluster(zrange z, z_element origin)
   {
 
     namespace sr = std::ranges;
 
     const z_element max_diff = 5;
-    z_type clustered;
 
-    if (z.empty())
+    if (empty(z))
     {
-      return {z_type{},size_t(0)};
+      return {z,0};
     }
 
-    auto i = z.begin();
-    for(; i < z.end(); ++i)
+    auto i = begin(z);
+    z_element e = *i;
+    size_t d = 0;
+    for(; i < end(z); ++i)
     {
       if(std::isnan(*i)) continue;
 
-      auto e = *i;
-      if(std::abs(e - origin) < max_diff) {
-        clustered.push_back(e);
-      }else{
+      if(std::abs(*i - origin) < max_diff) {
+        e = *i;
+        ++d;
+      } 
+      else {
         break;
       }
     }
 
-    
-    //auto found = std::find_if(begin(z), end(z), [=](z_element i)
-    //                          { return std::abs(i - origin) > max_diff; });
-
-    auto d = std::distance(z.begin(), i);
-    //clustered.insert(clustered.end(), z.begin(), found);
-
-    if (clustered.size() > 20)
+    if (d > 20)
     {
-      auto v = z | sr::views::drop(d - 1);
-      auto [b,dd] = cluster({v.begin(), v.end()},*v.begin());
-      clustered.insert(clustered.end(), b.begin(), b.end());
-      return {clustered,d+dd};
+      auto [c,cd] = cluster({i,end(z)},e);
+      if(cd > 0) {
+        return {{begin(z),end(c)},d + cd};
+      }else{
+        return {{begin(z),i},d};
+      }
     }else {
-      z_type tmp;
-      return {tmp,d};
+      return {{i,i},0};
     }
   }
   
   
   
-  std::tuple<z_type,size_t> cluster(const z_type &z)
+  std::tuple<zrange,size_t> cluster(const z_type &z)
   {
-    return cluster(z,z[0]);
+    return cluster(mk_zrange(z),z[0]);
   }
 
-  void cluster_merge(std::vector<z_type>& group, z_type c) 
+  void cluster_merge(std::vector<std::vector<zrange>>& group, zrange c) 
   {
 
     if(group.size() < 1) {
-      group.push_back(c);
+      group.push_back({c});
       return;
     }
     
-    auto c_avg =  std::accumulate(c.begin(),c.end(),0.0) / c.size();
+    auto c_avg =  average(c);
 
     bool push = true;
-    for (auto& x : group) {
-      auto group_avg = std::accumulate(x.begin(),x.end(),0.0) / x.size();
-      if(std::abs(c_avg - group_avg) < 5) {
-        x.insert(x.end(), c.begin(), c.end()); 
-        push = false;
-        break;       
-      }
-    }
-
-    if(push) {
-      group.push_back(c);
+    auto& x = group.back().back();
+    auto group_avg = average(x);
+    
+    if(std::abs(c_avg - group_avg) < 5 ) {
+        x = {begin(x),end(c)};
+      
+    }else {
+      group.push_back({c});      
     }
 
   }
 
-  std::vector<z_type> dbscan(const z_type &z, std::vector<z_type> &&group = std::vector<z_type>())
+  std::vector<std::vector<zrange>> dbscan(zrange z, std::vector<std::vector<zrange>> &&group = {})
   {
 
-    namespace sr = std::ranges;
+    auto [a,d] = cluster(z,*begin(z));
 
-    auto [a,d] = cluster(z);
+    auto dbg = std::distance(begin(a),end(a));
 
-
-    if(a.size() > 20) {
+    if(d > 20) {
       cluster_merge(group,a);
       //group.push_back(a);
     }
 
-    if (d < z.size())
+    if (end(a) != end(z))
     {
-      auto v = z | sr::views::drop(d);
-      group = dbscan({v.begin(), v.end()}, std::move(group));
+      group = dbscan({end(a), end(z)}, std::move(group));
     }
 
     return group;
   }
 
+  std::vector<std::vector<zrange>>  dbscan(const z_type &z)
+  {
+    return dbscan(mk_zrange(z));
 
-  double dbscan_test(const z_type &z)
+  }
+
+  void recontruct_z(z_type & z,const std::vector<std::vector<zrange>>& group) {
+
+    auto i = z.begin();
+    for(const auto &g : group) {
+      
+      for(auto r : g) {
+
+        for(; i < begin(r); ++i) {
+          *i = std::numeric_limits<z_element>::quiet_NaN();
+        }
+
+        i = std::bit_cast<z_type::iterator>(end(r));
+
+      }
+    }
+
+    for(;i < z.end();++i) {
+      *i = std::numeric_limits<z_element>::quiet_NaN();
+    }
+
+  }
+
+  std::tuple<double,double> dbscan_test(z_type &z)
   {
     auto r = dbscan(z);
-    auto rc = r;
-    z_type c;
-    c.resize(r.size());
-    std::transform(r.begin(),r.end(),c.begin(),[](z_type x){return std::accumulate(x.begin(),x.end(),0.0) / x.size();});
-    std::ranges::sort(r, [](auto a, auto b)
-                  { return a.size() > b.size(); });
-    auto p = pulley_mean(r[1]);
-    return p;
+    recontruct_z(z,r);
+
+    if(r.size() == 2) {
+      if(*begin(r[0][0]) < *begin(r[1][0])) {
+        return std::make_tuple(average(r[0]),average(r[0]));
+      }else {
+        return std::make_tuple(average(r[1]),average(r[1]));
+      }
+    }else {
+      return std::make_tuple(average(r.front()),average(r.back()));
+    }
+
   }
 
   std::tuple<z_element, z_element, bool> barrel_offset(const z_type &win, double z_height_mm)
