@@ -1,22 +1,22 @@
 {
   "data_source" : "../../profiles/rawprofile_cv001.db",
   "sqlite_gocator" : {
-    "range" : [0,9007199254740991],
-    "laser_fps" : 980,
+    "range" : [1740000,9007199254740991],
+    "fps" : 923,
     "forever" : false
   },
-  "y_max_length" : 11000000,
-  "y_max_upload" : 11000000,
+  "y_max_length" : 12565200,
+  "y_max_upload" : 12565200,
   "z_height" : 27.0,
   "x_width"  : 1500,
   "width_n" : 1820,
   "clip_height" : 36.0,
   "left_edge_nan" : 10,
   "right_edge_nan" : 10,
-  "fiducial_depth" : 3,
-  "fiducial_x" : 50,
-  "fiducial_y" : 67,
-  "fiducial_gap" : 78,
+  "fiducial_depth" : 2,
+  "fiducial_x" : 25,
+  "fiducial_y" : 50,
+  "fiducial_gap" : 31,
   "daily_upload" : true,
   "daily_start_time" : "04:00",
   "spike_filter" : 5,
@@ -49,7 +49,7 @@
   "state_db_name" : "state.db",
   "transient_db_name" : "transient.db",
   "use_encoder" : false,
-  "belt_cross_correlation_threshold" : 0.4,
+  "belt_cross_correlation_threshold" : 0.85,
 
   "filters" : {
     "SchmittThreshold" : 0.05
@@ -62,7 +62,7 @@
     "PulleyCover" : 6.0,
     "CordDiameter" : 4.3,
     "TopCover" : 17.0,
-    "PulleyCircumference" : 2613.8
+    "PulleyCircumference" : 2089.16
   },
   "webapi_urls" : {
     "add_conveyor" : ["http://localhost:5000/api/conveyors",false],

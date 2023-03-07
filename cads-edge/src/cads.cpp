@@ -477,10 +477,9 @@ namespace
       //iz = trim_nan(iz);
 
       //spike_filter(iz);
-      auto z_nan_filtered = iz;
-      nan_interpolation_last(z_nan_filtered);
+      nan_interpolation_last(iz);
 
-      auto [ileft_edge_index, iright_edge_index] = find_profile_edges_sobel(z_nan_filtered);
+      auto [ileft_edge_index, iright_edge_index] = find_profile_edges_sobel(iz);
       //ileft_edge_index -= 20;
       //auto [pulley_left, pulley_right] = pulley_left_right_mean(iz, ileft_edge_index, iright_edge_index);
       

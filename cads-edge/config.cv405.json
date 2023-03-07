@@ -1,8 +1,11 @@
 {
-  "data_source" : "gocator",
-  "laser_fps" : 980,
-  "forever" : false,
-  "y_max_length" : 930000,
+  "data_source" : "../../profiles/rawprofile_cv405_2023-03-07.db",
+  "sqlite_gocator" : {
+    "range" : [0,9007199254740991],
+    "fps" : 480,
+    "forever" : true
+  },
+  "y_max_length" : 950000,
   "y_max_upload" : 906000,
   "z_height" : 27.0,
   "x_width"  : 1500,
@@ -63,11 +66,11 @@
   },
   "webapi_urls" : {
     "add_conveyor" : ["http://localhost:5000/api/conveyors",false],
-    "add_meta" : ["http://localhost:5000/api/meta",true],
-    "add_belt" : ["http://localhost:5000/api/belt",true]
+    "add_meta" : ["http://localhost:5000/api/meta",false],
+    "add_belt" : ["http://localhost:5000/api/belt",false]
   },
   "nats_url" : "10.9.1.1",
-  "upload_profile" : true,
+  "upload_profile" : false,
   "base_url" : "https://server.mhysystems.com/api",
   "lua_window_height" : 2,
   "lua_fn" : "function process(width,height)\nlocal sum = 0\nfor i = 1+50,width-50 do\nfor j = 0,height-1 do\nsum = sum + ((win[j*width + i] <= 25 and win[j*width + i] > 10)and 1 or 0)\nend\nend\nreturn (sum / (width * height)) > 0.001 and sum or 0\nend"

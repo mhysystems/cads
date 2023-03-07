@@ -13,8 +13,8 @@ namespace {
 
   auto mk_sqlite_gocator(nlohmann::json config) {
     auto current_length = config["sqlite_gocator"]["range"].get<cads::SqliteGocatorConfig::range_type>();
-    auto fps = config["sqlite_gocator"]["fps"];
-    auto forever = config["sqlite_gocator"]["forever"];
+    auto fps = config["sqlite_gocator"]["fps"].get<double>();
+    auto forever = config["sqlite_gocator"]["forever"].get<bool>();
 
     return cads::SqliteGocatorConfig{current_length,fps,forever};
   }

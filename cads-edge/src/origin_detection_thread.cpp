@@ -56,7 +56,8 @@ namespace cads
 
   coro<std::tuple<profile,bool>,profile,1> origin_detection_coro(double x_resolution, double y_resolution, int width_n)
   {
-     auto fiducial = make_fiducial(x_resolution, y_resolution);
+    auto fiducial = make_fiducial(x_resolution, y_resolution);
+    fiducial_as_image(fiducial,"fid");
     window profile_buffer;
 
     auto fdepth = global_config["fiducial_depth"].get<double>();
@@ -134,8 +135,8 @@ namespace cads
             trigger_length = y_max_length * 0.90;
           }
 
-          
-           // fiducial_as_image(belt);
+          mat_as_image(belt,cv_threshhold);
+          fiducial_as_image(belt);
 
           y_offset += y;
 

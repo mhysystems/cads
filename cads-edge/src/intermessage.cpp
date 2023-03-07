@@ -16,6 +16,7 @@ namespace cads {
   void publish_SurfaceSpeed(double value) {
     auto valid = between(global_constraints.SurfaceSpeed,value);
     publish_meta_realtime("SurfaceSpeed",value, valid);
+    spdlog::get("cads")->debug("Surface Speed {}",value);
   }
 
   void publish_PulleyOscillation(double value) {

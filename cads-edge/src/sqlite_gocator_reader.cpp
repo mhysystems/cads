@@ -59,21 +59,25 @@ namespace cads
 
     m_yResolution = params.y_res;
     m_encoder_resolution = params.encoder_res;
+    auto pulley_period_us = 1000000 / m_config.fps;
 
     do
     {
-      auto fetch_profile = fetch_belt_coro(std::get<0>(m_config.range), std::get<1>(m_config.range), 0, 256, data_src);
-
+      auto fetch_profile = fetch_belt_coro(0,std::get<1>(m_config.range), std::get<0>(m_config.range), 256, data_src);
+      auto loop_time = std::chrono::high_resolution_clock::now();
+      
       while (!m_stopped)
       {
 
         auto [co_terminate, cv] = fetch_profile.resume(0);
         auto [idx, p] = cv;
 
-        if (co_terminate)
+        if (co_terminate && !m_config.forever)
         {
           m_gocatorFifo.enqueue({msgid::finished, 0});
           m_stopped = true;
+          break;
+        }else if(co_terminate && m_config.forever) {
           break;
         }
 
@@ -84,10 +88,18 @@ namespace cads
                                  { return !std::isnan(z); });
 
         m_gocatorFifo.enqueue({msgid::scan, profile{p.y, p.x_off, z_type(first, last.base())}});
-
-        if (m_gocatorFifo.size_approx() > 1000000)
+        
+        auto now = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::micro> dt = now - loop_time;
+        loop_time = now;
+        if(dt.count() < pulley_period_us) {
+          auto sleep_for = uint64_t(pulley_period_us - dt.count());
+          std::this_thread::sleep_for(std::chrono::microseconds(sleep_for));
+        }
+        
+        if (m_gocatorFifo.size_approx() > buffer_warning_increment)
         {
-          std::this_thread::sleep_for(std::chrono::seconds(10));
+        //  std::this_thread::sleep_for(std::chrono::seconds(10));
         }
 
         if (terminate)
