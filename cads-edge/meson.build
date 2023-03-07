@@ -24,7 +24,7 @@ boost = dependency('boost', modules : ['program_options'])
 sqlite = dependency('sqlite3')
 opencv = dependency('opencv4', required:false, include_type:'system')
 tbb = dependency('tbb')
-gsl = dependency('gsl')
+#gsl = dependency('gsl')
 
 if not opencv.found()
 	opencv = dependency('opencv',include_type:'system')
