@@ -10,7 +10,16 @@
 nlohmann::json global_config;
 
 namespace {
-    auto mk_contraints(nlohmann::json config) {
+
+  auto mk_sqlite_gocator(nlohmann::json config) {
+    auto current_length = config["sqlite_gocator"]["range"].get<cads::SqliteGocatorConfig::range_type>();
+    auto fps = config["sqlite_gocator"]["fps"].get<double>();
+    auto forever = config["sqlite_gocator"]["forever"].get<bool>();
+
+    return cads::SqliteGocatorConfig{current_length,fps,forever};
+  }
+
+  auto mk_contraints(nlohmann::json config) {
     using namespace std;
 
     auto current_length = config["constraints"]["current_length"].get<cads::constraints::value_type>();
@@ -82,6 +91,7 @@ namespace cads {
   Conveyor global_conveyor_parameters;
   webapi_urls global_webapi;
   Filters global_filters;
+  SqliteGocatorConfig sqlite_gocator_config;
 
   
   void init_config(std::string f) {
@@ -92,6 +102,7 @@ namespace cads {
     global_conveyor_parameters = mk_conveyor_parameters(config);
     global_webapi = mk_webapi_urls(config);
     global_filters = mk_filters(config);
+    sqlite_gocator_config = mk_sqlite_gocator(config);
     global_config = config;
   }
 

@@ -1,21 +1,24 @@
 {
-  "data_source" : "gocator",
-  "laser_fps" : 980,
-  "forever" : false,
-  "y_max_length" : 11000000,
-  "y_max_upload" : 11000000,
+  "data_source" : "../../profiles/rawprofile_cv001_2.db",
+  "sqlite_gocator" : {
+    "range" : [1080000,9007199254740991],
+    "fps" : 10000,
+    "forever" : false
+  },
+  "y_max_length" : 12665200,
+  "y_max_upload" : 12565200,
   "z_height" : 27.0,
   "x_width"  : 1500,
-  "width_n" : 1820,
+  "width_n" : 1960,
   "clip_height" : 36.0,
   "left_edge_nan" : 10,
   "right_edge_nan" : 10,
-  "fiducial_depth" : 3,
-  "fiducial_x" : 50,
-  "fiducial_y" : 67,
-  "fiducial_gap" : 78,
+  "fiducial_depth" : 2,
+  "fiducial_x" : 25,
+  "fiducial_y" : 40,
+  "fiducial_gap" : 40,
   "daily_upload" : true,
-  "daily_start_time" : "04:00",
+  "daily_start_time" : "now",
   "spike_filter" : 5,
   "sobel_filter" : 5,
   "nan_%" : 0.1,
@@ -46,7 +49,7 @@
   "state_db_name" : "state.db",
   "transient_db_name" : "transient.db",
   "use_encoder" : false,
-  "belt_cross_correlation_threshold" : 0.4,
+  "belt_cross_correlation_threshold" : 0.6,
 
   "filters" : {
     "SchmittThreshold" : 0.05
@@ -59,16 +62,16 @@
     "PulleyCover" : 6.0,
     "CordDiameter" : 4.3,
     "TopCover" : 17.0,
-    "PulleyCircumference" : 2613.8
+    "PulleyCircumference" : 2089.16
   },
   "webapi_urls" : {
     "add_conveyor" : ["http://localhost:5000/api/conveyors",false],
-    "add_meta" : ["http://localhost:5000/api/meta",true],
-    "add_belt" : ["http://localhost:5000/api/belt",true]
+    "add_meta" : ["https://server.mhysystems.com/api/meta",true],
+    "add_belt" : ["https://server.mhysystems.com/api/belt",true]
   },
   "nats_url" : "10.9.1.1",
   "upload_profile" : true,
   "base_url" : "https://server.mhysystems.com/api",
   "lua_window_height" : 2,
-  "lua_fn" : "function process(width,height)\nlocal sum = 0\nfor i = 1+50,width-50 do\nfor j = 0,height-1 do\nsum = sum + ((win[j*width + i] <= 25 and win[j*width + i] > 10)and 1 or 0)\nend\nend\nreturn (sum / (width * height)) > 0.001 and sum or 0\nend"
+  "lua_fn" : "function process(width,height)\n return 0\nend"
 }

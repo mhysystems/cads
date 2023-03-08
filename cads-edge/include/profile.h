@@ -51,6 +51,6 @@ namespace cads
   double barrel_gradient(const z_type &z, int left_edge_index, int right_edge_index);
   z_type trim_nan(const z_type& z);
   void constraint_substitute(z_type& z, z_element z_min, z_element z_max, z_element sub = std::numeric_limits<z_element>::quiet_NaN());
-  double dbscan_test(const z_type& z) ;
+  std::tuple<double,double> dbscan_test(z_type &z);
   
 }

@@ -85,16 +85,14 @@ namespace
     else
     {
       spdlog::get("cads")->debug("Using sqlite as data source");
-      auto fps = global_config["laser_fps"].get<double>();
-      auto forever = global_config["forever"].get<bool>();
-      auto sqlite = make_unique<SqliteGocatorReader>(gocatorFifo,fps,forever);
+      auto sqlite = make_unique<SqliteGocatorReader>(gocatorFifo);
       return {std::move(sqlite),false};
     }
   }
 
   enum class Process_Status {Error, Finished, Stopped};
 
-  Process_Status process_impl()
+  Process_Status process_impl2()
   {
    
     std::jthread uploading_conveyor_parameters(upload_conveyor_parameters);
@@ -342,7 +340,7 @@ namespace
   }
 
 
-  Process_Status process_impl2()
+  Process_Status process_impl()
   {
    
     std::jthread uploading_conveyor_parameters(upload_conveyor_parameters);
@@ -413,7 +411,7 @@ namespace
       winFifo.enqueue({msgid::scan, p});
     };
 
-    auto fn = encoder_distance_id(csp);
+    auto fn = encoder_distance_id(csp); //encoder_distance_estimation(csp); //
     const auto [z_min_unbiased,z_max_unbiased] = global_constraints.ZUnbiased;
 
     do
@@ -428,9 +426,9 @@ namespace
       }
 
       auto p = get<profile>(get<1>(m));
-      auto dbscan = -22.18;// dbscan_test(p.z);
-      p.z.insert(p.z.begin(),20,(float)dbscan);
-      p.z.insert(p.z.end(),20,(float)dbscan);
+      auto [pulley_left,pulley_right] = dbscan_test(p.z);
+      p.z.insert(p.z.begin(),20,(float)pulley_left);
+      p.z.insert(p.z.end(),20,(float)pulley_right);
 
 
       auto iy = p.y;
@@ -475,18 +473,17 @@ namespace
           continue;
         }
       }
-      constraint_substitute(iz,z_min_unbiased,z_max_unbiased);
-      iz = trim_nan(iz);
+      //constraint_substitute(iz,z_min_unbiased,z_max_unbiased);
+      //iz = trim_nan(iz);
 
-      spike_filter(iz);
-      auto z_nan_filtered = iz;
-      nan_interpolation_last(z_nan_filtered);
+      //spike_filter(iz);
+      nan_interpolation_last(iz);
 
-      auto [ileft_edge_index, iright_edge_index] = find_profile_edges_sobel(z_nan_filtered);
-      ileft_edge_index -= 20;
-      auto [pulley_left, pulley_right] = pulley_left_right_mean(iz, ileft_edge_index, iright_edge_index);
+      auto [ileft_edge_index, iright_edge_index] = find_profile_edges_sobel(iz);
+      //ileft_edge_index -= 20;
+      //auto [pulley_left, pulley_right] = pulley_left_right_mean(iz, ileft_edge_index, iright_edge_index);
       
-      
+      /*
       if(std::isnan(pulley_left) && !std::isnan(pulley_right)) {
         pulley_left = pulley_right;
         store_errored_profile(p.z);
@@ -505,10 +502,9 @@ namespace
           continue;
         }
       }
-      
-      pulley_left = dbscan;
-      auto pulley_left_filtered = -22.18; (z_element)iirfilter_left(pulley_left);
-      auto pulley_right_filtered = -22.18; (z_element)iirfilter_right(pulley_right);
+      */
+      auto pulley_left_filtered = (z_element)iirfilter_left(pulley_left);
+      auto pulley_right_filtered = (z_element)iirfilter_right(pulley_right);
       
       auto left_edge_filtered = (z_element)iirfilter_left_edge(ileft_edge_index);
       auto right_edge_filtered = (z_element)iirfilter_right_edge(iright_edge_index);
@@ -549,7 +545,7 @@ namespace
       auto gradient = (pulley_right_filtered - pulley_left_filtered) / (double)z.size();
       regression_compensate(z, 0, z.size(), gradient);
 
-      nan_interpolation_last(z);
+      //nan_interpolation_last(z);
       auto left_edge_index_aligned = left_edge_index;
 
       barrel_height_compensate(z, -bottom_filtered, clip_height);
@@ -791,7 +787,7 @@ namespace cads
 
     cads::msg m;
 
-    auto differentiation = mk_dc_filter(); //mk_differentiation(0);
+    auto differentiation = mk_dc_filter(); 
 
     std::ofstream filt("filt.txt");
     const auto [z_min_unbiased,z_max_unbiased] = global_constraints.ZUnbiased;
@@ -809,10 +805,10 @@ namespace cads
         auto ix = p.x_off;
         auto iz = p.z;
 
-        auto tt = dbscan_test(p.z);
+        auto [tt,ttt] = dbscan_test(p.z);
 
-        constraint_substitute(iz,z_min_unbiased,z_max_unbiased);
-        iz = trim_nan(iz);
+       // constraint_substitute(iz,z_min_unbiased,z_max_unbiased);
+       // iz = trim_nan(iz);
 
         spike_filter(iz);
         auto z_nan_filtered = iz;

@@ -3,14 +3,14 @@ import numpy as np
 import argparse
 from PIL import Image
 
-def process_belt(db) :
+def process_belt(db,nan) :
     
     maxrows = 60000
     conn = sqlite3.connect(db)
     cur = conn.cursor()
     m = 99999999999
     rowcnt = 1    
-    ss = np.vectorize(lambda x :x if not np.isnan(x) else -25.0 ) 
+    ss = np.vectorize(lambda x :x if not np.isnan(x) else nan ) 
     yindex = 0
     while rowcnt > 0:
         rowcnt = 0
@@ -31,6 +31,7 @@ def process_belt(db) :
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Generate PNG from profile DB')
     parser.add_argument("db", help="Belt DB")
+    parser.add_argument("--nan", type=float, help="Substitute NaN", default=-25.0)
 
     args = parser.parse_args()
-    process_belt(args.db)
+    process_belt(args.db,args.nan)
