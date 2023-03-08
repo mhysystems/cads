@@ -112,6 +112,79 @@ namespace cads_gui.Data
       return frame;
     }
 
+    public static async Task<List<Profile>> RetrieveFrameModular(string db, double y_min, long len, long left)
+    {
+
+      var frame = new List<Profile>();
+      var abslen = Math.Abs(len*2);
+
+      using var connection = new SqliteConnection("" +
+        new SqliteConnectionStringBuilder
+        {
+          Mode = SqliteOpenMode.ReadOnly,
+          DataSource = db
+        });
+
+      await connection.OpenAsync();
+
+      var commandRes = connection.CreateCommand();
+      commandRes.CommandText = $"select y from profile where rowid = 1 limit 1";
+
+      using var readerRes = commandRes.ExecuteReader(CommandBehavior.SingleRow);
+      
+      readerRes.Read();
+      var y_res = readerRes.GetDouble(0);
+      
+      readerRes.Close();
+
+      var commandMax = connection.CreateCommand();
+      commandMax.CommandText = $"select max(rowid)+1 from profile ";
+
+      using var readerMax = commandMax.ExecuteReader(CommandBehavior.SingleRow);
+      
+      readerMax.Read();
+      var max = readerMax.GetInt64(0);
+      
+      readerMax.Close();
+
+      var row = (long)Math.Floor(y_min / y_res);
+      var rowBegin = Mod(row - left,max);
+      var mask = rowBegin > row - left || Mod(row - left + len, max) < row - left + len ? 1.0 : 0.0;
+      
+
+      var query = $"select (rowid - @mask*@rowmax)*@yres,x_off,z from PROFILE where rowid >= @row union all select rowid*@yres,x_off,z from profile limit @len";
+      var command = connection.CreateCommand();
+      command.CommandText = query;
+      command.Parameters.AddWithValue("@row", rowBegin);
+      command.Parameters.AddWithValue("@len", abslen);
+      command.Parameters.AddWithValue("@mask",mask);
+      command.Parameters.AddWithValue("@rowmax",max);
+      command.Parameters.AddWithValue("@yres",y_res);
+
+
+      using var reader = command.ExecuteReader();
+
+
+      while (reader.Read())
+      {
+        var y = reader.GetDouble(0);
+        var x_off = reader.GetDouble(1);
+        byte[] z = (byte[])reader[2];
+
+        if (len >= 0)
+        {
+          frame.Add(new Profile(y, x_off, z));
+        }
+        else
+        {
+          frame.Insert(0, new Profile(y, x_off, z));
+        }
+      }
+
+      return frame;
+    }
+
+
     public static double Mod(double x, double n) { return ((x % n) + n) % n; }
     static float[] Convert(byte[] a)
     {
@@ -182,7 +255,7 @@ namespace cads_gui.Data
 
 
 
-    public static async Task<List<Profile>> RetrieveFrameModular(string belt, double y_min, long len, long left)
+    public static async Task<List<Profile>> RetrieveFrameModular11(string belt, double y_min, long len, long left)
     {
       var (min, max, cnt) = await BeltBoundaryAsync(belt);
       var beltLength = max + (max - min) / cnt;

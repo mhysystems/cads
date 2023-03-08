@@ -25,7 +25,7 @@ def fill_scan_db(db: str, width: int, n: int) :
     x_off = -width / 2
     
     for i in range(0,n):
-        cur.execute(f"INSERT INTO PROFILE (y,x_off,z) VALUES (?,?,?)",(i * step, x_off,z))
+        cur.execute(f"INSERT INTO PROFILE (rowid,y,x_off,z) VALUES (?,?,?,?)",(i,i * step, x_off,z))
         if not i % 100 : 
             conn.commit()
     
