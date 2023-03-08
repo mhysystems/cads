@@ -99,7 +99,8 @@ namespace cads
         
         if (m_gocatorFifo.size_approx() > buffer_warning_increment)
         {
-        //  std::this_thread::sleep_for(std::chrono::seconds(10));
+          //spink lock
+          while(m_gocatorFifo.size_approx() > buffer_warning_increment / 4){}
         }
 
         if (terminate)

@@ -411,7 +411,7 @@ namespace
       winFifo.enqueue({msgid::scan, p});
     };
 
-    auto fn = encoder_distance_estimation(csp); //encoder_distance_id(csp);
+    auto fn = encoder_distance_id(csp); //encoder_distance_estimation(csp); //
     const auto [z_min_unbiased,z_max_unbiased] = global_constraints.ZUnbiased;
 
     do
