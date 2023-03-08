@@ -33,7 +33,7 @@ def process_profile_out(db: str, y = 0, ztype: str ='f') :
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Plot each profile')
+    parser = argparse.ArgumentParser(description='Input a scan, perform a transform on each row and write to new scan. Tranform is hard coded in file')
     parser.add_argument("db", help="Belt data with columns")
     parser.add_argument("--y", help="Y start", default=0)
     parser.add_argument("--odb", help="Output DB name", default="result.db")
