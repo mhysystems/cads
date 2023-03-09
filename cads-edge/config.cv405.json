@@ -62,7 +62,9 @@
     "PulleyCover" : 6.0,
     "CordDiameter" : 4.3,
     "TopCover" : 17.0,
-    "PulleyCircumference" : 2613.8
+    "PulleyCircumference" : 2613.8,
+    "Width" : 1500,
+    "Length" : 901000
   },
   "webapi_urls" : {
     "add_conveyor" : ["http://localhost:5000/api/conveyors",false],

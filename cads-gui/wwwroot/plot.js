@@ -46,448 +46,6 @@ function generate_ploty_y_axis(y_sample_start, num_plot_y_samples, num_y_samples
 }
 
 
-
-// Cannot get the profile buffer out of JS into Blazor, so use handles
-const handles = [];
-
-
-export function init(
-  z_min,
-  z_max,
-  x_res,
-  y_res,
-  colour_scale,
-  belt_name,
-  htmlelement) {
-
-  let color_scale = typeof (colour_scale) == 'string' ? colour_scale : colour_scale.map(({ item1, item2 }) => [item1, item2]);
-  const cut_y = 9.0;
-  let sample_y = 0;
-
-  //var w = new Worker('background_download.js');
-
-  //const buffer = new SharedArrayBuffer(buffer_length);
-
-  //new Float32Array(buffer).fill(-0);
-  // w.postMessage({ b: buffer, f: filename, s: num_plot_y_samples});
-
-  //const bottom_plane = [];
-
-
-  //for (let i = 0; i < num_plot_y_samples; i++) {
-  //bottom_plane.push(new Float32Array(num_x_samples).fill(z_min));
-  //}
-
-  //const o = document.querySelector('#'+htmlelement).getBoundingClientRect();
-
-  //const hh = (o.right - o.left)*(belt_width / plot_y_length);
-  //console.log((o.right - o.left),o.top - o.bottom, belt_width, plot_y_length);
-  const defaultEyePosition = { x: 0.5, y: 0, z: 1.2 };
-  const layout = {
-    // title: '➤➤➤➤➤➤➤➤➤➤',
-    autosize: true,
-    //  height:hh,
-    margin: {
-      l: 0,
-      r: 0,
-      b: 0,
-      t: 0,
-    },
-    //unirevision : "true",
-    scene: {
-      camera: {
-        center: {
-          x: 0,
-          y: 0,
-          z: 0
-        },
-        eye: { ...defaultEyePosition }
-      },
-
-      zaxis: {
-        //showspikes: false,
-        //spikemode :"across",
-
-        range: [z_min, z_max]
-      },
-
-      yaxis: {
-        showspikes: true,
-        spikecolor: "magenta",
-        spikemode: "across",
-        spikethickness: 5,
-        // range : [0,num_plot_y_samples*y_sample_len]
-      },
-
-      xaxis: {
-        showspikes: true,
-        spikecolor: "magenta",
-        spikethickness: 5,
-        spikemode: "across",
-        //  range:[x_start,x_end]
-      },
-
-      aspectratio: {
-        //y: plot_y_length / belt_width,
-        x: 1,
-        //z: z_max / (belt_width*1000)
-      },
-    }, // end scene
-  };
-
-  const layout2 = {
-    //height:200,
-    autosize: true,
-    yaxis: {
-      range: [z_min, z_max],
-      side: 'right'
-    },
-    xaxis: {
-      // range: [x_start, x_end],
-
-    },
-
-    shapes: [{
-      type: 'line',
-      //x0: x_start,
-      y0: 29.5,
-      //x1 : x_end,
-      y1: 29.5,
-      line: {
-        color: 'rgb(50, 171, 96)',
-        width: 2
-      }
-
-    }],
-
-    margin: {
-      l: 20,
-      r: 20,
-      b: 20,
-      t: 20,
-    },
-
-    aspectratio: {
-      x: 1,
-      //y: z_max / (belt_width*1000),
-    },
-  };
-
-  const config = {
-    displaylogo: false,
-    displayModeBar: true
-  };
-
-
-  function resize_plot() {
-    //  const o = document.querySelector('#'+htmlelement).getBoundingClientRect();
-
-    //  const hh = (o.right - o.left)*(belt_width / plot_y_length);
-    //  layout.height = hh;
-    //  layout.width = o.right-o.left;
-    //  layout.scene.camera.eye.z = 2.0;
-    //console.log("dim",layout.width ,layout.height);
-
-    //(async _ => {await null; Plotly.update(htmlelement, data, layout);})();
-    //(async _ => {await null; Plotly.relayout(htmlelement, layout);})();
-    Plotly.purge(htmlelement);
-    //(async _ => {await null; Plotly.update(htmlelement, trace, ulayout,0);})();
-    Plotly.react(htmlelement, data, layout, config);
-
-    const { width, height } = document.querySelector(`#${htmlelement}-profile`).getBoundingClientRect();
-    const scale = width / height > 3 ? 1 : 4.5;
-
-    layout2.yaxis.range = [z_min, z_max * scale];
-
-    Plotly.purge(htmlelement + "-profile");
-    Plotly.react(htmlelement + "-profile", data2, layout2, config);
-    var myPlot = document.getElementById(htmlelement);
-
-
-    myPlot.on('plotly_click', function (e) {
-      console.debug(`plotly_click`);
-      const y = e.points[0].pointNumber[1];
-      data2[0].y = data[0].z[y];
-      data2[1].y = data2[0].y.map(y => 16.2 * (y > cut_y));
-      Plotly.react(htmlelement + "-profile", data2, layout2, config);
-
-    });
-  }
-
-
-  function plot_change_colorscale(c) {
-    c = c.map(({ item1, item2 }) => [item1, item2]);
-
-    console.debug(`plot_change_colorscale(${c})`);
-    data[0].colorscale = c;
-    data[1].colorscale = c;
-    Plotly.react(htmlelement, data, layout);
-
-  }
-
-  function plot_overlay(x, width, y, length) {
-    console.debug(`plot_overlay(${x},${width},${y},${length})`);
-    let z = [];
-    const x_off = data[0].x[0] * 1000;
-    const x_off_end = data[0].x.slice(-1) * 1000;
-    let y_off_end = data[0].y.slice(-1) * 1000;
-    let y_off_start = data[0].y[0] * 1000;
-    const y_off = Math.min(y_off_start, y_off_end);
-
-    let indexX = Math.floor((x - x_off) / x_res);
-    let lengthX = Math.floor(width / x_res);
-
-    if (indexX < 0) indexX = 0;
-    if (indexX + lengthX > data[0].x.length) lengthX = data[0].x.length - indexX;
-
-    let indexY = Math.floor((y - y_off) / y_res);
-    let lengthY = Math.floor(length / y_res);
-
-    if (indexY < 0) indexY = 0;
-    if (indexY + lengthY > data[0].z.length) lengthY = data[0].z.length - indexY;
-
-    for (let j = indexY; j < indexY + lengthY; j++) {
-      z = [...z, data[0].z[j].slice(indexX, indexX + lengthX).map(z => z + 0.5)];
-    }
-
-    let trace = {
-      z: z,
-      x: data[0].x.slice(indexX, indexX + lengthX),
-      y: data[0].y.slice(indexY, indexY + lengthY),
-      colorscale: [[0, "hsl(300,100,50)"], [1, "hsl(300,100,50)"]],
-      type: 'surface',
-      showscale: false,
-      opacity: 0.5
-    }
-    if (z.length > 0) {
-      //Plotly.purge(htmlelement);
-      data.push(trace);
-      const wy = 2 / (y_off_end - y_off);
-      //const cy = (y_off + y_off_end) / (y_off - y_off_start); 
-
-      const wx = 2 / (x_off_end - x_off);
-      const cx = (x_off + x_off_end) / (x_off - x_off_end);
-
-      const ax = v => (v * wx + cx) * (1 / layout.scene.aspectratio.y);
-      const ay = v => (v - ((y_off_start + y_off_end) / 2)) * wy;// + cy;
-
-      const magx = Math.max(width / (x_off_end - x_off), 0);
-      const magy = Math.max(length / (y_off_end - y_off_start), 0);
-
-      const mag = Math.max(magx, magy);
-
-      layout.scene.camera.eye.x = defaultEyePosition.x + mag * ax(x + width / 2);
-      layout.scene.camera.center.x = ax(x + width / 2);
-
-      layout.scene.camera.eye.y = (defaultEyePosition.y + ay(y + length / 2));
-      layout.scene.camera.center.y = ay(y + length / 2);
-
-      layout.scene.camera.eye.z = mag * (defaultEyePosition.z);
-      Plotly.react(htmlelement, data, layout);
-    }
-
-  }
-
-
-  function update_plot_b(buf, y) {
-
-    const plotData = plot_data.getRootAsplot_data(new ByteBuffer(new Uint8Array(buf)));
-    const x_min = plotData.xOff() / 1000;
-    const y_axis = plotData.ySamplesArray().map(y => y / 1000);
-    const rows = plotData.ySamplesLength();
-    const columns = plotData.zSamplesLength() / rows;
-    const x_resolution = x_res / 1000; // convert mm to m
-    const y_resolution = y_res / 1000;
-    const belt_width = columns * x_resolution;
-    const belt_length = y_axis[y_axis.length - 1] - y_axis[0];
-
-    const z_surface = generate_ploty_z_samples(plotData.zSamplesArray(), columns);
-
-    const x_axis = [...Array(columns).keys()].map(x => x_min + x * x_resolution);
-
-    data[0].z = z_surface;
-    data[0].x = x_axis;
-    data[0].y = y_axis;
-
-    layout.scene.yaxis.range = [y_axis[0], y_axis[y_axis.length - 1]];
-    layout.scene.xaxis.range = [x_axis[0], x_axis[x_axis.length - 1]];
-    layout.scene.aspectratio.y = belt_length / belt_width;
-    layout.scene.aspectratio.z = z_max / (belt_width * 1000);
-    layout.scene.camera.eye = { ...defaultEyePosition };
-    layout.scene.camera.center = { x: 0, y: 0, z: 0 };
-
-    // Pull edges to zero to mimic 3d belt
-    for (let i = 0; i < rows; i++) {
-      z_surface[i][0] = this.zMIn;
-      z_surface[i][columns - 1] = this.zMin;
-    }
-
-    for (let i = 0; i < columns; i++) {
-      z_surface[0][i] = this.zMin;
-      z_surface[rows - 1][i] = this.zMin;
-    }
-
-    const bottom_plane = mk_2dArray(rows, columns,this.zMin);
-
-    data[1].y = y_axis;
-    data[1].x = x_axis;
-    data[1].z = bottom_plane;
-
-    //Plotly.purge(htmlelement);
-    //(async _ => {await null; Plotly.update(htmlelement, trace, ulayout,0);})();
-    data.splice(2);
-    Plotly.react(htmlelement, data, layout, config);
-    //Plotly.newPlot(htmlelement, data, layout);
-    var myPlot = document.getElementById(htmlelement);
-
-    myPlot.on('plotly_click', function (e) {
-      const y = e.points[0].pointNumber[1];
-      data2[0].y = data[0].z[y];
-      data2[1].y = data2[0].y.map(y => 16.2 * (y > cut_y));
-      Plotly.react(htmlelement + "-profile", data2, layout2, config);
-    });
-
-
-    layout2.xaxis = [x_axis[0], x_axis[x_axis.length - 1]];
-
-    layout2.shapes[0].x0 = layout2.xaxis[0];
-    layout2.shapes[0].x1 = layout2.xaxis[1];
-    layout2.aspectratio.y = z_max / (belt_width * 1000);
-
-    data2[0].y = z_surface[Math.floor(columns / 2)];
-    data2[0].x = x_axis;
-    data2[1].y = data2[0].y.map(y => 16.2 * (y > cut_y));
-    data2[1].x = x_axis;
-    Plotly.react(htmlelement + "-profile", data2, layout2, config);
-    console.debug(`update_plot(${y}) finished`);
-    //plot_overlay(700,50,0,50);
-  }
-
-
-  async function update_plot(belt, y, window_len) {
-
-    console.debug(`update_plotb(${belt},${y},${window_len})`);
-    await fetch(`api/belt/${belt}/${y}/${window_len}`)
-      .then(r => {
-        if (!r.ok) throw new Error();
-        //return r.body.getReader();
-        return r.arrayBuffer();
-      })
-      .then(r => update_plot_b(r, y))
-      .catch();
-
-  }
-
-
-  //w.onmessage = (e) => {
-  //  update_plot(Math.floor(num_plot_y_samples/2)*y_sample_len); // Zero is offset into buffer
-  //}
-
-  const data = [
-    {
-      // z: generate_ploty_z_samples(buffer,0,num_plot_y_samples,num_x_samples),
-      colorscale: color_scale,
-      //reversescale: !Array.isArray(color_scale),
-      cmax: z_max,
-      cmin: z_min,
-      type: 'surface',
-      contours: {
-        x: { highlight: false }, y: { highlight: false },
-        z: {
-          highlight: true,
-          show: true,
-          //usecolormap: true,
-          highlightcolor: "#42f462",
-          project: { z: false }
-        }
-      },
-      //y: generate_ploty_y_axis(0,num_plot_y_samples,num_y_samples,y_sample_len), //[...Array(num_plot_y_samples).keys()].map(x => x * y_sample_len),
-      //x: [...Array(num_x_samples).keys()].map(x => x_start + x * belt_width / num_x_samples)
-    }
-  ];
-
-  data.push
-    (
-      {
-        //z: bottom_plane,
-        cmax: z_max,
-        cmin: z_min,
-        colorscale: color_scale,
-        showscale: false,
-        //reversescale: !Array.isArray(color_scale),
-        type: 'surface',
-        //y: data[0].y,
-        //x: data[0].x
-      }
-    );
-
-
-
-
-  //const h = Plotly.react(htmlelement, data, layout, config);
-  // update_plot("jimblebar","cv504",,256);
-
-
-  var trace1 = {
-    // x: [...Array(num_x_samples).keys()].map(x => x_start + x * belt_width / num_x_samples),
-    // y: generate_ploty_z_samples(buffer,0,num_plot_y_samples,num_x_samples)[127],
-    type: 'scatter',
-    fill: 'tonexty',
-    fillcolor: "#f77f00",
-    showlegend: false,
-    line: {
-      color: "#f77f00"
-    }
-  };
-
-  var trace2 = {
-    // x: [...Array(num_x_samples).keys()].map(x => x_start + x * belt_width / num_x_samples),
-    // y: [...Array(num_x_samples).keys()].map(x => 16.2),
-    type: 'scatter',
-    fill: 'tozeroy',
-    fillcolor: '#ffd691',
-    showlegend: false,
-    line: {
-      color: "#ffd691"
-    }
-  };
-
-  var data2 = [trace1, trace2];
-
-
-  handles.push({
-    update_plot: update_plot,
-    resize_plot: resize_plot,
-    plot_overlay: plot_overlay,
-    plot_change_colorscale: plot_change_colorscale
-  });
-
-  return handles.length - 1
-
-}
-
-function plot_change_colorscale(handle, c) {
-  handles[handle].plot_change_colorscale(c)
-}
-
-function plot_overlay(handle, x, width, y, length) {
-  handles[handle].plot_overlay(x, width, y, length);
-}
-
-async function update_plot(handle, belt, y, len) {
-  await handles[handle].update_plot(belt, y, len);
-}
-
-function resize_plot(handle) {
-  handles[handle].resize_plot();
-}
-
-function getBoundingClientRect(elementId) {
-  const o = document.querySelector(elementId).getBoundingClientRect();
-  return { x: o.left, y: o.top, right: o.right, bottom: o.bottom };
-}
-
-
 class PlotDataCache {
   constructor(blazor) {
     this.cacheCount = 0;
@@ -762,6 +320,27 @@ class ProfilePlot {
 
       xaxis: {},
 
+      shapes: [{
+        type: 'line',
+        y0: 27.3,
+        y1: 27.3,
+        line: {
+          color: 'rgb(50, 171, 96)',
+          width: 2
+        }
+      },
+      {
+        type: 'line',
+        y0: 8.15,
+        y1: 8.15,
+        line: {
+          color: 'rgb(70, 9, 2)',
+          width: 2,
+          dash: 'dot'
+        }
+      }
+      ],
+
       margin: {
         l: 20,
         r: 20,
@@ -780,27 +359,32 @@ class ProfilePlot {
     };
 
 
-    const trace1 = {
+    const topCover = {
       type: 'scatter',
       fill: 'tonexty',
       fillcolor: "#f77f00",
+      stackgroup: "profile",
       showlegend: false,
-      line: {
-        color: "#f77f00"
-      }
+      mode : 'none'
     };
 
-    const trace2 = {
+    const cord = {
+      type: 'scatter',
+      fill: 'tonexty',
+      fillcolor: '#e8e8e8',
+      showlegend: false,
+      mode : 'none'
+    };
+    
+    const pulleyCover = {
       type: 'scatter',
       fill: 'tozeroy',
-      fillcolor: '#ffd691',
+      fillcolor: '#867f74',
       showlegend: false,
-      line: {
-        color: "#ffd691"
-      }
+      mode : 'none'
     };
 
-    this.plotData = [trace1, trace2];
+    this.plotData = [topCover, cord, pulleyCover];
   }
 
   async updatePlot(plotDataPromise, yIndex) {
@@ -821,13 +405,18 @@ class ProfilePlot {
     const x_axis = [...Array(columns).keys()].map(x => x_min + x * x_resolution);
 
     this.layout.xaxis = [x_axis[0], x_axis[x_axis.length - 1]];
-
+    this.layout.shapes[0].x0 = this.layout.xaxis[0];
+    this.layout.shapes[0].x1 = this.layout.xaxis[1];
+    this.layout.shapes[1].x0 = this.layout.xaxis[0];
+    this.layout.shapes[1].x1 = this.layout.xaxis[1];
     this.layout.aspectratio.y = (this.zMax - this.zMin)  / (belt_width * 1000);
 
     this.plotData[0].y = z_surface[yIndex];
     this.plotData[0].x = x_axis;
-    this.plotData[1].y = this.plotData[0].y.map(y => 0 * (y > 9.0));
+    this.plotData[1].y = z_surface[yIndex].map(y => 10.3 * (y > 10.3));
     this.plotData[1].x = x_axis;
+    this.plotData[2].y = z_surface[yIndex].map(y => 6 * (y > 6.0));
+    this.plotData[2].x = x_axis;
     await Plotly.react(this.plotElement, this.plotData, this.layout, this.config);
   }
 
