@@ -44,7 +44,7 @@ plotly-container-two {
     if (firstRender)
     {
       var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
-      var offset = DoubleSided ? Belt.z_min : Belt.z_min + 12;
+      var offset = DoubleSided ? Belt.z_min : Belt.z_min + 0;
       jsProfilePlot = await module.InvokeAsync<IJSObjectReference>("mk_ProfilePlot",jsPlot,Belt.x_res,Belt.z_min + offset,Belt.z_max);
     }
 
