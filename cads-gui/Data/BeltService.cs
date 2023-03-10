@@ -75,7 +75,7 @@ namespace cads_gui.Data
       return await NoAsp.BeltBoundaryAsync(belt);
     }
 
-    public IEnumerable<Belt> GetBelts(string site, string belt)
+    public IEnumerable<Scan> GetBelts(string site, string belt)
     {
       using var context = dBContext.CreateDbContext();
       var data = from a in context.belt orderby a.chrono where a.site == site && a.conveyor == belt select a;
@@ -83,7 +83,7 @@ namespace cads_gui.Data
       return data.ToList();
     }
 
-    public List<Belt> GetBelts(string site, string belt, DateTime chrono)
+    public List<Scan> GetBelts(string site, string belt, DateTime chrono)
     {
       using var context = dBContext.CreateDbContext();
       var data = from a in context.belt orderby a.chrono where a.site == site && a.conveyor == belt && a.chrono.Date == chrono.Date select a;
@@ -91,7 +91,7 @@ namespace cads_gui.Data
       return data.ToList();
     }
 
-    public IEnumerable<Belt> GetBeltsAsync(string site, string conveyor)
+    public IEnumerable<Scan> GetBeltsAsync(string site, string conveyor)
     {
       using var context = dBContext.CreateDbContext();
       var data = from a in context.belt orderby a.chrono where a.site == site && a.conveyor == conveyor select a;
@@ -101,7 +101,7 @@ namespace cads_gui.Data
 
     }
 
-    public async Task<IEnumerable<DateTime>> GetBeltDatesAsync(Belt belt)
+    public async Task<IEnumerable<DateTime>> GetBeltDatesAsync(Scan belt)
     {
       using var context = dBContext.CreateDbContext();
       return await Task.Run(() => (from a in context.belt orderby a.chrono where a.site == belt.site && a.conveyor == belt.conveyor select a.chrono).ToArray());
@@ -173,7 +173,7 @@ namespace cads_gui.Data
     }
 
 
-    public async Task StoreBeltConstantsAsync(Belt entry)
+    public async Task StoreBeltConstantsAsync(Scan entry)
     {
       using var context = dBContext.CreateDbContext();
       DateTime.SpecifyKind(entry.chrono,DateTimeKind.Utc);
@@ -196,7 +196,7 @@ namespace cads_gui.Data
       
     }
 
-    public async Task<(double, float[])> GetBeltProfileAsync(double y, long num_y_samples, Belt belt)
+    public async Task<(double, float[])> GetBeltProfileAsync(double y, long num_y_samples, Scan belt)
     {
       var dbpath = Path.GetFullPath(Path.Combine(_config.DBPath,belt.name));
       var fs = await NoAsp.RetrieveFrameModular(dbpath, y, num_y_samples);
@@ -209,7 +209,7 @@ namespace cads_gui.Data
     }
 
     
-    public List<SavedZDepthParams> GetSavedZDepthParams(Belt belt)
+    public List<SavedZDepthParams> GetSavedZDepthParams(Scan belt)
     {
       using var context = dBContext.CreateDbContext();
       var rtn = from a in context.SavedZDepthParams where a.Conveyor == belt.conveyor && a.Site == belt.site select a;
@@ -238,7 +238,7 @@ namespace cads_gui.Data
     /// <param name="p"> Percentage of points in area given true by fn</param>
     /// <param name="fn"> Boolean function with z height as input.</param>
     /// <returns></returns>
-    public async IAsyncEnumerable<(List<ZDepth>, P3)> BeltScanAsync(double X, double Y, double p, double Z, Belt BeltConstants, long offset, long y_len)
+    public async IAsyncEnumerable<(List<ZDepth>, P3)> BeltScanAsync(double X, double Y, double p, double Z, Scan BeltConstants, long offset, long y_len)
     {
 
       bool fn(float z) {
@@ -342,7 +342,7 @@ namespace cads_gui.Data
 
     }
 
-     public async Task<List<ZDepth>> BeltScanAsync2(ZDepthQueryParameters search, Belt belt, long limit) {
+     public async Task<List<ZDepth>> BeltScanAsync2(ZDepthQueryParameters search, Scan belt, long limit) {
       
       var db = AppendPath(NoAsp.EndpointToSQliteDbName(belt.site,belt.conveyor,belt.chrono));
       var xOff = - belt.Xmax / 2;

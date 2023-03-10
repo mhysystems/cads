@@ -71,7 +71,7 @@
   protected Func<DateTime,bool> IsDateDisabledFunc = (DateTime d) => false;
 
   [Parameter]
-  public Belt Scan {get; set;}
+  public Scan Scan {get; set;}
   
   [Parameter]
   public EventCallback<ValueTuple<DateTime?,int,string>> DateChanged {get; set;}

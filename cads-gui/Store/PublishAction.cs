@@ -4,9 +4,9 @@ namespace Fluxor.Blazor.Store
 {
 	public class BeltAction
 	{
-    public readonly Belt Belt;
+    public readonly Scan Belt;
 
-		public BeltAction(Belt b)
+		public BeltAction(Scan b)
 		{
 			Belt = b;
 		}

@@ -65,7 +65,7 @@
   protected SavedZDepthParams savedZDepthParams = new();
 
   [Parameter]
-  public Belt Belt { get; set; }
+  public Scan Belt { get; set; }
 
   public ZDepthQueryParameters SearchParameters { get { return new ZDepthQueryParameters(X, Y, Z, P / 100, XMin, XMax); } private set { } }
 

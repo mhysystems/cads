@@ -38,7 +38,7 @@
   
   protected TrendControls trendControls;
 
-  protected Belt belt {get; set;} = new Belt();
+  protected Scan belt {get; set;} = new Scan();
   protected double yCoord;
 
   [Parameter]
@@ -80,7 +80,7 @@
     }
 
     var Y = GuiState?.Value.Y ?? 0;
-    List<Belt> b = Beltservice.GetBelts(site, conveyor, date.Value);
+    List<Scan> b = Beltservice.GetBelts(site, conveyor, date.Value);
 
     if(b is not null && b.Any()) {
       var (XOffset,z) = await Beltservice.GetBeltProfileAsync(Y, 1, b.First());

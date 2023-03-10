@@ -21,11 +21,11 @@ namespace cads_gui.Data
 
 
           
-          modelBuilder.Entity<Belt>().HasKey(e => e.rowid);
-          modelBuilder.Entity<Belt>().Property(b => b.rowid).ValueGeneratedOnAdd();
-          modelBuilder.Entity<Belt>().Ignore(b => b.ConveyorID);
-          modelBuilder.Entity<Belt>().Ignore(b => b.name);
-          modelBuilder.Entity<Belt>().Property(e => e.chrono).HasConversion(e => e, e => DateTime.SpecifyKind(e,DateTimeKind.Utc));
+          modelBuilder.Entity<Scan>().HasKey(e => e.rowid);
+          modelBuilder.Entity<Scan>().Property(b => b.rowid).ValueGeneratedOnAdd();
+          modelBuilder.Entity<Scan>().Ignore(b => b.ConveyorID);
+          modelBuilder.Entity<Scan>().Ignore(b => b.name);
+          modelBuilder.Entity<Scan>().Property(e => e.chrono).HasConversion(e => e, e => DateTime.SpecifyKind(e,DateTimeKind.Utc));
 					modelBuilder.Entity<SavedZDepthParams>().HasKey( e => new{e.Site,e.Conveyor,e.Name});
 					modelBuilder.Entity<Conveyor>().HasKey(e => e.Id);
           modelBuilder.Entity<Conveyor>().Property(b => b.Id).ValueGeneratedOnAdd();
@@ -36,7 +36,7 @@ namespace cads_gui.Data
         }
 
 
-       	public DbSet<Belt> belt { get; set; }
+       	public DbSet<Scan> belt { get; set; }
 				public DbSet<SavedZDepthParams> SavedZDepthParams { get; set; }
 				public DbSet<Conveyor> Conveyors { get; set; }
     }
