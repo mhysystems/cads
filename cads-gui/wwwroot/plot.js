@@ -305,11 +305,14 @@ class TrendPlot {
 }
 
 class ProfilePlot {
-  constructor(plotElement, x_res, z_min, z_max) {
+  constructor(plotElement, x_res, z_min, z_max, topCover, cord, pulleyCover) {
     this.plotElement = plotElement;
     this.xRes = x_res;
     this.zMax = z_max;
     this.zMin = z_min;
+    this.topCover = topCover;
+    this.cord = cord;
+    this.pulleyCover = pulleyCover;
 
     this.layout = {
       autosize: true,
@@ -322,8 +325,8 @@ class ProfilePlot {
 
       shapes: [{
         type: 'line',
-        y0: 27.3,
-        y1: 27.3,
+        y0: this.topCover + this.cord + this.pulleyCover,
+        y1: this.topCover + this.cord + this.pulleyCover,
         line: {
           color: 'rgb(50, 171, 96)',
           width: 2
@@ -331,8 +334,8 @@ class ProfilePlot {
       },
       {
         type: 'line',
-        y0: 8.15,
-        y1: 8.15,
+        y0: this.cord / 2 + this.pulleyCover,
+        y1: this.cord / 2 + this.pulleyCover,
         line: {
           color: 'rgb(70, 9, 2)',
           width: 2,
@@ -413,9 +416,9 @@ class ProfilePlot {
 
     this.plotData[0].y = z_surface[yIndex];
     this.plotData[0].x = x_axis;
-    this.plotData[1].y = z_surface[yIndex].map(y => 10.3 * (y > 10.3));
+    this.plotData[1].y = z_surface[yIndex].map(y => (this.cord + this.pulleyCover) * (y > this.cord + this.pulleyCover));
     this.plotData[1].x = x_axis;
-    this.plotData[2].y = z_surface[yIndex].map(y => 6 * (y > 6.0));
+    this.plotData[2].y = z_surface[yIndex].map(y => this.pulleyCover * (y > this.pulleyCover));
     this.plotData[2].x = x_axis;
     await Plotly.react(this.plotElement, this.plotData, this.layout, this.config);
   }
@@ -794,8 +797,8 @@ export function mk_SurfacePlot(plotElement, x_res, z_min, z_max, color_scale, bl
   return new SurfacePlot(plotElement, x_res, z_min, z_max, color_scale, blazor);
 }
 
-export function mk_ProfilePlot(plotElement, x_res, z_min, z_max) {
-  return new ProfilePlot(plotElement, x_res, z_min, z_max);
+export function mk_ProfilePlot(plotElement, x_res, z_min, z_max, topCover, cord, pulleyCover) {
+  return new ProfilePlot(plotElement, x_res, z_min, z_max, topCover, cord, pulleyCover);
 }
 
 export function mk_TrendPlot(plotElement, x_res, z_min, z_max,blazor) {

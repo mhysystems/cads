@@ -45,6 +45,7 @@
     "barrel_height" : [-36.5,-31.0],
     "z_unbiased" : [-37.0,4.0]
   },
+
   "profile_db_name" : "profile.db",
   "state_db_name" : "state.db",
   "transient_db_name" : "transient.db",
@@ -58,6 +59,10 @@
   "conveyor" : {
     "Site" : "jimblebar",
     "Name" : "cv001",
+    "Timezone" : ""
+  },
+
+  "Belt" : {
     "Installed" : "2023-01-14T00:00:00Z",
     "PulleyCover" : 7.0,
     "CordDiameter" : 9.1,
@@ -67,6 +72,7 @@
     "Length" : 12665200,
     "Splices" : 1
   },
+
   "webapi_urls" : {
     "add_conveyor" : ["http://localhost:5000/api/conveyors",false],
     "add_meta" : ["https://server.mhysystems.com/api/meta",true],
