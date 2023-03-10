@@ -36,7 +36,7 @@ namespace cads_gui.Data
         }
 
 
-       	public DbSet<Scan> belt { get; set; }
+       	public DbSet<Scan> Scans { get; set; }
 				public DbSet<SavedZDepthParams> SavedZDepthParams { get; set; }
 				public DbSet<Conveyor> Conveyors { get; set; }
     }

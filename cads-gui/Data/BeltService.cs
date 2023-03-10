@@ -65,7 +65,7 @@ namespace cads_gui.Data
     public IEnumerable<string> GetConveyorsString(string site)
     {
       using var context = dBContext.CreateDbContext();
-      var data = from row in context.belt where row.site == site select row.conveyor;
+      var data = from row in context.Scans where row.site == site select row.conveyor;
 
       return data.Distinct().ToList();
     }
@@ -78,7 +78,7 @@ namespace cads_gui.Data
     public IEnumerable<Scan> GetBelts(string site, string belt)
     {
       using var context = dBContext.CreateDbContext();
-      var data = from a in context.belt orderby a.chrono where a.site == site && a.conveyor == belt select a;
+      var data = from a in context.Scans orderby a.chrono where a.site == site && a.conveyor == belt select a;
       
       return data.ToList();
     }
@@ -86,7 +86,7 @@ namespace cads_gui.Data
     public List<Scan> GetBelts(string site, string belt, DateTime chrono)
     {
       using var context = dBContext.CreateDbContext();
-      var data = from a in context.belt orderby a.chrono where a.site == site && a.conveyor == belt && a.chrono.Date == chrono.Date select a;
+      var data = from a in context.Scans orderby a.chrono where a.site == site && a.conveyor == belt && a.chrono.Date == chrono.Date select a;
       
       return data.ToList();
     }
@@ -94,7 +94,7 @@ namespace cads_gui.Data
     public IEnumerable<Scan> GetBeltsAsync(string site, string conveyor)
     {
       using var context = dBContext.CreateDbContext();
-      var data = from a in context.belt orderby a.chrono where a.site == site && a.conveyor == conveyor select a;
+      var data = from a in context.Scans orderby a.chrono where a.site == site && a.conveyor == conveyor select a;
       
       // context will be disposed without evaluation of data
       return data.ToArray(); 
@@ -104,13 +104,13 @@ namespace cads_gui.Data
     public async Task<IEnumerable<DateTime>> GetBeltDatesAsync(Scan belt)
     {
       using var context = dBContext.CreateDbContext();
-      return await Task.Run(() => (from a in context.belt orderby a.chrono where a.site == belt.site && a.conveyor == belt.conveyor select a.chrono).ToArray());
+      return await Task.Run(() => (from a in context.Scans orderby a.chrono where a.site == belt.site && a.conveyor == belt.conveyor select a.chrono).ToArray());
     }
 
     public async Task UpdateBeltPropertyYmax(string site, string belt, DateTime chrono, double ymax, long ymaxn)
     {
       using var context = dBContext.CreateDbContext();
-      var data = from a in context.belt where a.site == site && a.conveyor == belt && a.chrono == chrono select a;
+      var data = from a in context.Scans where a.site == site && a.conveyor == belt && a.chrono == chrono select a;
 
       if (data.Any())
       {
@@ -124,7 +124,7 @@ namespace cads_gui.Data
     public async Task UpdateBeltPropertyWidthN(string site, string belt, DateTime chrono, double param)
     {
       using var context = dBContext.CreateDbContext();
-      var data = from a in context.belt where a.site == site && a.conveyor == belt && a.chrono == chrono select a;
+      var data = from a in context.Scans where a.site == site && a.conveyor == belt && a.chrono == chrono select a;
 
       if (data.Any())
       {
@@ -137,7 +137,7 @@ namespace cads_gui.Data
     public async Task UpdateBeltPropertyZmax(string site, string belt, DateTime chrono, double param)
     {
       using var context = dBContext.CreateDbContext();
-      var data = from a in context.belt where a.site == site && a.conveyor == belt && a.chrono == chrono select a;
+      var data = from a in context.Scans where a.site == site && a.conveyor == belt && a.chrono == chrono select a;
 
       if (data.Any())
       {
@@ -150,7 +150,7 @@ namespace cads_gui.Data
     public (double, int) SelectBeltPropertyZmax(string site, string belt, DateTime chrono)
     {
       using var context = dBContext.CreateDbContext();
-      var data = from a in context.belt where a.site == site && a.conveyor == belt && a.chrono == chrono select a;
+      var data = from a in context.Scans where a.site == site && a.conveyor == belt && a.chrono == chrono select a;
 
       if (data.Any())
       {
@@ -167,7 +167,7 @@ namespace cads_gui.Data
     {
       using var context = dBContext.CreateDbContext();
       // EFcore returns IQueryable which doesn't handle selecting tuples or order by very well, so convert to Enumerable
-      var rows = (from a in context.belt orderby a.chrono select a).ToList();
+      var rows = (from a in context.Scans orderby a.chrono select a).ToList();
       var sites = from r in rows group r by r.site into site select (site.Key, site.First().conveyor);
       return sites;
     }
@@ -177,7 +177,7 @@ namespace cads_gui.Data
     {
       using var context = dBContext.CreateDbContext();
       DateTime.SpecifyKind(entry.chrono,DateTimeKind.Utc);
-      context.belt.Add(entry);
+      context.Scans.Add(entry);
       await context.SaveChangesAsync();
     }
 
