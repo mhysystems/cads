@@ -181,10 +181,10 @@ namespace cads_gui.Data
       await context.SaveChangesAsync();
     }
 
-    public async Task<int> AddConveyorAsync(Conveyor entry)
+    public async Task<long> AddConveyorAsync(Conveyor entry)
     {
       using var context = dBContext.CreateDbContext();
-      var q = context.Conveyors.Where(e => e.Name == entry.Name && e.Site == entry.Site && e.Installed == entry.Installed);
+      var q = context.Conveyors.Where(e => e.Name == entry.Name && e.Site == entry.Site);
       
       if(q.Any()) {
         return q.First().Id;

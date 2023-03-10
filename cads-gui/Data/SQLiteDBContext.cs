@@ -33,10 +33,14 @@ namespace cads_gui.Data
             e => e.Id,
             e => TimeZoneInfo.FindSystemTimeZoneById(e)
             );
+          
+          modelBuilder.Entity<Belt>().HasKey(e => e.Id);
+          modelBuilder.Entity<Belt>().Property(b => b.Id).ValueGeneratedOnAdd();
         }
 
 
        	public DbSet<Scan> Scans { get; set; }
+        public DbSet<Belt> Belts { get; set; }
 				public DbSet<SavedZDepthParams> SavedZDepthParams { get; set; }
 				public DbSet<Conveyor> Conveyors { get; set; }
     }

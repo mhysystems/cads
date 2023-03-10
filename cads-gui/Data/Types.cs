@@ -106,6 +106,8 @@ namespace cads_gui.Data
     [NotMapped]
     public (double,double) XBegin{ get { return (-WidthN * x_res / 2, x_res) ; } private set { } }
 
+    public long Belt { get; set; } = 0;
+
     public Scan(long rowid, string site, string conveyor, DateTime chrono, double x_res, double y_res, double z_res, double z_off, double z_max, double z_min)
     {
       this.rowid = rowid;
@@ -166,15 +168,24 @@ namespace cads_gui.Data
 
   public class Conveyor
   {
-    public int Id { get; set; }
+    public long Id { get; set; }
     public string Site { get; set; }
     public string Name { get; set; }
-    public DateTime Installed { get; set; }
     public TimeZoneInfo Timezone { get; set; }
+    public long Belt { get; set; }
+  }
+
+  public class Belt
+  {
+    public long Id { get; set; }
+    public long Conveyor { get; set; }
+    public DateTime Installed { get; set; }
     public double PulleyCover { get; set; }
     public double CordDiameter { get; set; }
     public double TopCover { get; set; }
-
+    public double Length { get; set; }
+    public double Width { get; set; }
+    public long Splices { get; set; }
   }
 
   public class PlotInfo
