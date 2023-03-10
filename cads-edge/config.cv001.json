@@ -59,12 +59,13 @@
     "Site" : "jimblebar",
     "Name" : "cv001",
     "Installed" : "2023-01-14T00:00:00Z",
-    "PulleyCover" : 6.0,
-    "CordDiameter" : 4.3,
-    "TopCover" : 17.0,
+    "PulleyCover" : 7.0,
+    "CordDiameter" : 9.1,
+    "TopCover" : 14.0,
     "PulleyCircumference" : 2089.16,
     "Width" : 1600,
-    "Length" : 12665200
+    "Length" : 12665200,
+    "Splices" : 1
   },
   "webapi_urls" : {
     "add_conveyor" : ["http://localhost:5000/api/conveyors",false],
