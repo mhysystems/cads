@@ -70,11 +70,6 @@ namespace cads_gui.Data
       return data.Distinct().ToList();
     }
 
-    public async Task<(double, double, double)> GetBeltBoundary(string belt)
-    {
-      return await NoAsp.BeltBoundaryAsync(belt);
-    }
-
     public IEnumerable<Scan> GetScans(string site, string belt)
     {
       using var context = dBContext.CreateDbContext();
@@ -208,7 +203,7 @@ namespace cads_gui.Data
     public async Task<(double, float[])> GetBeltProfileAsync(double y, long num_y_samples, Scan belt)
     {
       var dbpath = Path.GetFullPath(Path.Combine(_config.DBPath,belt.name));
-      var fs = await NoAsp.RetrieveFrameModular(dbpath, y, num_y_samples);
+      var fs = await NoAsp.RetrieveFrameModular(dbpath, y, num_y_samples,0);
       return NoAsp.make_same_widthf(fs, belt.x_res);
     }
 
@@ -394,15 +389,6 @@ namespace cads_gui.Data
 
     }
  
-
-    public async Task<double> GetLength(string belt)
-    {
-      var (min, max, _) = await GetBeltBoundary(belt);
-      return max - min;
-    }
-
-
-
   } // class
 
 } // namespace
