@@ -106,7 +106,7 @@ namespace cads_gui.Data
     [NotMapped]
     public (double,double) XBegin{ get { return (-WidthN * x_res / 2, x_res) ; } private set { } }
 
-    public long Belt { get; set; } = 0;
+    public long Belt { get; set; } = 1;
     public int Orientation { get; set; } = -1;
 
     public Scan(long rowid, string site, string conveyor, DateTime chrono, double x_res, double y_res, double z_res, double z_off, double z_max, double z_min)

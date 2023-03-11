@@ -55,7 +55,7 @@
       belt = GuiState.Value.Belt;
       yCoord = GuiState.Value.Y;
     }else {
-      belt = Beltservice.GetBelts(site, conveyor).Last();
+      belt = Beltservice.GetScans(site, conveyor).Last();
     }
   }
 

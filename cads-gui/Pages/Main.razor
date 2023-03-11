@@ -13,7 +13,7 @@
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <SiteHeader ShowDraw site="@site" conveyor="@conveyor">
-  <SearchControls SelectZDepthParams="@LoadZDepthParamsAsync" DateChanged="@DateChanged" Belt="@belt"
+  <SearchControls SelectZDepthParams="@LoadZDepthParamsAsync" DateChanged="@DateChanged" Belt="@scan"
     JumpTo="@JumpToAsync" StepBack="@StepBackward" StepForward="@StepForward" Search="@SearchBelt" SaveZQueryParams="SaveZQueryParams" savedZDepthParams="savedZDepthParams"/>
 </SiteHeader>
 
@@ -23,10 +23,10 @@
     <MudItem xs="12" Class="d-flex" Style="height:40%">
 
       <MudTooltip Placement="Placement.End" Text="The circle represents the entire belt. Damage locations that match the search criteria are indicated in white. Clicking on the circle triggers the plot to jump to that location. If too many damage locations are found they are limited">
-      <DoughnutPlot @ref="doughnutPlot" Style="display:contents" Belt="@belt" Y="@UpdateYAsync" />
+      <DoughnutPlot @ref="doughnutPlot" Style="display:contents" Belt="@scan" Y="@UpdateYAsync" />
         </MudTooltip> 
       <MudContainer Class="d-flex flex-column ">
-        <ZDepthQuery @ref="zDepthQuery" Belt="belt"></ZDepthQuery>
+        <ZDepthQuery @ref="zDepthQuery" Belt="scan"></ZDepthQuery>
         <MudExpansionPanels Class="z-30">
           <MudExpansionPanel Class="overflow-auto" Dense="true" MaxHeight="270" Text="Search Results">
             <Ztable @ref="@zDepthTabe" selectedRow="@UpdateYAsync"></Ztable>
@@ -42,10 +42,10 @@
 
     <MudItem xs="12" Style="height:50%">
       <MudProgressLinear Color="Color.Secondary" Class="my-0" Value="@progressPercentage" />
-      <SurfacePlot @ref="surfacePlot" Belt="@belt" YIndex="@UpdateProfilePlotAsync"></SurfacePlot>
+      <SurfacePlot @ref="surfacePlot" Belt="@scan" YIndex="@UpdateProfilePlotAsync"></SurfacePlot>
     </MudItem>
     <MudItem xs="12" Style="height:10%">
-      <ProfilePlot @ref="profilePlot" Belt="@belt" DoubleSided="@(Beltservice.IsDoubledSided())"></ProfilePlot>
+      <ProfilePlot @ref="profilePlot" scan="@scan" belt="belt" DoubleSided="@(Beltservice.IsDoubledSided())"></ProfilePlot>
     </MudItem>
   </MudGrid>
 </MudContainer>
@@ -82,7 +82,8 @@
   }
   double progressPercentage = 0;
 
-  protected Scan belt { get; set; }
+  protected Scan? scan { get; set; }
+  protected Belt? belt { get; set; }
   protected IJSObjectReference? plotDataCache;
   protected IJSObjectReference? plotData;
   [Inject]
@@ -90,13 +91,21 @@
 
   protected override async Task OnInitializedAsync()
   {
-    var b = Beltservice.GetBelts(site, conveyor);
-    if(b.Any()) {
-      belt = b.Last();
-      var action = new BeltAction(belt);
+    var scans = Beltservice.GetScans(site, conveyor);
+    if(scans.Any()) {
+      scan = scans.Last();
+      var action = new BeltAction(scan);
       Dispatcher?.Dispatch(action);
-      savedZDepthParams = await Task.Run(() => Beltservice.GetSavedZDepthParams(belt) ?? new List<SavedZDepthParams>());
+      savedZDepthParams = await Task.Run(() => Beltservice.GetSavedZDepthParams(scan) ?? new List<SavedZDepthParams>());
+
+      var belts = Beltservice.GetBelt(scan);
+
+      if(belts.Any()) {
+        belt = belts.Last();
+      }
+      
     }
+
   }
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -124,15 +133,15 @@
 
   async Task StepForward()
   {
-    currentY += (belt.y_res * 1024);
-    currentY = NoAsp.Mod(currentY, belt.Ymax);
+    currentY += (scan.y_res * 1024);
+    currentY = NoAsp.Mod(currentY, scan.Ymax);
     await UpdateYAsync(currentY);
   }
 
   async Task StepBackward()
   {
-    currentY -= (belt.y_res * 1024);
-    currentY = NoAsp.Mod(currentY, belt.Ymax);
+    currentY -= (scan.y_res * 1024);
+    currentY = NoAsp.Mod(currentY, scan.Ymax);
     await UpdateYAsync(currentY);
   }
 
@@ -173,13 +182,13 @@
     try
     {
       if(!Beltservice.IsDoubledSided()) {
-        var plotDataPromise = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData", belt.name, currentY, 512, 512);
+        var plotDataPromise = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData", scan.name, currentY, 512, 512);
 
         await fn(plotDataPromise);
         await profilePlot.UpdatePlotAsync(plotDataPromise);
       }else {
-        var plotDataPromiseBottom = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData", belt.name, currentY+4000, 512, 512);
-        var plotDataPromiseTop = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData", belt.name, currentY, 512, 512);
+        var plotDataPromiseBottom = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData", scan.name, currentY+4000, 512, 512);
+        var plotDataPromiseTop = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData", scan.name, currentY, 512, 512);
 
         await surfacePlot.UpdatePlotDoubleSidedAsync(plotDataPromiseTop,plotDataPromiseBottom);
         await profilePlot.UpdatePlotDoubleSidedAsync(plotDataPromiseTop,plotDataPromiseBottom);
@@ -211,7 +220,7 @@
     if (b.Any())
     {
       Snackbar.Add($"Loading belt scan on {DateOnly.FromDateTime(date.Value)}", Severity.Info);
-      belt = b.Last();
+      scan = b.Last();
       await UpdateYAsync(currentY);
       StateHasChanged();
     }
@@ -222,68 +231,11 @@
   }
 
 
-  async Task SearchBelt1()
-  {
-
-    var scan = zDepthQuery.SearchParameters;
-    doughnutPlot.AnimateSearch = true;
-
-    await Task.Delay(1);
-
-    //z_depth_value.Clear();
-
-    var procn = Environment.ProcessorCount;
-
-    long y_len = 1 + ((long)belt.YmaxN / procn);
-    var offsets = from number in Enumerable.Range(0, procn) select (number * y_len + 1, y_len);
-
-    P3 zmin = new P3(0, 0, Double.MaxValue);
-
-    var zDepth = new ConcurrentBag<List<ZDepth>>();
-    //foreach(var offset in offsets)
-    //Parallel.ForEach(offsets, async (offset) =>
-    //var ts = offsets.Select(async (offset) =>
-    try
-    {
-      await Parallel.ForEachAsync(offsets, async (offset, token) =>
-      {
-        logger.LogDebug("Parallel.ForEach Thread ID: " + System.Threading.Thread.CurrentThread.ManagedThreadId);
-
-        await foreach (var z in Beltservice.BeltScanAsync(scan.Width, scan.Length, scan.Percentage, scan.Depth, belt,
-  offset.Item1, offset.Item2))
-        {
-          var (xs, pz) = z;
-          zmin = zmin.z < pz.z ? zmin : pz;
-          zDepth.Add(xs);
-          // z_depth_value.AddRange(xs);
-        }
-      });
-    }
-    catch (Exception e)
-    {
-      logger.LogError(e.Message);
-    }
-
-
-    if (zDepth.Any())
-    {
-      doughnutPlot.data = zDepth.SelectMany(i => i).OrderBy(i => i.y).Select(d => new
-      PlotInfo(d.y, belt.FrameLength, d.z.z, "")).Take(1024).ToList();
-      zDepthTabe.data = zDepth.SelectMany(i => i).Take(1024).ToList();
-      var fn = zDepthQuery.MakeAreaOfInterest();
-      surfacePlot.HighlightSurface(fn);
-
-    }
-
-    doughnutPlot.AnimateSearch = false;
-
-  }
-
   async Task SaveZQueryParams(string name){
     var s = new SavedZDepthParams{
       Name = name,
-      Site = belt.site,
-      Conveyor = belt.conveyor,
+      Site = scan.site,
+      Conveyor = scan.conveyor,
       Width = zDepthQuery.SearchParameters.Width,
       Length = zDepthQuery.SearchParameters.Length,
       Depth = zDepthQuery.SearchParameters.Depth,
@@ -294,7 +246,7 @@
 
     await zDepthQuery.LoadZDepthParamsAsync(s);
     Beltservice.AddDamage(s);
-    savedZDepthParams = Beltservice.GetSavedZDepthParams(belt);
+    savedZDepthParams = Beltservice.GetSavedZDepthParams(scan);
     StateHasChanged();
   }
   async Task SearchBelt()
@@ -306,14 +258,14 @@
 
     try
     {
-      var zDepth = await Beltservice.BeltScanAsync2(zDepthQuery.SearchParameters, belt, limit);
+      var zDepth = await Beltservice.BeltScanAsync2(zDepthQuery.SearchParameters, scan, limit);
       
       if(zDepth.Count > limit) {
         Snackbar.Add($"Too many results. Limited to {limit}", Severity.Warning);
       }
 
       doughnutPlot.data = zDepth.OrderBy(i => i.y).Take((int)limit).Select(d => new
-      PlotInfo(d.y, belt.FrameLength, d.z.z, "")).ToList();
+      PlotInfo(d.y, scan.FrameLength, d.z.z, "")).ToList();
       
       zDepthTabe.data = zDepth;
       var fn = zDepthQuery.MakeAreaOfInterest();

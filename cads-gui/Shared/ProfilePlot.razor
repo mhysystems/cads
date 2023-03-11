@@ -32,34 +32,42 @@ plotly-container-two {
 @code {
 
   [Parameter]
-	public Scan Belt {get; set;}
+	public Scan? scan {get; set;}
+  [Parameter]
+	public Belt? belt {get; set;}
   [Parameter]
 	public bool DoubleSided {get; set;}
 
   
-  protected IJSObjectReference jsProfilePlot;
+  protected IJSObjectReference? jsProfilePlot;
   protected ElementReference jsPlot;  
+
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
     if (firstRender)
     {
       var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
-      var offset = DoubleSided ? Belt.z_min : Belt.z_min + 0;
-      jsProfilePlot = await module.InvokeAsync<IJSObjectReference>("mk_ProfilePlot",jsPlot,Belt.x_res,Belt.z_min + offset,Belt.z_max,17,4.3,6);
+      jsProfilePlot = await module.InvokeAsync<IJSObjectReference>("mk_ProfilePlot",jsPlot,scan?.x_res,scan?.z_min,scan?.z_max,belt?.TopCover,belt?.CordDiameter,belt?.PulleyCover);
     }
 
   }
 
   public async Task UpdatePlotAsync(IJSObjectReference plotDataPromise, int y = 1) {
-    await jsProfilePlot.InvokeVoidAsync("updatePlot",plotDataPromise, y);
+    if(jsProfilePlot is not null){
+      await jsProfilePlot.InvokeVoidAsync("updatePlot",plotDataPromise, y);
+    }
   }
 
   public async Task UpdateY(int y = 1) {
-    await jsProfilePlot.InvokeVoidAsync("updateY", y);
+    if(jsProfilePlot is not null){
+      await jsProfilePlot.InvokeVoidAsync("updateY", y);
+    }
   }
 
   public async Task UpdatePlotDoubleSidedAsync(IJSObjectReference plotDataPromiseTop, IJSObjectReference plotDataPromiseBottom, int y = 1) {
-    await jsProfilePlot.InvokeVoidAsync("updatePlotDoubleSided",plotDataPromiseTop, plotDataPromiseBottom, y);
+    if(jsProfilePlot is not null){
+      await jsProfilePlot.InvokeVoidAsync("updatePlotDoubleSided",plotDataPromiseTop, plotDataPromiseBottom, y);
+    }
   }
 
 }

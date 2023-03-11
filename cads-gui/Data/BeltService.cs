@@ -75,7 +75,7 @@ namespace cads_gui.Data
       return await NoAsp.BeltBoundaryAsync(belt);
     }
 
-    public IEnumerable<Scan> GetBelts(string site, string belt)
+    public IEnumerable<Scan> GetScans(string site, string belt)
     {
       using var context = dBContext.CreateDbContext();
       var data = from a in context.Scans orderby a.chrono where a.site == site && a.conveyor == belt select a;
@@ -97,6 +97,15 @@ namespace cads_gui.Data
       var data = from a in context.Scans orderby a.chrono where a.site == site && a.conveyor == conveyor select a;
       
       // context will be disposed without evaluation of data
+      return data.ToArray(); 
+
+    }
+
+    public IEnumerable<Belt> GetBelt(Scan scan)
+    {
+      using var context = dBContext.CreateDbContext();
+      var data = from a in context.Belts where a.Id == scan.Belt select a;
+      
       return data.ToArray(); 
 
     }
