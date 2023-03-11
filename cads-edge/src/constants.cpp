@@ -47,19 +47,32 @@ namespace {
 
   auto mk_conveyor_parameters(nlohmann::json config) {
 
-    auto Id = 0;
+    int64_t Id = 0;
     auto Site = config["conveyor"]["Site"].get<std::string>();
     auto Name = config["conveyor"]["Name"].get<std::string>();
-    cads::DateTime Installed;
-    std::istringstream in(config["conveyor"]["Installed"].get<std::string>());
-    in >> date::parse("%FT%TZ", Installed);
     auto Timezone =  date::current_zone()->name();
-    auto PulleyCover = config["conveyor"]["PulleyCover"].get<double>();
-    auto CordDiameter = config["conveyor"]["CordDiameter"].get<double>();
-    auto TopCover = config["conveyor"]["TopCover"].get<double>();
-    auto PulleyCircumference = config["conveyor"]["PulleyCircumference"].get<double>();
+    auto PulleyCircumference = config["belt"]["PulleyCircumference"].get<double>();
+    int64_t Belt = 0;
 
-    return cads::Conveyor{Id,Site,Name,Installed,Timezone,PulleyCover,CordDiameter,TopCover,PulleyCircumference};
+    return cads::Conveyor{Id,Site,Name,Timezone,PulleyCircumference,Belt};
+
+  }
+
+  auto mk_belt_parameters(nlohmann::json config) {
+
+    int64_t Id = 0;
+    cads::DateTime Installed;
+    std::istringstream in(config["belt"]["Installed"].get<std::string>());
+    in >> date::parse("%FT%TZ", Installed);
+    auto PulleyCover = config["belt"]["PulleyCover"].get<double>();
+    auto CordDiameter = config["belt"]["CordDiameter"].get<double>();
+    auto TopCover = config["belt"]["TopCover"].get<double>();
+    auto Length = config["belt"]["Length"].get<double>();
+    auto Width = config["belt"]["Width"].get<double>();
+    auto Splices = config["belt"]["Splices"].get<double>();
+    int64_t Conveyor = 0;
+
+    return cads::Belt{Id,Installed,PulleyCover,CordDiameter,TopCover,Length,Width,Splices,Conveyor};
 
   }
 
@@ -89,6 +102,7 @@ namespace cads {
   constraints global_constraints;
   profile_parameters global_profile_parameters;
   Conveyor global_conveyor_parameters;
+  Belt global_belt_parameters;
   webapi_urls global_webapi;
   Filters global_filters;
   SqliteGocatorConfig sqlite_gocator_config;
@@ -100,6 +114,7 @@ namespace cads {
     global_constraints = mk_contraints(config);
     global_profile_parameters = mk_profile_parameters(config);
     global_conveyor_parameters = mk_conveyor_parameters(config);
+    global_belt_parameters = mk_belt_parameters(config);
     global_webapi = mk_webapi_urls(config);
     global_filters = mk_filters(config);
     sqlite_gocator_config = mk_sqlite_gocator(config);
@@ -121,14 +136,27 @@ namespace cads {
     params_json["Id"] = Id;
     params_json["Site"] = Site;
     params_json["Name"] = Name;
-    params_json["Installed"] =  date::format("%FT%TZ", Installed);
     params_json["Timezone"] = Timezone;
+    params_json["PulleyCircumference"] = PulleyCircumference;
+    params_json["Belt"] = Belt;
+
+    return params_json.dump();
+  }
+
+  Belt::operator std::string() const {
+    
+    nlohmann::json params_json;
+  
+    params_json["Id"] = Id;
+    params_json["Installed"] =  date::format("%FT%TZ", Installed);
     params_json["PulleyCover"] = PulleyCover;
     params_json["CordDiameter"] = CordDiameter;
     params_json["TopCover"] = TopCover;
-    params_json["PulleyCircumference"] = PulleyCircumference;
- 
-
+    params_json["Length"] = Length;
+    params_json["Width"] = Length;
+    params_json["Splices"] = Splices;
+    params_json["Conveyor"] = Conveyor;
+    
     return params_json.dump();
   }
 

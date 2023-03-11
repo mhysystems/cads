@@ -173,13 +173,13 @@ namespace cads_gui.Data
     public string Site { get; set; }
     public string Name { get; set; }
     public TimeZoneInfo Timezone { get; set; }
+    public double PulleyCircumference { get; set; }
     public long Belt { get; set; }
   }
 
   public class Belt
   {
     public long Id { get; set; }
-    public long Conveyor { get; set; }
     public DateTime Installed { get; set; }
     public double PulleyCover { get; set; }
     public double CordDiameter { get; set; }
@@ -187,6 +187,7 @@ namespace cads_gui.Data
     public double Length { get; set; }
     public double Width { get; set; }
     public long Splices { get; set; }
+    public long Conveyor { get; set; }
   }
 
   public class PlotInfo

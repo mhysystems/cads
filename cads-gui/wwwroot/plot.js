@@ -305,14 +305,14 @@ class TrendPlot {
 }
 
 class ProfilePlot {
-  constructor(plotElement, x_res, z_min, z_max, topCover, cord, pulleyCover) {
+  constructor(plotElement, x_res, z_min, z_max, TopCover, Cord, PulleyCover) {
     this.plotElement = plotElement;
     this.xRes = x_res;
     this.zMax = z_max;
     this.zMin = z_min;
-    this.topCover = topCover;
-    this.cord = cord;
-    this.pulleyCover = pulleyCover;
+    this.topCover = TopCover;
+    this.cord = Cord;
+    this.pulleyCover = PulleyCover;
 
     this.layout = {
       autosize: true,

@@ -59,18 +59,22 @@
   "conveyor" : {
     "Site" : "jimblebar",
     "Name" : "cv001",
-    "Timezone" : ""
+    "Timezone" : "",
+    "PulleyCircumference" : 2089.16
   },
 
-  "Belt" : {
+  "belt" : {
     "Installed" : "2023-01-14T00:00:00Z",
     "PulleyCover" : 7.0,
     "CordDiameter" : 9.1,
     "TopCover" : 14.0,
-    "PulleyCircumference" : 2089.16,
     "Width" : 1600,
     "Length" : 12665200,
     "Splices" : 1
+  },
+
+  "scan" : {
+    "Orientation" : -1
   },
 
   "webapi_urls" : {
