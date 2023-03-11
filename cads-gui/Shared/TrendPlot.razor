@@ -24,14 +24,23 @@
 
   protected IJSObjectReference? jsPlot;
   protected ElementReference jsPlotElement;  
+
+  protected (int,float[],string)? updatePlot;
   
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
     if (firstRender)
     {
       selfReference = DotNetObjectReference.Create(this);
-      var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
+      await using var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
       jsPlot = await module.InvokeAsync<IJSObjectReference>("mk_TrendPlot",jsPlotElement,scan.z_min + 12,scan.z_max,selfReference);
+      
+      if(updatePlot is not null) {
+
+        var (index,z,color) = updatePlot.Value;
+        await UpdatePlotAsync(index,z,color);
+        updatePlot = null;
+      }
     }
   }
 
@@ -42,6 +51,8 @@
       var (xMin,xRes) = scan.XBegin;
       var xAxis = from x in Enumerable.Range(0,z.Count()) select (xMin + x * xRes) / 1000; 
       await jsPlot.InvokeVoidAsync("updatePlot",index,xAxis.ToArray(), z, color);
+    }else {
+      updatePlot = (index,z,color);
     }
   }
 
@@ -54,10 +65,12 @@
 
   async ValueTask IAsyncDisposable.DisposeAsync()
   {
+    updatePlot = null;
     try {
       selfReference?.Dispose();
     if (jsPlot is not null) {
      await jsPlot.DisposeAsync();
+     jsPlot = null;
     }
     }catch(Microsoft.JSInterop.JSDisconnectedException) {}
   }

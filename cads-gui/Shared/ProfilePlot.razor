@@ -1,5 +1,6 @@
 @namespace Cads
 
+@implements IAsyncDisposable
 @inject IJSRuntime JS
 
 <style>
@@ -42,7 +43,7 @@
   {
     if (firstRender)
     {
-      var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
+      await using var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
       jsProfilePlot = await
       module.InvokeAsync<IJSObjectReference>("mk_ProfilePlot", jsPlot, scan?.x_res, scan?.z_min, scan?.z_max, belt?.TopCover, belt?.CordDiameter, belt?.PulleyCover);
     }
@@ -74,4 +75,12 @@
     }
   }
 
+  async ValueTask IAsyncDisposable.DisposeAsync()
+  {
+    try {
+    if (jsProfilePlot is not null) {
+     await jsProfilePlot.DisposeAsync();
+    }
+    }catch(Microsoft.JSInterop.JSDisconnectedException) {}
+  }
 }

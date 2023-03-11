@@ -16,12 +16,20 @@
 
   protected IJSObjectReference? jsPlot;
   protected ElementReference jsPlotElement;  
+
+  protected (DateTime[],double[])? updatePlot;
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
     if (firstRender)
     {
-      var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
+      await using var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
       jsPlot = await module.InvokeAsync<IJSObjectReference>("mk_LinePlot",jsPlotElement);
+      
+      if(updatePlot is not null) {
+        var(x,y) = updatePlot.Value;
+        await UpdatePlotAsync(x,y);
+        updatePlot = null;
+      }
     }
 
   }
@@ -29,15 +37,19 @@
   public async Task UpdatePlotAsync(DateTime[] x, double[] y) {
     if(jsPlot is not null) {
       await jsPlot.InvokeVoidAsync("updatePlot",x,y);
+    }else {
+      updatePlot = (x,y);
     }
   }
 
   async ValueTask IAsyncDisposable.DisposeAsync()
   {
+    updatePlot = null;
     try {
-    if (jsPlot is not null) {
-     await jsPlot.DisposeAsync();
-    }
+      if (jsPlot is not null) {
+        await jsPlot.DisposeAsync();
+        jsPlot = null;
+      }
     }catch(Microsoft.JSInterop.JSDisconnectedException) {}
   }
 

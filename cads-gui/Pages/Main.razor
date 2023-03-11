@@ -10,10 +10,12 @@
 @inject ILogger<Main> logger
 @inject ISnackbar Snackbar
 
+
+@implements IAsyncDisposable
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <SiteHeader ShowDraw site="@site" conveyor="@conveyor">
-  <SearchControls SelectZDepthParams="@LoadZDepthParamsAsync" DateChanged="@DateChanged" scan="@scan"
+  <SearchControls SelectZDepthParams="@LoadZDepthParamsAsync" DateChanged="@DateChanged" Scan="@scan"
     JumpTo="@JumpToAsync" StepBack="@StepBackward" StepForward="@StepForward" Search="@SearchBelt"
     SaveZQueryParams="SaveZQueryParams" savedZDepthParams="savedZDepthParams" />
 </SiteHeader>
@@ -25,10 +27,10 @@
 
       <MudTooltip Placement="Placement.End"
         Text="The circle represents the entire belt. Damage locations that match the search criteria are indicated in white. Clicking on the circle triggers the plot to jump to that location. If too many damage locations are found they are limited">
-        <DoughnutPlot @ref="doughnutPlot" Style="display:contents" Belt="@scan" Y="@UpdateYAsync" />
+        <DoughnutPlot @ref="doughnutPlot" Style="display:contents" Scan="@scan" Y="@UpdateYAsync" />
       </MudTooltip>
       <MudContainer Class="d-flex flex-column ">
-        <ZDepthQuery @ref="zDepthQuery" Belt="scan"></ZDepthQuery>
+        <ZDepthQuery @ref="zDepthQuery" Scan="@scan"></ZDepthQuery>
         <MudExpansionPanels Class="z-30">
           <MudExpansionPanel Class="overflow-auto" Dense="true" MaxHeight="270" Text="Search Results">
             <Ztable @ref="@zDepthTabe" selectedRow="@UpdateYAsync"></Ztable>
@@ -44,10 +46,10 @@
 
     <MudItem xs="12" Style="height:50%">
       <MudProgressLinear Color="Color.Secondary" Class="my-0" Value="@progressPercentage" />
-      <SurfacePlot @ref="surfacePlot" Belt="@scan" YIndex="@UpdateProfilePlotAsync"></SurfacePlot>
+      <SurfacePlot @ref="surfacePlot" Scan="@scan" YIndex="@UpdateProfilePlotAsync"></SurfacePlot>
     </MudItem>
     <MudItem xs="12" Style="height:10%">
-      <ProfilePlot @ref="profilePlot" scan="@scan" belt="belt" DoubleSided="@(Beltservice.IsDoubledSided())">
+      <ProfilePlot @ref="profilePlot" Scan="@scan" Belt="@belt" DoubleSided="@(Beltservice.IsDoubledSided())">
       </ProfilePlot>
     </MudItem>
   </MudGrid>
@@ -84,12 +86,11 @@
     }
   }
   double progressPercentage = 0;
-  protected bool disposed = false;
 
   protected Scan scan { get; set; } = new();
   protected Belt belt { get; set; } = new();
   protected IJSObjectReference? plotDataCache;
-  protected IJSObjectReference? plotData;
+
   [Inject]
   public IDispatcher Dispatcher { get; set; } = default!;
 
@@ -119,7 +120,7 @@
     if (firstRender)
     {
       selfReference = DotNetObjectReference.Create(this);
-      var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
+      await using var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
       plotDataCache = await module.InvokeAsync<IJSObjectReference>("mk_PlotDataCache", selfReference);
       await UpdateYAsync(currentY);
     }
@@ -202,16 +203,16 @@
 
       if (!Beltservice.IsDoubledSided())
       {
-        var plotDataPromise = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData", scan.name, currentY, 512, 512);
+        await using var plotDataPromise = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData", scan.name, currentY, 512, 512);
 
         await fn(plotDataPromise);
         await profilePlot.UpdatePlotAsync(plotDataPromise);
       }
       else
       {
-        var plotDataPromiseBottom = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData", scan.name, currentY + 4000,
+        await using var plotDataPromiseBottom = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData", scan.name, currentY + 4000,
         512, 512);
-        var plotDataPromiseTop = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData", scan.name, currentY, 512,
+        await using var plotDataPromiseTop = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData", scan.name, currentY, 512,
         512);
 
         await surfacePlot.UpdatePlotDoubleSidedAsync(plotDataPromiseTop, plotDataPromiseBottom);
@@ -308,17 +309,15 @@
 
   }
 
-  protected override void Dispose(bool disposing)
+  async ValueTask IAsyncDisposable.DisposeAsync()
   {
-    if (!this.disposed)
-    {
-      if (disposing)
-      {
-        selfReference?.Dispose();
-        base.Dispose();
+    try {
+      selfReference?.Dispose();
+      if (plotDataCache is not null) {
+        await plotDataCache.DisposeAsync();
+        plotDataCache = null;
       }
-
-      disposed = true;
-    }
+    }catch(Microsoft.JSInterop.JSDisconnectedException) {}
   }
+
 }
