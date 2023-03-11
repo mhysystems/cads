@@ -16,7 +16,7 @@
   <MudSpacer/>
 </SiteHeader>
 
-@if(@GuiState.Value.Belt is not null) {
+@if((GuiState is not null) && GuiState.Value.Belt is not null) {
 <MudContainer MaxWidth="MaxWidth.False" Class="ma-0 pa-0"
   Style="width:calc(98vw - var(--mud-drawer-width-mini-left));height:calc(96vh - var(--mud-appbar-height)">
   <MudGrid Class="ma-0" Style="height:100%" Spacing=0>
@@ -47,11 +47,11 @@
   public string conveyor { get; set; } = string.Empty;
   
   [Inject]
-  private IState<GuiState> GuiState { get; set; }
+  private IState<GuiState>? GuiState { get; set; }
 
   protected override void OnInitialized()
   {
-    if(GuiState.Value.Belt.HasData) {
+    if((GuiState is not null) && GuiState.Value.Belt.HasData) {
       belt = GuiState.Value.Belt;
       yCoord = GuiState.Value.Y;
     }else {

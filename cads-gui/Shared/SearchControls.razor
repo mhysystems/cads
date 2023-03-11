@@ -10,7 +10,7 @@
   -->
 
   <MudAutocomplete Label="Saved Z Depth" Class="mud-palette-secondary"  @bind-Value="@selectedZDepthParamsString" T="string" ResetValueOnEmptyText="true" Clearable="true"
-   CoreceText="false" CoerceValue="true"Dense="true" SearchFunc="GetSavedZDepthParams2" ListClass="overload-mud-list-item-secondary" />
+   CoreceText="false" CoerceValue="true"Dense="true" SearchFunc="GetSavedZDepthParamsAsync" ListClass="overload-mud-list-item-secondary" />
 
   
   <MudTooltip Text="Save Z query parameters">
@@ -54,7 +54,7 @@
     }
   }
 
-  string _selectedZDepthParamsString;
+  string _selectedZDepthParamsString = string.Empty;
   private string selectedZDepthParamsString
   {
     get { return _selectedZDepthParamsString; }
@@ -84,7 +84,7 @@
   }
   
   [Parameter]
-  public List<SavedZDepthParams> savedZDepthParams { get; set; }
+  public List<SavedZDepthParams> savedZDepthParams { get; set; } = new();
   
   [Parameter]
   public EventCallback<SavedZDepthParams> SelectZDepthParams { get; set; }
@@ -93,7 +93,7 @@
   public EventCallback<string> SaveZQueryParams { get; set; }
 
   [Parameter]
-  public Scan scan { get; set; }
+  public Scan scan { get; set; } = new();
 
   [Parameter]
   public EventCallback<int> StepBack { get; set; }
@@ -161,20 +161,13 @@
     }
   }
 
-    protected async Task<IEnumerable<SavedZDepthParams>> GetSavedZDepthParams(string value)
-    {
-      if (string.IsNullOrEmpty(value)){
-        return savedZDepthParams;
-      }
-      return savedZDepthParams.Where(x => x.Name.Contains(value, StringComparison.InvariantCultureIgnoreCase));
-    }
-
-    protected async Task<IEnumerable<string>> GetSavedZDepthParams2(string value)
+    protected async Task<IEnumerable<string>> GetSavedZDepthParamsAsync(string value)
     {
       if (string.IsNullOrEmpty(value)){
         return savedZDepthParams.Select(e => e.Name);
       }
-      return savedZDepthParams.Where(x => x.Name.Contains(value, StringComparison.InvariantCultureIgnoreCase)).Select(e => e.Name);
+      
+      return await Task.Run(() => savedZDepthParams.Where(x => x.Name.Contains(value, StringComparison.InvariantCultureIgnoreCase)).Select(e => e.Name));
     }
 
 

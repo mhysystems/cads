@@ -35,7 +35,7 @@
     
 
     protected MudTable<Realtime> mudTable = new();
-    private HubConnection hubConnection;
+    private HubConnection? hubConnection;
     private List<Realtime> messages = new();
 
     protected override async Task OnInitializedAsync()

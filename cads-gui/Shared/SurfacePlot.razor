@@ -86,7 +86,7 @@
     }
   }
 
-  public async Task HighlightSurface(Func<float, bool> fn)
+  public async Task HighlightSurfaceAsync(Func<float, bool> fn)
   {
     var colorRange = GenerateColorRange(scan.z_max - sliderLow, fn).ToArray();
     if (jsSurfacePlot is not null)
