@@ -17,12 +17,12 @@
   <MudItem xs="12" Class="d-flex gap-0 ">
     <MudTooltip Text="X Range Minimum">
       <MudNumericField HideSpinButtons="true" Immediate="true" Class="XMin queryInput mt-0" T="double" @bind-Value="@XMin"
-        Min="@((int)(-Belt.Xmax / 2))" Max="0" Variant="Variant.Text" Format="N0">
+        Min="@((int)(-scan.Xmax / 2))" Max="0" Variant="Variant.Text" Format="N0">
       </MudNumericField>
     </MudTooltip>
     <MudTooltip Text="X Range Maximum">
       <MudNumericField HideSpinButtons="true" Immediate="true" Class="XMax queryInput mt-0" T="double" @bind-Value="@XMax"
-        Min="0" Max="@((int)Belt.Xmax)" Variant="Variant.Text" Format="N0"> 
+        Min="0" Max="@((int)scan.Xmax)" Variant="Variant.Text" Format="N0"> 
       </MudNumericField>
     </MudTooltip>
   </MudItem>
@@ -30,18 +30,18 @@
 
     <MudTooltip Text="X">
       <MudNumericField HideSpinButtons="true" Immediate="true" Class="X queryInput mt-0" T="int" @bind-Value="@X"
-        Min="0" Max="(int)Belt.Xmax" Variant="Variant.Text">
+        Min="0" Max="(int)scan.Xmax" Variant="Variant.Text">
       </MudNumericField>
     </MudTooltip>
 
     <MudTooltip Text="Y">
       <MudNumericField HideSpinButtons="true" Immediate="true" Class="Y queryInput mt-0" T="int" @bind-Value="@Y"
-        Min="0" Max="(int)Belt.FrameLength" Variant="Variant.Text">
+        Min="0" Max="(int)scan.FrameLength" Variant="Variant.Text">
       </MudNumericField>
     </MudTooltip>
     <MudTooltip Text="Z">
       <MudNumericField HideSpinButtons="true" Immediate="true" Class="Z queryInput mt-0" T="int" @bind-Value="@Z"
-        Min="(int)Belt.z_min" Max="(int)Belt.z_max" Variant="Variant.Text">
+        Min="(int)scan.z_min" Max="(int)scan.z_max" Variant="Variant.Text">
       </MudNumericField>
     </MudTooltip>
     <MudTooltip Text="%">
@@ -65,20 +65,20 @@
   protected SavedZDepthParams savedZDepthParams = new();
 
   [Parameter]
-  public Scan Belt { get; set; }
+  public Scan scan { get; set; } = new();
 
   public ZDepthQueryParameters SearchParameters { get { return new ZDepthQueryParameters(X, Y, Z, P / 100, XMin, XMax); } private set { } }
 
 
-  protected IJSObjectReference module;
+  protected IJSObjectReference? module;
 
-  protected override async Task OnInitializedAsync()
+  protected override void OnInitialized()
   {
-    Y = (int)Belt.FrameLength;
-    X = (int)Belt.Xmax;
-    Z = (int)Belt.z_max;
-    XMin = -Belt.Xmax/2;
-    XMax = Belt.Xmax/2;
+    Y = (int)scan.FrameLength;
+    X = (int)scan.Xmax;
+    Z = (int)scan.z_max;
+    XMin = -scan.Xmax/2;
+    XMax = scan.Xmax/2;
 
   }
 
@@ -87,7 +87,7 @@
     if (firstRender)
     {
       module = await JS.InvokeAsync<IJSObjectReference>("import", "./querybuilder.js");
-      await module.InvokeVoidAsync("initThree", Belt.Xmax, Belt.FrameLength, Belt.z_max - Belt.z_min);
+      await module.InvokeVoidAsync("initThree", scan.Xmax, scan.FrameLength, scan.z_max - scan.z_min);
       await module.InvokeVoidAsync("update", X, Y, Z);
     }
 

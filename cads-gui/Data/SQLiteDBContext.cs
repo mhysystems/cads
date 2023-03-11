@@ -12,10 +12,10 @@ namespace cads_gui.Data
           //Database.Migrate();
         }
 					string c(string timezone) {
-            if (!TimeZoneInfo.TryConvertWindowsIdToIanaId(timezone, out string iana)) {
+            if (!TimeZoneInfo.TryConvertWindowsIdToIanaId(timezone, out string? iana)) {
                 //throw new TimeZoneNotFoundException($"No IANA time zone found for {timezone}.");
             }
-              return iana;
+              return iana ?? "Etc/UTC";
           }
         protected override void OnModelCreating(ModelBuilder modelBuilder) {
 

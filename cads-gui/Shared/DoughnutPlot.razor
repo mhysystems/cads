@@ -177,10 +177,10 @@
       {
         @foreach (var (start, length, info, title) in _data)
         {
-          var fudgeFactor =  Belt.Ymax < 1000000 ? 1.0 : Belt.Ymax / 1000000;
+          var fudgeFactor =  scan.Ymax < 1000000 ? 1.0 : scan.Ymax / 1000000;
           var l = ((length) < 2.0 ? 2.0 : (length)) * fudgeFactor;
-          var th = l * (2 * Math.PI) / Belt.Ymax;
-          var s = (start) * (2 * Math.PI) / Belt.Ymax;
+          var th = l * (2 * Math.PI) / scan.Ymax;
+          var s = (start) * (2 * Math.PI) / scan.Ymax;
           var g = th > Math.PI ? 1 : 0;
 
           <path class="@category_color(info)" transform="rotate(@(s*180/Math.PI),300,300)" d="
@@ -202,7 +202,7 @@
 </MudContainer>
 
 @code {
-  private IJSObjectReference module;
+  private IJSObjectReference? module;
   private ElementReference svgElement;
 
   const double r = 290;
@@ -231,7 +231,7 @@
   }
 
   [Parameter]
-  public Scan Belt { get; set; }
+  public Scan scan { get; set; } = new();
 
   protected IEnumerable<PlotInfo> _data = new List<PlotInfo>().AsEnumerable();
   public IEnumerable<PlotInfo> data
@@ -277,7 +277,7 @@
       var midX = (g.right - g.x) / 2;
       var theta = Math.Atan2((e.ClientY - midY - g.y), (e.ClientX - midX - g.x));
       theta = theta < 0.0 ? 2 * Math.PI + theta : theta;
-      toolTipYpos = theta * Belt.Ymax / (2 * Math.PI);
+      toolTipYpos = theta * scan.Ymax / (2 * Math.PI);
     }
 
   }
@@ -291,7 +291,7 @@
       var midX = (g.right - g.x) / 2;
       var theta = Math.Atan2((e.ClientY - midY - g.y), (e.ClientX - midX - g.x));
       theta = theta < 0.0 ? 2 * Math.PI + theta : theta;
-      var y = theta * Belt.Ymax / (2 * Math.PI);
+      var y = theta * scan.Ymax / (2 * Math.PI);
       await Y.InvokeAsync(y);
     }
 
@@ -305,7 +305,7 @@
         await module.DisposeAsync();
       }
     }
-    catch (Microsoft.JSInterop.JSDisconnectedException ex)
+    catch (Microsoft.JSInterop.JSDisconnectedException)
     {
       // Ignore
     }

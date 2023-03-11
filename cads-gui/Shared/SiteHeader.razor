@@ -43,7 +43,7 @@
 
 @code {
   [Parameter]
-  public RenderFragment ChildContent { get; set; }
+  public RenderFragment? ChildContent { get; set; }
   [Parameter]
   public bool ShowDraw {get; set;} = false;
   [Parameter]
@@ -55,7 +55,7 @@
 
   public string logo = "https://cadswebsite.blob.core.windows.net/wwwroot/MHY Systems Logo.png";
 
-  protected override async Task OnInitializedAsync()
+  protected override void OnInitialized()
   {
     conveyors = BeltApi.GetConveyorsString(site);
     

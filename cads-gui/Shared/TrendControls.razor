@@ -71,21 +71,21 @@
   protected Func<DateTime,bool> IsDateDisabledFunc = (DateTime d) => false;
 
   [Parameter]
-  public Scan Scan {get; set;}
+  public Scan scan {get; set;} = new();
   
   [Parameter]
   public EventCallback<ValueTuple<DateTime?,int,string>> DateChanged {get; set;}
 
   protected override async Task OnInitializedAsync()
   { 
-    if(Scan.HasData) 
+    if(scan.HasData) 
     {
-      _scanDate0 = (await Beltservice.GetBeltDatesAsync(Scan)).LastOrDefault(DateTime.Now); 
+      _scanDate0 = (await Beltservice.GetBeltDatesAsync(scan)).LastOrDefault(DateTime.Now); 
       _scanDate1 = _scanDate0;
       _scanDate2 = _scanDate0;
       _scanDate3 = _scanDate0;
       
-      var validDates = await Beltservice.GetBeltDatesAsync(Scan);
+      var validDates = await Beltservice.GetBeltDatesAsync(scan);
       IsDateDisabledFunc = (DateTime d) => !validDates.Where(e => e.Date == d.Date).Any();
     }
   }
