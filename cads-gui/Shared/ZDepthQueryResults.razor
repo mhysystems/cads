@@ -2,7 +2,7 @@
 
 
       <DoughnutPlot belt_length=Belt.Ymax
-        data=@(_ZDepthValues.Select(d => new PlotInfo(d.y,Belt.FrameLength,d.z.z,"")).ToArray()) animate="@_AnimateSearch" Y=@SelectedY
+        data=@(_ZDepthValues.Select(d => new PlotInfo(d.y,scan.FrameLength,d.z.z,"")).ToArray()) animate="@_AnimateSearch" Y=@SelectedY
         SY=0 />
 
 
@@ -30,7 +30,7 @@
   }
 
   [Parameter]
-  public Scan Belt { get; set; }
+  public Scan scan { get; set; } = new();
 
   [Parameter]
   public EventCallback<ZDepth> SelectedRow { get; set; }

@@ -34,9 +34,9 @@
     public string Conveyor { get; set; } = String.Empty;
     
 
-    protected MudTable<Realtime> mudTable;
-    private HubConnection? hubConnection;
-    private List<Realtime> messages = new List<Realtime>();
+    protected MudTable<Realtime> mudTable = new();
+    private HubConnection hubConnection;
+    private List<Realtime> messages = new();
 
     protected override async Task OnInitializedAsync()
     {

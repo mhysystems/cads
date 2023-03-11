@@ -40,7 +40,7 @@
 @code {
   protected List<ZDepth> _data = new();
   protected int selectedRowNumber = -1;
-  protected MudTable<ZDepth> mudTable;
+  protected MudTable<ZDepth> mudTable = new();
   
   public List<ZDepth> data {
   get{ return _data;} 

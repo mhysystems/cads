@@ -169,25 +169,25 @@ namespace cads_gui.Data
 
   public class Conveyor
   {
-    public long Id { get; set; }
-    public string Site { get; set; }
-    public string Name { get; set; }
-    public TimeZoneInfo Timezone { get; set; }
-    public double PulleyCircumference { get; set; }
-    public long Belt { get; set; }
+    public long Id { get; set; } = 1;
+    public string Site { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public TimeZoneInfo Timezone { get; set; } = TimeZoneInfo.Utc;
+    public double PulleyCircumference { get; set; } = 0;
+    public long Belt { get; set; } = 1;
   }
 
   public class Belt
   {
-    public long Id { get; set; }
-    public DateTime Installed { get; set; }
-    public double PulleyCover { get; set; }
-    public double CordDiameter { get; set; }
-    public double TopCover { get; set; }
-    public double Length { get; set; }
-    public double Width { get; set; }
-    public long Splices { get; set; }
-    public long Conveyor { get; set; }
+    public long Id { get; set; } = 1;
+    public DateTime Installed { get; set; } = DateTime.UnixEpoch;
+    public double PulleyCover { get; set; } = 0;
+    public double CordDiameter { get; set; } = 0;
+    public double TopCover { get; set; } = 0;
+    public double Length { get; set; } = 0;
+    public double Width { get; set; } = 0;
+    public long Splices { get; set; } = 0;
+    public long Conveyor { get; set; } = 1;
   }
 
   public class PlotInfo

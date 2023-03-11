@@ -22,7 +22,7 @@
   <MudGrid Class="ma-0" Style="height:100%" Spacing=0>
 
 <MudItem xs="12"  Style="height:46%">
-<TrendPlot @ref="trendPlot" Belt="belt" XIndex="@UpdateWearPlot"></TrendPlot>
+<TrendPlot @ref="trendPlot" scan="belt" XIndex="@UpdateWearPlot"></TrendPlot>
 </MudItem>
     <MudItem xs="12" Style="height:46%">
     <LinePlot @ref="wearPlot" ></LinePlot>
@@ -33,18 +33,18 @@
 
 @code {
   
-  protected TrendPlot trendPlot;
-  protected LinePlot wearPlot;
+  protected TrendPlot trendPlot = new();
+  protected LinePlot wearPlot = new();
   
-  protected TrendControls trendControls;
+  protected TrendControls trendControls = new();
 
-  protected Scan belt {get; set;} = new Scan();
+  protected Scan belt {get; set;} = new();
   protected double yCoord;
 
   [Parameter]
-  public string site { get; set; }
+  public string site { get; set; } = string.Empty;
   [Parameter]
-  public string conveyor { get; set; }
+  public string conveyor { get; set; } = string.Empty;
   
   [Inject]
   private IState<GuiState> GuiState { get; set; }

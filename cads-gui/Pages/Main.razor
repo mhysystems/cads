@@ -13,7 +13,7 @@
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <SiteHeader ShowDraw site="@site" conveyor="@conveyor">
-  <SearchControls SelectZDepthParams="@LoadZDepthParamsAsync" DateChanged="@DateChanged" Belt="@scan"
+  <SearchControls SelectZDepthParams="@LoadZDepthParamsAsync" DateChanged="@DateChanged" scan="@scan"
     JumpTo="@JumpToAsync" StepBack="@StepBackward" StepForward="@StepForward" Search="@SearchBelt" SaveZQueryParams="SaveZQueryParams" savedZDepthParams="savedZDepthParams"/>
 </SiteHeader>
 
@@ -64,7 +64,7 @@
   ZDepthQuery zDepthQuery;
   DoughnutPlot doughnutPlot;
 
-  List<SavedZDepthParams> savedZDepthParams;
+  List<SavedZDepthParams> savedZDepthParams = new();
 
   
   Ztable zDepthTabe;
@@ -82,8 +82,8 @@
   }
   double progressPercentage = 0;
 
-  protected Scan? scan { get; set; }
-  protected Belt? belt { get; set; }
+  protected Scan scan { get; set; }
+  protected Belt belt { get; set; }
   protected IJSObjectReference? plotDataCache;
   protected IJSObjectReference? plotData;
   [Inject]
@@ -133,15 +133,23 @@
 
   async Task StepForward()
   {
-    currentY += (scan.y_res * 1024);
-    currentY = NoAsp.Mod(currentY, scan.Ymax);
+    
+    var yRes = scan.y_res;
+    var yMax = scan.y_res;
+
+    currentY += (yRes * 1024);
+    currentY = NoAsp.Mod(currentY, yMax);
     await UpdateYAsync(currentY);
   }
 
   async Task StepBackward()
   {
-    currentY -= (scan.y_res * 1024);
-    currentY = NoAsp.Mod(currentY, scan.Ymax);
+
+    var yRes = scan.y_res;
+    var yMax = scan.y_res;
+
+    currentY -= (yRes * 1024);
+    currentY = NoAsp.Mod(currentY, yMax);
     await UpdateYAsync(currentY);
   }
 

@@ -5,7 +5,7 @@ public class TimeZoneInfoConverter : JsonConverter<TimeZoneInfo>
 {
     public override TimeZoneInfo Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        var timezone = reader.GetString();
+        var timezone = reader.GetString() ?? "/Etc/UTC";
         return TimeZoneInfo.FindSystemTimeZoneById(timezone);
     }
 

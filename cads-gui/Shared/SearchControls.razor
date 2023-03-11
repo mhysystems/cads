@@ -2,7 +2,7 @@
 
 <MudToolBar Class="d-flex flex-grow-0 ma-0" Style="width:50%">
   <MudTooltip Text="Search belt for damage ">
-    <MudButton Class="mud-theme-secondary" StartIcon="@Icons.Filled.ImageSearch" Size="Size.Large" OnClick="@Search" />
+    <MudButton Class="mud-theme-secondary" StartIcon="@Icons.Material.Filled.ImageSearch" Size="Size.Large" OnClick="@Search" />
   </MudTooltip>
   
   <!--<MudAutocomplete Label="Saved Z Depth" @bind-Value="@selectedZDepthParams" T="SavedZDepthParams" ResetValueOnEmptyText="true"
@@ -18,14 +18,14 @@
   </MudTooltip>
 
   <MudTooltip Text="Step Backwards">
-    <MudButton Color="Color.Primary" StartIcon="@Icons.Filled.FastRewind" Size="Size.Large" OnClick="@StepBackAsync" />
+    <MudButton Color="Color.Primary" StartIcon="@Icons.Material.Filled.FastRewind" Size="Size.Large" OnClick="@StepBackAsync" />
   </MudTooltip>
   <MudTooltip Text="Jump">
     <MudNumericField Color="Color.Secondary" HideSpinButtons="true" ValueChanged="@JumpTo" Class="ma-0 flex-grow-0"
-      Variant="Variant.Text" Min="0" Max="@(Belt.Ymax / 1000)" />
+      Variant="Variant.Text" Min="0" Max="@(scan.Ymax / 1000)" />
   </MudTooltip>
   <MudTooltip Text="Step Forward">
-    <MudButton Color="Color.Primary" StartIcon="@Icons.Filled.FastForward" Size="Size.Large"
+    <MudButton Color="Color.Primary" StartIcon="@Icons.Material.Filled.FastForward" Size="Size.Large"
       OnClick="@StepForwardAsync" />
   </MudTooltip>
 
@@ -93,7 +93,7 @@
   public EventCallback<string> SaveZQueryParams { get; set; }
 
   [Parameter]
-  public Scan Belt { get; set; }
+  public Scan scan { get; set; }
 
   [Parameter]
   public EventCallback<int> StepBack { get; set; }
@@ -113,7 +113,7 @@
 
   protected override async Task OnInitializedAsync()
   {
-       _scanDate = (await Beltservice.GetBeltDatesAsync(Belt)).LastOrDefault(DateTime.Now);
+       _scanDate = (await Beltservice.GetBeltDatesAsync(scan)).LastOrDefault(DateTime.Now);
 
     if (savedZDepthParams.Any())
     {
@@ -132,7 +132,7 @@
       }
     }
 
-    var validDates = await Beltservice.GetBeltDatesAsync(Belt);
+    var validDates = await Beltservice.GetBeltDatesAsync(scan);
     IsDateDisabledFunc = (DateTime d) => !validDates.Where(e => e.Date == d.Date).Any();
 
   }
