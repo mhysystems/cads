@@ -29,21 +29,21 @@
   <MudDrawer Open="false" OpenMiniOnHover="false" Fixed="true" Variant="@DrawerVariant.Mini"
   ClipMode="DrawerClipMode.Always" Elevation="0">
   <MudNavMenu>
-    <MudNavLink Href="/" DisableRipple=true IconColor="Color.Tertiary" Match="NavLinkMatch.All" Icon="@Icons.Filled.Home">Home
+    <MudNavLink Href="/" DisableRipple=true IconColor="Color.Tertiary" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Home
     <MudTooltip Text="Home"/>
     </MudNavLink>
-    <MudNavLink Href=@($"/site/dashboard/{site}/{conveyor}")  DisableRipple=true Icon="@Icons.Filled.Dashboard">Dashboard</MudNavLink>
-    <MudNavLink DisableRipple=true Icon="@Icons.Filled.AccessAlarm">Alarm</MudNavLink>
-    <MudNavLink DisableRipple=true Icon="@Icons.Filled.OnlinePrediction">Prediction</MudNavLink>
-    <MudNavLink Href=@($"/site/trend/{site}/{conveyor}") DisableRipple=true Icon="@Icons.Filled.TrendingUp">Trend</MudNavLink>
-    <MudNavLink DisableRipple=true Icon="@Icons.Filled.Settings">Settings</MudNavLink>
+    <MudNavLink Href=@($"/site/dashboard/{site}/{conveyor}")  DisableRipple=true Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
+    <MudNavLink DisableRipple=true Icon="@Icons.Material.Filled.AccessAlarm">Alarm</MudNavLink>
+    <MudNavLink DisableRipple=true Icon="@Icons.Material.Filled.OnlinePrediction">Prediction</MudNavLink>
+    <MudNavLink Href=@($"/site/trend/{site}/{conveyor}") DisableRipple=true Icon="@Icons.Material.Filled.TrendingUp">Trend</MudNavLink>
+    <MudNavLink DisableRipple=true Icon="@Icons.Material.Filled.Settings">Settings</MudNavLink>
   </MudNavMenu>
 </MudDrawer>
 }
 
 @code {
   [Parameter]
-  public RenderFragment ChildContent { get; set; }
+  public RenderFragment? ChildContent { get; set; }
   [Parameter]
   public bool ShowDraw {get; set;} = false;
   [Parameter]
@@ -55,7 +55,7 @@
 
   public string logo = "https://cadswebsite.blob.core.windows.net/wwwroot/MHY Systems Logo.png";
 
-  protected override async Task OnInitializedAsync()
+  protected override void OnInitialized()
   {
     conveyors = BeltApi.GetConveyorsString(site);
     

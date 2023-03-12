@@ -73,7 +73,7 @@ namespace cads_gui.Data
     public List<SiteName> Sites { get; set; } = Array.Empty<SiteName>().ToList();
   }
 
-  public sealed class Belt
+  public sealed class Scan
   {
 
     public long rowid { get; set; } = 0;
@@ -106,7 +106,10 @@ namespace cads_gui.Data
     [NotMapped]
     public (double,double) XBegin{ get { return (-WidthN * x_res / 2, x_res) ; } private set { } }
 
-    public Belt(long rowid, string site, string conveyor, DateTime chrono, double x_res, double y_res, double z_res, double z_off, double z_max, double z_min)
+    public long Belt { get; set; } = 1;
+    public int Orientation { get; set; } = -1;
+
+    public Scan(long rowid, string site, string conveyor, DateTime chrono, double x_res, double y_res, double z_res, double z_off, double z_max, double z_min)
     {
       this.rowid = rowid;
       this.site = site;
@@ -120,7 +123,7 @@ namespace cads_gui.Data
       this.z_min = z_min;
     }
 
-    public Belt(Belt bc)
+    public Scan(Scan bc)
     {
       rowid = bc.rowid;
       site = bc.site;
@@ -135,7 +138,7 @@ namespace cads_gui.Data
     }
 
     // Required for ASP ApiController JSON Deserialization 
-    public Belt() { }
+    public Scan() { }
 
   }
 
@@ -166,15 +169,25 @@ namespace cads_gui.Data
 
   public class Conveyor
   {
-    public int Id { get; set; }
-    public string Site { get; set; }
-    public string Name { get; set; }
-    public DateTime Installed { get; set; }
-    public TimeZoneInfo Timezone { get; set; }
-    public double PulleyCover { get; set; }
-    public double CordDiameter { get; set; }
-    public double TopCover { get; set; }
+    public long Id { get; set; } = 1;
+    public string Site { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public TimeZoneInfo Timezone { get; set; } = TimeZoneInfo.Utc;
+    public double PulleyCircumference { get; set; } = 0;
+    public long Belt { get; set; } = 1;
+  }
 
+  public class Belt
+  {
+    public long Id { get; set; } = 1;
+    public DateTime Installed { get; set; } = DateTime.UnixEpoch;
+    public double PulleyCover { get; set; } = 0;
+    public double CordDiameter { get; set; } = 0;
+    public double TopCover { get; set; } = 0;
+    public double Length { get; set; } = 0;
+    public double Width { get; set; } = 0;
+    public long Splices { get; set; } = 0;
+    public long Conveyor { get; set; } = 1;
   }
 
   public class PlotInfo

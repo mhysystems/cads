@@ -51,5 +51,16 @@ valgrind --tool=memcheck --leak-check=full --show-leak-kinds=all --log-file="val
 GCC Address Sanitzer
 Uncomment meson.build
 
+# Windows Build
+Install vcpkg
+VCPKG_ROOT=C:\Users\me\scoop\apps\vcpkg\current
+CMAKE_TOOLCHAIN_FILE=%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake
+PKG_CONFIG=C:\Users\me\scoop\apps\vcpkg\current\installed\x64-windows\tools\pkgconf\pkgconf.exe
+PKG_CONFIG_PATH=C:\Users\me\scoop\apps\vcpkg\current\installed\x64-windows\debug\lib\pkgconfig
+VCPKG_DEFAULT_TRIPLET=x64-windows
+
+maybe cross file
+meson setup --cross-file meson-vcpkg.txt win
+
 
 

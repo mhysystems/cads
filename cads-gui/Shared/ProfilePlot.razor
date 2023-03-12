@@ -1,65 +1,86 @@
 @namespace Cads
-@using cads_gui.Data
 
+@implements IAsyncDisposable
 @inject IJSRuntime JS
 
 <style>
+  #container-profile {
+    width: 99%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
 
-#container-profile {
-  width:99%;
-  height:100%;
-	margin:0;
-	padding:0;
+  }
 
-}
+  plotly-container-two {
+    position: static;
+    display: block;
+    width: 100%;
+    height: 100%;
 
-plotly-container-two {
-  position: static;
-  display:block;
-  width:100%;
-  height:100%;
-
-}
-
-
+  }
 </style>
 
 <plotly-container-two>
-    <div id="container-profile" @ref="@jsPlot"></div>
+  <div id="container-profile" @ref="@jsPlot"></div>
 </plotly-container-two>
 
 
 @code {
 
   [Parameter]
-	public Belt Belt {get; set;}
+  public Scan? scan { get; set; }
   [Parameter]
-	public bool DoubleSided {get; set;}
+  public Belt? belt { get; set; }
+  [Parameter]
+  public bool DoubleSided { get; set; }
 
-  
-  protected IJSObjectReference jsProfilePlot;
-  protected ElementReference jsPlot;  
+
+  protected IJSObjectReference? jsProfilePlot;
+  protected ElementReference jsPlot;
+
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
     if (firstRender)
     {
-      var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
-      var offset = DoubleSided ? Belt.z_min : Belt.z_min + 0;
-      jsProfilePlot = await module.InvokeAsync<IJSObjectReference>("mk_ProfilePlot",jsPlot,Belt.x_res,Belt.z_min + offset,Belt.z_max);
+      await using var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
+      jsProfilePlot = await
+      module.InvokeAsync<IJSObjectReference>("mk_ProfilePlot", jsPlot, scan?.x_res, scan?.z_min, scan?.z_max, belt?.TopCover, belt?.CordDiameter, belt?.PulleyCover);
     }
 
   }
 
-  public async Task UpdatePlotAsync(IJSObjectReference plotDataPromise, int y = 1) {
-    await jsProfilePlot.InvokeVoidAsync("updatePlot",plotDataPromise, y);
+  public async Task UpdatePlotAsync(IJSObjectReference plotDataPromise, int y = 1)
+  {
+    if (jsProfilePlot is not null)
+    {
+      await jsProfilePlot.InvokeVoidAsync("updatePlot", plotDataPromise, y);
+    }
   }
 
-  public async Task UpdateY(int y = 1) {
-    await jsProfilePlot.InvokeVoidAsync("updateY", y);
+  public async Task UpdateYAsync(int y = 1)
+  {
+    if (jsProfilePlot is not null)
+    {
+      await jsProfilePlot.InvokeVoidAsync("updateY", y);
+    }
   }
 
-  public async Task UpdatePlotDoubleSidedAsync(IJSObjectReference plotDataPromiseTop, IJSObjectReference plotDataPromiseBottom, int y = 1) {
-    await jsProfilePlot.InvokeVoidAsync("updatePlotDoubleSided",plotDataPromiseTop, plotDataPromiseBottom, y);
+  public async Task UpdatePlotDoubleSidedAsync(IJSObjectReference plotDataPromiseTop, IJSObjectReference
+  plotDataPromiseBottom, int y = 1)
+  {
+    if (jsProfilePlot is not null)
+    {
+      await jsProfilePlot.InvokeVoidAsync("updatePlotDoubleSided", plotDataPromiseTop, plotDataPromiseBottom, y);
+    }
   }
 
+  async ValueTask IAsyncDisposable.DisposeAsync()
+  {
+    try {
+    if (jsProfilePlot is not null) {
+     await jsProfilePlot.DisposeAsync();
+    }
+    }catch(Microsoft.JSInterop.JSDisconnectedException) {}
+  }
 }

@@ -60,7 +60,7 @@ namespace cads_gui.Data
 
     [Route("/api/meta")]
     [HttpPost]
-    public async Task<IActionResult> Post_meta([FromBody] Belt json)
+    public async Task<IActionResult> Post_meta([FromBody] Scan json)
     {
       await beltservice.StoreBeltConstantsAsync(json);
       return Ok();

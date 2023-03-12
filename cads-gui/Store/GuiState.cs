@@ -5,12 +5,12 @@ namespace Fluxor.Blazor.Store
 	[FeatureState]
 	public class GuiState
 	{
-		public Belt Belt { get; } = new Belt();
+		public Scan scan { get; } = new Scan();
     public double Y { get; }
     private GuiState(){}
-		public GuiState(Belt b, double y)
+		public GuiState(Scan b, double y)
 		{
-			Belt = b;
+			scan = b;
       Y = y;
 		}
 	}
@@ -21,6 +21,6 @@ namespace Fluxor.Blazor.Store
 		public static GuiState ReduceBeltAction(GuiState state, BeltAction action) => new (b: action.Belt, y:state.Y);
 
     [ReducerMethod]
-		public static GuiState ReduceYAction(GuiState state, YAction action) => new (b: state.Belt, y:action.Y);
+		public static GuiState ReduceYAction(GuiState state, YAction action) => new (b: state.scan, y:action.Y);
 	}
 }

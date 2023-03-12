@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using cads_gui.Data;
 
@@ -10,20 +11,19 @@ using cads_gui.Data;
 namespace cadsgui.Migrations
 {
     [DbContext(typeof(SQLiteDBContext))]
-    partial class SQLiteDBContextModelSnapshot : ModelSnapshot
+    [Migration("20230310015114_RenameBelt")]
+    partial class RenameBelt
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "7.0.2");
 
-            modelBuilder.Entity("cads_gui.Data.Belt", b =>
+            modelBuilder.Entity("cads_gui.Data.Conveyor", b =>
                 {
-                    b.Property<long>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<long>("Conveyor")
                         .HasColumnType("INTEGER");
 
                     b.Property<double>("CordDiameter")
@@ -32,40 +32,11 @@ namespace cadsgui.Migrations
                     b.Property<DateTime>("Installed")
                         .HasColumnType("TEXT");
 
-                    b.Property<double>("Length")
-                        .HasColumnType("REAL");
-
-                    b.Property<double>("PulleyCover")
-                        .HasColumnType("REAL");
-
-                    b.Property<long>("Splices")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<double>("TopCover")
-                        .HasColumnType("REAL");
-
-                    b.Property<double>("Width")
-                        .HasColumnType("REAL");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Belts");
-                });
-
-            modelBuilder.Entity("cads_gui.Data.Conveyor", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<long>("Belt")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<double>("PulleyCircumference")
+                    b.Property<double>("PulleyCover")
                         .HasColumnType("REAL");
 
                     b.Property<string>("Site")
@@ -75,6 +46,9 @@ namespace cadsgui.Migrations
                     b.Property<string>("Timezone")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<double>("TopCover")
+                        .HasColumnType("REAL");
 
                     b.HasKey("Id");
 
@@ -121,12 +95,6 @@ namespace cadsgui.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<long>("Belt")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Orientation")
-                        .HasColumnType("INTEGER");
-
                     b.Property<double>("WidthN")
                         .HasColumnType("REAL");
 
@@ -167,7 +135,7 @@ namespace cadsgui.Migrations
 
                     b.HasKey("rowid");
 
-                    b.ToTable("Scans");
+                    b.ToTable("belt");
                 });
 #pragma warning restore 612, 618
         }

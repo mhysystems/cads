@@ -65,52 +65,56 @@ namespace cads_gui.Data
     public IEnumerable<string> GetConveyorsString(string site)
     {
       using var context = dBContext.CreateDbContext();
-      var data = from row in context.belt where row.site == site select row.conveyor;
+      var data = from row in context.Scans where row.site == site select row.conveyor;
 
       return data.Distinct().ToList();
     }
 
-    public async Task<(double, double, double)> GetBeltBoundary(string belt)
-    {
-      return await NoAsp.BeltBoundaryAsync(belt);
-    }
-
-    public IEnumerable<Belt> GetBelts(string site, string belt)
+    public IEnumerable<Scan> GetScans(string site, string belt)
     {
       using var context = dBContext.CreateDbContext();
-      var data = from a in context.belt orderby a.chrono where a.site == site && a.conveyor == belt select a;
+      var data = from a in context.Scans orderby a.chrono where a.site == site && a.conveyor == belt select a;
       
       return data.ToList();
     }
 
-    public List<Belt> GetBelts(string site, string belt, DateTime chrono)
+    public List<Scan> GetBelts(string site, string belt, DateTime chrono)
     {
       using var context = dBContext.CreateDbContext();
-      var data = from a in context.belt orderby a.chrono where a.site == site && a.conveyor == belt && a.chrono.Date == chrono.Date select a;
+      var data = from a in context.Scans orderby a.chrono where a.site == site && a.conveyor == belt && a.chrono.Date == chrono.Date select a;
       
       return data.ToList();
     }
 
-    public IEnumerable<Belt> GetBeltsAsync(string site, string conveyor)
+    public IEnumerable<Scan> GetBeltsAsync(string site, string conveyor)
     {
       using var context = dBContext.CreateDbContext();
-      var data = from a in context.belt orderby a.chrono where a.site == site && a.conveyor == conveyor select a;
+      var data = from a in context.Scans orderby a.chrono where a.site == site && a.conveyor == conveyor select a;
       
       // context will be disposed without evaluation of data
       return data.ToArray(); 
 
     }
 
-    public async Task<IEnumerable<DateTime>> GetBeltDatesAsync(Belt belt)
+    public IEnumerable<Belt> GetBelt(Scan scan)
     {
       using var context = dBContext.CreateDbContext();
-      return await Task.Run(() => (from a in context.belt orderby a.chrono where a.site == belt.site && a.conveyor == belt.conveyor select a.chrono).ToArray());
+      var data = from a in context.Belts where a.Id == scan.Belt select a;
+      
+      return data.ToArray(); 
+
+    }
+
+    public async Task<IEnumerable<DateTime>> GetBeltDatesAsync(Scan belt)
+    {
+      using var context = dBContext.CreateDbContext();
+      return await Task.Run(() => (from a in context.Scans orderby a.chrono where a.site == belt.site && a.conveyor == belt.conveyor select a.chrono).ToArray());
     }
 
     public async Task UpdateBeltPropertyYmax(string site, string belt, DateTime chrono, double ymax, long ymaxn)
     {
       using var context = dBContext.CreateDbContext();
-      var data = from a in context.belt where a.site == site && a.conveyor == belt && a.chrono == chrono select a;
+      var data = from a in context.Scans where a.site == site && a.conveyor == belt && a.chrono == chrono select a;
 
       if (data.Any())
       {
@@ -124,7 +128,7 @@ namespace cads_gui.Data
     public async Task UpdateBeltPropertyWidthN(string site, string belt, DateTime chrono, double param)
     {
       using var context = dBContext.CreateDbContext();
-      var data = from a in context.belt where a.site == site && a.conveyor == belt && a.chrono == chrono select a;
+      var data = from a in context.Scans where a.site == site && a.conveyor == belt && a.chrono == chrono select a;
 
       if (data.Any())
       {
@@ -137,7 +141,7 @@ namespace cads_gui.Data
     public async Task UpdateBeltPropertyZmax(string site, string belt, DateTime chrono, double param)
     {
       using var context = dBContext.CreateDbContext();
-      var data = from a in context.belt where a.site == site && a.conveyor == belt && a.chrono == chrono select a;
+      var data = from a in context.Scans where a.site == site && a.conveyor == belt && a.chrono == chrono select a;
 
       if (data.Any())
       {
@@ -150,7 +154,7 @@ namespace cads_gui.Data
     public (double, int) SelectBeltPropertyZmax(string site, string belt, DateTime chrono)
     {
       using var context = dBContext.CreateDbContext();
-      var data = from a in context.belt where a.site == site && a.conveyor == belt && a.chrono == chrono select a;
+      var data = from a in context.Scans where a.site == site && a.conveyor == belt && a.chrono == chrono select a;
 
       if (data.Any())
       {
@@ -167,24 +171,24 @@ namespace cads_gui.Data
     {
       using var context = dBContext.CreateDbContext();
       // EFcore returns IQueryable which doesn't handle selecting tuples or order by very well, so convert to Enumerable
-      var rows = (from a in context.belt orderby a.chrono select a).ToList();
+      var rows = (from a in context.Scans orderby a.chrono select a).ToList();
       var sites = from r in rows group r by r.site into site select (site.Key, site.First().conveyor);
       return sites;
     }
 
 
-    public async Task StoreBeltConstantsAsync(Belt entry)
+    public async Task StoreBeltConstantsAsync(Scan entry)
     {
       using var context = dBContext.CreateDbContext();
       DateTime.SpecifyKind(entry.chrono,DateTimeKind.Utc);
-      context.belt.Add(entry);
+      context.Scans.Add(entry);
       await context.SaveChangesAsync();
     }
 
-    public async Task<int> AddConveyorAsync(Conveyor entry)
+    public async Task<long> AddConveyorAsync(Conveyor entry)
     {
       using var context = dBContext.CreateDbContext();
-      var q = context.Conveyors.Where(e => e.Name == entry.Name && e.Site == entry.Site && e.Installed == entry.Installed);
+      var q = context.Conveyors.Where(e => e.Name == entry.Name && e.Site == entry.Site);
       
       if(q.Any()) {
         return q.First().Id;
@@ -196,10 +200,10 @@ namespace cads_gui.Data
       
     }
 
-    public async Task<(double, float[])> GetBeltProfileAsync(double y, long num_y_samples, Belt belt)
+    public async Task<(double, float[])> GetBeltProfileAsync(double y, long num_y_samples, Scan belt)
     {
       var dbpath = Path.GetFullPath(Path.Combine(_config.DBPath,belt.name));
-      var fs = await NoAsp.RetrieveFrameModular(dbpath, y, num_y_samples);
+      var fs = await NoAsp.RetrieveFrameModular(dbpath, y, num_y_samples,0);
       return NoAsp.make_same_widthf(fs, belt.x_res);
     }
 
@@ -209,7 +213,7 @@ namespace cads_gui.Data
     }
 
     
-    public List<SavedZDepthParams> GetSavedZDepthParams(Belt belt)
+    public List<SavedZDepthParams> GetSavedZDepthParams(Scan belt)
     {
       using var context = dBContext.CreateDbContext();
       var rtn = from a in context.SavedZDepthParams where a.Conveyor == belt.conveyor && a.Site == belt.site select a;
@@ -229,120 +233,7 @@ namespace cads_gui.Data
 
     }
 
-    
-    /// <summary>
-    /// Search for areas of interest on a section of belt.
-    /// </summary>
-    /// <param name="X"> Length(mm) of area in X direction</param>
-    /// <param name="Y"> Length(mm) of area in Y direction</param>
-    /// <param name="p"> Percentage of points in area given true by fn</param>
-    /// <param name="fn"> Boolean function with z height as input.</param>
-    /// <returns></returns>
-    public async IAsyncEnumerable<(List<ZDepth>, P3)> BeltScanAsync(double X, double Y, double p, double Z, Belt BeltConstants, long offset, long y_len)
-    {
-
-      bool fn(float z) {
-        return z < Z;
-      }
-      const double cut_y = 9.0;
-
-      var dx = BeltConstants.x_res;
-      var dy = BeltConstants.y_res;
-
-      var area_sample_x = (long)Math.Ceiling(X / dx);
-      var area_sample_y = (long)Math.Ceiling(Y / dy);
-
-      var zy = y_len;
-
-      (double x_start, float[] zs) = await GetBeltProfileAsync(offset, y_len, BeltConstants);
-      var zx = zs.Length / zy;
-      area_sample_x = area_sample_x > zx ? zx : area_sample_x;
-
-
-      (double, P3) sub_area(long x, long y, long x_max, long y_max)
-      {
-
-        double total = 0;
-
-
-        var zmin = new P3(0.0, 0.0, Double.MaxValue);
-
-        for (long j = 0; j < y_max; j++)
-        {
-          for (long i = 0; i < x_max; i++)
-          {
-            var z = zs[(y + j) * zx + i + x];
-            if (!float.IsNaN(z) && z > cut_y) zmin = zmin.z < z ? zmin : new P3((i + x) * dx + x_start, (offset + j + y) * dy, z);
-
-            if (!float.IsNaN(z) && z > cut_y && fn(z))
-            {
-              total++;
-            }
-          }
-        }
-
-        return (total / (y_max * x_max), zmin);
-
-      };
-
-
-      (List<ZDepth>, P3) shift_x(long y, long ry)
-      {
-
-        long x;
-        var x_coord = new List<ZDepth>();
-        var zmin = new P3(0, 0, Double.MaxValue);
-
-        for (x = 0; (x + area_sample_x) <= zx; x += area_sample_x)
-        {
-          var (total, pz) = sub_area(x, y, area_sample_x, ry);
-          zmin = zmin.z < pz.z ? zmin : pz;
-
-          if (total >= p)
-          {
-            x_coord.Add(new ZDepth(x * dx + x_start, (y + offset) * dy, area_sample_x * dx, area_sample_y * dy, (long)(total*100), pz));
-          }
-        }
-
-        if (x < zx)
-        {
-          long rx = zx - x;
-          var (total, pz) = sub_area(x, y, rx, ry);
-          zmin = zmin.z < pz.z ? zmin : pz;
-
-          if (total >= p)
-          {
-            x_coord.Add(new ZDepth(x * dx + x_start, (y + offset) * dy, area_sample_x * dx, area_sample_y * dy, (long)(total*100), pz));
-          }
-        }
-
-        return (x_coord, zmin);
-      };
-
-      long y;
-      var r = new List<ZDepth>();
-      var zmin = new P3(0, 0, Double.MaxValue);
-
-      for (y = 0; (y + area_sample_y) <= zy; y += area_sample_y)
-      {
-        var (xs, pz) = shift_x(y, area_sample_y);
-        zmin = zmin.z < pz.z ? zmin : pz;
-        r.AddRange(xs);
-      }
-
-      if (y < zy)
-      {
-        long ry = zy - y;
-        var (xs, pz) = shift_x(y, ry);
-        zmin = zmin.z < pz.z ? zmin : pz;
-        r.AddRange(xs);
-      }
-
-      yield return (r, zmin); //Useless but will leave for now
-
-    }
-
-     public async Task<List<ZDepth>> BeltScanAsync2(ZDepthQueryParameters search, Belt belt, long limit) {
+     public async Task<List<ZDepth>> BeltScanAsync2(ZDepthQueryParameters search, Scan belt, long limit) {
       
       var db = AppendPath(NoAsp.EndpointToSQliteDbName(belt.site,belt.conveyor,belt.chrono));
       var xOff = - belt.Xmax / 2;
@@ -385,15 +276,6 @@ namespace cads_gui.Data
 
     }
  
-
-    public async Task<double> GetLength(string belt)
-    {
-      var (min, max, _) = await GetBeltBoundary(belt);
-      return max - min;
-    }
-
-
-
   } // class
 
 } // namespace
