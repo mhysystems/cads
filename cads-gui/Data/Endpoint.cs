@@ -32,7 +32,7 @@ namespace cads_gui.Data
       {
         if (len < 1) return NotFound();
 
-        var dbpath = Path.GetFullPath(Path.Combine(beltservice._config.DBPath,belt));
+        var dbpath = Path.GetFullPath(Path.Combine(beltservice.config.DBPath,belt));
         var frame = await NoAsp.RetrieveFrameModular(dbpath, y, len+1, left+1);
         var dbg = frame.Skip(1).SkipLast(1).SelectMany(x => x.z).ToArray();
         var builder = new FlatBufferBuilder(frame.Capacity);
@@ -94,7 +94,7 @@ namespace cads_gui.Data
       var (zmaxInit, err) = beltservice.SelectBeltPropertyZmax(site, belt, chrono);
       double zmax = err == 0 ? zmaxInit : 0;
 
-      var dbname = Path.Combine(beltservice._config.DBPath,NoAsp.EndpointToSQliteDbName(site, belt, chrono));
+      var dbname = Path.Combine(beltservice.config.DBPath,NoAsp.EndpointToSQliteDbName(site, belt, chrono));
       using var db = new ProfileData(dbname);
 
       while (cnt++ < pa.Count)

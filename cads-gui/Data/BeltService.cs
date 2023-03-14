@@ -36,13 +36,13 @@ namespace cads_gui.Data
   {
     private readonly IDbContextFactory<SQLiteDBContext> dBContext;
     private readonly ILogger<BeltService> _logger;
-    public readonly AppSettings _config;
+    public readonly AppSettings config;
 
     public BeltService(IDbContextFactory<SQLiteDBContext> db, ILogger<BeltService> logger, IOptions<AppSettings> config)
     {
       this.dBContext = db;
       this._logger = logger;
-      this._config = config.Value;
+      this.config = config.Value;
     }
 
     public IEnumerable<Conveyor> GetConveyors()
@@ -53,7 +53,7 @@ namespace cads_gui.Data
 
     public bool IsDoubledSided()
     {
-      return _config.DoubleSided;
+      return config.DoubleSided;
     }
 
     public IEnumerable<Conveyor> GetConveyors(string site)
@@ -202,14 +202,14 @@ namespace cads_gui.Data
 
     public async Task<(double, float[])> GetBeltProfileAsync(double y, long num_y_samples, Scan belt)
     {
-      var dbpath = Path.GetFullPath(Path.Combine(_config.DBPath,belt.name));
+      var dbpath = Path.GetFullPath(Path.Combine(config.DBPath,belt.name));
       var fs = await NoAsp.RetrieveFrameModular(dbpath, y, num_y_samples,0);
       return NoAsp.make_same_widthf(fs, belt.x_res);
     }
 
     
     public string AppendPath(string belt) {
-      return Path.GetFullPath(Path.Combine(_config.DBPath,belt));
+      return Path.GetFullPath(Path.Combine(config.DBPath,belt));
     }
 
     

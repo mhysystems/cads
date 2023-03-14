@@ -141,7 +141,7 @@ namespace cads_gui.Data
     {
 
       var frame = new List<Profile>();
-      var abslen = Math.Abs(len*2); // TODO
+      var abslen = Math.Abs(len);
 
       using var connection = new SqliteConnection("" +
         new SqliteConnectionStringBuilder
