@@ -51,6 +51,12 @@ namespace {
     auto Site = config["conveyor"]["Site"].get<std::string>();
     auto Name = config["conveyor"]["Name"].get<std::string>();
     auto Timezone =  date::current_zone()->name();
+    
+    if(config["conveyor"]["Timezone"].get<std::string>() != "use_os")
+    {
+      Timezone = config["conveyor"]["Timezone"].get<std::string>();
+    }
+
     auto PulleyCircumference = config["belt"]["PulleyCircumference"].get<double>();
     int64_t Belt = 0;
 
@@ -76,14 +82,24 @@ namespace {
 
   }
 
+  auto mk_scan_parameters(nlohmann::json config) {
+
+    auto Orientation = config["scan"]["Orientation"].get<int32_t>();
+
+    return cads::Scan{Orientation};
+
+  }
+
+
   auto mk_webapi_urls(nlohmann::json config) {
     using namespace std;
     
     auto add_conveyor = config["webapi_urls"]["add_conveyor"].get<cads::webapi_urls::value_type>();
     auto add_meta = config["webapi_urls"]["add_meta"].get<cads::webapi_urls::value_type>();
     auto add_belt = config["webapi_urls"]["add_belt"].get<cads::webapi_urls::value_type>();
+    auto add_scan = config["webapi_urls"]["add_scan"].get<cads::webapi_urls::value_type>();
 
-    return cads::webapi_urls{add_conveyor,add_meta,add_belt};
+    return cads::webapi_urls{add_conveyor,add_meta,add_belt,add_scan};
 
   }
 
@@ -103,6 +119,7 @@ namespace cads {
   profile_parameters global_profile_parameters;
   Conveyor global_conveyor_parameters;
   Belt global_belt_parameters;
+  Scan global_scan_parameters;
   webapi_urls global_webapi;
   Filters global_filters;
   SqliteGocatorConfig sqlite_gocator_config;
@@ -115,6 +132,7 @@ namespace cads {
     global_profile_parameters = mk_profile_parameters(config);
     global_conveyor_parameters = mk_conveyor_parameters(config);
     global_belt_parameters = mk_belt_parameters(config);
+    global_scan_parameters = mk_scan_parameters(config);
     global_webapi = mk_webapi_urls(config);
     global_filters = mk_filters(config);
     sqlite_gocator_config = mk_sqlite_gocator(config);
@@ -156,6 +174,15 @@ namespace cads {
     params_json["Width"] = Length;
     params_json["Splices"] = Splices;
     params_json["Conveyor"] = Conveyor;
+    
+    return params_json.dump();
+  }
+
+  Scan::operator std::string() const {
+    
+    nlohmann::json params_json;
+  
+    params_json["Orientation"] = Orientation;
     
     return params_json.dump();
   }

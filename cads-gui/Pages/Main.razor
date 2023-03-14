@@ -140,11 +140,11 @@
 
   async Task StepForward()
   {
-
+    var windowLen = Beltservice.config.NumDisplayLines;
     var yRes = scan.y_res;
     var yMax = scan.y_res;
 
-    currentY += (yRes * 1024);
+    currentY += (yRes * windowLen);
     currentY = NoAsp.Mod(currentY, yMax);
     await UpdateYAsync(currentY);
   }
@@ -152,10 +152,11 @@
   async Task StepBackward()
   {
 
+    var windowLen = Beltservice.config.NumDisplayLines;
     var yRes = scan.y_res;
     var yMax = scan.y_res;
 
-    currentY -= (yRes * 1024);
+    currentY -= (yRes * windowLen);
     currentY = NoAsp.Mod(currentY, yMax);
     await UpdateYAsync(currentY);
   }
@@ -194,6 +195,9 @@
 
     currentY = y;
     surfacePlot.Loading = true;
+    var windowLen = Beltservice.config.NumDisplayLines;
+    var windowBegin = (int)(windowLen / 2);
+    var frameLength = Beltservice.config.FrameLength;
     try
     {
       if (plotDataCache is null)
@@ -203,17 +207,17 @@
 
       if (!Beltservice.IsDoubledSided())
       {
-        await using var plotDataPromise = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData", scan.name, currentY, 512, 512);
+        await using var plotDataPromise = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData", scan.name, currentY,windowLen, windowBegin);
 
         await fn(plotDataPromise);
         await profilePlot.UpdatePlotAsync(plotDataPromise);
       }
       else
       {
-        await using var plotDataPromiseBottom = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData", scan.name, currentY + 4000,
-        512, 512);
-        await using var plotDataPromiseTop = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData", scan.name, currentY, 512,
-        512);
+        await using var plotDataPromiseBottom = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData", scan.name, currentY + frameLength,
+        windowLen, windowBegin);
+        await using var plotDataPromiseTop = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData", scan.name, currentY, windowLen,
+        windowBegin);
 
         await surfacePlot.UpdatePlotDoubleSidedAsync(plotDataPromiseTop, plotDataPromiseBottom);
         await profilePlot.UpdatePlotDoubleSidedAsync(plotDataPromiseTop, plotDataPromiseBottom);

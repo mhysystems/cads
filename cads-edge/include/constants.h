@@ -66,11 +66,18 @@ namespace cads {
     operator std::string() const;
   };
 
+  struct Scan {
+    int32_t Orientation;
+
+    operator std::string() const;
+  };
+
   struct webapi_urls {
     using value_type = std::tuple<std::string,bool>;
     value_type add_conveyor;
     value_type add_meta;
     value_type add_belt;
+    value_type add_scan;
   };
 
   struct Filters {

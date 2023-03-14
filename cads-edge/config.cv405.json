@@ -56,21 +56,34 @@
   },
 
   "conveyor" : {
-    "Site" : "whaleback",
+   "Site" : "whaleback",
     "Name" : "cv405",
+    "Timezone" : "use_os",
+    "PulleyCircumference" : 2613.8
+  },
+
+  "belt" : {
     "Installed" : "2023-01-14T00:00:00Z",
     "PulleyCover" : 6.0,
     "CordDiameter" : 4.3,
     "TopCover" : 17.0,
-    "PulleyCircumference" : 2613.8,
     "Width" : 1500,
-    "Length" : 901000
+    "Length" : 901000,
+    "Splices" : 1
   },
+
+  "scan" : {
+    "Orientation" : -1
+  },
+
+
   "webapi_urls" : {
     "add_conveyor" : ["http://localhost:5000/api/conveyors",false],
     "add_meta" : ["http://localhost:5000/api/meta",false],
-    "add_belt" : ["http://localhost:5000/api/belt",false]
+    "add_belt" : ["http://localhost:5000/api/belt",false],
+    "add_scan" : ["http://localhost:5000/api/scans",false]
   },
+  
   "nats_url" : "10.9.1.1",
   "upload_profile" : false,
   "base_url" : "https://server.mhysystems.com/api",

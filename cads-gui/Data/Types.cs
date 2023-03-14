@@ -70,6 +70,8 @@ namespace cads_gui.Data
     public string ConnectionString { get; set; } = String.Empty;
     public bool DoubleSided { get; set; } = false;
     public bool ShowInstructions {get; set;} = false;
+    public int NumDisplayLines {get; set;} = 1024;
+    public int FrameLength {get; set;} = 4000;
     public List<SiteName> Sites { get; set; } = Array.Empty<SiteName>().ToList();
   }
 
