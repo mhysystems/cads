@@ -57,7 +57,7 @@ namespace {
       Timezone = config["conveyor"]["Timezone"].get<std::string>();
     }
 
-    auto PulleyCircumference = config["belt"]["PulleyCircumference"].get<double>();
+    auto PulleyCircumference = config["conveyor"]["PulleyCircumference"].get<double>();
     int64_t Belt = 0;
 
     return cads::Conveyor{Id,Site,Name,Timezone,PulleyCircumference,Belt};
