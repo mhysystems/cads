@@ -327,15 +327,22 @@ namespace cads
 
   std::tuple<double,double> dbscan_test(z_type &z)
   {
+ 
     auto r = dbscan(z);
     recontruct_z(z,r);
 
     if(r.size() == 2) {
-      if(*begin(r[0][0]) < *begin(r[1][0])) {
-        return std::make_tuple(average(r[0]),average(r[0]));
-      }else {
-        return std::make_tuple(average(r[1]),average(r[1]));
-      }
+      // Only one side of pulley detected.
+      // Check heights. Assumes belt is higher than pulley.
+      auto avg = (*begin(r[0][0]) < *begin(r[1][0])) ? 
+        // Pulley found on left of belt
+        average(r[0]) 
+      :
+        // Pulley found on right of belt
+        average(r[1]) 
+      ;      
+      
+      return std::make_tuple(avg,avg);
     }else {
       return std::make_tuple(average(r.front()),average(r.back()));
     }
