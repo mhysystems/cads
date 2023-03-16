@@ -84,6 +84,11 @@ namespace cads {
     double SchmittThreshold;
   };
 
+  struct Dbscan {
+    double InCluster;
+    size_t MinPoints;
+  };
+
 
   extern constraints global_constraints;
   extern profile_parameters global_profile_parameters;
@@ -91,6 +96,7 @@ namespace cads {
   extern webapi_urls global_webapi;
   extern Filters global_filters;
   extern SqliteGocatorConfig sqlite_gocator_config;
+  extern Dbscan dbscan_config;
   
   void init_config(std::string f);
   void drop_config();

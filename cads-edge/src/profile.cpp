@@ -267,7 +267,7 @@ namespace cads
     return cluster(mk_zrange(z),z[0]);
   }
 
-  void cluster_merge(z_clusters& group, zrange c) 
+  void cluster_merge(z_clusters& group, zrange c, double in_cluster = dbscan_config.InCluster) 
   {
 
     if(group.size() < 1) {
@@ -280,7 +280,7 @@ namespace cads
     auto& x = group.back().back();
     auto group_avg = average_zrange(x);
     
-    if(std::abs(c_avg - group_avg) < 5 ) {
+    if(std::abs(c_avg - group_avg) < in_cluster ) {
         x = {begin(x),end(c)};
       
     }else {
@@ -289,12 +289,12 @@ namespace cads
 
   }
 
-  z_clusters dbscan(zrange z, std::vector<z_cluster> &&group = {})
+  z_clusters dbscan(zrange z, std::vector<z_cluster> &&group = {}, size_t min_points = dbscan_config.MinPoints)
   {
 
     auto [a,d] = cluster(z,*begin(z));
 
-    if(d > 20) {
+    if(d > min_points) {
       cluster_merge(group,a);
     }
 

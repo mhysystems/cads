@@ -111,6 +111,12 @@ namespace {
 
   }
 
+  auto mk_dbscan(nlohmann::json config) {
+    auto InCluster = config["dbscan"]["InCluster"].get<double>();
+    auto MinPoints = config["dbscan"]["MinPoints"].get<size_t>();
+    return cads::Dbscan{InCluster,MinPoints};
+
+  }
 }
 
 namespace cads {  
@@ -123,6 +129,7 @@ namespace cads {
   webapi_urls global_webapi;
   Filters global_filters;
   SqliteGocatorConfig sqlite_gocator_config;
+  Dbscan dbscan_config;
 
   
   void init_config(std::string f) {
@@ -136,6 +143,7 @@ namespace cads {
     global_webapi = mk_webapi_urls(config);
     global_filters = mk_filters(config);
     sqlite_gocator_config = mk_sqlite_gocator(config);
+    dbscan_config = mk_dbscan(config);
     global_config = config;
   }
 
