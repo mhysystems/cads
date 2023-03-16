@@ -164,7 +164,7 @@ namespace cads
             pro.y -= off;
           }
 
-          valid = true;
+          valid = false;
           y_max_length = global_config["y_max_length"].get<double>();
           trigger_length = std::numeric_limits<y_type>::lowest();
           lowest_correlation = std::numeric_limits<double>::max();
