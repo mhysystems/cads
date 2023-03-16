@@ -21,6 +21,7 @@ namespace cads {
     range_type range;
     double fps;
     bool forever;
+    double delay;
   };
   
   struct constraints {
@@ -60,7 +61,7 @@ namespace cads {
     double TopCover; 
     double Length;
     double Width;
-    double Splices;
+    int64_t Splices;
     int64_t Conveyor;
 
     operator std::string() const;
@@ -84,13 +85,20 @@ namespace cads {
     double SchmittThreshold;
   };
 
+  struct Dbscan {
+    double InCluster;
+    size_t MinPoints;
+  };
+
 
   extern constraints global_constraints;
   extern profile_parameters global_profile_parameters;
   extern Conveyor global_conveyor_parameters;
+  extern Belt global_belt_parameters;
   extern webapi_urls global_webapi;
   extern Filters global_filters;
   extern SqliteGocatorConfig sqlite_gocator_config;
+  extern Dbscan dbscan_config;
   
   void init_config(std::string f);
   void drop_config();

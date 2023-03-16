@@ -142,7 +142,7 @@
   {
     var windowLen = Beltservice.config.NumDisplayLines;
     var yRes = scan.y_res;
-    var yMax = scan.y_res;
+    var yMax = scan.Ymax;
 
     currentY += (yRes * windowLen);
     currentY = NoAsp.Mod(currentY, yMax);
@@ -154,7 +154,7 @@
 
     var windowLen = Beltservice.config.NumDisplayLines;
     var yRes = scan.y_res;
-    var yMax = scan.y_res;
+    var yMax = scan.Ymax;
 
     currentY -= (yRes * windowLen);
     currentY = NoAsp.Mod(currentY, yMax);

@@ -205,6 +205,47 @@ namespace cads
     return {r,false}; 
   }
 
+  void store_belt_id(int id, std::string name)
+  {
+    auto query = R"(UPDATE STATE SET BeltId = ? WHERE ROWID = 1)"s;
+    auto db_config_name = name.empty() ? global_config["state_db_name"].get<std::string>() : name;
+    auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
+    
+    auto err = sqlite3_bind_int(stmt.get(), 1, id);
+
+    if (err != SQLITE_OK)
+    {
+      spdlog::get("db")->error("store_conveyor_id: SQLite Error Code:{}", err);
+    }
+
+    tie(err, stmt) = db_step(move(stmt));
+
+    if (err != SQLITE_DONE)
+    {
+      spdlog::get("db")->error("db_step: SQLite Error Code:{}", err);
+    }
+  }
+
+  std::tuple<int,bool> fetch_belt_id(std::string name)
+  {
+    auto query = R"(SELECT BeltId FROM STATE WHERE ROWID = 1)"s;
+    auto db_config_name = name.empty() ? global_config["state_db_name"].get<std::string>() : name;
+    auto [stmt,db] = prepare_query(db_config_name, query);
+    auto err = SQLITE_OK;
+
+    tie(err, stmt) = db_step(move(stmt));
+    
+    if (err != SQLITE_ROW)
+    {
+      spdlog::get("db")->error("db_step: SQLite Error Code:{}", err);
+      return {0,true};
+    }
+    
+    int r = sqlite3_column_int(stmt.get(), 0);
+
+    return {r,false}; 
+  }
+
   
   bool create_profile_db(std::string name)
   {
@@ -307,8 +348,8 @@ namespace cads
     }
 
     vector<string> tables{
-      R"(CREATE TABLE IF NOT EXISTS STATE (DAILYUPLOAD TEXT NOT NULL, ConveyorId INTEGER NOT NULL))",
-      fmt::format(R"(INSERT INTO STATE(DAILYUPLOAD,ConveyorId) SELECT '{}',{} WHERE NOT EXISTS (SELECT * FROM STATE))", ts,0)
+      R"(CREATE TABLE IF NOT EXISTS STATE (DAILYUPLOAD TEXT NOT NULL, ConveyorId INTEGER NOT NULL, BeltId INTEGER NOT NULL))",
+      fmt::format(R"(INSERT INTO STATE(DAILYUPLOAD,ConveyorId,BeltId) SELECT '{}',{},{} WHERE NOT EXISTS (SELECT * FROM STATE))", ts,0,0)
     };
 
     int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);

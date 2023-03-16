@@ -15,8 +15,9 @@ namespace {
     auto current_length = config["sqlite_gocator"]["range"].get<cads::SqliteGocatorConfig::range_type>();
     auto fps = config["sqlite_gocator"]["fps"].get<double>();
     auto forever = config["sqlite_gocator"]["forever"].get<bool>();
+    auto delay = config["sqlite_gocator"]["delay"].get<double>();
 
-    return cads::SqliteGocatorConfig{current_length,fps,forever};
+    return cads::SqliteGocatorConfig{current_length,fps,forever,delay};
   }
 
   auto mk_contraints(nlohmann::json config) {
@@ -75,7 +76,7 @@ namespace {
     auto TopCover = config["belt"]["TopCover"].get<double>();
     auto Length = config["belt"]["Length"].get<double>();
     auto Width = config["belt"]["Width"].get<double>();
-    auto Splices = config["belt"]["Splices"].get<double>();
+    auto Splices = config["belt"]["Splices"].get<int64_t>();
     int64_t Conveyor = 0;
 
     return cads::Belt{Id,Installed,PulleyCover,CordDiameter,TopCover,Length,Width,Splices,Conveyor};
@@ -111,6 +112,12 @@ namespace {
 
   }
 
+  auto mk_dbscan(nlohmann::json config) {
+    auto InCluster = config["dbscan"]["InCluster"].get<double>();
+    auto MinPoints = config["dbscan"]["MinPoints"].get<size_t>();
+    return cads::Dbscan{InCluster,MinPoints};
+
+  }
 }
 
 namespace cads {  
@@ -123,6 +130,7 @@ namespace cads {
   webapi_urls global_webapi;
   Filters global_filters;
   SqliteGocatorConfig sqlite_gocator_config;
+  Dbscan dbscan_config;
 
   
   void init_config(std::string f) {
@@ -136,6 +144,7 @@ namespace cads {
     global_webapi = mk_webapi_urls(config);
     global_filters = mk_filters(config);
     sqlite_gocator_config = mk_sqlite_gocator(config);
+    dbscan_config = mk_dbscan(config);
     global_config = config;
   }
 
@@ -171,7 +180,7 @@ namespace cads {
     params_json["CordDiameter"] = CordDiameter;
     params_json["TopCover"] = TopCover;
     params_json["Length"] = Length;
-    params_json["Width"] = Length;
+    params_json["Width"] = Width;
     params_json["Splices"] = Splices;
     params_json["Conveyor"] = Conveyor;
     

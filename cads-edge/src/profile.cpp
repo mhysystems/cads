@@ -135,8 +135,6 @@ namespace cads
     return hist;
   }
 
-  using zrange = std::tuple<z_type::const_iterator,z_type::const_iterator>;
-  
   auto mk_zrange(const z_type &z) {
     return zrange{z.cbegin(),z.cend()};
   }
@@ -157,7 +155,7 @@ namespace cads
     return std::get<1>(r);
   }
 
-  auto average(zrange r) {
+  auto average_zrange(zrange r) {
     
     double size = 0;
     double sum = 0;
@@ -190,7 +188,7 @@ namespace cads
   }
 
  
-  auto average(const std::vector<zrange>& a) {
+  auto average_cluster(const z_cluster& a) {
     
     double size = 0;
     double sum = 0;
@@ -202,6 +200,21 @@ namespace cads
 
     return sum / size;
 
+  }
+
+  auto construct_ztype(const z_cluster& zv) {
+    
+    if(zv.size() < 1) {
+      return z_type();
+    }
+    
+    z_type out;
+
+    for(auto r : zv) {
+      std::copy(begin(r),end(r),std::back_inserter(out));
+    }
+
+    return out;
   }
 
   // Return sequence of clustered z values and offset into profile
@@ -254,7 +267,7 @@ namespace cads
     return cluster(mk_zrange(z),z[0]);
   }
 
-  void cluster_merge(std::vector<std::vector<zrange>>& group, zrange c) 
+  void cluster_merge(z_clusters& group, zrange c, double in_cluster = dbscan_config.InCluster) 
   {
 
     if(group.size() < 1) {
@@ -262,13 +275,12 @@ namespace cads
       return;
     }
     
-    auto c_avg =  average(c);
+    auto c_avg =  average_zrange(c);
 
-    bool push = true;
     auto& x = group.back().back();
-    auto group_avg = average(x);
+    auto group_avg = average_zrange(x);
     
-    if(std::abs(c_avg - group_avg) < 5 ) {
+    if(std::abs(c_avg - group_avg) < in_cluster ) {
         x = {begin(x),end(c)};
       
     }else {
@@ -277,16 +289,13 @@ namespace cads
 
   }
 
-  std::vector<std::vector<zrange>> dbscan(zrange z, std::vector<std::vector<zrange>> &&group = {})
+  z_clusters dbscan(zrange z, std::vector<z_cluster> &&group = {}, size_t min_points = dbscan_config.MinPoints)
   {
 
     auto [a,d] = cluster(z,*begin(z));
 
-    auto dbg = std::distance(begin(a),end(a));
-
-    if(d > 20) {
+    if(d > min_points) {
       cluster_merge(group,a);
-      //group.push_back(a);
     }
 
     if (end(a) != end(z))
@@ -297,13 +306,13 @@ namespace cads
     return group;
   }
 
-  std::vector<std::vector<zrange>>  dbscan(const z_type &z)
+  z_clusters dbscan(const z_type &z)
   {
     return dbscan(mk_zrange(z));
 
   }
 
-  void recontruct_z(z_type & z,const std::vector<std::vector<zrange>>& group) {
+  void recontruct_z(z_type & z,const z_clusters& group) {
 
     auto i = z.begin();
     for(const auto &g : group) {
@@ -325,28 +334,44 @@ namespace cads
 
   }
 
-  std::tuple<double,double> dbscan_test(z_type &z)
-  {
- 
-    auto r = dbscan(z);
-    recontruct_z(z,r);
 
-    if(r.size() == 2) {
-      // Only one side of pulley detected.
-      // Check heights. Assumes belt is higher than pulley.
-      auto avg = (*begin(r[0][0]) < *begin(r[1][0])) ? 
-        // Pulley found on left of belt
-        average(r[0]) 
-      :
-        // Pulley found on right of belt
-        average(r[1]) 
-      ;      
-      
-      return std::make_tuple(avg,avg);
-    }else {
-      return std::make_tuple(average(r.front()),average(r.back()));
+  double average(const z_type & v){
+    if(v.empty()){
+        return 0;
     }
 
+    auto const count = static_cast<float>(v.size());
+    return std::reduce(v.begin(), v.end()) / count;
+  }
+
+
+  std::tuple<double,double,z_clusters> pulley_levels_clustered(const z_type &z, std::function<double(const z_type &)> estimator)
+  {
+ 
+    auto clusters = dbscan(z);
+    auto avg_l = 0.0;
+    auto avg_r = 0.0;
+
+    if(clusters.size() == 2) {
+      // Only one side of pulley detected.
+      // Check heights. Assumes belt is higher than pulley.
+      auto avg = (*begin(clusters[0][0]) < *begin(clusters[1][0])) ? 
+        // Pulley found on left of belt
+        estimator(construct_ztype(clusters[0])) 
+      :
+        // Pulley found on right of belt
+        estimator(construct_ztype(clusters[1])) 
+      ; 
+
+      avg_l = avg;
+      avg_r = avg;
+
+    }else {
+      avg_l = estimator(construct_ztype(clusters.front()));
+      avg_r = estimator(construct_ztype(clusters.back()));
+    }
+    
+    return std::make_tuple(avg_l,avg_r,clusters);
   }
 
   std::tuple<z_element, z_element, bool> barrel_offset(const z_type &win, double z_height_mm)

@@ -215,6 +215,32 @@ namespace cads
     }
   }
 
+  std::tuple<int, bool> remote_addbelt(Belt params)
+  {
+    auto [url, enable] = global_webapi.add_belt;
+
+    if (enable)
+    {
+      std::string ps = params;
+      auto [text, err] = http_post_json(url, ps);
+      auto json = nlohmann::json::parse(text, nullptr, false);
+
+      if (json.is_number_integer())
+      {
+        auto conveyor_id = json.get<int>();
+        return {conveyor_id, err};
+      }
+      else
+      {
+        return {0, true};
+      }
+    }
+    else
+    {
+      return {0, true};
+    }
+  }
+
   std::string mk_post_profile_url(std::string ts)
   {
     auto endpoint_url = global_config["base_url"].get<std::string>() + "/belt";
@@ -356,6 +382,7 @@ namespace cads
     auto db_name = global_config["profile_db_name"].get<std::string>();
     auto [params, err] = fetch_profile_parameters(db_name);
     auto [Ymin, Ymax, YmaxN, WidthN, err2] = fetch_belt_dimensions(revid, last_idx, db_name);
+    auto [belt_id, err3] = fetch_belt_id();
 
     params_json["site"] = global_conveyor_parameters.Site;
     params_json["conveyor"] = global_conveyor_parameters.Name;
@@ -368,6 +395,7 @@ namespace cads
     params_json["Ymax"] = belt_length;
     params_json["YmaxN"] = YmaxN;
     params_json["WidthN"] = WidthN;
+    params_json["Belt"] = belt_id;
 
     if (err == 0 && err2 == 0)
     {

@@ -74,6 +74,14 @@ namespace cads_gui.Data
       return new JsonResult(Id);
     }
 
+    [Route("/api/belts")]
+    [HttpPost]
+    public async Task<IActionResult> Post_BeltsAsync([FromBody] Belt json)
+    {
+      var Id = await beltservice.AddBeltsAsync(json);
+      return new JsonResult(Id);
+    }
+
 
     [Route("/api/belt/{site}/{belt}/{chrono}")]
     [HttpPost]
