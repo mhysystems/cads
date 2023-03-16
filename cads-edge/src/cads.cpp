@@ -414,6 +414,8 @@ namespace
     auto fn = encoder_distance_id(csp); //encoder_distance_estimation(csp); //
     const auto [z_min_unbiased,z_max_unbiased] = global_constraints.ZUnbiased;
 
+    auto pulley_estimator = mk_pulleyfitter(-412.0,z_resolution);
+
     do
     {
 
@@ -426,7 +428,7 @@ namespace
       }
 
       auto p = get<profile>(get<1>(m));
-      auto [pulley_left,pulley_right,ignored] = pulley_levels_clustered(p.z,average);
+      auto [pulley_left,pulley_right,ignored] = pulley_levels_clustered(p.z,pulley_estimator);
       p.z.insert(p.z.begin(),20,(float)pulley_left);
       p.z.insert(p.z.end(),20,(float)pulley_right);
 

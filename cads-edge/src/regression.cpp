@@ -174,7 +174,7 @@ void belt_model(Eigen::VectorXf &z, float height, float x_offset, float z_offset
 
 
 
-std::function<double(std::vector<float>)>  mk_pulleyfitter(float init_z, float z_res) {
+std::function<double(std::vector<float>)>  mk_pulleyfitter(float z_res,float init_z) {
     
     const auto z_index = 0;
 
@@ -237,8 +237,6 @@ std::function<double(std::vector<float>)>  mk_pulleyfitter(float init_z, float z
   LMFunctor functor(z_res);
   
   return [=](std::vector<float> z) mutable -> double {
-    auto f = z | std::views::filter([](float a) { return !std::isnan(a);});
-    z = decltype(z)(f.begin(),f.end());
     functor.belt_z = Eigen::Map<Eigen::VectorXf>(z.data(), z.size());
 
     Eigen::LevenbergMarquardt<LMFunctor, float> lm(functor);
