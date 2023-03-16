@@ -2,8 +2,9 @@
   "data_source" : "../../profiles/rawprofile_cv405_2023-03-07.db",
   "sqlite_gocator" : {
     "range" : [0,9007199254740991],
-    "fps" : 480,
-    "forever" : true
+    "fps" : 980,
+    "forever" : false,
+    "delay" : 98
   },
   "y_max_length" : 950000,
   "y_max_upload" : 906000,

@@ -27,6 +27,7 @@ namespace cads
   std::tuple<date::utc_clock::time_point,bool> http_post_whole_belt(int, int, int);
   std::vector<profile> http_get_frame(double y, int len, date::utc_clock::time_point chrono);
   std::tuple<int,bool> remote_addconveyor(Conveyor params); 
+  std::tuple<int,bool> remote_addbelt(Belt params); 
 
   cads::coro<int, cads::profile, 1> post_profiles_coro(cads::meta meta);
 }

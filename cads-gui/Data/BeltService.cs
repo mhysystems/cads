@@ -200,6 +200,20 @@ namespace cads_gui.Data
       
     }
 
+    public async Task<long> AddBeltsAsync(Belt entry)
+    {
+      using var context = dBContext.CreateDbContext();
+      var q = context.Belts.Where(e => e.Conveyor == entry.Conveyor && e.Installed == entry.Installed);
+      
+      if(q.Any()) {
+        return q.First().Id;
+      }else {
+        context.Belts.Add(entry);
+        await context.SaveChangesAsync(); 
+        return entry.Id;
+      }
+    }
+
     public async Task<(double, float[])> GetBeltProfileAsync(double y, long num_y_samples, Scan belt)
     {
       var dbpath = Path.GetFullPath(Path.Combine(config.DBPath,belt.name));

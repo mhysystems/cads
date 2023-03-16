@@ -76,7 +76,7 @@ namespace {
     auto TopCover = config["belt"]["TopCover"].get<double>();
     auto Length = config["belt"]["Length"].get<double>();
     auto Width = config["belt"]["Width"].get<double>();
-    auto Splices = config["belt"]["Splices"].get<double>();
+    auto Splices = config["belt"]["Splices"].get<int64_t>();
     int64_t Conveyor = 0;
 
     return cads::Belt{Id,Installed,PulleyCover,CordDiameter,TopCover,Length,Width,Splices,Conveyor};
@@ -180,7 +180,7 @@ namespace cads {
     params_json["CordDiameter"] = CordDiameter;
     params_json["TopCover"] = TopCover;
     params_json["Length"] = Length;
-    params_json["Width"] = Length;
+    params_json["Width"] = Width;
     params_json["Splices"] = Splices;
     params_json["Conveyor"] = Conveyor;
     

@@ -60,14 +60,22 @@ namespace
 {
   using namespace cads;
 
-  void upload_conveyor_parameters() {
+  void upload_conveyorbelt_parameters() {
     
-    auto db = global_config["state_db_name"].get<std::string>();
-    auto [id,err] = fetch_conveyor_id(db);
+    auto [conveyor_id,err] = fetch_conveyor_id();
     
-    if(!err && id == 0){
+    if(!err && conveyor_id == 0){
       auto [new_id,err] = remote_addconveyor(global_conveyor_parameters);
-      store_conveyor_id(new_id,db);
+      store_conveyor_id(new_id);
+    }
+
+    auto [belt_id,errb] = fetch_belt_id();
+    
+    if(!errb && belt_id == 0 && conveyor_id != 0){
+      auto belt = global_belt_parameters;
+      belt.Conveyor = conveyor_id;
+      auto [new_id,err] = remote_addbelt(belt);
+      store_belt_id(new_id);
     }
   }
 
@@ -95,7 +103,7 @@ namespace
   Process_Status process_impl2()
   {
    
-    std::jthread uploading_conveyor_parameters(upload_conveyor_parameters);
+    std::jthread uploading_conveyorbelt_parameters(upload_conveyorbelt_parameters);
 
     BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
     BlockingReaderWriterQueue<msg> winFifo(4096 * 1024);
@@ -343,7 +351,7 @@ namespace
   Process_Status process_impl()
   {
    
-    std::jthread uploading_conveyor_parameters(upload_conveyor_parameters);
+    std::jthread uploading_conveyorbelt_parameters(upload_conveyorbelt_parameters);
 
     BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
     BlockingReaderWriterQueue<msg> winFifo(4096 * 1024);
@@ -434,11 +442,11 @@ namespace
       
       ++cnt;
 
-      if(cnt % 10000 == 0) {
+      if(cnt % 20000 == 0) {
         auto now = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::micro> dt = now - time0;
         time0 = now;
-        spdlog::get("cads")->debug("Gocator sending rate : {}", 10000*(1000000 / dt.count()));
+        spdlog::get("cads")->debug("Gocator sending rate : {}", 20000*(1000000 / dt.count()));
       }
 
 
@@ -603,6 +611,13 @@ namespace cads
       auto args = nlohmann::json::parse(params);
       auto [first_idx,last_idx] = args.get<std::tuple<int,int>>();
       auto fetch_belt = fetch_belt_coro(0,last_idx,first_idx,256,db);
+      auto [belt_id, belt_id_err] = fetch_belt_id();
+
+      if(belt_id_err && belt_id == 0) {
+        spdlog::get("cads")->info("Belt is not registered with server");
+        return;
+      }
+
       meta m;
 
       auto [params, err] = fetch_profile_parameters(db);
@@ -620,6 +635,7 @@ namespace cads
       m.YmaxN = YmaxN;
       m.z_off = params.z_off;
       m.z_res = params.z_res;
+      m.Belt = belt_id;
 
       auto post_profile = post_profiles_coro(m);
 

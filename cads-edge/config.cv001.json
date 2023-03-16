@@ -66,7 +66,7 @@
   "conveyor" : {
     "Site" : "jimblebar",
     "Name" : "cv001",
-    "Timezone" : "",
+    "Timezone" : "use_os",
     "PulleyCircumference" : 4178.32
   },
 
@@ -85,14 +85,14 @@
   },
 
   "webapi_urls" : {
-    "add_conveyor" : ["http://localhost:5000/api/conveyors",false],
-    "add_meta" : ["https://server.mhysystems.com/api/meta",true],
-    "add_belt" : ["https://server.mhysystems.com/api/belt",true],
-    "add_scan" : ["https://server.mhysystems.com/api/belt",true]
+    "add_conveyor" : ["http://localhost:5000/api/conveyors",true],
+    "add_meta" : ["http://localhost:5000/api/meta",true],
+    "add_belt" : ["http://localhost:5000/api/belts",true],
+    "add_scan" : ["http://localhost:5000/api/belt",true]
   },
   "nats_url" : "10.9.1.1",
   "upload_profile" : true,
-  "base_url" : "https://server.mhysystems.com/api",
+  "base_url" : "http://localhost:5000/api",
   "lua_window_height" : 2,
   "lua_fn" : "function process(width,height)\n return 0\nend"
 }

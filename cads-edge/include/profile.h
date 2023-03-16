@@ -39,6 +39,7 @@ namespace cads
     double Ymax = 0;
     double YmaxN = 0;
     double WidthN = 0;
+    long Belt = 0;
   };
   
   
