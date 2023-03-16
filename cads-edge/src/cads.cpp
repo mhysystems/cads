@@ -426,7 +426,7 @@ namespace
       }
 
       auto p = get<profile>(get<1>(m));
-      auto [pulley_left,pulley_right] = dbscan_test(p.z);
+      auto [pulley_left,pulley_right,ignored] = pulley_levels_clustered(p.z,average);
       p.z.insert(p.z.begin(),20,(float)pulley_left);
       p.z.insert(p.z.end(),20,(float)pulley_right);
 
@@ -805,7 +805,7 @@ namespace cads
         auto ix = p.x_off;
         auto iz = p.z;
 
-        auto [tt,ttt] = dbscan_test(p.z);
+        auto [tt,ttt,ignored] = pulley_levels_clustered(p.z);
 
        // constraint_substitute(iz,z_min_unbiased,z_max_unbiased);
        // iz = trim_nan(iz);

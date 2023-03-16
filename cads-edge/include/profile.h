@@ -14,6 +14,9 @@ namespace cads
   using z_element = float; //int16_t;
   using y_type = double;
   using z_type = std::vector<z_element>;
+  using zrange = std::tuple<z_type::const_iterator,z_type::const_iterator>;
+  using z_cluster = std::vector<zrange>;
+  using z_clusters = std::vector<z_cluster>;
   
   struct profile{y_type y; double x_off; z_type z;}; 
   using profile_window = std::deque<profile>;
@@ -51,6 +54,9 @@ namespace cads
   double barrel_gradient(const z_type &z, int left_edge_index, int right_edge_index);
   z_type trim_nan(const z_type& z);
   void constraint_substitute(z_type& z, z_element z_min, z_element z_max, z_element sub = std::numeric_limits<z_element>::quiet_NaN());
-  std::tuple<double,double> dbscan_test(z_type &z);
+  
+  double average(const z_type&);
+  
+  std::tuple<double,double,z_clusters> pulley_levels_clustered(const z_type &z, std::function<double(const z_type &)> estimator = average);
   
 }

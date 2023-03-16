@@ -18,7 +18,7 @@ namespace cads
     namespace sr = std::ranges;
     using namespace Eigen;
 
-    auto r = yy | sr::views::take(right_edge_index) | sr::views::drop(left_edge_index) | sr::views::filter([](int16_t a)
+    auto r = yy | sr::views::take(right_edge_index) | sr::views::drop(left_edge_index) | sr::views::filter([](float a)
                                                                                                            { return !std::isnan(a); });
 
     std::vector<double> yr(r.begin(), r.end());
@@ -32,6 +32,9 @@ namespace cads
     return {s(0,0),s(1,0)};
   }
 
+  std::tuple<double, double> linear_regression(const z_type &yy) {
+    return linear_regression(yy,0,yy.size());
+  }
 
   void regression_compensate(z_type &z, int left_edge_index, int right_edge_index, double gradient)
   {
@@ -168,5 +171,83 @@ void belt_model(Eigen::VectorXf &z, float height, float x_offset, float z_offset
   };
 
   }
+
+
+
+std::function<double(std::vector<float>)>  mk_pulleyfitter(float init_z, float z_res) {
+    
+    const auto z_index = 0;
+
+
+    struct LMFunctor
+    {
+
+      const int n = 1;
+
+      Eigen::VectorXf belt_z;
+      Eigen::VectorXf dp;
+     
+			LMFunctor() = delete;
+ 
+      LMFunctor(float z_res) : 
+        dp(n)
+      {
+        dp(z_index) = z_res;
+      }
+
+      // Difference between belt and belt model. Ie errors
+      int operator()(const Eigen::VectorXf &parameters, Eigen::VectorXf &model_z)
+      {
+
+        model_z.fill(parameters(z_index));
+
+        model_z = (belt_z - model_z).array().abs().sqrt();
+
+        return 0;
+      }
+
+      int df(const Eigen::VectorXf &parameters, Eigen::MatrixXf &jac)
+      {
+        
+				Eigen::VectorXf belt_model_positive(values()), belt_model_negative(values());
+        
+				for (int i = 0; i < n; i++) {
+          Eigen::VectorXf postive(parameters), negative(parameters);
+          
+          postive(i) += dp(i);
+          negative(i) -= dp(i);
+
+          operator()(postive, belt_model_positive);
+          operator()(negative, belt_model_negative);
+
+          jac.block(0, i, values(), 1) = (belt_model_positive - belt_model_negative) / (2.0f * dp(i));
+        }
+
+        return 0;
+      }
+
+      int values() const { return (int)belt_z.rows(); }
+
+    };
+
+
+    Eigen::VectorXf parameters(1);
+    parameters(z_index) = init_z;
+
+  LMFunctor functor(z_res);
+  
+  return [=](std::vector<float> z) mutable -> double {
+    auto f = z | std::views::filter([](float a) { return !std::isnan(a);});
+    z = decltype(z)(f.begin(),f.end());
+    functor.belt_z = Eigen::Map<Eigen::VectorXf>(z.data(), z.size());
+
+    Eigen::LevenbergMarquardt<LMFunctor, float> lm(functor);
+    lm.minimize(parameters);
+    return (double)parameters(z_index);
+  };
+
+}
+
+
 
 }
