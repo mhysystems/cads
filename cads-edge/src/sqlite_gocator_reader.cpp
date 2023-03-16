@@ -60,12 +60,14 @@ namespace cads
     m_yResolution = params.y_res;
     m_encoder_resolution = params.encoder_res;
     auto pulley_period_us = 1000000 / m_config.fps;
+    uint64_t scnt =0, cnt = 0;
+    auto time0 = std::chrono::high_resolution_clock::now();
 
     do
     {
       auto fetch_profile = fetch_belt_coro(0,std::get<1>(m_config.range), std::get<0>(m_config.range), 256, data_src);
       auto loop_time = std::chrono::high_resolution_clock::now();
-      
+      std::chrono::duration<double, std::micro> slept_for(0);
       while (!m_stopped)
       {
 
@@ -91,12 +93,16 @@ namespace cads
         
         auto now = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::micro> dt = now - loop_time;
+
         loop_time = now;
-        if(dt.count() < pulley_period_us) {
-          auto sleep_for = uint64_t(pulley_period_us - dt.count());
-          std::this_thread::sleep_for(std::chrono::microseconds(sleep_for));
-        }
+        cnt++;
+        auto sleep_for = uint64_t(2*pulley_period_us - (dt + slept_for).count() - m_config.delay);
         
+        auto start = std::chrono::system_clock::now();
+        std::this_thread::sleep_for(std::chrono::microseconds(sleep_for));
+        auto end = std::chrono::system_clock::now();  
+        slept_for = end - start;           
+                     
         if (m_gocatorFifo.size_approx() > buffer_warning_increment)
         {
           //spink lock

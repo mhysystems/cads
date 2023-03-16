@@ -21,6 +21,7 @@ namespace cads {
     range_type range;
     double fps;
     bool forever;
+    double delay;
   };
   
   struct constraints {

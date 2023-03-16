@@ -101,23 +101,23 @@ namespace cads
     };
   }
 
-  std::function<cads::z_element(cads::z_element)> mk_schmitt_trigger(const cads::z_element ref)
+  std::function<cads::z_element(cads::z_element)> mk_schmitt_trigger(const cads::z_element ref, const cads::z_element bias)
   {
 
     auto level = true;
 
     return [=](cads::z_element x) mutable
     {
-      auto high = x > ref;
-      auto low = x < -ref;
+      auto high = x > (bias+ref);
+      auto low =  x < (bias -ref);
       level = high || (level && !low);
       return level ? cads::z_element(1) : cads::z_element(-1);
     };
   }
 
-  std::function<cads::z_element(cads::z_element)> mk_schmitt_trigger()
+  std::function<cads::z_element(cads::z_element)> mk_schmitt_trigger(const cads::z_element bias)
   {
-    return mk_schmitt_trigger(global_filters.SchmittThreshold);
+    return mk_schmitt_trigger(global_filters.SchmittThreshold,bias);
   }
 
   std::function<cads::z_element(cads::z_element,bool)> mk_amplitude_extraction()

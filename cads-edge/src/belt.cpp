@@ -65,6 +65,28 @@ namespace cads
     };
   }
 
+  std::function<std::tuple<bool, double>(double)> mk_pulley_revolution2()
+  {
+
+    auto pully_circumfrence = global_conveyor_parameters.PulleyCircumference; // In mm
+    auto trigger_distance = pully_circumfrence / 2;
+    double schmitt1 = 1.0, schmitt0 = -1.0;
+    auto schmitt_trigger = mk_schmitt_trigger(-416.0);
+
+    return [=](double pulley_height) mutable -> std::tuple<bool, double>
+    {
+      auto rtn = std::make_tuple(false, trigger_distance);
+      schmitt1 = schmitt_trigger(pulley_height);
+      if (std::signbit(schmitt1) == false && std::signbit(schmitt0) == true)
+      {
+        std::get<0>(rtn) = true;
+      }
+
+      schmitt0 = schmitt1;
+      return rtn;
+    };
+  }
+
   coro<int, std::tuple<double, profile>> encoder_distance_estimation(std::function<void(profile)> next)
   {
     namespace sml = boost::sml;
@@ -72,6 +94,7 @@ namespace cads
     auto args_in = std::tuple<double, profile>{};
     std::deque<profile> fifo;
     auto pulley_revolution = mk_pulley_revolution();
+    auto pulley_revolution2 = mk_pulley_revolution2();
 
     struct root_event
     {
@@ -139,6 +162,11 @@ namespace cads
         continue;
 
       auto [root, root_distance] = pulley_revolution(pully_height);
+      auto [root2, root_distance2] = pulley_revolution2(pully_height);
+
+      if(root2) {
+        auto i = 0;
+      }
 
       if (root)
       {

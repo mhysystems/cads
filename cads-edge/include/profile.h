@@ -54,7 +54,7 @@ namespace cads
   double barrel_gradient(const z_type &z, int left_edge_index, int right_edge_index);
   z_type trim_nan(const z_type& z);
   void constraint_substitute(z_type& z, z_element z_min, z_element z_max, z_element sub = std::numeric_limits<z_element>::quiet_NaN());
-  
+  void recontruct_z(z_type & z,const z_clusters& group);
   double average(const z_type&);
   
   std::tuple<double,double,z_clusters> pulley_levels_clustered(const z_type &z, std::function<double(const z_type &)> estimator = average);

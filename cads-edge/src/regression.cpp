@@ -237,6 +237,8 @@ std::function<double(std::vector<float>)>  mk_pulleyfitter(float z_res,float ini
   LMFunctor functor(z_res);
   
   return [=](std::vector<float> z) mutable -> double {
+    auto f = z | std::views::filter([](float a) { return !std::isnan(a);});
+    z = decltype(z)(f.begin(),f.end());
     functor.belt_z = Eigen::Map<Eigen::VectorXf>(z.data(), z.size());
 
     Eigen::LevenbergMarquardt<LMFunctor, float> lm(functor);

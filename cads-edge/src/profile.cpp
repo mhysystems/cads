@@ -312,7 +312,7 @@ namespace cads
 
   }
 
-  void recontruct_z(z_type & z,const std::vector<z_cluster>& group) {
+  void recontruct_z(z_type & z,const z_clusters& group) {
 
     auto i = z.begin();
     for(const auto &g : group) {
