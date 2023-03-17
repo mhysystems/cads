@@ -45,14 +45,8 @@ namespace cads
   
   struct transient{double y;};
 
-  bool compare_samples(const profile& a, const profile& b, int threshold); 
   std::tuple<z_element,z_element> find_minmax_z(const profile& ps);
-  std::tuple<z_element,z_element,bool>  barrel_offset(const z_type& win,double z_height_mm);
-  std::function<int(int,int)> mk_edge_adjust(int left_edge_index_previous, int width_n);
-  std::tuple<z_type,z_type> partition_profile(const z_type& z,int,int);
-  double barrel_mean(const z_type& z,int,int);
-  std::tuple<double,double> pulley_left_right_mean(const z_type& z, int left_edge_index, int right_edge_index);
-  double barrel_gradient(const z_type &z, int left_edge_index, int right_edge_index);
+  
   z_type trim_nan(const z_type& z);
   void constraint_substitute(z_type& z, z_element z_min, z_element z_max, z_element sub = std::numeric_limits<z_element>::quiet_NaN());
   void recontruct_z(z_type & z,const z_clusters& group);

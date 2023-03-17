@@ -163,7 +163,7 @@ namespace cads {
     global_filters = mk_filters(config);
     sqlite_gocator_config = mk_sqlite_gocator(config);
     dbscan_config = mk_dbscan(config);
-    revolution_sensor_config = mk_revolution_sensor(json);
+    revolution_sensor_config = mk_revolution_sensor(config);
     global_config = config;
   }
 

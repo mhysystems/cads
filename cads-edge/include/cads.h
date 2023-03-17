@@ -11,7 +11,6 @@ namespace cads
   bool direct_process();
   void generate_signal();
   void stop_gocator();
-  void generate_belt_parameters(long cnt);
   void dump_gocator_log();
 
 }
