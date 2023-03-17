@@ -428,6 +428,8 @@ namespace
     auto filter_window_len = global_config["sobel_filter"].get<size_t>();
 
     auto time0 = std::chrono::high_resolution_clock::now();
+    
+    auto pulley_rev =  mk_pulley_revolution2();
 
     do
     {
@@ -546,6 +548,13 @@ namespace
 
       auto gradient = (pulley_right_filtered - pulley_left_filtered) / (double)z.size();
       regression_compensate(z, 0, z.size(), gradient);
+
+      if(revolution_sensor_config.source == RevolutionSensor::Source::raw) {
+        pulley_rev(pulley_left);
+      }else {
+        pulley_rev(pulley_left_filtered);
+      }
+
 
       auto left_edge_index_aligned = left_edge_index;
 

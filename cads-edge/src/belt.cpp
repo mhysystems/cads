@@ -65,21 +65,31 @@ namespace cads
     };
   }
 
-  std::function<std::tuple<bool, double>(double)> mk_pulley_revolution2()
+  std::function<PulleyRevolution(double)> 
+  mk_pulley_revolution2()
   {
-
+    auto n = revolution_sensor_config.trigger_num;
+    auto bidirectional = revolution_sensor_config.bidirectional;
+    auto bias = revolution_sensor_config.bias;
     auto pully_circumfrence = global_conveyor_parameters.PulleyCircumference; // In mm
-    auto trigger_distance = pully_circumfrence / 2;
+    auto trigger_distance = pully_circumfrence / n;
     double schmitt1 = 1.0, schmitt0 = -1.0;
-    auto schmitt_trigger = mk_schmitt_trigger(-416.0);
+    auto schmitt_trigger = mk_schmitt_trigger(bias);
+    auto time0 = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> dt = time0 - time0;
 
-    return [=](double pulley_height) mutable -> std::tuple<bool, double>
+    return [=](double pulley_height) mutable -> PulleyRevolution
     {
-      auto rtn = std::make_tuple(false, trigger_distance);
+      auto rtn = PulleyRevolution{false, trigger_distance,dt};
       schmitt1 = schmitt_trigger(pulley_height);
-      if (std::signbit(schmitt1) == false && std::signbit(schmitt0) == true)
+      if ((std::signbit(schmitt1) == true && std::signbit(schmitt0) == false) || 
+         (bidirectional && (std::signbit(schmitt1) == false && std::signbit(schmitt0) == true)))
       {
+        auto now = std::chrono::high_resolution_clock::now();
+        dt = now - time0;
+        time0 = now;
         std::get<0>(rtn) = true;
+        std::get<2>(rtn) = dt;
       }
 
       schmitt0 = schmitt1;
