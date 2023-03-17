@@ -43,21 +43,31 @@ namespace
 namespace cads
 {
 
-  std::function<std::tuple<bool, double>(double)> mk_pulley_revolution()
+ std::function<PulleyRevolution(double)> 
+  mk_pulley_revolution()
   {
-
+    auto n = revolution_sensor_config.trigger_num;
+    auto bidirectional = revolution_sensor_config.bidirectional;
+    auto bias = revolution_sensor_config.bias;
     auto pully_circumfrence = global_conveyor_parameters.PulleyCircumference; // In mm
-    auto trigger_distance = pully_circumfrence / 2;
+    auto trigger_distance = pully_circumfrence / n;
     double schmitt1 = 1.0, schmitt0 = -1.0;
-    auto schmitt_trigger = mk_schmitt_trigger();
+    auto schmitt_trigger = mk_schmitt_trigger(bias);
+    auto time0 = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> dt = time0 - time0;
 
-    return [=](double pulley_height) mutable -> std::tuple<bool, double>
+    return [=](double pulley_height) mutable -> PulleyRevolution
     {
-      auto rtn = std::make_tuple(false, trigger_distance);
+      auto rtn = PulleyRevolution{false, trigger_distance,dt};
       schmitt1 = schmitt_trigger(pulley_height);
-      if ((std::signbit(schmitt1) == false && std::signbit(schmitt0) == true) || (std::signbit(schmitt1) == true && std::signbit(schmitt0) == false))
+      if ((std::signbit(schmitt1) == true && std::signbit(schmitt0) == false) || 
+         (bidirectional && (std::signbit(schmitt1) == false && std::signbit(schmitt0) == true)))
       {
+        auto now = std::chrono::high_resolution_clock::now();
+        dt = now - time0;
+        time0 = now;
         std::get<0>(rtn) = true;
+        std::get<2>(rtn) = dt;
       }
 
       schmitt0 = schmitt1;
@@ -65,35 +75,12 @@ namespace cads
     };
   }
 
-  std::function<std::tuple<bool, double>(double)> mk_pulley_revolution2()
-  {
-
-    auto pully_circumfrence = global_conveyor_parameters.PulleyCircumference; // In mm
-    auto trigger_distance = pully_circumfrence / 2;
-    double schmitt1 = 1.0, schmitt0 = -1.0;
-    auto schmitt_trigger = mk_schmitt_trigger(-416.0);
-
-    return [=](double pulley_height) mutable -> std::tuple<bool, double>
-    {
-      auto rtn = std::make_tuple(false, trigger_distance);
-      schmitt1 = schmitt_trigger(pulley_height);
-      if (std::signbit(schmitt1) == false && std::signbit(schmitt0) == true)
-      {
-        std::get<0>(rtn) = true;
-      }
-
-      schmitt0 = schmitt1;
-      return rtn;
-    };
-  }
-
-  coro<int, std::tuple<double, profile>> encoder_distance_estimation(std::function<void(profile)> next)
+  coro<int, std::tuple<PulleyRevolution, profile>> encoder_distance_estimation(std::function<void(profile)> next)
   {
     namespace sml = boost::sml;
 
-    auto args_in = std::tuple<double, profile>{};
+    auto args_in = std::tuple<PulleyRevolution, profile>{};
     std::deque<profile> fifo;
-    auto pulley_revolution = mk_pulley_revolution();
 
     struct root_event
     {
@@ -155,12 +142,12 @@ namespace cads
     for (auto terminate = false; !terminate;)
     {
       std::tie(args_in, terminate) = co_yield 0;
-      auto [pully_height, p] = args_in;
+      auto [pulley_revolution, p] = args_in;
 
       if (terminate)
         continue;
 
-      auto [root, root_distance] = pulley_revolution(pully_height);
+      auto [root, root_distance, time] = pulley_revolution;
 
       if (root)
       {
@@ -191,84 +178,53 @@ namespace cads
   }
 
 
-  std::function<long(double)> mk_pulley_frequency()
-  {
-
-    auto barrel_origin_time = std::chrono::high_resolution_clock::now();
-    auto pully_circumfrence = global_conveyor_parameters.PulleyCircumference; // In mm
-    double schmitt1 = 1.0, schmitt0 = -1.0;
-    auto amplitude_extraction = mk_amplitude_extraction();
-    auto schmitt_trigger = mk_schmitt_trigger();
-    long barrel_cnt = 0;
-
-    return [=](double bottom) mutable -> long
-    {
-      schmitt1 = schmitt_trigger(bottom);
-      amplitude_extraction(bottom, false);
-
-      if ((std::signbit(schmitt1) == false && std::signbit(schmitt0) == true) || (std::signbit(schmitt1) == true && std::signbit(schmitt0) == false))
-      {
-        auto now = std::chrono::high_resolution_clock::now();
-        auto period = std::chrono::duration_cast<std::chrono::milliseconds>(now - barrel_origin_time).count();
-
-        if (barrel_cnt % 100 == 0)
-        {
-          spdlog::get("cads")->debug("Barrel Frequency(Hz): {}", 1000.0 / ((double)period * 2));
-          publish_PulleyOscillation(amplitude_extraction(bottom, true));
-          publish_SurfaceSpeed(pully_circumfrence / (2 * period));
-          spdlog::get("cads")->debug("Surface Speed(m/s): {}", pully_circumfrence / (2 * period));
-        }
-
-        barrel_cnt++;
-        barrel_origin_time = now;
-      }
-
-      schmitt0 = schmitt1;
-      return barrel_cnt;
-    };
-  }
-
-  std::function<double(double)> mk_pulley_speed(double init)
+ 
+  std::function<std::tuple<double,double,double>(PulleyRevolution,double)> mk_pulley_stats(double init)
   {
     using namespace std::placeholders;
 
+    auto pulley_circumfrence = global_conveyor_parameters.PulleyCircumference;
     auto avg_speed = (std::get<0>(global_constraints.SurfaceSpeed) + std::get<0>(global_constraints.SurfaceSpeed)) / 2;
-    auto T0 = global_conveyor_parameters.PulleyCircumference / avg_speed; // in ms
-    auto T1 = 2 * T0;                                                     // in ms
+    auto T0 = pulley_circumfrence / avg_speed; // in ms
+    auto T1 = 2 * T0;  // in ms
     auto barrel_origin_time = std::chrono::high_resolution_clock::now();
-    double speed = init;
+    
     double period = 1.0;
-    long root_cnt = 0;
-    auto pulley_revolution = mk_pulley_revolution();
+    long cnt = 0;
     auto adjust = std::bind(pulley_speed_adjustment, _1, T0, T1);
+    auto amplitude_extraction = mk_amplitude_extraction();
 
-    return [=](double pulley_height) mutable -> double
+    double speed = init;
+    double amplitude = 0;
+    double frequency = 0;
+
+    return [=](PulleyRevolution pulley_revolution, double pulley_osc) mutable -> std::tuple<double,double,double>
     {
-      auto [root, root_distance] = pulley_revolution(pulley_height);
+      auto [root, root_distance, root_dt] = pulley_revolution;
 
       auto now = std::chrono::high_resolution_clock::now();
       std::chrono::duration<double, std::milli> dt = now - barrel_origin_time;
       period = dt.count();
+      amplitude_extraction(pulley_osc, false);
 
-      if (root && root_cnt > 0)
+      if (root && cnt > 0)
       {
+        amplitude = amplitude_extraction(pulley_osc, true);
         speed = root_distance / period;
+        frequency = ((root_distance / pulley_circumfrence ) * 1000.0) / ((double)period);
+        
         barrel_origin_time = now;
-        root_cnt++;
-
-        if (root_cnt % 100 == 0)
-        {
-          spdlog::get("cads")->debug("Surface Speed2(m/s): {},{}", speed, speed * adjust(period));
-        }
+        cnt++;
       }
 
-      if (root && root_cnt == 0)
+      if (cnt == 0)
       {
         barrel_origin_time = std::chrono::high_resolution_clock::now();
-        root_cnt++;
+        cnt++;
       }
 
-      return speed * (root_cnt > 0 ? adjust(period) : 1.0);
+      auto speed_mask = adjust(period);
+      return {speed * (cnt > 1 ? speed_mask: 1.0), frequency, amplitude};
     };
   }
 
@@ -298,14 +254,4 @@ namespace cads
     };
   }
 
-  std::function<double(double)> mk_differentiation(double v0)
-  {
-
-    return [=](double v1) mutable
-    {
-      auto dv = (v1 - v0) * 64;
-      v0 = v1;
-      return dv;
-    };
-  }
 }

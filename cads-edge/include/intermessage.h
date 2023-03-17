@@ -7,6 +7,5 @@ namespace cads {
   void publish_CadsToOrigin(double value);
   void publish_RotationPeriod(double value);
   void publish_CurrentLength(double value);
-  void publish_BarrelHeight(double value);
 
 }

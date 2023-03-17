@@ -118,6 +118,23 @@ namespace {
     return cads::Dbscan{InCluster,MinPoints};
 
   }
+
+  auto mk_revolution_sensor(nlohmann::json config) {
+    auto source_s = config["revolution_sensor"]["source"].get<std::string>();
+    cads::RevolutionSensor::Source source;
+    if(source_s == "raw") {
+      source = cads::RevolutionSensor::Source::raw;
+    }else {
+      source = cads::RevolutionSensor::Source::filtered;  
+    }
+
+    auto trigger_num = config["revolution_sensor"]["trigger_num"].get<size_t>();
+    auto bias = config["revolution_sensor"]["bias"].get<double>();
+    auto bidirectional = config["revolution_sensor"]["bidirectional"].get<bool>();
+
+    return cads::RevolutionSensor{source,trigger_num,bias,bidirectional};
+
+  }
 }
 
 namespace cads {  
@@ -131,6 +148,7 @@ namespace cads {
   Filters global_filters;
   SqliteGocatorConfig sqlite_gocator_config;
   Dbscan dbscan_config;
+  RevolutionSensor revolution_sensor_config;
 
   
   void init_config(std::string f) {
@@ -145,6 +163,7 @@ namespace cads {
     global_filters = mk_filters(config);
     sqlite_gocator_config = mk_sqlite_gocator(config);
     dbscan_config = mk_dbscan(config);
+    revolution_sensor_config = mk_revolution_sensor(config);
     global_config = config;
   }
 

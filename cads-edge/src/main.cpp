@@ -29,7 +29,6 @@ int main(int argn, char **argv)
     ("stop,s", po::bool_switch(), "Stop Gocator")
     ("upload,u", po::value<std::string>()->implicit_value(""), "Upload Profile Only")
     ("signal,e", po::bool_switch(), "Generate signal for input into python filter parameter creation")
-    ("params,p", po::value<long>(), "Generate belt paramaters to be used in cads config")
     ("go-log,g", po::bool_switch(), "Dump Gocator Log")
     ("level,l", po::value<std::string>(), "Logging Level")
     ("db-name", po::value<std::string>(), "db file");
@@ -97,8 +96,6 @@ int main(int argn, char **argv)
     store_profile_only();
   }else if(vm["signal"].as<bool>()) {
     generate_signal();
-  }else if(vm.count("params") > 0) {
-    generate_belt_parameters(vm["params"].as<long>());
   }else if(vm["go-log"].as<bool>()) {
     dump_gocator_log();
   }else{

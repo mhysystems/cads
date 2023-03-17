@@ -273,7 +273,12 @@ namespace cads
         fmt::format(R"(CREATE TABLE IF NOT EXISTS PROFILE (revid INTEGER NOT NULL, idx INTEGER NOT NULL,y {} NOT NULL, x_off REAL NOT NULL, z BLOB NOT NULL, PRIMARY KEY (revid,idx));)", ytype),
         R"(CREATE TABLE IF NOT EXISTS PARAMETERS (y_res REAL NOT NULL, x_res REAL NOT NULL, z_res REAL NOT NULL, z_off REAL NOT NULL, encoder_res REAL NOT NULL, z_max REAL NOT NULL))"s
         };
-
+    
+    if(global_config["startup_delete_db"].get<bool>()) {
+      std::filesystem::remove(db_name_string);
+      std::filesystem::remove(db_name_string + "-shm");
+      std::filesystem::remove(db_name_string + "-wal");
+    }
 
     for(int retry = 2; retry > 0; --retry) {
       int err = sqlite3_open_v2(db_name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);

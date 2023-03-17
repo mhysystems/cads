@@ -90,6 +90,14 @@ namespace cads {
     size_t MinPoints;
   };
 
+  struct RevolutionSensor{
+    enum class Source { raw, filtered};
+    Source source;
+    size_t trigger_num;
+    double bias;
+    bool bidirectional;
+  };
+
 
   extern constraints global_constraints;
   extern profile_parameters global_profile_parameters;
@@ -99,6 +107,7 @@ namespace cads {
   extern Filters global_filters;
   extern SqliteGocatorConfig sqlite_gocator_config;
   extern Dbscan dbscan_config;
+  extern RevolutionSensor revolution_sensor_config;
   
   void init_config(std::string f);
   void drop_config();

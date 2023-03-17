@@ -60,8 +60,7 @@ namespace cads
     m_yResolution = params.y_res;
     m_encoder_resolution = params.encoder_res;
     auto pulley_period_us = 1000000 / m_config.fps;
-    uint64_t scnt =0, cnt = 0;
-    auto time0 = std::chrono::high_resolution_clock::now();
+    uint64_t cnt = 0;
 
     do
     {

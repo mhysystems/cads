@@ -41,7 +41,7 @@ namespace cads
   }
 
 
-  void barrel_height_compensate(z_type &z, z_element z_off, z_element z_max)
+  void pulley_level_compensate(z_type &z, z_element z_off, z_element z_max)
   {
     const auto z_max_compendated = z_max + z_off;
 
