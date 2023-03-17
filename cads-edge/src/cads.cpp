@@ -213,9 +213,6 @@ namespace
       auto ix = p.x_off;
       auto iz = p.z;
  
-
-      
-
       if (iz.size()*x_resolution < size_t(x_width * 0.75))
       {
         spdlog::get("cads")->error("Gocator sending profiles with widths less than 0.75 of expected width");
@@ -301,7 +298,7 @@ namespace
         }
       }
 
-      if (cnt % (1000 * 10) == 0)
+      if (cnt % (2000 * 10) == 0)
       {
         publish_PulleyOscillation(amplitude);
         publish_SurfaceSpeed(frequency);

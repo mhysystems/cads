@@ -19,7 +19,7 @@
   "fiducial_y" : 40,
   "fiducial_gap" : 40,
   "daily_upload" : true,
-  "daily_start_time" : "now",
+  "daily_start_time" : "01:15",
   "spike_filter" : 5,
   "sobel_filter" : 5,
   "nan_%" : 0.15,
@@ -60,6 +60,7 @@
     "z_unbiased" : [-37.0,4.0]
   },
 
+  "startup_delete_db" : true,
   "profile_db_name" : "profile.db",
   "state_db_name" : "state.db",
   "transient_db_name" : "transient.db",
@@ -92,14 +93,15 @@
   },
 
   "webapi_urls" : {
-    "add_conveyor" : ["http://localhost:5000/api/conveyors",true],
-    "add_meta" : ["http://localhost:5000/api/meta",true],
-    "add_belt" : ["http://localhost:5000/api/belts",true],
-    "add_scan" : ["http://localhost:5000/api/belt",true]
+    "add_conveyor" : ["https://server.mhysystems.com/api/conveyors",true],
+    "add_meta" : ["https://server.mhysystems.com/api/meta",true],
+    "add_belt" : ["https://server.mhysystems.com/api/belt",true],
+    "add_scan" : ["https://server.mhysystems.com/api/scans",true]
   },
+
   "nats_url" : "10.9.1.1",
   "upload_profile" : true,
-  "base_url" : "http://localhost:5000/api",
+  "base_url" : "https://server.mhysystems.com/api",
   "lua_window_height" : 2,
   "lua_fn" : "function process(width,height)\n return 0\nend"
 }

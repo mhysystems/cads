@@ -29,6 +29,13 @@
     "MinPoints" : 20
   },
 
+  "revolution_sensor" : {
+    "source" : "unbiased",
+    "trigger_num" : 2,
+    "bias" : 0.0,
+    "bidirectional" : true
+  },
+
   "iirfilter" : {
     "skip" : 4000,
     "delay" : 10,
@@ -52,6 +59,8 @@
     "barrel_height" : [-36.5,-31.0],
     "z_unbiased" : [-37.0,4.0]
   },
+
+  "startup_delete_db" : true,
   "profile_db_name" : "profile.db",
   "state_db_name" : "state.db",
   "transient_db_name" : "transient.db",
@@ -85,14 +94,14 @@
 
 
   "webapi_urls" : {
-    "add_conveyor" : ["http://localhost:5000/api/conveyors",false],
-    "add_meta" : ["http://localhost:5000/api/meta",false],
-    "add_belt" : ["http://localhost:5000/api/belt",false],
-    "add_scan" : ["http://localhost:5000/api/scans",false]
+    "add_conveyor" : ["https://server.mhysystems.com/api/conveyors",true],
+    "add_meta" : ["https://server.mhysystems.com/api/meta",true],
+    "add_belt" : ["https://server.mhysystems.com/api/belt",true],
+    "add_scan" : ["https://server.mhysystems.com/api/scans",true]
   },
   
   "nats_url" : "10.9.1.1",
-  "upload_profile" : false,
+  "upload_profile" : true,
   "base_url" : "https://server.mhysystems.com/api",
   "lua_window_height" : 2,
   "lua_fn" : "function process(width,height)\nlocal sum = 0\nfor i = 1+50,width-50 do\nfor j = 0,height-1 do\nsum = sum + ((win[j*width + i] <= 25 and win[j*width + i] > 10)and 1 or 0)\nend\nend\nreturn (sum / (width * height)) > 0.001 and sum or 0\nend"

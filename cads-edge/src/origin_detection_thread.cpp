@@ -54,7 +54,7 @@ namespace cads
     }
   }
 
-  coro<std::tuple<profile,bool>,profile,1> origin_detection_coro(double x_resolution, double y_resolution, int width_n)
+  coro<std::tuple<profile,double,bool>,profile,1> origin_detection_coro(double x_resolution, double y_resolution, int width_n)
   {
     auto fiducial = make_fiducial(x_resolution, y_resolution);
     fiducial_as_image(fiducial,"fid");
@@ -68,10 +68,10 @@ namespace cads
     bool terminate = false;
 
     // Fill buffer
-    std::tie(p,terminate) = co_yield {null_profile,false};
+    std::tie(p,terminate) = co_yield {null_profile,0.0,false};
     for (int j = 0; j < fiducial.rows; j++)
     {
-      std::tie(p,terminate) = co_yield {p,false};
+      std::tie(p,terminate) = co_yield {p,p.y,false};
       profile_buffer.push_back(p);
     }
 
@@ -101,7 +101,7 @@ namespace cads
       y_type y = profile_buffer.front().y;
       
       if(sequence_cnt > 0 && (cnt++ % 10000) == 0) {
-        publish_CadsToOrigin(y);
+        publish_CadsToOrigin(y); //TODO
       }
 
 
@@ -126,17 +126,17 @@ namespace cads
           start = now;
 
           if(sequence_cnt > 1) {
-            publish_RotationPeriod(period);
-            y_max_length =  y * 1.05;
-            trigger_length = y * 0.95;
+            publish_RotationPeriod(period); //TODO
+            y_max_length =  y * 1.05; //TODO
+            trigger_length = y * 0.95; //TODO
           }
           
           if(sequence_cnt == 1) {
-            trigger_length = y_max_length * 0.90;
+            trigger_length = y_max_length * 0.90; //TODO
           }
 
-          mat_as_image(belt,cv_threshhold);
-          fiducial_as_image(belt);
+          //mat_as_image(belt,cv_threshhold);
+          //fiducial_as_image(belt);
 
           y_offset += y;
 
@@ -171,7 +171,7 @@ namespace cads
         }
       }
 
-      std::tie(p,terminate) = co_yield {profile_buffer.front(),valid};
+      std::tie(p,terminate) = co_yield {profile_buffer.front(),y,valid};
 
       if(terminate) break;
 
@@ -188,13 +188,11 @@ namespace cads
   {
 
     cads::msg m;
-    auto pully_circumfrence = global_conveyor_parameters.PulleyCircumference;
+
     auto start = std::chrono::high_resolution_clock::now();
     int64_t cnt = 0;
     auto buffer_size_warning = buffer_warning_increment;
 
-    long barrel_rotation_cnt = 0;
-    long barrel_rotation_offset = 0;
 
     auto origin_detection = origin_detection_coro(x_resolution,y_resolution,width_n);
 
@@ -206,16 +204,13 @@ namespace cads
       profile_fifo.wait_dequeue(m);
 
       switch(std::get<0>(m)) {
-        case msgid::barrel_rotation_cnt:
-        barrel_rotation_cnt = get<long>(get<1>(m));
-        break;
 
         case msgid::scan: {
           auto p = get<profile>(get<1>(m));
           auto [coro_end,result] = origin_detection.resume(p);
           
           if(!coro_end) {
-            auto [op,valid] = result;
+            auto [op,estimated_belt_length,valid] = result;
 
             if(valid) {
 
@@ -226,13 +221,11 @@ namespace cads
                 }
 
                 if(origin_sequence_cnt > 0) {
-                  auto estimated_belt_length = pully_circumfrence * (double(barrel_rotation_cnt - barrel_rotation_offset) / 2.0);
-                  spdlog::get("cads")->info("Barrel rotation count : {} Estimated Belt Length: {}",barrel_rotation_cnt - barrel_rotation_offset, estimated_belt_length / 1000);
+                  spdlog::get("cads")->info("Estimated Belt Length(m): {}", estimated_belt_length / 1000);
                   publish_CurrentLength(estimated_belt_length);
                   next_fifo.enqueue({msgid::complete_belt, estimated_belt_length});
                 }
                 
-                barrel_rotation_offset = barrel_rotation_cnt;
                 origin_sequence_cnt++;
               }
               
@@ -269,7 +262,7 @@ namespace cads
   }
 
 
-  coro<std::tuple<profile,bool>,profile,1> maxlength_coro()
+  coro<std::tuple<profile,double,bool>,profile,1> maxlength_coro()
   {
 
     profile p;
@@ -278,7 +271,7 @@ namespace cads
 
     auto y_max_length = global_config["y_max_length"].get<double>();
 
-    std::tie(p,terminate) = co_yield {p,false};  
+    std::tie(p,terminate) = co_yield {p,0.0,false}; 
 
     y_type y_offset = p.y;
     while (true)
@@ -294,7 +287,7 @@ namespace cads
       }
       p = {p.y - y_offset, p.x_off, p.z};
 
-      std::tie(p,terminate) = co_yield {p,true};  
+      std::tie(p,terminate) = co_yield {p,y,true};  
     }
   }
 
@@ -320,13 +313,9 @@ namespace cads
   {
 
     cads::msg m;
-    auto pully_circumfrence = global_conveyor_parameters.PulleyCircumference;
     auto start = std::chrono::high_resolution_clock::now();
     int64_t cnt = 0;
     auto buffer_size_warning = buffer_warning_increment;
-
-    long barrel_rotation_cnt = 0;
-    long barrel_rotation_offset = 0;
 
     auto origin_detection = maxlength_coro();
 
@@ -338,16 +327,13 @@ namespace cads
       profile_fifo.wait_dequeue(m);
 
       switch(std::get<0>(m)) {
-        case msgid::barrel_rotation_cnt:
-        barrel_rotation_cnt = get<long>(get<1>(m));
-        break;
 
         case msgid::scan: {
           auto p = get<profile>(get<1>(m));
           auto [coro_end,result] = origin_detection.resume(p);
           
           if(!coro_end) {
-            auto [op,valid] = result;
+            auto [op,estimated_belt_length,valid] = result;
 
             if(valid) {
 
@@ -358,13 +344,11 @@ namespace cads
                 }
 
                 if(origin_sequence_cnt > 0) {
-                  auto estimated_belt_length = pully_circumfrence * (double(barrel_rotation_cnt - barrel_rotation_offset) / 2.0);
-                  spdlog::get("cads")->info("Barrel rotation count : {} Estimated Belt Length: {}",barrel_rotation_cnt - barrel_rotation_offset, estimated_belt_length / 1000);
+                  spdlog::get("cads")->info("Estimated Belt Length(m): {}", estimated_belt_length / 1000);
                   publish_CurrentLength(estimated_belt_length);
                   next_fifo.enqueue({msgid::complete_belt, estimated_belt_length});
                 }
                 
-                barrel_rotation_offset = barrel_rotation_cnt;
                 origin_sequence_cnt++;
               }
               
