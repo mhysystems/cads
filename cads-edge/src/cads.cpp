@@ -160,7 +160,7 @@ namespace
     auto start = std::chrono::high_resolution_clock::now();
 
     auto dc_filter = mk_dc_filter(); 
-    auto pulley_speed = mk_pulley_speed();
+    auto pulley_speed = mk_pulley_stats();
 
     long drop_profiles = global_config["iirfilter"]["skip"]; // Allow for iir fillter too stablize
     Process_Status status = Process_Status::Finished;
@@ -171,7 +171,6 @@ namespace
 
     //auto fn = encoder_distance_id(csp); 
     auto fn = encoder_distance_estimation(csp); 
-    const auto [z_min_unbiased,z_max_unbiased] = global_constraints.ZUnbiased;
 
     auto pulley_estimator = mk_pulleyfitter(z_resolution,-212.0);
 
@@ -179,7 +178,7 @@ namespace
 
     auto time0 = std::chrono::high_resolution_clock::now();
     
-    auto pulley_rev =  mk_pulley_revolution2();
+    auto pulley_rev =  mk_pulley_revolution();
 
     do
     {
@@ -204,9 +203,9 @@ namespace
 
 
       auto p = get<profile>(get<1>(m));
-      auto [pulley_left,pulley_right,clusters] = pulley_levels_clustered(p.z,pulley_estimator);
+      auto [pulley_level,pulley_right,clusters] = pulley_levels_clustered(p.z,pulley_estimator);
       recontruct_z(p.z,clusters);
-      p.z.insert(p.z.begin(),filter_window_len,(float)pulley_left);
+      p.z.insert(p.z.begin(),filter_window_len,(float)pulley_level);
       p.z.insert(p.z.end(),filter_window_len,(float)pulley_right);
 
 
@@ -257,17 +256,15 @@ namespace
 
       auto [ileft_edge_index, iright_edge_index] = find_profile_edges_sobel(iz);
 
-      auto pulley_left_filtered = (z_element)iirfilter_left(pulley_left);
+      auto pulley_level_filtered = (z_element)iirfilter_left(pulley_level);
       auto pulley_right_filtered = (z_element)iirfilter_right(pulley_right);
       
       auto left_edge_filtered = (z_element)iirfilter_left_edge(ileft_edge_index);
       auto right_edge_filtered = (z_element)iirfilter_right_edge(iright_edge_index);
       
-      
-      auto bottom_filtered =  pulley_left_filtered;
-      auto removed_dc_bias = dc_filter(bottom_filtered);
+      auto pulley_level_unbias = dc_filter(pulley_level_filtered);
 
-      auto [delayed, dd] = delay({iy, ix, iz, (int)left_edge_filtered, (int)pulley_left_filtered,p.z});
+      auto [delayed, dd] = delay({iy, ix, iz, (int)left_edge_filtered, (int)right_edge_filtered,p.z});
 
       if (!delayed)
         continue;
@@ -280,17 +277,17 @@ namespace
 
       auto [y, x, z, left_edge_index, right_edge_index, raw_z] = dd;
 
-      auto gradient = (pulley_right_filtered - pulley_left_filtered) / (double)z.size();
+      auto gradient = (pulley_right_filtered - pulley_level_filtered) / (double)z.size();
       regression_compensate(z, 0, z.size(), gradient);
-
+      
       PulleyRevolution ps;
       if(revolution_sensor_config.source == RevolutionSensor::Source::raw) {
-        ps = pulley_rev(pulley_left);
+        ps = pulley_rev(pulley_level);
       }else {
-        ps = pulley_rev(pulley_left_filtered);
+        ps = pulley_rev(pulley_level_unbias);
       }
 
-      auto speed = pulley_speed(ps,pulley_left_filtered);
+      auto [speed,frequency,amplitude] = pulley_speed(ps,pulley_level_unbias);
 
       if (speed == 0)
       {
@@ -304,9 +301,20 @@ namespace
         }
       }
 
+      if (cnt % (1000 * 10) == 0)
+      {
+        publish_PulleyOscillation(amplitude);
+        publish_SurfaceSpeed(frequency);
+        
+
+        spdlog::get("cads")->debug("Pulley Oscillation(mm): {}",amplitude);
+        spdlog::get("cads")->debug("Pulley Frequency(Hz): {}", frequency);
+        spdlog::get("cads")->debug("Surface Speed(m/s): {}", speed);
+      }
+
       auto left_edge_index_aligned = left_edge_index;
 
-      barrel_height_compensate(z, -bottom_filtered, clip_height);
+      pulley_level_compensate(z, -pulley_level_filtered, clip_height);
 
       if(z.size() < size_t(left_edge_index_aligned + width_n)) {
         //spdlog::get("cads")->debug("Belt width({})[la - {}, l- {}, r - {}] less than required. Filled with zeros",z.size(),left_edge_index_aligned,left_edge_index,right_edge_index);
