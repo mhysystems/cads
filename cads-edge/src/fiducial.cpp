@@ -93,24 +93,6 @@ double search_for_fiducial(cv::Mat belt, cv::Mat fiducial, cv::Mat& black_belt,c
   minMaxLoc( out, &minVal);
 
 	return minVal;
-
 }
-
-#if 0
-double samples_contains_fiducial_gpu(CadsMat belt, CadsMat fiducial, double c_threshold, double z_threshold) {
-	
-	CadsMat black_belt; //.colRange(0,fiducial.cols*2)
-	cv::threshold(belt.colRange(0,fiducial.cols*2),black_belt,z_threshold,1.0,cv::THRESH_BINARY);
-
-	CadsMat out(black_belt.rows - fiducial.rows + 1,black_belt.cols - fiducial.cols + 1, CV_32F);
-	cv::matchTemplate(black_belt,fiducial,out,cv::TM_SQDIFF_NORMED);
-
-	double minVal; double maxVal; cv::Point minLoc; cv::Point maxLoc;
-  minMaxLoc( out, &minVal, &maxVal, &minLoc, &maxLoc, cv::Mat() );
-	
-	return minVal;
-
-}
-#endif
 
 }

@@ -2,7 +2,6 @@
 #include <constants.h>
 #include <algorithm>
 #include <ranges>
-#include <window.hpp>
 
 #include <Iir.h>
 

@@ -11,7 +11,6 @@ cadsSrc += files(
   'edge_detection.cpp',
   'profile.cpp',
   'constants.cpp',
-  'window.cpp',
   'dynamic_processing.cpp',
   'init.cpp',
   'save_send_thread.cpp',

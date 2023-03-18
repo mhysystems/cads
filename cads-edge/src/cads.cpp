@@ -1,15 +1,9 @@
-#include <opencv2/core.hpp>
-#include <opencv2/core/types.hpp>
-#include <opencv2/imgproc.hpp>
-
 #include <cads.h>
 #include <regression.h>
 
 #include <db.h>
 #include <coms.h>
 #include <constants.h>
-#include <fiducial.h>
-#include <window.hpp>
 #include <readerwriterqueue.h>
 #include <gocator_reader.h>
 #include <sqlite_gocator_reader.h>
@@ -19,26 +13,12 @@
 #include <string>
 #include <vector>
 #include <tuple>
-#include <algorithm>
 #include <thread>
-#include <memory>
 #include <ranges>
 #include <chrono>
-#include <sstream>
 #include <fstream>
-#include <iostream>
 
 #include <spdlog/spdlog.h>
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wuseless-cast"
-
-#include <date/date.h>
-#include <date/tz.h>
-#include <fmt/core.h>
-#include <fmt/chrono.h>
-
-#pragma GCC diagnostic pop
 
 #include <filters.h>
 #include <edge_detection.h>
@@ -53,7 +33,6 @@
 using namespace std;
 using namespace moodycamel;
 using namespace std::chrono;
-using CadsMat = cv::UMat; // cv::cuda::GpuMat
 
 
 namespace
@@ -303,7 +282,6 @@ namespace
         publish_PulleyOscillation(amplitude);
         publish_SurfaceSpeed(frequency);
         
-
         spdlog::get("cads")->debug("Pulley Oscillation(mm): {}",amplitude);
         spdlog::get("cads")->debug("Pulley Frequency(Hz): {}", frequency);
         spdlog::get("cads")->debug("Surface Speed(m/s): {}", speed);

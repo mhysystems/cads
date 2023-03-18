@@ -5,11 +5,11 @@
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 
 #include <spdlog/spdlog.h>
+#include <opencv2/core.hpp>
 
 #pragma GCC diagnostic pop
 
 #include <origin_detection_thread.h>
-#include <window.hpp>
 #include <fiducial.h>
 #include <constants.h>
 #include <coro.hpp>
@@ -20,6 +20,36 @@ using namespace moodycamel;
 
 namespace cads
 {
+using window = std::deque<profile>;
+
+double left_edge_avg_height(const cv::Mat& belt, const cv::Mat& fiducial) {
+
+  cv::Mat mout;
+  cv::multiply(belt.colRange(0,fiducial.cols),fiducial,mout);
+  auto avg_val = cv::sum(mout)[0] / cv::countNonZero(mout);
+  return avg_val;
+
+}
+  cv::Mat window_to_mat_fixed(const window& win, int width) {
+
+  if(win.size() < 1) return cv::Mat(0,0,CV_32F);
+
+  cv::Mat mat(win.size(),width,CV_32F,cv::Scalar::all(0.0f));
+	
+  int i = 0;
+  for(auto p : win) {
+
+    auto m = mat.ptr<float>(i++);
+
+    int j = 0;
+    
+    for(auto z : p.z) {
+       m[j++] = (float)z;
+    }
+  }
+
+	return mat;
+}
 
   void shift_Mat(cv::Mat &m)
   {

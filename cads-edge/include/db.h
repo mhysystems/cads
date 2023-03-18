@@ -9,7 +9,6 @@
 #include <date/date.h>
 #include <readerwriterqueue.h>
 
-#include <window.hpp>
 #include <profile.h>
 #include <coro.hpp>
 
