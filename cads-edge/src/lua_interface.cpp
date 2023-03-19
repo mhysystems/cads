@@ -72,7 +72,7 @@ namespace
   }
 
   int save_send(lua_State *L) {
-    return mk_thread(L,cads::save_send_thread);
+    return mk_thread(L,[](moodycamel::BlockingReaderWriterQueue<cads::msg>& m){cads::save_send_thread(m,0,0);}); // Need to pass in z_offset, z_resolutions
   }
 
 }

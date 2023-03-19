@@ -7,7 +7,7 @@ def process_profile(db: str, y = 0, i = 0, ztype: str ='f') :
     q = "SELECT z from PROFILE where y >= ? order by y asc"
     p = y
     if i != 0:
-        q = "SELECT z from PROFILE where idx >= ? order by idx asc"
+        q = "SELECT z from PROFILE where rowid >= ? order by rowid asc"
         p = i
         
     for row in cur.execute(q,[p]):
