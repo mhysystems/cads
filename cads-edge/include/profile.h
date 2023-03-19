@@ -42,7 +42,6 @@ namespace cads
     long Belt = 0;
   };
   
-  //profile compress_profile(const profile &p, z_element z_offset, z_element z_resolution);
   struct transient{double y;};
 
   std::tuple<z_element,z_element> find_minmax_z(const profile& ps);
@@ -54,7 +53,4 @@ namespace cads
   
   std::tuple<double,double,z_clusters> pulley_levels_clustered(const z_type &z, std::function<double(const z_type &)> estimator = average);
 
-  profile compress_profile(const profile &p, z_element z_offset, z_element z_resolution);
-  profile decompress_profile(const profile &p, z_element z_offset, z_element z_resolution);
-  
 }

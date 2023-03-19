@@ -119,7 +119,7 @@ namespace
 
     bool terminate_publish = false;
     std::jthread realtime_publish(realtime_publish_thread, std::ref(terminate_publish));
-    std::jthread save_send(save_send_thread, std::ref(db_fifo),z_offset,z_resolution);
+    std::jthread save_send(save_send_thread, std::ref(db_fifo));
     
     std::jthread dynamic_processing;
     std::jthread origin_dectection;
