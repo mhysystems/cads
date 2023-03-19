@@ -124,7 +124,7 @@ namespace cads
 
   }
 
-  void save_send_thread(BlockingReaderWriterQueue<msg> &profile_fifo, double z_offset, double z_resolution)
+  void save_send_thread(BlockingReaderWriterQueue<msg> &profile_fifo)
   {
     namespace sml = boost::sml;
 
@@ -138,12 +138,9 @@ namespace cads
       coro<long, std::tuple<long, double>, 1> daily_upload = daily_upload_coro(0);
       long revid = 0;
       long idx = 0;
-      z_element offset;
-      z_element resolution;
     } global;
 
-    global.offset = z_offset;
-    global.resolution = z_resolution;
+
 
     struct transitions
     {
@@ -154,9 +151,8 @@ namespace cads
 
         const auto store_action = [](global_t &global, const scan_t &e)
         {
-          auto p = compress_profile(e.value,global.offset,global.resolution);
-          auto [co_end, s_err] = global.store_profile.resume({global.revid, global.idx, p});
-          global.store_profile2.resume({global.revid, global.idx, p});
+          auto [co_end, s_err] = global.store_profile.resume({global.revid, global.idx, e.value});
+ 
           if (s_err == 101)
           {
             global.idx++;
