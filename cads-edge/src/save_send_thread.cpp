@@ -25,9 +25,9 @@ using namespace std::chrono;
 
 namespace cads
 {
-
   coro<long, std::tuple<long, double>, 1> daily_upload_coro(long read_revid)
   {
+ 
     using namespace date;
     using namespace std;
  
@@ -97,7 +97,7 @@ namespace cads
         {
           if (fut.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
           {
-            auto [time, err] = fut.get();
+            auto [time,err] = fut.get();
             read_revid = write_revid;
             if (err)
             {
@@ -109,7 +109,6 @@ namespace cads
               write_revid--;
               state = daily_upload ? pre_upload : no_shedule;
               next_upload_date += std::chrono::days(1);
-              //store_daily_upload(next_upload_date,program_state_db_name);
             }
             spdlog::get("cads")->info("Belt upload thread finished. Writing data to revid: {}", write_revid);
           }
@@ -125,7 +124,7 @@ namespace cads
 
   }
 
-  void save_send_thread(BlockingReaderWriterQueue<msg> &profile_fifo)
+  void save_send_thread(BlockingReaderWriterQueue<msg> &profile_fifo, double z_offset, double z_resolution)
   {
     namespace sml = boost::sml;
 
@@ -134,11 +133,17 @@ namespace cads
     struct global_t
     {
       cads::coro<int, std::tuple<int, int, cads::profile>, 1> store_profile = store_profile_coro();
+      cads::coro<int, std::tuple<int, int, cads::profile>, 1> store_profile2 = store_profile_coro("test.db");
       coro<int, double,1> store_last_y = store_last_y_coro();
       coro<long, std::tuple<long, double>, 1> daily_upload = daily_upload_coro(0);
       long revid = 0;
       long idx = 0;
+      z_element offset;
+      z_element resolution;
     } global;
+
+    global.offset = z_offset;
+    global.resolution = z_resolution;
 
     struct transitions
     {
@@ -149,7 +154,9 @@ namespace cads
 
         const auto store_action = [](global_t &global, const scan_t &e)
         {
-          auto [co_end, s_err] = global.store_profile.resume({global.revid, global.idx, e.value});
+          auto p = compress_profile(e.value,global.offset,global.resolution);
+          auto [co_end, s_err] = global.store_profile.resume({global.revid, global.idx, p});
+          global.store_profile2.resume({global.revid, global.idx, p});
           if (s_err == 101)
           {
             global.idx++;
@@ -194,6 +201,9 @@ namespace cads
 
       switch (get<0>(m))
       {
+      case msgid::finished:
+        loop = false;
+        break;
       case msgid::scan:
         sm.process_event(scan_t{get<profile>(get<1>(m))});
         break;
@@ -207,8 +217,7 @@ namespace cads
         sm.process_event(complete_belt_t{get<double>(get<1>(m))});
         break;
       default:
-        loop = false;
-        continue;
+        break;
       }
     }
 

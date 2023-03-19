@@ -271,8 +271,12 @@ double left_edge_avg_height(const cv::Mat& belt, const cv::Mat& fiducial) {
           }
           break;
         }
-        default:
+        case msgid::finished:
+          next_fifo.enqueue(m);
           loop = false;
+          break;
+        default:
+          next_fifo.enqueue(m);
       }
 
       if (profile_fifo.size_approx() > buffer_size_warning)
@@ -287,7 +291,6 @@ double left_edge_avg_height(const cv::Mat& belt, const cv::Mat& fiducial) {
     auto rate = duration != 0 ? (double)cnt / duration : 0;
     spdlog::get("cads")->info("ORIGIN DETECTION - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, rate);
 
-    next_fifo.enqueue({msgid::finished, 0});
     spdlog::get("cads")->info("window_processing_thread");
   }
 

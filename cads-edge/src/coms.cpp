@@ -425,11 +425,12 @@ namespace cads
 
   }
 
-  std::tuple<date::utc_clock::time_point, bool> http_post_whole_belt(int revid, int last_idx, int first_idx)
+  std::tuple<std::chrono::time_point<date::utc_clock, std::chrono::seconds>, bool> http_post_whole_belt(int revid, int last_idx, int first_idx)
   {
     using namespace flatbuffers;
 
     auto now = chrono::floor<chrono::seconds>(date::utc_clock::now()); // Default sends to much decimal precision for asp.net core
+ 
     auto db_name = global_config["profile_db_name"].get<std::string>();
     auto endpoint_url = global_config["base_url"].get<std::string>();
     auto y_max_length = global_config["y_max_length"].get<double>();
@@ -564,6 +565,7 @@ namespace cads
     next_upload_date += std::chrono::days(1);
     store_daily_upload(next_upload_date, program_state_db_name);
     return {now, failure};
+
   }
 
   cads::coro<int, cads::profile, 1> post_profiles_coro(cads::meta meta)

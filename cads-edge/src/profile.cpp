@@ -292,29 +292,6 @@ namespace cads
     return std::make_tuple(avg_l,avg_r,clusters);
   }
 
-  std::function<int(int, int)> mk_edge_adjust(int left_edge_index_previous, int width_n)
-  {
-
-    return [=](int left_edge_index, int right_edge_index) mutable
-    {
-      auto right_edge_index_previous = left_edge_index_previous + width_n;
-
-      double edge_adjust = right_edge_index - left_edge_index - width_n;
-
-      auto denominator = (std::abs(left_edge_index - left_edge_index_previous) + std::abs(right_edge_index - right_edge_index_previous));
-
-      if (denominator != 0)
-      {
-        auto proportion = std::abs(left_edge_index - left_edge_index_previous) / denominator;
-        left_edge_index_previous -= (int)edge_adjust * proportion;
-
-        if (left_edge_index_previous < 0)
-          left_edge_index_previous = 0;
-      }
-
-      return left_edge_index_previous;
-    };
-  }
 
   bool operator==(const profile &a, const profile &b)
   {
@@ -333,6 +310,43 @@ namespace cads
                               { return !std::isnan(z); });
 
     return {left, right.base()};
+  }
+
+  profile compress_profile(const profile &p, z_element z_offset, z_element z_resolution)
+  {
+
+      auto tmp_z  = p.z | std::ranges::views::transform([=](float e) -> int16_t
+                                                { return std::isnan(e) ? std::numeric_limits<int16_t>::lowest() : int16_t((e - z_offset) / z_resolution); });
+        
+  z_type rtn((size_t)std::ceil(p.z.size() / 2.0));
+   auto kk = std::bit_cast<std::vector<int16_t>::iterator>(rtn.begin());
+   for(auto i = tmp_z.begin(); i < tmp_z.end(); ++i) {
+    *kk = *i;
+    ++kk;
+   }
+    return {p.y,p.x_off,rtn};
+
+  }
+
+  profile decompress_profile(const profile &p, z_element z_offset, z_element z_resolution)
+  {
+    
+    z_type rtn;
+    
+    for(auto i = std::bit_cast<std::vector<int16_t>::iterator>(std::begin(p.z)); i < std::bit_cast<std::vector<int16_t>::iterator>(std::end(p.z)); ++i) {
+      
+      auto v = *i;
+
+      if(v == std::numeric_limits<int16_t>::lowest()) {
+        rtn.push_back(std::numeric_limits<z_element>::quiet_NaN());
+      }else {
+        auto p = ((z_element)v)*z_resolution + z_offset; 
+        rtn.push_back(p);
+      }
+    
+    }
+    
+    return {p.y,p.x_off,rtn};
   }
 
   void constraint_substitute(z_type &z, z_element z_min, z_element z_max, z_element sub)

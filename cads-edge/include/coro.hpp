@@ -74,15 +74,18 @@ namespace cads
     };
 
     handle_type coro_hnd;
-
-    coro(handle_type h) : coro_hnd(h) {}
+    bool initialised = false;
+    //coro(){}
+    coro(handle_type h) : coro_hnd(h), initialised(true) {}
     coro(const coro&) = delete;
     coro(coro&& c) = delete;
     ~coro() { 
-      if (!coro_hnd.done()) {
-        terminate();
+      if(initialised) {
+        if (!coro_hnd.done()) {
+          terminate();
+        }
+        coro_hnd.destroy(); 
       }
-      coro_hnd.destroy(); 
     }
 
     std::tuple<bool, FC> resume(TC a)

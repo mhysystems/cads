@@ -109,6 +109,8 @@ namespace
       std::throw_with_nested(std::runtime_error("preprocessing:First message must be resolutions"));
     }
 
+    // Forward gocator resolutions
+    winFifo.enqueue(m);
     auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution] = get<resolutions_t>(get<1>(m));
     store_profile_parameters({y_resolution, x_resolution, z_resolution, 33.0, encoder_resolution, clip_height});
 
@@ -117,7 +119,7 @@ namespace
 
     bool terminate_publish = false;
     std::jthread realtime_publish(realtime_publish_thread, std::ref(terminate_publish));
-    std::jthread save_send(save_send_thread, std::ref(db_fifo));
+    std::jthread save_send(save_send_thread, std::ref(db_fifo),z_offset,z_resolution);
     
     std::jthread dynamic_processing;
     std::jthread origin_dectection;
@@ -186,7 +188,6 @@ namespace
       recontruct_z(p.z,clusters);
       p.z.insert(p.z.begin(),filter_window_len,(float)pulley_level);
       p.z.insert(p.z.end(),filter_window_len,(float)pulley_right);
-
 
       auto iy = p.y;
       auto ix = p.x_off;
@@ -280,7 +281,7 @@ namespace
       if (cnt % (2000 * 10) == 0)
       {
         publish_PulleyOscillation(amplitude);
-        publish_SurfaceSpeed(frequency);
+        publish_SurfaceSpeed(speed);
         
         spdlog::get("cads")->debug("Pulley Oscillation(mm): {}",amplitude);
         spdlog::get("cads")->debug("Pulley Frequency(Hz): {}", frequency);

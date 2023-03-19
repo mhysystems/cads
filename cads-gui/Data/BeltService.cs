@@ -281,8 +281,10 @@ namespace cads_gui.Data
       }
 
       var req = new List<ZDepth>();
-  
-      foreach (var r in await Search.SearchParallelAsync(db,columns,rows,(int)belt.WidthN,(long)belt.YmaxN,limit,xRange, fz, fp)) {
+
+      var x = await Search.SearchParallelAsync(db,columns,rows,(int)belt.WidthN,(long)belt.YmaxN,limit,xRange, fz, fp);
+
+      foreach (var r in x) {
         req.Add(new (r.Col*dx + xOff,r.Row*dy,r.Width*dx,r.Length*dy,r.Percent,new(r.ZMin.X*dx + xOff,r.ZMin.Y*dy,r.ZMin.Z)));
       }
 

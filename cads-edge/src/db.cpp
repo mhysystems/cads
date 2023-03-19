@@ -412,6 +412,7 @@ namespace cads
 
    void create_default_dbs() {
     create_profile_db();
+    create_profile_db("test.db");
     create_program_state_db();
     create_transient_db();
    }
