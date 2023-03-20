@@ -72,6 +72,7 @@
   },
 
   "conveyor" : {
+    "Org"  : "bhp",
     "Site" : "jimblebar",
     "Name" : "cv001",
     "Timezone" : "use_os",

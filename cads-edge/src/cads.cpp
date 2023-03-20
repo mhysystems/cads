@@ -125,12 +125,12 @@ namespace
       return Process_Status::Finished;
     }
 
-    if (m_id != cads::msgid::resolutions)
+    if (m_id != cads::msgid::gocator_properties)
     {
-      std::throw_with_nested(std::runtime_error("preprocessing:First message must be resolutions"));
+      std::throw_with_nested(std::runtime_error("preprocessing:First message must be gocator_properties"));
     }
 
-    // Forward gocator resolutions
+    // Forward gocator gocator_properties
     winFifo.enqueue(m);
     auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution, encoder_framerate] = get<GocatorProperties>(get<1>(m));
     store_profile_parameters({y_resolution, x_resolution, z_resolution, 33.0, encoder_resolution, clip_height});
@@ -441,7 +441,7 @@ namespace cads
 
     gocatorFifo.wait_dequeue(m);
 
-    if (get<0>(m) != cads::msgid::resolutions)
+    if (get<0>(m) != cads::msgid::gocator_properties)
     {
       std::throw_with_nested(std::runtime_error("First message must be resolutions"));
     }else {
@@ -485,7 +485,7 @@ namespace cads
         store_profile.resume({0, idx++, p});
         break;
       }
-      case cads::msgid::resolutions:
+      case cads::msgid::gocator_properties:
       {
         break;
       }
@@ -567,9 +567,9 @@ namespace cads
       return;
     }
 
-    if (m_id != cads::msgid::resolutions)
+    if (m_id != cads::msgid::gocator_properties)
     {
-      std::throw_with_nested(std::runtime_error("preprocessing:First message must be resolutions"));
+      std::throw_with_nested(std::runtime_error("preprocessing:First message must be gocator_properties"));
     }
 
     auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution, encoder_framerate] = get<GocatorProperties>(get<1>(m));

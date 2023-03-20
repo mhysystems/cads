@@ -137,6 +137,7 @@ namespace cads
       coro<long, std::tuple<long, double>, 1> daily_upload = daily_upload_coro(0);
       long revid = 0;
       long idx = 0;
+      GocatorProperties gocator_properties;
     } global;
 
 
@@ -177,8 +178,14 @@ namespace cads
           global.revid = 0;
         };
 
+        const auto init_gocator_properties_action = [](global_t &global,const GocatorProperties &v)
+        {
+          global.gocator_properties = v;
+        };
+
         return make_transition_table(
-            *"invalid_data"_s + event<begin_sequence_t> / reset_globals_action = "valid_data"_s,
+            *"init"_s + event<GocatorProperties> / init_gocator_properties_action = "invalid_data"_s,
+            "invalid_data"_s + event<begin_sequence_t> / reset_globals_action = "valid_data"_s,
             "valid_data"_s + event<scan_t> / store_action = "valid_data"_s,
             "valid_data"_s + event<complete_belt_t> / complete_belt_action = "valid_data"_s,
             "valid_data"_s + event<end_sequence_t> / reset_globals_action = "invalid_data"_s);
@@ -210,6 +217,9 @@ namespace cads
         break;
       case msgid::complete_belt:
         sm.process_event(complete_belt_t{get<double>(get<1>(m))});
+        break;
+      case msgid::gocator_properties:
+        sm.process_event(GocatorProperties{get<GocatorProperties>(get<1>(m))});
         break;
       default:
         break;

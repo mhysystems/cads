@@ -8,7 +8,7 @@
 namespace cads
 { 
   
-  enum msgid{resolutions,scan,finished,begin_sequence,end_sequence,complete_belt};
+  enum msgid{gocator_properties,scan,finished,begin_sequence,end_sequence,complete_belt};
   using GocatorProperties = std::tuple<double,double,double,double,double,double>;
   using scan_t = struct {cads::profile value;};
   using begin_sequence_t = struct {};

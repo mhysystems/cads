@@ -49,6 +49,7 @@ namespace {
   auto mk_conveyor_parameters(nlohmann::json config) {
 
     int64_t Id = 0;
+    auto Org = config["conveyor"]["Org"].get<std::string>();
     auto Site = config["conveyor"]["Site"].get<std::string>();
     auto Name = config["conveyor"]["Name"].get<std::string>();
     auto Timezone =  date::current_zone()->name();
@@ -61,7 +62,7 @@ namespace {
     auto PulleyCircumference = config["conveyor"]["PulleyCircumference"].get<double>();
     int64_t Belt = 0;
 
-    return cads::Conveyor{Id,Site,Name,Timezone,PulleyCircumference,Belt};
+    return cads::Conveyor{Id,Org,Site,Name,Timezone,PulleyCircumference,Belt};
 
   }
 
@@ -180,6 +181,7 @@ namespace cads {
     nlohmann::json params_json;
   
     params_json["Id"] = Id;
+    params_json["Org"] = Org;
     params_json["Site"] = Site;
     params_json["Name"] = Name;
     params_json["Timezone"] = Timezone;

@@ -44,6 +44,7 @@ namespace cads {
 
   struct Conveyor {
     int64_t Id;
+    std::string Org;
     std::string Site;
     std::string Name;
     std::string Timezone;

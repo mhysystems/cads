@@ -54,7 +54,7 @@ namespace cads
     auto data_src = global_config["data_source"].get<std::string>();
     auto [params, err2] = fetch_profile_parameters(data_src);
 
-    m_gocatorFifo.enqueue({msgid::resolutions, GocatorProperties{params.y_res, params.x_res, params.z_res, params.z_off, params.encoder_res, 0.0}});
+    m_gocatorFifo.enqueue({msgid::gocator_properties, GocatorProperties{params.y_res, params.x_res, params.z_res, params.z_off, params.encoder_res, 0.0}});
 
     m_yResolution = params.y_res;
     m_encoder_resolution = params.encoder_res;

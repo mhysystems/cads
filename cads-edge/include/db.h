@@ -16,9 +16,6 @@
 namespace cads
 {
 
-  bool create_profile_db(std::string name = "");
-  bool create_program_state_db(std::string name = "");
-  bool create_transient_db(std::string name = "");
   void create_default_dbs();
 
   coro<int, std::tuple<int, int, profile>, 1> store_profile_coro(std::string name = "");
