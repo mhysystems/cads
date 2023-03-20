@@ -16,11 +16,16 @@ namespace cads
     // Class passed to co_wait or co_yield ie. co_await promise.yield_value(expr)
     struct awaitable
     {
-      TC& to_coro;
-      bool& terminate;
-      awaitable() = default;
-      awaitable(TC& a, bool& t) : to_coro(a),terminate(t) {}
+      const promise_type &promise;
       
+      awaitable(const promise_type &p) : promise(p) {}
+      
+      // To keep track of what is used
+      awaitable() = delete;
+      awaitable(promise_type &&p) = delete;
+      awaitable& operator=(const awaitable&) = delete;
+      awaitable& operator=(awaitable&&) = delete;
+     
       constexpr bool await_ready() const noexcept { return false; }
 
       // Called when coroutine suspends
@@ -30,7 +35,7 @@ namespace cads
       // Called when coroutine is resumed
       std::tuple<TC,bool> await_resume() const noexcept
       {
-        return {to_coro,terminate};
+        return {promise.to_coro,promise.terminate_coro};
       }
     };
 
@@ -42,7 +47,16 @@ namespace cads
 
       std::exception_ptr exception_;
 
-      // Called when coroutine give back control
+      // Need this constructor
+      promise_type() = default;
+
+      // To keep track of what is used
+      promise_type(const promise_type&) = delete;
+      promise_type(promise_type&&) = delete;
+      promise_type& operator=(const promise_type&) = delete;
+      promise_type& operator=(promise_type&&) = delete;
+      
+      // Called when coroutine is constructed
       coro get_return_object()
       {
         return coro(handle_type::from_promise(*this));
@@ -63,7 +77,7 @@ namespace cads
       awaitable yield_value(FC from)
       {
         from_coro = from;
-        return {to_coro,terminate_coro};
+        return {*this};
       }
 
       void return_value(FC from)
@@ -74,18 +88,35 @@ namespace cads
     };
 
     handle_type coro_hnd;
-    bool initialised = false;
-    //coro(){}
-    coro(handle_type h) : coro_hnd(h), initialised(true) {}
+
+
+    friend void swap(coro& first, coro& second)
+    {
+      std::swap(first.coro_hnd, second.coro_hnd);
+    }
+    
+    coro(handle_type h) : coro_hnd(h){}
+    coro& operator=(coro&& rhs) noexcept
+    {
+      swap(*this,rhs);
+      return *this;
+    }
+    
+    
+    // To keep track of what is used
+    coro() = delete;
     coro(const coro&) = delete;
     coro(coro&& c) = delete;
+    coro& operator=(const coro&) = delete;
+    
+    
     ~coro() { 
-      if(initialised) {
-        if (!coro_hnd.done()) {
-          terminate();
-        }
-        coro_hnd.destroy(); 
+
+      if (!coro_hnd.done()) {
+        terminate();
       }
+      coro_hnd.destroy(); 
+
     }
 
     std::tuple<bool, FC> resume(TC a)

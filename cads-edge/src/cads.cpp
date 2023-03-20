@@ -132,7 +132,7 @@ namespace
 
     // Forward gocator resolutions
     winFifo.enqueue(m);
-    auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution] = get<resolutions_t>(get<1>(m));
+    auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution, encoder_framerate] = get<resolutions_t>(get<1>(m));
     store_profile_parameters({y_resolution, x_resolution, z_resolution, 33.0, encoder_resolution, clip_height});
 
     BlockingReaderWriterQueue<msg> db_fifo;
@@ -450,7 +450,7 @@ namespace cads
       spdlog::get("cads")->info("Let's go! - {}",ts);
     }
 
-    auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution] = get<resolutions_t>(get<1>(m));
+    auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution, gocator_framerate] = get<resolutions_t>(get<1>(m));
     store_profile_parameters({y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution, global_config["z_height"].get<double>()});
 
     auto store_profile = store_profile_coro();
@@ -572,7 +572,7 @@ namespace cads
       std::throw_with_nested(std::runtime_error("preprocessing:First message must be resolutions"));
     }
 
-    auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution] = get<resolutions_t>(get<1>(m));
+    auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution, encoder_framerate] = get<resolutions_t>(get<1>(m));
 
     auto differentiation = mk_dc_filter(); 
 

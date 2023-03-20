@@ -133,7 +133,6 @@ namespace cads
     struct global_t
     {
       cads::coro<int, std::tuple<int, int, cads::profile>, 1> store_profile = store_profile_coro();
-      cads::coro<int, std::tuple<int, int, cads::profile>, 1> store_profile2 = store_profile_coro("test.db");
       coro<int, double,1> store_last_y = store_last_y_coro();
       coro<long, std::tuple<long, double>, 1> daily_upload = daily_upload_coro(0);
       long revid = 0;
