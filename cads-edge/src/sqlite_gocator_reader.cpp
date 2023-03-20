@@ -54,8 +54,7 @@ namespace cads
     auto data_src = global_config["data_source"].get<std::string>();
     auto [params, err2] = fetch_profile_parameters(data_src);
 
-    spdlog::get("gocator")->info("First frame recieved from gocator. y :{}, x : {}, z : {}, zoff : {}, enc : {}, 1st : {}", params.y_res, params.x_res, params.z_res, params.z_off, params.encoder_res, 0);
-    m_gocatorFifo.enqueue({msgid::resolutions, std::tuple<double, double, double, double, double, double>{params.y_res, params.x_res, params.z_res, params.z_off, params.encoder_res, 0.0}});
+    m_gocatorFifo.enqueue({msgid::resolutions, resolutions_t{params.y_res, params.x_res, params.z_res, params.z_off, params.encoder_res, 0.0}});
 
     m_yResolution = params.y_res;
     m_encoder_resolution = params.encoder_res;
