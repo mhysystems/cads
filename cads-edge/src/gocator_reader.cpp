@@ -313,7 +313,7 @@ namespace cads
       }else {
         m_yOffset = frame;
       }
-      m_gocatorFifo.enqueue({msgid::resolutions, resolutions_t{m_yResolution, xResolution, zResolution, zOffset, m_encoder_resolution, m_frame_rate}});
+      m_gocatorFifo.enqueue({msgid::resolutions, GocatorProperties{m_yResolution, xResolution, zResolution, zOffset, m_encoder_resolution, m_frame_rate}});
     }
 
     if (m_use_encoder)
