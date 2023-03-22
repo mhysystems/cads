@@ -108,7 +108,7 @@ namespace cads
       }
 
 
-      if (y >= 0)
+      if (y >= trigger_length)
       {
         const auto cv_threshhold = left_edge_avg_height(belt, fiducial) - fdepth;
         auto correlation = search_for_fiducial(belt, fiducial, m1, out, cv_threshhold);

@@ -25,12 +25,13 @@ namespace cads
   bool store_scan_state(std::string scan_db, std::string db_name = "");
   bool store_scan_gocator(std::tuple<double,double,double,double> gocator, std::string db_name);
   bool store_scan_properties(std::tuple<date::utc_clock::time_point,date::utc_clock::time_point> props, std::string db_name);
-  std::deque<std::tuple<std::string,std::string,int64_t>> fetch_scan_state(std::string name ="");
+  std::deque<std::tuple<std::string,std::string,int64_t,int64_t>> fetch_scan_state(std::string name ="");
   bool delete_scan_state(std::string Path, std::string db_name = "");
   coro<std::tuple<int, z_type>> fetch_scan_coro(long last_idx, long first_index, std::string db_name, int size = 256);
   long zs_count(std::string db_name);
   void store_scan_uploaded(int64_t idx, std::string scan_name, std::string name = "");
   std::tuple<int64_t,bool> fetch_scan_uploaded(std::string scan_name, std::string name = "");
+  void store_scan_status(int64_t status, std::string scan_name, std::string name = "");
 
   coro<int, double, 1> store_last_y_coro(std::string name = "");
   coro<std::tuple<int, profile>> fetch_belt_coro(int revid, long last_idx, long first_idx = 0, int size = 256, std::string name = "");

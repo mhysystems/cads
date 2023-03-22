@@ -299,6 +299,28 @@ namespace cads
     }
   }
 
+  void store_scan_status(int64_t status, std::string scan_name, std::string name)
+  {
+    auto query = R"(update scans set status = ? where rowid = (select rowid from scans where Path=?);)"s;
+    auto db_config_name = name.empty() ? global_config["state_db_name"].get<std::string>() : name;
+    auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
+    
+    auto err = sqlite3_bind_int(stmt.get(), 1, status);
+    err = sqlite3_bind_text(stmt.get(), 2, scan_name.c_str(), scan_name.size(), nullptr);
+
+    if (err != SQLITE_OK)
+    {
+      spdlog::get("db")->error("store_conveyor_id: SQLite Error Code:{}", err);
+    }
+
+    tie(err, stmt) = db_step(move(stmt));
+
+    if (err != SQLITE_DONE)
+    {
+      spdlog::get("db")->error("db_step: SQLite Error Code:{}", err);
+    }
+  }
+
   std::tuple<int64_t,bool> fetch_scan_uploaded(std::string scan_name, std::string name)
   {
     auto query = R"(select rowid from scans where Path=?)"s;
@@ -396,7 +418,7 @@ namespace cads
 
     vector<string> tables{
       R"(CREATE TABLE IF NOT EXISTS STATE (DAILYUPLOAD TEXT NOT NULL, ConveyorId INTEGER NOT NULL, BeltId INTEGER NOT NULL))",
-      R"(CREATE TABLE IF NOT EXISTS SCANS (ScanBegin TEXT NOT NULL, Path TEXT NOT NULL, UPLOADED INTEGER NOT NULL))",
+      R"(CREATE TABLE IF NOT EXISTS SCANS (ScanBegin TEXT NOT NULL, Path TEXT NOT NULL, Uploaded INTEGER NOT NULL, Status INTEGER NOT NULL))",
       fmt::format(R"(INSERT INTO STATE(DAILYUPLOAD,ConveyorId,BeltId) SELECT '{}',{},{} WHERE NOT EXISTS (SELECT * FROM STATE))", ts,0,0),
       R"(VACUUM)"
     };
@@ -833,14 +855,14 @@ namespace cads
   }
 
 
-  std::deque<std::tuple<std::string,std::string,int64_t>> fetch_scan_state(std::string name)
+  std::deque<std::tuple<std::string,std::string,int64_t,int64_t>> fetch_scan_state(std::string name)
   {
 
-    auto query = R"(SELECT ScanBegin, Path, Uploaded FROM Scans)"s;
+    auto query = R"(SELECT ScanBegin, Path, Uploaded, Status FROM Scans)"s;
     auto db_config_name = name.empty() ? global_config["state_db_name"].get<std::string>() : name;
     auto [stmt,db] = prepare_query(db_config_name, query);
     
-    std::deque<std::tuple<std::string,std::string,int64_t>>  rtn;
+    std::deque<std::tuple<std::string,std::string,int64_t,int64_t>>  rtn;
     
     int err = SQLITE_ERROR;
 
@@ -854,7 +876,8 @@ namespace cads
         auto tmp = std::make_tuple(
           std::string( (const char* )sqlite3_column_text(stmt.get(), 0), sqlite3_column_bytes(stmt.get(), 0)),
           std::string( (const char* )sqlite3_column_text(stmt.get(), 1), sqlite3_column_bytes(stmt.get(), 1)),
-          int64_t(sqlite3_column_int64(stmt.get(), 2))
+          int64_t(sqlite3_column_int64(stmt.get(), 2)),
+          int64_t(sqlite3_column_int64(stmt.get(), 3))
         );
 
         rtn.push_back(tmp); 
@@ -880,7 +903,7 @@ namespace cads
 
   bool store_scan_state(std::string scan_db, std::string db_name)
   {
-    auto query = R"(INSERT INTO SCANS (ScanBegin, Path, Uploaded) VALUES(?,?,?))"s;
+    auto query = R"(INSERT INTO SCANS (ScanBegin, Path, Uploaded, Status) VALUES(?,?,?,?))"s;
     auto db_config_name = db_name.empty() ? global_config["state_db_name"].get<std::string>() : db_name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
     
@@ -890,6 +913,7 @@ namespace cads
     auto err = sqlite3_bind_text(stmt.get(), 1, ScanBegin.c_str(), ScanBegin.size(),nullptr);
     err = sqlite3_bind_text(stmt.get(), 2, Path.c_str(), Path.size(),nullptr);
     err = sqlite3_bind_int64(stmt.get(), 3, 0L);
+    err = sqlite3_bind_int64(stmt.get(), 4, 0L);
 
     tie(err, stmt) = db_step(move(stmt));
 
