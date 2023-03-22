@@ -33,7 +33,7 @@
 			"type": "cppdbg",
 			"request": "launch",
 			"program": "${workspaceFolder}/debug/cads",
-			"args": ["-l","debug","-c", "${workspaceFolder}/config.cv001.json"],
+			"args": ["-l","debug","-c", "${workspaceFolder}/config.json"],
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}/debug",
 			"environment": [],

@@ -1,9 +1,9 @@
 {
-  "data_source" : "../../profiles/rawprofile_cv001_2.db",
+  "data_source" : "gocator",
   "sqlite_gocator" : {
     "range" : [1058749,9007199254740991],
     "fps" : 999980,
-    "forever" : false,
+    "forever" : true,
     "delay" : 98
   },
   "y_max_length" : 12665200,
@@ -72,6 +72,7 @@
   },
 
   "conveyor" : {
+    "Org"  : "bhp",
     "Site" : "jimblebar",
     "Name" : "cv001",
     "Timezone" : "use_os",
