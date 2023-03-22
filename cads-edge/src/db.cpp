@@ -7,8 +7,6 @@
 #include <memory>
 #include <sstream>
 
-#include <date/date.h>
-#include <date/tz.h>
 #include <fmt/core.h>
 #include <fmt/chrono.h>
 #include <spdlog/spdlog.h>
@@ -31,48 +29,6 @@ namespace cads
   using sqlite3_t = std::unique_ptr<sqlite3, decltype(&sqlite3_close)>;
   using sqlite3_stmt_t = std::unique_ptr<sqlite3_stmt, decltype(&sqlite3_finalize)>;
   
-  tuple<sqlite3_stmt_t,sqlite3_t> prepare_query(string db_config_name, string query, int flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX)
-  {
-
-    sqlite3 *db_raw = nullptr;
-    const char *db_name = db_config_name.c_str();
-    auto err = sqlite3_open_v2(db_name, &db_raw, flags, nullptr);
-
-    if (err != SQLITE_OK)
-    {
-      std::throw_with_nested(std::runtime_error("prepare_querysqlite3_open_v2"));
-    }
-
-    sqlite3_t db(db_raw, &sqlite3_close);
-
-    sqlite3_stmt *stmt_raw = nullptr;
-    err = sqlite3_prepare_v2(db.get(), query.c_str(), (int)query.size(), &stmt_raw, NULL);
-
-    if (err != SQLITE_OK)
-    {
-      std::throw_with_nested(std::runtime_error("prepare_query:sqlite3_prepare_v2"));
-    }
-
-    sqlite3_stmt_t stmt(stmt_raw, &sqlite3_finalize);
-
-    // Undefined behaviour. FIXME Current destruction order is left to right
-    return {move(stmt),move(db)};
-  }
-
-  tuple<int, sqlite3_stmt_t> db_step(sqlite3_stmt_t stmt)
-  {
-    auto err = sqlite3_step(stmt.get());
-    auto attempts = 512;
-
-    while (err != SQLITE_ROW && err != SQLITE_DONE && attempts-- > 0)
-    {
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      err = sqlite3_step(stmt.get());
-    }
-
-    return {err, move(stmt)};
-  }
-
   auto db_exec(sqlite3* db,  string query)
   {
     std::string func_name = __func__;
@@ -137,6 +93,75 @@ namespace cads
     return err;
   }
   
+  int sqlite3_prepare_retry
+  (
+  sqlite3 *db,            /* Database handle */
+  const char *zSql,       /* SQL statement, UTF-8 encoded */
+  int nByte,              /* Maximum length of zSql in bytes. */
+  sqlite3_stmt **ppStmt,  /* OUT: Statement handle */
+  const char **pzTail     /* OUT: Pointer to unused portion of zSql */
+)
+  {
+        int err = SQLITE_ERROR;
+
+    for(int retry = 10; retry > 0; --retry) {
+
+        char *errmsg;
+        err = sqlite3_prepare_v2(db, zSql, nByte, ppStmt, pzTail);
+
+        if (err != SQLITE_OK)
+        {
+          std::this_thread::sleep_for(std::chrono::milliseconds(10));
+          
+        }else {
+          retry = 0;
+        }
+    }
+
+    return err;
+  }
+
+  tuple<sqlite3_stmt_t,sqlite3_t> prepare_query(string db_config_name, string query, int flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX)
+  {
+
+    sqlite3 *db_raw = nullptr;
+    const char *db_name = db_config_name.c_str();
+    auto err = sqlite3_open_v2(db_name, &db_raw, flags, nullptr);
+
+    if (err != SQLITE_OK)
+    {
+      std::throw_with_nested(std::runtime_error("prepare_querysqlite3_open_v2"));
+    }
+
+    sqlite3_t db(db_raw, &sqlite3_close);
+
+    sqlite3_stmt *stmt_raw = nullptr;
+    err = sqlite3_prepare_retry(db.get(), query.c_str(), (int)query.size(), &stmt_raw, NULL);
+
+    if (err != SQLITE_OK)
+    {
+      std::throw_with_nested(std::runtime_error("prepare_query:sqlite3_prepare_v2"));
+    }
+
+    sqlite3_stmt_t stmt(stmt_raw, &sqlite3_finalize);
+
+    // Undefined behaviour. FIXME Current destruction order is left to right
+    return {move(stmt),move(db)};
+  }
+
+  tuple<int, sqlite3_stmt_t> db_step(sqlite3_stmt_t stmt)
+  {
+    auto err = sqlite3_step(stmt.get());
+    auto attempts = 512;
+
+    while (err != SQLITE_ROW && err != SQLITE_DONE && attempts-- > 0)
+    {
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      err = sqlite3_step(stmt.get());
+    }
+
+    return {err, move(stmt)};
+  }
  
   int store_daily_upload(std::chrono::time_point<date::local_t, std::chrono::seconds> date, std::string name)
   {
@@ -250,6 +275,48 @@ namespace cads
     {
       spdlog::get("db")->error("db_step: SQLite Error Code:{}", err);
     }
+  }
+
+  void store_scan_uploaded(int64_t idx, std::string scan_name, std::string name)
+  {
+    auto query = R"(update scans set uploaded = ? where rowid = (select rowid from scans where Path=?);)"s;
+    auto db_config_name = name.empty() ? global_config["state_db_name"].get<std::string>() : name;
+    auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
+    
+    auto err = sqlite3_bind_int(stmt.get(), 1, idx);
+    err = sqlite3_bind_text(stmt.get(), 2, scan_name.c_str(), scan_name.size(), nullptr);
+
+    if (err != SQLITE_OK)
+    {
+      spdlog::get("db")->error("store_conveyor_id: SQLite Error Code:{}", err);
+    }
+
+    tie(err, stmt) = db_step(move(stmt));
+
+    if (err != SQLITE_DONE)
+    {
+      spdlog::get("db")->error("db_step: SQLite Error Code:{}", err);
+    }
+  }
+
+  std::tuple<int64_t,bool> fetch_scan_uploaded(std::string scan_name, std::string name)
+  {
+    auto query = R"(select rowid from scans where Path=?)"s;
+    auto db_config_name = name.empty() ? global_config["state_db_name"].get<std::string>() : name;
+    auto [stmt,db] = prepare_query(db_config_name, query);
+    auto err = sqlite3_bind_text(stmt.get(), 1, scan_name.c_str(), scan_name.size(), nullptr);
+
+    tie(err, stmt) = db_step(move(stmt));
+    
+    if (err != SQLITE_ROW)
+    {
+      spdlog::get("db")->error("db_step: SQLite Error Code:{}", err);
+      return {0,true};
+    }
+    
+    int64_t r = sqlite3_column_int64(stmt.get(), 0);
+
+    return {r,false}; 
   }
 
   std::tuple<int,bool> fetch_belt_id(std::string name)
@@ -602,6 +669,45 @@ namespace cads
     co_return err;
   }
 
+  std::tuple<std::deque<std::tuple<int, z_type>>, sqlite3_stmt_t> fetch_scan_coro_step(sqlite3_stmt_t stmt, int rowid_begin, int rowid_end)
+  {
+
+    std::deque<std::tuple<int, z_type>> rtn;
+    auto err = sqlite3_bind_int(stmt.get(), 1, rowid_begin);
+    err = sqlite3_bind_int(stmt.get(), 2, rowid_end);
+
+    while (true)
+    {
+      // Run once, retrying not effective, too slow and causes buffers to fill
+      err = sqlite3_step(stmt.get());
+
+      if (err == SQLITE_ROW)
+      {
+
+        auto rowid = sqlite3_column_int(stmt.get(), 0);
+
+        z_element *z = (z_element *)sqlite3_column_blob(stmt.get(), 1); // Freed on next call to sqlite3_step
+        int len = sqlite3_column_bytes(stmt.get(), 1) / sizeof(*z);
+
+        rtn.push_back({rowid, {z, z + len}});
+      }
+      else if (err == SQLITE_DONE)
+      {
+        break;
+      }
+      else
+      {
+        spdlog::get("db")->error("{}:sqlite3_step Code:{}",__func__, err);
+        break;
+      }
+    }
+
+    sqlite3_reset(stmt.get());
+
+    return {rtn, std::move(stmt)};
+  }
+
+
   std::tuple<std::deque<std::tuple<int, profile>>, sqlite3_stmt_t> fetch_belt_coro_step(sqlite3_stmt_t stmt, int idx_begin, int idx_end)
   {
 
@@ -644,6 +750,35 @@ namespace cads
     return {rtn, std::move(stmt)};
   }
 
+  coro<std::tuple<int, z_type>> fetch_scan_coro(long first_index, long last_idx, std::string db_name, int size)
+  {
+    auto query = R"(SELECT rowid,z FROM ZS WHERE rowid >= ? AND rowid < ?)";
+    auto [stmt,db] = prepare_query(db_name, query);
+
+    for (long i = first_index; i < last_idx; i += size)
+    {
+      auto iend = i + size; 
+      if(iend > last_idx) iend = last_idx;
+      
+      auto [p, s] = fetch_scan_coro_step(std::move(stmt), i, iend);
+      stmt = std::move(s);
+
+      if (p.empty())
+        break;
+
+      while (!p.empty())
+      {
+        auto [ignore, terminate] = co_yield p.front();
+        p.pop_front();
+        if (terminate)
+        {
+          i = last_idx;
+        }
+      }
+    }
+  }
+
+
   coro<std::tuple<int, profile>> fetch_belt_coro(int revid, long last_idx, long first_index, int size, std::string name)
   {
     auto query = fmt::format(R"(SELECT idx,y,x_off,z FROM PROFILE WHERE REVID = {} AND IDX >= ? AND IDX < ?)", revid);
@@ -673,17 +808,88 @@ namespace cads
     }
   }
 
-  bool store_scan_state(std::tuple<date::utc_clock::time_point,std::string> scan, std::string name)
+  long max_rowid(std::string table, std::string db_name) {
+
+    auto query = fmt::format(R"(SELECT max(rowid) FROM {})", table);
+    
+    auto [stmt,db] = prepare_query(db_name, query);
+
+    int err = SQLITE_ERROR;
+
+    tie(err, stmt) = db_step(move(stmt));
+
+    if(err != SQLITE_ROW) {
+      spdlog::get("cads")->error("{} : error code {}",__func__, err);
+      return -1;
+    }
+
+    auto cnt = sqlite3_column_int64(stmt.get(), 0);
+    return cnt;
+  }
+
+  long zs_count(std::string db_name) 
   {
-    auto query = R"(SCANS (ScanBegin, Path TEXT, Uploaded) VALUES(?,?,?))"s;
+    return max_rowid("ZS",db_name);
+  }
+
+
+  std::deque<std::tuple<std::string,std::string,int64_t>> fetch_scan_state(std::string name)
+  {
+
+    auto query = R"(SELECT ScanBegin, Path, Uploaded FROM Scans)"s;
     auto db_config_name = name.empty() ? global_config["state_db_name"].get<std::string>() : name;
+    auto [stmt,db] = prepare_query(db_config_name, query);
+    
+    std::deque<std::tuple<std::string,std::string,int64_t>>  rtn;
+    
+    int err = SQLITE_ERROR;
+
+    do{
+      
+      tie(err, stmt) = db_step(move(stmt));
+
+      if (err == SQLITE_ROW)
+      {
+        
+        auto tmp = std::make_tuple(
+          std::string( (const char* )sqlite3_column_text(stmt.get(), 0), sqlite3_column_bytes(stmt.get(), 0)),
+          std::string( (const char* )sqlite3_column_text(stmt.get(), 1), sqlite3_column_bytes(stmt.get(), 1)),
+          int64_t(sqlite3_column_int64(stmt.get(), 2))
+        );
+
+        rtn.push_back(tmp); 
+      }
+    }while(err == SQLITE_ROW);
+    
+    return rtn;
+  }
+
+  bool delete_scan_state(std::string Path, std::string db_name)
+  {
+    auto query = R"(DELETE FROM Scans WHERE Path = ?)"s;
+    auto db_config_name = db_name.empty() ? global_config["state_db_name"].get<std::string>() : db_name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
     
-    auto ScanBegin = date::format("%FT%TZ",std::get<1-1>(scan));
-    auto Path = date::format("%FT%TZ",std::get<2-1>(scan));
+    auto err = sqlite3_bind_text(stmt.get(), 1, Path.c_str(), Path.size(),nullptr);
 
-    err = sqlite3_bind_text(stmt.get(), 1, ScanBegin.c_str(), ScanBegin.size(),nullptr);
+
+    tie(err, stmt) = db_step(move(stmt));
+
+    return err == SQLITE_OK || err == SQLITE_DONE;
+  }
+
+  bool store_scan_state(std::string scan_db, std::string db_name)
+  {
+    auto query = R"(INSERT INTO SCANS (ScanBegin, Path, Uploaded) VALUES(?,?,?))"s;
+    auto db_config_name = db_name.empty() ? global_config["state_db_name"].get<std::string>() : db_name;
+    auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
+    
+    auto ScanBegin = date::format("%FT%TZ",chrono::floor<chrono::seconds>(date::utc_clock::now()));
+    auto Path = scan_db;
+
+    auto err = sqlite3_bind_text(stmt.get(), 1, ScanBegin.c_str(), ScanBegin.size(),nullptr);
     err = sqlite3_bind_text(stmt.get(), 2, Path.c_str(), Path.size(),nullptr);
+    err = sqlite3_bind_int64(stmt.get(), 3, 0L);
 
     tie(err, stmt) = db_step(move(stmt));
 
@@ -693,7 +899,7 @@ namespace cads
   bool store_scan_gocator(std::tuple<double,double,double,double> gocator, std::string db_name) 
   {
     
-    auto err = db_exec(db_name, "R(CREATE TABLE IF NOT EXISTS GOCATOR (ZRes REAL NOT NULL, ZOff REAL NOT NULL, ZCard REAL NOT NULL, Framerate REAL NOT NULL))");
+    auto err = db_exec(db_name, R"(CREATE TABLE IF NOT EXISTS GOCATOR(ZRes REAL NOT NULL, ZOff REAL NOT NULL, ZCard REAL NOT NULL, Framerate REAL NOT NULL))"s);
     
     auto query = R"(INSERT INTO GOCATOR (ZRes, ZOff, ZCard, Framerate) VALUES (?,?,?,?))"s;
 
@@ -709,26 +915,28 @@ namespace cads
     return err == SQLITE_OK || err == SQLITE_DONE;
   }
 
-  bool store_scan_properties(std::tuple<double,double,date::utc_clock::time_point,date::utc_clock::time_point,std::string,long,long> props, std::string db_name) 
+  bool store_scan_properties(std::tuple<date::utc_clock::time_point,date::utc_clock::time_point> props, std::string db_name) 
   {
     
-    auto err = db_exec(db_name, R"(CREATE TABLE IF NOT EXISTS PROPERTIES (Width REAL NOT NULL, Length REAL NOT NULL, ScanBegin TEXT NOT NULL, ScanEnd TEXT NOT NULL, Org TEXT NOT NULL, ConveyorId INTEGER NOT NULL, BeltId INTEGER NOT NULL)");
+    auto err = db_exec(db_name, R"(CREATE TABLE IF NOT EXISTS PROPERTIES (Width REAL NOT NULL, Length REAL NOT NULL, ScanBegin TEXT NOT NULL, ScanEnd TEXT NOT NULL, Org TEXT NOT NULL, ConveyorId INTEGER NOT NULL, BeltId INTEGER NOT NULL))");
     
     auto query = R"(INSERT INTO PROPERTIES (Width, Length, ScanBegin, ScanEnd, Org, ConveyorId, BeltId) VALUES (?,?,?,?,?,?,?))"s;
 
     auto [stmt,db] = prepare_query(db_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
 
-    auto ScanBegin = date::format("%FT%TZ",std::get<3-1>(props));
-    auto ScanEnd = date::format("%FT%TZ",std::get<4-1>(props));
-    auto Org = std::get<5-1>(props);
+    auto ScanBegin = date::format("%FT%TZ",std::get<0>(props));
+    auto ScanEnd = date::format("%FT%TZ",std::get<1>(props));
+    auto [ConveyorId,errorc] = fetch_conveyor_id(); 
+    auto [BeltId, errorb] = fetch_belt_id();
+ 
 
-    err = sqlite3_bind_double(stmt.get(), 1, std::get<1-1>(props));
-    err = sqlite3_bind_double(stmt.get(), 2, std::get<2-1>(props));
+    err = sqlite3_bind_double(stmt.get(), 1, global_belt_parameters.Width);
+    err = sqlite3_bind_double(stmt.get(), 2, global_belt_parameters.Length);
     err = sqlite3_bind_text(stmt.get(), 3, ScanBegin.c_str(),ScanBegin.size(),nullptr);
     err = sqlite3_bind_text(stmt.get(), 4, ScanEnd.c_str(),ScanEnd.size(),nullptr);
-    err = sqlite3_bind_text(stmt.get(), 5, Org.c_str(), Org.size(), nullptr);
-    err = sqlite3_bind_int64(stmt.get(), 6, std::get<6-1>(props));
-    err = sqlite3_bind_int64(stmt.get(), 7, std::get<7-1>(props));
+    err = sqlite3_bind_text(stmt.get(), 5, global_conveyor_parameters.Org.c_str(), global_conveyor_parameters.Org.size(), nullptr);
+    err = sqlite3_bind_int64(stmt.get(), 6, ConveyorId);
+    err = sqlite3_bind_int64(stmt.get(), 7, BeltId);
 
 
     tie(err, stmt) = db_step(move(stmt));
@@ -736,16 +944,17 @@ namespace cads
     return err == SQLITE_OK || err == SQLITE_DONE;
   }
 
-  coro<int, z_type, 1> store_scan_z_coro(std::string db_name)
+  coro<int, z_type, 1> store_scan_coro(std::string db_name)
   {
     int err = SQLITE_ERROR;
     {
       std::string func_name = __func__;
 
-      auto err = db_exec(db_name, {R"(CREATE TABLE IF NOT EXISTS ZS (Z BLOB NOT NULL))"s,R"(PRAGMA synchronous=OFF)"s});
+      err = db_exec(db_name, R"(CREATE TABLE IF NOT EXISTS ZS (Z BLOB NOT NULL))"s);
 
-      auto query = R"(INSERT INTO PROFILES (z) VALUES (?))"s;
+      auto query = R"(INSERT INTO ZS (z) VALUES (?))"s;
       auto [stmt,db] = prepare_query(db_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
+      db_exec(db.get(), R"(PRAGMA synchronous=OFF)"s);
 
       while (true)
       {

@@ -403,6 +403,32 @@ namespace cads
     }
   }
 
+  void http_post_profile_properties2(std::string chrono, double YmaxN, double y_step)
+  {
+    nlohmann::json params_json;
+    auto db_name = global_config["profile_db_name"].get<std::string>();
+    auto [params, err] = fetch_profile_parameters(db_name);
+    auto [belt_id, err2] = fetch_belt_id();
+
+    params_json["site"] = global_conveyor_parameters.Site;
+    params_json["conveyor"] = global_conveyor_parameters.Name;
+    params_json["chrono"] = chrono;
+    params_json["y_res"] = y_step;
+    params_json["x_res"] = params.x_res;
+    params_json["z_res"] = params.z_res;
+    params_json["z_off"] = params.z_off;
+    params_json["z_max"] = params.z_max;
+    params_json["Ymax"] = global_belt_parameters.Length;
+    params_json["YmaxN"] = YmaxN;
+    params_json["WidthN"] = global_config["width_n"].get<double>();
+    params_json["Belt"] = belt_id;
+
+    if (err == 0 && err2 == 0)
+    {
+      http_post_profile_properties_json(params_json.dump());
+    }
+  }
+
   void http_post_profile_properties(cads::meta meta)
   {
     nlohmann::json params_json;
@@ -567,6 +593,115 @@ namespace cads
     return {now, failure};
 
   }
+
+  std::tuple<std::chrono::time_point<date::utc_clock, std::chrono::seconds>, bool> post_scan(std::string db_name)
+  {
+    using namespace flatbuffers;
+
+    auto now = chrono::floor<chrono::seconds>(date::utc_clock::now()); // Default sends to much decimal precision for asp.net core
+    if(!std::filesystem::exists(db_name))
+    {
+      return {now,false};
+    }
+
+    auto profile_db_name = global_config["profile_db_name"].get<std::string>();
+    auto endpoint_url = global_config["base_url"].get<std::string>();
+    auto upload_profile = global_config["upload_profile"].get<bool>();
+
+    if (endpoint_url == "null")
+    {
+      spdlog::get("upload")->info("http_post_whole_belt set to null. Belt not uploaded");
+      return {now, true};
+    }
+    auto [rowid,ignored]  = fetch_scan_uploaded(db_name);
+    auto fetch_profile = fetch_scan_coro(rowid,std::numeric_limits<int>::max(),db_name);
+
+    FlatBufferBuilder builder(4096 * 128);
+    std::vector<flatbuffers::Offset<CadsFlatbuffers::profile>> profiles_flat;
+
+    auto ts = date::format("%FT%TZ", now);
+    cpr::Url endpoint{mk_post_profile_url(ts)};
+
+    auto [params, err] = fetch_profile_parameters(profile_db_name);
+  
+    auto YmaxN = zs_count(db_name);
+
+    auto z_resolution = params.z_res;
+    auto z_offset = params.z_off;
+    auto y_step = global_belt_parameters.Length / (YmaxN);
+
+
+    auto start = std::chrono::high_resolution_clock::now();
+    int64_t size = 0;
+    int64_t frame_idx = -1;
+    double belt_z_max = 0;
+    int final_idx = 0;
+
+    while (true)
+    {
+      auto [co_terminate, cv] = fetch_profile.resume(0);
+      auto [idx, zs] = cv;
+
+      if (frame_idx < 0)
+        frame_idx = (int64_t)idx;
+
+      if (!co_terminate)
+      {
+        namespace sr = std::ranges;
+
+        auto y = (idx - 1) * y_step;// Sqlite rowid starts a 1
+
+        auto max_iter = max_element(zs.begin(), zs.end());
+
+        if (max_iter != zs.end())
+        {
+          belt_z_max = max(belt_z_max, (double)*max_iter);
+        }
+
+        auto tmp_z = zs | sr::views::transform([=](float e) -> int16_t
+                                                { return std::isnan(e) ? std::numeric_limits<int16_t>::lowest() : int16_t(((double)e - z_offset) / z_resolution); });
+        std::vector<int16_t> short_z{tmp_z.begin(), tmp_z.end()};
+
+        profiles_flat.push_back(CadsFlatbuffers::CreateprofileDirect(builder, y, 0, &short_z));
+
+        if (profiles_flat.size() == 256)
+        {
+          size += send_flatbuffer_array(builder, z_resolution, z_offset, idx - 1, profiles_flat, endpoint, upload_profile);
+          store_scan_uploaded(idx,db_name);
+        }
+      }
+      else
+      {
+        if (profiles_flat.size() > 0)
+        {
+          size += send_flatbuffer_array(builder, z_resolution, z_offset, idx - 1, profiles_flat, endpoint, upload_profile);
+          store_scan_uploaded(idx,db_name);
+        }
+        final_idx = idx;
+        break;
+      }
+    }
+
+
+    bool failure = false;
+    if (final_idx == YmaxN)
+    {
+      http_post_profile_properties2(ts, YmaxN, y_step);
+    }
+    
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start).count() + 1; // Add one second to avoid divide by zero
+
+    spdlog::get("upload")->info("ZMAX: {}, SIZE: {}, DUR:{}, RATE(Kb/s):{} ", belt_z_max, size, duration, size / (1000 * duration));
+    spdlog::get("upload")->info("Leaving http_post_thread_bulk");
+    auto program_state_db_name = global_config["state_db_name"].get<std::string>();
+    auto next_upload_date = fetch_daily_upload(program_state_db_name);
+    next_upload_date += std::chrono::days(1);
+    store_daily_upload(next_upload_date, program_state_db_name);
+    return {now, failure};
+
+  }
+
 
   cads::coro<int, cads::profile, 1> post_profiles_coro(cads::meta meta)
   {

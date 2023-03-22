@@ -5,5 +5,5 @@
 
 namespace cads
 {
-  void save_send_thread(moodycamel::BlockingReaderWriterQueue<msg> &profile_fifo);
+  void save_send_thread(moodycamel::BlockingReaderWriterQueue<msg> &profile_fifo, moodycamel::BlockingReaderWriterQueue<msg> &next);
 }

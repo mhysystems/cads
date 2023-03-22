@@ -23,6 +23,18 @@
 using namespace moodycamel;
 using namespace std::chrono;
 
+namespace {
+
+  std::tuple<double,double,double,double> get_gocator_subset(cads::GocatorProperties g) 
+  {
+    //struct{double yResolution; double xResolution; double zResolution; double zOffset; double m_encoder_resolution; double m_frame_rate;};
+    return {std::get<2>(g),std::get<3>(g),global_config["width_n"].get<double>(),std::get<5>(g)};
+    //return {g.zResolution,g.zOffset,global_config["width_n"].get<double>(),g.m_frame_rate};
+  }
+
+}
+
+
 namespace cads
 {
   coro<long, std::tuple<long, double>, 1> daily_upload_coro(long read_revid)
@@ -124,22 +136,27 @@ namespace cads
 
   }
 
-  void save_send_thread(BlockingReaderWriterQueue<msg> &profile_fifo)
+  void save_send_thread(BlockingReaderWriterQueue<msg> &profile_fifo, BlockingReaderWriterQueue<msg> &next)
   {
     namespace sml = boost::sml;
 
-    spdlog::get("cads")->info("save_send_thread started");
-
+    constexpr auto scan_filename_init = "scan-delete.sqlite";
+    
     struct global_t
     {
       cads::coro<int, std::tuple<int, int, cads::profile>, 1> store_profile = store_profile_coro();
       coro<int, double,1> store_last_y = store_last_y_coro();
       coro<long, std::tuple<long, double>, 1> daily_upload = daily_upload_coro(0);
+      coro<int, z_type, 1> store_scan = store_scan_coro(scan_filename_init);
       long revid = 0;
       long idx = 0;
       GocatorProperties gocator_properties;
-    } global;
+      date::utc_clock::time_point scan_begin  = date::utc_clock::now();
+      BlockingReaderWriterQueue<msg> & cps;
 
+      global_t(BlockingReaderWriterQueue<msg> &m) : cps(m){};
+
+    } global(next);
 
 
     struct transitions
@@ -152,6 +169,7 @@ namespace cads
         const auto store_action = [](global_t &global, const scan_t &e)
         {
           auto [co_end, s_err] = global.store_profile.resume({global.revid, global.idx, e.value});
+          global.store_scan.resume(e.value.z);
  
           if (s_err == 101)
           {
@@ -168,20 +186,43 @@ namespace cads
         const auto complete_belt_action = [](global_t &global, const complete_belt_t &e)
         {
           bool terminate = false;
-          std::tie(terminate, global.revid) = global.daily_upload.resume({global.idx, e.value});
+          //std::tie(terminate, global.revid) = global.daily_upload.resume({global.idx, e.value});
           global.idx = 0;
+          
+          auto scan_end = date::utc_clock::now();
+          auto scan_filename = fmt::format("scan-{}.sqlite",global.scan_begin.time_since_epoch().count());
+          store_scan_gocator(get_gocator_subset(global.gocator_properties),scan_filename);
+          store_scan_properties({global.scan_begin,scan_end},scan_filename);
+          store_scan_state(scan_filename);          
+          global.cps.enqueue({msgid::complete_belt, 0});
+          auto new_scan_filename = fmt::format("scan-{}.sqlite",scan_end.time_since_epoch().count());
+          global.store_scan = store_scan_coro(new_scan_filename);
+          global.scan_begin = scan_end;
+
         };
 
         const auto reset_globals_action = [](global_t &global)
         {
           global.idx = 0;
           global.revid = 0;
+
+          global.store_scan.terminate();
+          auto scan_filename = fmt::format("scan-{}.sqlite",global.scan_begin.time_since_epoch().count());
+          std::filesystem::remove(scan_filename);
+          
+          auto scan_end = date::utc_clock::now();
+          auto filename = fmt::format("scan-{}.sqlite",std::chrono::system_clock::now().time_since_epoch().count());
+          auto new_scan_filename = fmt::format("scan-{}.sqlite",scan_end.time_since_epoch().count());
+          global.store_scan = store_scan_coro(new_scan_filename);
+          global.scan_begin = scan_end;
+
         };
 
         const auto init_gocator_properties_action = [](global_t &global,const GocatorProperties &v)
         {
           global.gocator_properties = v;
         };
+
 
         return make_transition_table(
             *"init"_s + event<GocatorProperties> / init_gocator_properties_action = "invalid_data"_s,

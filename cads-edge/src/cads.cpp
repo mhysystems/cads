@@ -49,6 +49,7 @@
 #include <intermessage.h>
 #include <belt.h>
 #include <interpolation.h>
+#include <upload.h>
 
 using namespace std;
 using namespace moodycamel;
@@ -66,7 +67,10 @@ namespace
     
     if(!err && conveyor_id == 0){
       auto [new_id,err] = remote_addconveyor(global_conveyor_parameters);
-      store_conveyor_id(new_id);
+      if(!err) {
+        store_conveyor_id(new_id);
+        conveyor_id = new_id;
+      }
     }
 
     auto [belt_id,errb] = fetch_belt_id();
@@ -75,7 +79,11 @@ namespace
       auto belt = global_belt_parameters;
       belt.Conveyor = conveyor_id;
       auto [new_id,err] = remote_addbelt(belt);
-      store_belt_id(new_id);
+      
+      if(!err) {
+        store_belt_id(new_id);
+        belt_id = new_id;
+      }
     }
   }
 
@@ -100,9 +108,9 @@ namespace
 
   enum class Process_Status {Error, Finished, Stopped};
 
-  Process_Status process_impl()
+  Process_Status process_impl(BlockingReaderWriterQueue<msg> &next)
   {
-   
+
     std::jthread uploading_conveyorbelt_parameters(upload_conveyorbelt_parameters);
 
     BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
@@ -140,7 +148,7 @@ namespace
 
     bool terminate_publish = false;
     std::jthread realtime_publish(realtime_publish_thread, std::ref(terminate_publish));
-    std::jthread save_send(save_send_thread, std::ref(db_fifo));
+    std::jthread save_send(save_send_thread, std::ref(db_fifo),std::ref(next));
     
     std::jthread dynamic_processing;
     std::jthread origin_dectection;
@@ -511,12 +519,15 @@ namespace cads
 
   void process()
   {
+    BlockingReaderWriterQueue<msg> scan_upload_fifo(4096 * 1024);
+    std::jthread save_send(upload_scan_thread, std::ref(scan_upload_fifo));
+
     for (int sleep_wait = 1;;)
     {
       
       auto start = std::chrono::high_resolution_clock::now();
 
-      auto status = process_impl();
+      auto status = process_impl(scan_upload_fifo);
 
       auto now = std::chrono::high_resolution_clock::now();
       auto period = std::chrono::duration_cast<std::chrono::seconds>(now - start).count();

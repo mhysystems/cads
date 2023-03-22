@@ -72,7 +72,7 @@ namespace
   }
 
   int save_send(lua_State *L) {
-    return mk_thread(L,cads::save_send_thread); // Need to pass in z_offset, z_resolutions
+    return mk_thread2(L,cads::save_send_thread); // Need to pass in z_offset, z_resolutions
   }
 
 }

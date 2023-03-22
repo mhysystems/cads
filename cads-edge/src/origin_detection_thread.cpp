@@ -57,7 +57,8 @@ namespace cads
   coro<std::tuple<profile,double,bool>,profile,1> origin_detection_coro(double x_resolution, double y_resolution, int width_n)
   {
     auto fiducial = make_fiducial(x_resolution, y_resolution);
-    fiducial_as_image(fiducial,"fid");
+    //fiducial_as_image(fiducial,"fid");
+    
     window profile_buffer;
 
     auto fdepth = global_config["fiducial_depth"].get<double>();
@@ -93,19 +94,21 @@ namespace cads
     long sequence_cnt = 0;
     auto valid = false;
     long cnt = 1;
+    uint64_t ccnt = 0;
 
     auto start = std::chrono::high_resolution_clock::now();
 
     while (true)
     {
       y_type y = profile_buffer.front().y;
-      
+      ccnt++;
+
       if(sequence_cnt > 0 && (cnt++ % 10000) == 0) {
         publish_CadsToOrigin(y); //TODO
       }
 
 
-      if (y >= trigger_length)
+      if (y >= 0)
       {
         const auto cv_threshhold = left_edge_avg_height(belt, fiducial) - fdepth;
         auto correlation = search_for_fiducial(belt, fiducial, m1, out, cv_threshhold);
@@ -120,7 +123,7 @@ namespace cads
         if (correlation < belt_crosscorr_threshold)
         {
           ++sequence_cnt;
-          spdlog::get("cads")->info("Correlation : {} at y : {} with threshold: {}", correlation, y, cv_threshhold);
+          spdlog::get("cads")->info("Correlation : {} at y : {} with threshold: {} and count : {}", correlation, y, cv_threshhold,ccnt);
           auto now = std::chrono::high_resolution_clock::now();
           auto period = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
           start = now;
