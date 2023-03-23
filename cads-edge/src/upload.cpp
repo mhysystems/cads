@@ -2,7 +2,7 @@
 #include <tuple>
 #include <list>
 #include <future>
-#include <chrono>
+#include <algorithm>
 
 #include <date/date.h>
 #include <date/tz.h>
@@ -60,7 +60,21 @@ void upload_scan_thread(moodycamel::BlockingReaderWriterQueue<msg> &fifo)
   do
   {
 
+    fifo.wait_dequeue(m);
+
+    switch (get<0>(m))
+    {
+      case msgid::finished:
+        loop = false;
+        break;
+      default:
+        spdlog::get("cads")->info("Recieved a scan");
+        break;
+    }
+
     auto scans = fetch_scan_state();
+    std::remove_if(scans.begin(),scans.end(),[](auto s) { return std::get<3>(s) == 1;});
+
     // keep last scan
     while(scans.size() > 1)
     {
@@ -90,18 +104,6 @@ void upload_scan_thread(moodycamel::BlockingReaderWriterQueue<msg> &fifo)
         running_uploads.push_back(std::async(resume_scan, scans.front()));
       }
     }
-
-    fifo.wait_dequeue(m);
-
-      switch (get<0>(m))
-      {
-        case msgid::finished:
-          loop = false;
-          break;
-        default:
-          spdlog::get("cads")->info("Recieved a scan");
-          break;
-      }
   
   }while(loop);
 

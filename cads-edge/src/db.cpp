@@ -319,7 +319,7 @@ namespace cads
 
   std::tuple<int64_t,bool> fetch_scan_uploaded(std::string scan_name, std::string name)
   {
-    auto query = R"(select rowid from scans where Path=?)"s;
+    auto query = R"(select uploaded from scans where Path=?)"s;
     auto db_config_name = name.empty() ? global_config["state_db_name"].get<std::string>() : name;
     auto [stmt,db] = prepare_query(db_config_name, query);
     auto err = sqlite3_bind_text(stmt.get(), 1, scan_name.c_str(), scan_name.size(), nullptr);
