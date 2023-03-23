@@ -224,7 +224,6 @@ namespace cads
                 }
 
                 if(origin_sequence_cnt > 0) {
-                  spdlog::get("cads")->info("Estimated Belt Length(m): {}", estimated_belt_length / 1000);
                   publish_CurrentLength(estimated_belt_length);
                   next_fifo.enqueue({msgid::complete_belt, estimated_belt_length});
                 }

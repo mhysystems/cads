@@ -85,7 +85,7 @@
     "CordDiameter" : 9.1,
     "TopCover" : 14.0,
     "Width" : 1600,
-    "Length" : 12665200,
+    "Length" : 12565200,
     "Splices" : 1
   },
 
@@ -96,7 +96,7 @@
   "webapi_urls" : {
     "add_conveyor" : ["https://server.mhysystems.com/api/conveyors",true],
     "add_meta" : ["https://server.mhysystems.com/api/meta",true],
-    "add_belt" : ["https://server.mhysystems.com/api/belt",true],
+    "add_belt" : ["https://server.mhysystems.com/api/belts",true],
     "add_scan" : ["https://server.mhysystems.com/api/scans",true]
   },
 

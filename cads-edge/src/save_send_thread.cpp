@@ -87,9 +87,8 @@ namespace cads
         }
         case pre_upload:
         {
-          auto now = current_zone()->to_local(system_clock::now());
-          auto dbg = date::format("%FT%T", now);
-          auto dbg2 = date::format("%FT%T", next_upload_date);
+          auto now = date::utc_clock::now();
+  
           if (now > next_upload_date)
           {
 

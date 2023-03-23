@@ -13,6 +13,7 @@
 
 #include <readerwriterqueue.h>
 #include <constants.h>
+#include <utils.hpp>
 
 using namespace moodycamel;
 
@@ -163,13 +164,13 @@ namespace cads
     return {err, move(stmt)};
   }
  
-  int store_daily_upload(std::chrono::time_point<date::local_t, std::chrono::seconds> date, std::string name)
+  int store_daily_upload(date::utc_clock::time_point datetime, std::string name)
   {
     auto query = R"(UPDATE STATE SET DAILYUPLOAD = ? WHERE ROWID = 1)"s;
     auto db_config_name = name.empty() ? global_config["state_db_name"].get<std::string>() : name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
     
-    auto ts = date::format("%FT%T", date);
+    auto ts = to_str(datetime);
 
     auto err = sqlite3_bind_text(stmt.get(), 1, ts.c_str(),ts.size(),nullptr);
 
@@ -188,7 +189,7 @@ namespace cads
     return err;
   }
 
-  std::chrono::time_point<date::local_t, std::chrono::seconds> fetch_daily_upload(std::string name)
+  date::utc_clock::time_point fetch_daily_upload(std::string name)
   {
     auto query = R"(SELECT DAILYUPLOAD FROM STATE WHERE ROWID = 1)"s;
     auto db_config_name = name.empty() ? global_config["state_db_name"].get<std::string>() : name;
@@ -206,12 +207,7 @@ namespace cads
     auto date_cstr_len = sqlite3_column_bytes(stmt.get(), 0);
 
     std::string date_str(date_cstr,date_cstr_len);
-    std::istringstream in(date_str);
-
-    std::chrono::time_point<date::local_t,std::chrono::seconds> date;
-    in >> date::parse("%FT%T", date);
-
-    return date; 
+    return to_clk(date_str); 
   }
 
   
@@ -404,16 +400,18 @@ namespace cads
 
       system_clock::duration run_in;
       st >> parse("%R", run_in);
-      date::zoned_time now{ date::current_zone(),std::chrono::system_clock::now() };
-      auto today = chrono::floor<chrono::days>(now.get_local_time());
-      ts = date::format("%FT%T", today + run_in);
+
+      date::zoned_time now{ date::current_zone(), std::chrono::system_clock::now()};
+      auto trigger = chrono::floor<chrono::days>(now.get_local_time()) + run_in;
+      
+      date::zoned_time trigger_local{ date::current_zone(), trigger};
+      auto trigger_utc = date::make_zoned("UTC", trigger_local);
+      ts = date::format("%FT%TZ", trigger_utc);
 
     }
     else
     {
-      date::zoned_time now{ date::current_zone(),std::chrono::system_clock::now() };
-      auto seconds = chrono::floor<chrono::seconds>(now.get_local_time());
-      ts = date::format("%FT%T", seconds);
+      ts = to_str(date::utc_clock::now());
     }
 
     vector<string> tables{
@@ -772,35 +770,6 @@ namespace cads
     return {rtn, std::move(stmt)};
   }
 
-  coro<std::tuple<int, z_type>> fetch_scan_coro(long first_index, long last_idx, std::string db_name, int size)
-  {
-    auto query = R"(SELECT rowid,z FROM ZS WHERE rowid >= ? AND rowid < ?)";
-    auto [stmt,db] = prepare_query(db_name, query);
-
-    for (long i = first_index; i < last_idx; i += size)
-    {
-      auto iend = i + size; 
-      if(iend > last_idx) iend = last_idx;
-      
-      auto [p, s] = fetch_scan_coro_step(std::move(stmt), i, iend);
-      stmt = std::move(s);
-
-      if (p.empty())
-        break;
-
-      while (!p.empty())
-      {
-        auto [ignore, terminate] = co_yield p.front();
-        p.pop_front();
-        if (terminate)
-        {
-          i = last_idx;
-        }
-      }
-    }
-  }
-
-
   coro<std::tuple<int, profile>> fetch_belt_coro(int revid, long last_idx, long first_index, int size, std::string name)
   {
     auto query = fmt::format(R"(SELECT idx,y,x_off,z FROM PROFILE WHERE REVID = {} AND IDX >= ? AND IDX < ?)", revid);
@@ -855,14 +824,14 @@ namespace cads
   }
 
 
-  std::deque<std::tuple<std::string,std::string,int64_t,int64_t>> fetch_scan_state(std::string name)
+  std::deque<state::scan> fetch_scan_state(std::string name)
   {
 
     auto query = R"(SELECT ScanBegin, Path, Uploaded, Status FROM Scans)"s;
     auto db_config_name = name.empty() ? global_config["state_db_name"].get<std::string>() : name;
     auto [stmt,db] = prepare_query(db_config_name, query);
     
-    std::deque<std::tuple<std::string,std::string,int64_t,int64_t>>  rtn;
+    std::deque<state::scan>  rtn;
     
     int err = SQLITE_ERROR;
 
@@ -874,7 +843,7 @@ namespace cads
       {
         
         auto tmp = std::make_tuple(
-          std::string( (const char* )sqlite3_column_text(stmt.get(), 0), sqlite3_column_bytes(stmt.get(), 0)),
+          to_clk(std::string( (const char* )sqlite3_column_text(stmt.get(), 0), sqlite3_column_bytes(stmt.get(), 0))),
           std::string( (const char* )sqlite3_column_text(stmt.get(), 1), sqlite3_column_bytes(stmt.get(), 1)),
           int64_t(sqlite3_column_int64(stmt.get(), 2)),
           int64_t(sqlite3_column_int64(stmt.get(), 3))
@@ -885,20 +854,6 @@ namespace cads
     }while(err == SQLITE_ROW);
     
     return rtn;
-  }
-
-  bool delete_scan_state(std::string Path, std::string db_name)
-  {
-    auto query = R"(DELETE FROM Scans WHERE Path = ?)"s;
-    auto db_config_name = db_name.empty() ? global_config["state_db_name"].get<std::string>() : db_name;
-    auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
-    
-    auto err = sqlite3_bind_text(stmt.get(), 1, Path.c_str(), Path.size(),nullptr);
-
-
-    tie(err, stmt) = db_step(move(stmt));
-
-    return err == SQLITE_OK || err == SQLITE_DONE;
   }
 
   bool store_scan_state(std::string scan_db, std::string db_name)
@@ -919,6 +874,23 @@ namespace cads
 
     return err == SQLITE_OK || err == SQLITE_DONE;
   }
+
+  bool delete_scan_state(std::string Path, std::string db_name)
+  {
+    auto query = R"(DELETE FROM Scans WHERE Path = ?)"s;
+    auto db_config_name = db_name.empty() ? global_config["state_db_name"].get<std::string>() : db_name;
+    auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
+    
+    auto err = sqlite3_bind_text(stmt.get(), 1, Path.c_str(), Path.size(),nullptr);
+
+
+    tie(err, stmt) = db_step(move(stmt));
+
+    return err == SQLITE_OK || err == SQLITE_DONE;
+  }
+
+
+  // scan db
 
   bool store_scan_gocator(std::tuple<double,double,double,double> gocator, std::string db_name) 
   {
@@ -1029,6 +1001,34 @@ namespace cads
     }
 
     co_return err;
+  }
+
+  coro<std::tuple<int, z_type>> fetch_scan_coro(long first_index, long last_idx, std::string db_name, int size)
+  {
+    auto query = R"(SELECT rowid,z FROM ZS WHERE rowid >= ? AND rowid < ?)";
+    auto [stmt,db] = prepare_query(db_name, query);
+
+    for (long i = first_index; i < last_idx; i += size)
+    {
+      auto iend = i + size; 
+      if(iend > last_idx) iend = last_idx;
+      
+      auto [p, s] = fetch_scan_coro_step(std::move(stmt), i, iend);
+      stmt = std::move(s);
+
+      if (p.empty())
+        break;
+
+      while (!p.empty())
+      {
+        auto [ignore, terminate] = co_yield p.front();
+        p.pop_front();
+        if (terminate)
+        {
+          i = last_idx;
+        }
+      }
+    }
   }
 
 
