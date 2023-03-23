@@ -25,7 +25,7 @@
 #pragma GCC diagnostic pop
 
 #include <constants.h>
-#include <db.h>
+#include <utils.hpp>
 
 using namespace std;
 
@@ -594,14 +594,18 @@ namespace cads
 
   }
 
-  std::tuple<std::chrono::time_point<date::utc_clock, std::chrono::seconds>, bool> post_scan(std::string db_name)
+  bool post_scan(state::scan scan)
   {
     using namespace flatbuffers;
-
-    auto now = chrono::floor<chrono::seconds>(date::utc_clock::now()); // Default sends to much decimal precision for asp.net core
+    spdlog::get("cads")->info("Entering {}",__func__);
+    auto [now_utc,db_name,uploaded,status] = scan;
+    
+    auto now = chrono::floor<chrono::seconds>(now_utc); // Default sends to much decimal precision for asp.net core
+    
     if(!std::filesystem::exists(db_name))
     {
-      return {now,false};
+      spdlog::get("cads")->info("{}: {} doesn't exist. Scan not uploaded",__func__, db_name);
+      return true;
     }
 
     auto profile_db_name = global_config["profile_db_name"].get<std::string>();
@@ -610,16 +614,17 @@ namespace cads
 
     if (endpoint_url == "null")
     {
-      spdlog::get("upload")->info("http_post_whole_belt set to null. Belt not uploaded");
-      return {now, true};
+      spdlog::get("cads")->info("{} endpoint_url set to null. Scan not uploaded",__func__);
+      return true;
     }
+
     auto [rowid,ignored]  = fetch_scan_uploaded(db_name);
     auto fetch_profile = fetch_scan_coro(rowid,std::numeric_limits<int>::max(),db_name);
 
     FlatBufferBuilder builder(4096 * 128);
     std::vector<flatbuffers::Offset<CadsFlatbuffers::profile>> profiles_flat;
 
-    auto ts = date::format("%FT%TZ", now);
+    auto ts = to_str(now);
     cpr::Url endpoint{mk_post_profile_url(ts)};
 
     auto [params, err] = fetch_profile_parameters(profile_db_name);
@@ -666,16 +671,16 @@ namespace cads
 
         if (profiles_flat.size() == 256)
         {
-          size += send_flatbuffer_array(builder, z_resolution, z_offset, idx - 1, profiles_flat, endpoint, upload_profile);
-          store_scan_uploaded(idx,db_name);
+          size += send_flatbuffer_array(builder, z_resolution, z_offset, idx - 256, profiles_flat, endpoint, upload_profile);
+          store_scan_uploaded(idx+1,db_name);
         }
       }
       else
       {
         if (profiles_flat.size() > 0)
         {
-          size += send_flatbuffer_array(builder, z_resolution, z_offset, idx - 1, profiles_flat, endpoint, upload_profile);
-          store_scan_uploaded(idx,db_name);
+          size += send_flatbuffer_array(builder, z_resolution, z_offset, idx - profiles_flat.size(), profiles_flat, endpoint, upload_profile);
+          store_scan_uploaded(idx+1,db_name);
         }
         final_idx = idx;
         break;
@@ -687,18 +692,18 @@ namespace cads
     if (final_idx == YmaxN)
     {
       http_post_profile_properties2(ts, YmaxN, y_step);
+    }else
+    {
+      failure = true;
+      spdlog::get("cads")->error("{}: Number of profiles sent {} not matching expected {}", __func__, final_idx, YmaxN);
     }
     
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start).count() + 1; // Add one second to avoid divide by zero
 
-    spdlog::get("upload")->info("ZMAX: {}, SIZE: {}, DUR:{}, RATE(Kb/s):{} ", belt_z_max, size, duration, size / (1000 * duration));
-    spdlog::get("upload")->info("Leaving http_post_thread_bulk");
-    auto program_state_db_name = global_config["state_db_name"].get<std::string>();
-    auto next_upload_date = fetch_daily_upload(program_state_db_name);
-    next_upload_date += std::chrono::days(1);
-    store_daily_upload(next_upload_date, program_state_db_name);
-    return {now, failure};
+    spdlog::get("cads")->info("ZMAX: {}, SIZE: {}, DUR:{}, RATE(Kb/s):{} ", belt_z_max, size, duration, size / (1000 * duration));
+    spdlog::get("cads")->info("Leaving {}",__func__);
+    return failure;
 
   }
 
