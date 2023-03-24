@@ -318,6 +318,7 @@
     try {
       selfReference?.Dispose();
       base.Dispose();
+
       if (plotDataCache is not null) {
         await plotDataCache.DisposeAsync();
         plotDataCache = null;

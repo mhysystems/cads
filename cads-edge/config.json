@@ -19,7 +19,7 @@
   "fiducial_y" : 40,
   "fiducial_gap" : 40,
   "daily_upload" : true,
-  "daily_start_time" : "01:15",
+  "daily_start_time" : "now",
   "spike_filter" : 5,
   "sobel_filter" : 5,
   "nan_%" : 0.15,
