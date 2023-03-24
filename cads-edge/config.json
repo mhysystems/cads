@@ -6,8 +6,7 @@
     "forever" : true,
     "delay" : 98
   },
-  "y_max_length" : 7000000,
-  "y_max_upload" : 6600000,
+
   "z_height" : 27.0,
   "x_width"  : 1500,
   "width_n" : 1960,

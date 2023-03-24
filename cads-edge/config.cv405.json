@@ -6,9 +6,7 @@
     "forever" : false,
     "delay" : 98
   },
-  "y_max_length" : 950000,
-  "y_max_upload" : 906000,
-  "z_height" : 27.0,
+   "z_height" : 27.0,
   "x_width"  : 1500,
   "width_n" : 1820,
   "clip_height" : 36.0,

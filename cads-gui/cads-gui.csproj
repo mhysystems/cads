@@ -41,16 +41,14 @@
       <Output ItemName="FlatbufferGeneratedCsharp" TaskParameter="Outputs" />
     </Exec>
 
-    <Exec Command="$(MSBuildProjectDirectory)\..\bin\flatc -o flatbuffers-typescript --ts @(FlatbufferSchemasTypescript)" />
+  </Target>
 
-    <Exec Command="npm run build" WorkingDirectory="flatbuffers-typescript" />
+  <Target Name="FlatbuffersJavascript"  BeforeTargets="BeforeBuild" Outputs="$(MSBuildProjectDirectory)\wwwroot\cads-flatbuffers-plot.es.js" Inputs="@(FlatbufferSchemasTypescript)">
     
-    <ItemGroup>
-      <Compile Include="@(FlatbufferGeneratedCsharp)" />
-      <FileWrites Include="@(FlatbufferGeneratedCsharp)" />
-    </ItemGroup>
+    <Exec Command="$(MSBuildProjectDirectory)\..\bin\flatc -o flatbuffers-typescript --ts @(FlatbufferSchemasTypescript)" />
+    <Exec Command="npm run build" WorkingDirectory="flatbuffers-typescript" />
+    <Delete Files="flatbuffers-typescript\plot_data_generated.ts" />
 
-    <Delete Files="flatbuffers-typescript/plot_data_generated.ts" />
   </Target>
 
   <ItemGroup>

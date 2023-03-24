@@ -85,7 +85,7 @@ namespace cads
     cv::Mat m1(fiducial.rows, int(fiducial.cols * 1.5), CV_32F, cv::Scalar::all(0.0f));
     cv::Mat out(m1.rows - fiducial.rows + 1, m1.cols - fiducial.cols + 1, CV_32F, cv::Scalar::all(0.0f));
 
-    auto y_max_length = global_config["y_max_length"].get<double>();
+    auto y_max_length = global_belt_parameters.Length * 1.02; 
     auto trigger_length = std::numeric_limits<y_type>::lowest();
     y_type y_offset = 0;
     double y_lowest_correlation = 0;
@@ -239,7 +239,7 @@ namespace cads
             
           }else {
             loop = false;
-            spdlog::get("cads")->error("Origin dectored stopped");
+            spdlog::get("cads")->error("Origin decetor stopped");
           }
           break;
         }
@@ -262,8 +262,6 @@ namespace cads
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     auto rate = duration != 0 ? (double)cnt / duration : 0;
     spdlog::get("cads")->info("ORIGIN DETECTION - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, rate);
-
-    spdlog::get("cads")->info("window_processing_thread");
   }
 
 

@@ -73,7 +73,7 @@ void upload_scan_thread(moodycamel::BlockingReaderWriterQueue<msg> &fifo)
     }
 
     auto scans = fetch_scan_state();
-    std::remove_if(scans.begin(),scans.end(),[](auto s) { return std::get<3>(s) == 1;});
+    std::remove_if(scans.begin(),scans.end(),[](auto s) { return std::get<state::scani::Status>(s) == 1;});
 
     // keep last scan
     while(scans.size() > 1)
