@@ -791,6 +791,18 @@ class SurfacePlot {
     Plotly.react(this.plotElement, this.plotData, this.layout);
   }
 
+  closePlot() {
+
+    Plotly.react(this.plotElement, [], {}, {});
+    
+    this.colorScale = null; 
+    this.layout = null;
+    this.config = null;
+    this.plotData = null;
+    this.plotElement.on('plotly_click',()=>{});
+    this.plotElement = null;
+  }
+
 }
 
 export function mk_SurfacePlot(plotElement, x_res, z_min, z_max, color_scale, blazor) {

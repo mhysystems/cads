@@ -12,7 +12,9 @@
 
 
 <surface-plot>
+
   <div id="container" @ref="@jsPlot"></div>
+
   <div class="spin-container" loading="@_Loading">
     <div class="spin"></div>
   </div>
@@ -78,7 +80,7 @@
     if (firstRender)
     {
       selfReference = DotNetObjectReference.Create(this);
-      var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
+      await using var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
       jsSurfacePlot = await
       module.InvokeAsync<IJSObjectReference>("mk_SurfacePlot", jsPlot, scan.x_res, scan.z_min, scan.z_max,
       colorscale.use_array ?
@@ -243,7 +245,8 @@
   {
     sliderLow = Convert.ToDouble(e.Value);
     var colorRange = GenerateColorRange(scan.z_max - sliderLow).ToArray();
-    if(jsSurfacePlot is not null) {
+    if (jsSurfacePlot is not null)
+    {
       await jsSurfacePlot.InvokeVoidAsync("changeColorScale", colorRange.Select(i => i.ToTuple()));
     }
   }
@@ -257,13 +260,20 @@
 
   async ValueTask IAsyncDisposable.DisposeAsync()
   {
-    try {
+    try
+    {
+      if (jsSurfacePlot is not null)
+      {
+        await jsSurfacePlot.InvokeVoidAsync("closePlot");
+        logger.LogInformation("SurfacePlot Disposed");
+        await jsSurfacePlot.DisposeAsync();
+        jsSurfacePlot = null;
+      }
+      
       selfReference?.Dispose();
-    if (jsSurfacePlot is not null) {
-     await jsSurfacePlot.DisposeAsync();
-     jsSurfacePlot = null;
+      selfReference = null;
     }
-    }catch(Microsoft.JSInterop.JSDisconnectedException) {}
+    catch (Microsoft.JSInterop.JSDisconnectedException) { }
   }
 
 
