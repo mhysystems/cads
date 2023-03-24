@@ -6,8 +6,6 @@
     "forever" : true,
     "delay" : 98
   },
-  "y_max_length" : 12665200,
-  "y_max_upload" : 12565200,
   "z_height" : 27.0,
   "x_width"  : 1500,
   "width_n" : 1960,
@@ -32,7 +30,7 @@
   "revolution_sensor" : {
     "source" : "raw",
     "trigger_num" : 1,
-    "bias" : -416.0,
+    "bias" : -33.0,
     "bidirectional" : false
   },
 

@@ -1,13 +1,13 @@
 {
-  "data_source" : "../../profiles/rawprofile_cv001_3.db",
+  "data_source" : "../../profiles/profile.db",
+  "origin_detector" : "bypass",
   "sqlite_gocator" : {
-    "range" : [1058749,9007199254740991],
+    "range" : [0,9007199254740991],
     "fps" : 999980,
     "forever" : true,
     "delay" : 98
   },
-  "y_max_length" : 7000000,
-  "y_max_upload" : 6600000,
+
   "z_height" : 27.0,
   "x_width"  : 1500,
   "width_n" : 1960,
@@ -32,7 +32,7 @@
   "revolution_sensor" : {
     "source" : "raw",
     "trigger_num" : 1,
-    "bias" : -416.0,
+    "bias" : -33.0,
     "bidirectional" : false
   },
 
@@ -85,7 +85,7 @@
     "CordDiameter" : 9.1,
     "TopCover" : 14.0,
     "Width" : 1600,
-    "Length" : 660000,
+    "Length" : 60000,
     "Splices" : 1
   },
 
@@ -94,15 +94,15 @@
   },
 
   "webapi_urls" : {
-    "add_conveyor" : ["http://localhost:5000/api/conveyors",true],
-    "add_meta" : ["http://localhost:5000/api/meta",true],
-    "add_belt" : ["http://localhost:5000/api/belts",true],
-    "add_scan" : ["http://localhost:5000/api/scans",true]
+    "add_conveyor" : ["https://server.mhysystems.com/api/conveyors",true],
+    "add_meta" : ["https://server.mhysystems.com/api/meta",true],
+    "add_belt" : ["https://server.mhysystems.com/api/belts",true],
+    "add_scan" : ["https://server.mhysystems.com/api/scans",true]
   },
 
   "nats_url" : "10.9.1.1",
   "upload_profile" : true,
-  "base_url" : "http://localhost:5000/api",
+  "base_url" : "https://server.mhysystems.com/api",
   "lua_window_height" : 2,
   "lua_fn" : "function process(width,height)\n return 0\nend"
 }

@@ -460,7 +460,7 @@ namespace cads
     auto db_name = global_config["profile_db_name"].get<std::string>();
     auto endpoint_url = global_config["base_url"].get<std::string>();
     auto y_max_length = global_config["y_max_length"].get<double>();
-    auto belt_length = global_config["y_max_upload"].get<double>();
+    auto belt_length = global_belt_parameters.Length;
     auto upload_profile = global_config["upload_profile"].get<bool>();
 
     if (endpoint_url == "null")

@@ -46,22 +46,6 @@ dotnet ef database update -- --environment fmg
 
 
 
-Deploy
-
-(async () => {
-  const rawResponse = await fetch('api/test/me', {
-    method: 'POST',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({x_res: 1, y_res: 2, z_res :3, z_off : 4})
-  });
-  const content = await rawResponse.json();
-
-  console.log(content);
-})();
-
 
 
 

@@ -43,6 +43,7 @@ namespace cads
   // scans table
   namespace state {
     using scan = std::tuple<date::utc_clock::time_point,std::string,int64_t,int64_t>;
+    enum scani {ScanBegin, Path, Uploaded, Status};
   }
   std::deque<cads::state::scan> fetch_scan_state(std::string name ="");
   bool store_scan_state(std::string scan_db, std::string db_name = "");

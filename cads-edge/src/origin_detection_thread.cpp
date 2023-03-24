@@ -115,7 +115,7 @@ double left_edge_avg_height(const cv::Mat& belt, const cv::Mat& fiducial) {
     cv::Mat m1(fiducial.rows, int(fiducial.cols * 1.5), CV_32F, cv::Scalar::all(0.0f));
     cv::Mat out(m1.rows - fiducial.rows + 1, m1.cols - fiducial.cols + 1, CV_32F, cv::Scalar::all(0.0f));
 
-    auto y_max_length = global_config["y_max_length"].get<double>();
+    auto y_max_length = global_belt_parameters.Length * 1.02; 
     auto trigger_length = std::numeric_limits<y_type>::lowest();
     y_type y_offset = 0;
     double y_lowest_correlation = 0;
@@ -269,7 +269,7 @@ double left_edge_avg_height(const cv::Mat& belt, const cv::Mat& fiducial) {
             
           }else {
             loop = false;
-            spdlog::get("cads")->error("Origin dectored stopped");
+            spdlog::get("cads")->error("Origin decetor stopped");
           }
           break;
         }
@@ -292,8 +292,6 @@ double left_edge_avg_height(const cv::Mat& belt, const cv::Mat& fiducial) {
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     auto rate = duration != 0 ? (double)cnt / duration : 0;
     spdlog::get("cads")->info("ORIGIN DETECTION - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, rate);
-
-    spdlog::get("cads")->info("window_processing_thread");
   }
 
 
@@ -304,7 +302,7 @@ double left_edge_avg_height(const cv::Mat& belt, const cv::Mat& fiducial) {
     bool terminate = false;
 
 
-    auto y_max_length = global_config["y_max_length"].get<double>();
+    auto y_max_length = global_belt_parameters.Length;
 
     std::tie(p,terminate) = co_yield {p,0.0,false}; 
 
@@ -399,8 +397,12 @@ double left_edge_avg_height(const cv::Mat& belt, const cv::Mat& fiducial) {
           }
           break;
         }
-        default:
+        case msgid::finished:
+          next_fifo.enqueue(m);
           loop = false;
+          break;
+        default:
+          next_fifo.enqueue(m);
       }
 
       if (profile_fifo.size_approx() > buffer_size_warning)
