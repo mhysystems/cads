@@ -911,6 +911,33 @@ namespace cads
     return err == SQLITE_OK || err == SQLITE_DONE;
   }
 
+  std::tuple<std::tuple<double,double,double,double>,int> fetch_scan_gocator(std::string db_name) 
+  {
+    auto query = R"(SELECT ZRes, ZOff, ZCard, Framerate FROM GOCATOR)"s;
+    auto [stmt,db] = prepare_query(db_name, query);
+    auto err = SQLITE_OK;
+
+    tie(err, stmt) = db_step(move(stmt));
+
+    std::tuple<std::tuple<double,double,double,double>,int> rtn;
+    if (err == SQLITE_ROW)
+    {
+
+      rtn = {
+          {sqlite3_column_double(stmt.get(), 0),
+           sqlite3_column_double(stmt.get(), 1),
+           sqlite3_column_double(stmt.get(), 2),
+           sqlite3_column_double(stmt.get(), 3)},
+          0};
+    }
+    else
+    {
+      rtn = {{1.0, 1.0, 1.0, 0.0}, -1};
+    }
+
+    return rtn;
+  }
+
   bool store_scan_properties(std::tuple<date::utc_clock::time_point,date::utc_clock::time_point> props, std::string db_name) 
   {
     
@@ -939,6 +966,7 @@ namespace cads
 
     return err == SQLITE_OK || err == SQLITE_DONE;
   }
+
 
   coro<int, z_type, 1> store_scan_coro(std::string db_name)
   {

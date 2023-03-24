@@ -618,6 +618,14 @@ namespace cads
       return true;
     }
 
+    auto [params, err] = fetch_scan_gocator(db_name);
+   
+    if (err < 0)
+    {
+      spdlog::get("cads")->info("{} fetch_scan_gocator failed - {}",__func__, db_name);
+      return true;
+    }
+
     auto [rowid,ignored]  = fetch_scan_uploaded(db_name);
     auto fetch_profile = fetch_scan_coro(rowid,std::numeric_limits<int>::max(),db_name);
 
@@ -627,12 +635,12 @@ namespace cads
     auto ts = to_str(now);
     cpr::Url endpoint{mk_post_profile_url(ts)};
 
-    auto [params, err] = fetch_profile_parameters(profile_db_name);
+
   
     auto YmaxN = zs_count(db_name);
 
-    auto z_resolution = params.z_res;
-    auto z_offset = params.z_off;
+    auto z_resolution = std::get<0>(params);
+    auto z_offset = std::get<1>(params);
     auto y_step = global_belt_parameters.Length / (YmaxN);
 
 
