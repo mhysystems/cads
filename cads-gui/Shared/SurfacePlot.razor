@@ -1,6 +1,6 @@
 @namespace Cads
 @inject IJSRuntime JS
-@implements IDisposable
+@implements IAsyncDisposable
 
 @using cads_gui.Data
 
@@ -255,6 +255,16 @@
     await YIndex.InvokeAsync((yIndex, y));
   }
 
-  public void Dispose() => selfReference?.Dispose();
+  async ValueTask IAsyncDisposable.DisposeAsync()
+  {
+    try {
+      selfReference?.Dispose();
+    if (jsSurfacePlot is not null) {
+     await jsSurfacePlot.DisposeAsync();
+     jsSurfacePlot = null;
+    }
+    }catch(Microsoft.JSInterop.JSDisconnectedException) {}
+  }
+
 
 }

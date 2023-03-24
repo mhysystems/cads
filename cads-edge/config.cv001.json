@@ -30,7 +30,7 @@
   "revolution_sensor" : {
     "source" : "raw",
     "trigger_num" : 1,
-    "bias" : -416.0,
+    "bias" : -33.0,
     "bidirectional" : false
   },
 

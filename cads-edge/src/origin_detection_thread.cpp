@@ -272,7 +272,7 @@ namespace cads
     bool terminate = false;
 
 
-    auto y_max_length = global_config["y_max_length"].get<double>();
+    auto y_max_length = global_belt_parameters.Length;
 
     std::tie(p,terminate) = co_yield {p,0.0,false}; 
 
@@ -367,8 +367,12 @@ namespace cads
           }
           break;
         }
-        default:
+        case msgid::finished:
+          next_fifo.enqueue(m);
           loop = false;
+          break;
+        default:
+          next_fifo.enqueue(m);
       }
 
       if (profile_fifo.size_approx() > buffer_size_warning)
