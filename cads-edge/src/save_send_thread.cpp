@@ -139,23 +139,24 @@ namespace cads
   {
     namespace sml = boost::sml;
 
-    constexpr auto scan_filename_init = "scan-delete.sqlite";
+    auto scan_begin = date::utc_clock::now();
+    auto scan_filename_init = fmt::format("scan-{}.sqlite",scan_begin.time_since_epoch().count());
     
     struct global_t
     {
       cads::coro<int, std::tuple<int, int, cads::profile>, 1> store_profile = store_profile_coro();
       coro<int, double,1> store_last_y = store_last_y_coro();
       coro<long, std::tuple<long, double>, 1> daily_upload = daily_upload_coro(0);
-      coro<int, z_type, 1> store_scan = store_scan_coro(scan_filename_init);
+      coro<int, z_type, 1> store_scan;
       long revid = 0;
       long idx = 0;
       GocatorProperties gocator_properties;
-      date::utc_clock::time_point scan_begin  = date::utc_clock::now();
+      date::utc_clock::time_point scan_begin;
       BlockingReaderWriterQueue<msg> & cps;
 
-      global_t(BlockingReaderWriterQueue<msg> &m) : cps(m){};
+      global_t(BlockingReaderWriterQueue<msg> &m, date::utc_clock::time_point sb, std::string s) : cps(m), store_scan(store_scan_coro(s)), scan_begin(sb){};
 
-    } global(next);
+    } global(next,scan_begin,scan_filename_init);
 
 
     struct transitions

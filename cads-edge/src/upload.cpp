@@ -23,9 +23,12 @@ namespace
     auto err = cads::post_scan(scan);
     
     if(!err) {
-      cads::delete_scan_state(path);
-      std::filesystem::remove(path);
-      spdlog::get("cads")->info("Removing a posted scan. {}", path);
+      cads::store_scan_status(2,path);
+      //cads::delete_scan_state(path);
+      //std::filesystem::remove(path);
+      //spdlog::get("cads")->info("Removing a posted scan. {}", path);
+    }else{
+      
     }
     return 0;
   }
@@ -59,8 +62,7 @@ void upload_scan_thread(moodycamel::BlockingReaderWriterQueue<msg> &fifo)
 
   do
   {
-
-    fifo.wait_dequeue(m);
+    fifo.wait_dequeue_timed(m, std::chrono::seconds(60));
 
     switch (get<0>(m))
     {
@@ -73,7 +75,17 @@ void upload_scan_thread(moodycamel::BlockingReaderWriterQueue<msg> &fifo)
     }
 
     auto scans = fetch_scan_state();
-    std::remove_if(scans.begin(),scans.end(),[](auto s) { return std::get<state::scani::Status>(s) == 1;});
+
+    // restart errored uploads
+    for(const auto &scan : scans) {
+      auto [scan_begin,path,uploaded,status] = scan;
+      if(status == 1 && running_uploads.size() == 0) {
+        running_uploads.push_back(std::async(resume_scan, scan));
+      }
+    }
+
+
+    std::remove_if(scans.begin(),scans.end(),[](auto s) { return std::get<state::scani::Status>(s) != 0;});
 
     // keep last scan
     while(scans.size() > 1)
@@ -81,8 +93,7 @@ void upload_scan_thread(moodycamel::BlockingReaderWriterQueue<msg> &fifo)
       auto [scan_begin,path,uploaded,status] = scans.front();
       scans.pop_front();
       
-      if(uploaded == 0 && status == 0) {
-       
+      if(status == 0) {
         delete_scan_state(path);
         std::filesystem::remove(path);
         spdlog::get("cads")->info("Removing a scan. {}", path);
@@ -91,7 +102,6 @@ void upload_scan_thread(moodycamel::BlockingReaderWriterQueue<msg> &fifo)
 
     // remove finshed uploads
     std::erase_if(running_uploads,[](const decltype(fut) &f ){return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;});
-
     
     if(scans.size() > 0) {
       auto last_upload_day = cads::fetch_daily_upload();
