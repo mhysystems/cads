@@ -105,6 +105,14 @@ namespace cads {
     size_t UploadRows;
   };
 
+  struct Fiducial {
+    double fiducial_depth;
+    double fiducial_x;
+    double fiducial_y;
+    double fiducial_gap;
+    bool   dump_match;
+    double cross_correlation_threshold;
+  };
 
   extern constraints global_constraints;
   extern profile_parameters global_profile_parameters;
@@ -116,6 +124,7 @@ namespace cads {
   extern Dbscan dbscan_config;
   extern RevolutionSensor revolution_sensor_config;
   extern Communications communications_config;
+  extern Fiducial fiducial_config;
   
   void init_config(std::string f);
   void drop_config();

@@ -57,13 +57,14 @@ namespace cads
   coro<std::tuple<profile,double,bool>,profile,1> origin_detection_coro(double x_resolution, double y_resolution, int width_n)
   {
     auto fiducial = make_fiducial(x_resolution, y_resolution);
-    //fiducial_as_image(fiducial,"fid");
+    //mat_as_image(fiducial,"fid");
     
     window profile_buffer;
 
-    auto fdepth = global_config["fiducial_depth"].get<double>();
+    auto fdepth = fiducial_config.fiducial_depth;
     double lowest_correlation = std::numeric_limits<double>::max();
-    const double belt_crosscorr_threshold = global_config["belt_cross_correlation_threshold"].get<double>();
+    double belt_crosscorr_threshold = fiducial_config.cross_correlation_threshold;
+    auto dump_match = fiducial_config.dump_match;
 
     profile p;
     bool terminate = false;
@@ -111,7 +112,7 @@ namespace cads
       if (y >= trigger_length)
       {
         const auto cv_threshhold = left_edge_avg_height(belt, fiducial) - fdepth;
-        auto correlation = search_for_fiducial(belt, fiducial, m1, out, cv_threshhold);
+        auto [correlation,loc] = search_for_fiducial(belt, fiducial, m1, out, cv_threshhold);
 
         if(correlation <= lowest_correlation) {
           lowest_correlation = correlation;
@@ -138,8 +139,10 @@ namespace cads
             trigger_length = y_max_length * 0.90; //TODO
           }
 
-          //mat_as_image(belt,cv_threshhold);
-          //fiducial_as_image(belt);
+          if(dump_match) {
+            mat_as_image(belt,cv_threshhold);
+            mat_as_image(belt);
+          }
 
           y_offset += y;
 
@@ -157,7 +160,10 @@ namespace cads
         {
           sequence_cnt = 0;
           spdlog::get("cads")->info("Origin not found before Max samples. Lowest Correlation: {} at Y: {} with threshold: {}", lowest_correlation,y_lowest_correlation,cv_threshold_correleation);
-          //fiducial_as_image(matrix_correlation,"best-failed-match");
+          if(dump_match) {
+            mat_as_image(matrix_correlation,"best-failed-match");
+          }
+          
 
           y_offset += y;
 
