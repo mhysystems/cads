@@ -36,105 +36,27 @@ namespace cads_gui.Data
       return b;
     }
 
-    public static double profile_width(Profile p, double x_resolution)
-    {
-      return p.x_off + p.z.Length * x_resolution / sizeof(float);
-    }
-
-    public static (double, float[]) make_same_widthf(List<Profile> frame, double x_resolution)
+    public static (double, float[]) ProfileToArray(List<Profile> frame)
     {
 
-      double x_min = double.MaxValue, x_max = double.MinValue;
+      int size = 0;
 
       foreach (var p in frame)
       {
-        x_min = Math.Min(x_min, p.x_off);
-        x_max = Math.Max(x_max, profile_width(p, x_resolution));
+        size += p.z.Length;
       }
-      int size = (int)Math.Round((x_max - x_min) / x_resolution);
-      float[] ret = new float[size * frame.Count];
+
+      float[] ret = new float[size];
       Array.Fill(ret, float.NaN);
 
       int i = 0;
       foreach (var p in frame)
       {
-        int offset = (int)((p.x_off - x_min) / x_resolution);
-        Buffer.BlockCopy(p.z, 0, ret, (i + offset) * sizeof(float), p.z.Length);
-        i += size;
+        Buffer.BlockCopy(p.z, 0, ret, i * sizeof(float), p.z.Length);
+        i += p.z.Length;
       }
 
-      return (x_min, ret);
-    }
-
-    public static (double, float[]) make_same_widthf2(List<Profile> frame, double x_resolution)
-    {
-
-      double x_min = double.MaxValue, x_max = double.MinValue;
-
-      foreach (var p in frame)
-      {
-        x_min = Math.Min(x_min, p.x_off);
-        x_max = Math.Max(x_max, profile_width(p, x_resolution));
-      }
-      int size = (int)Math.Round((x_max - x_min) / x_resolution);
-      float[] ret = new float[size * frame.Count];
-      Array.Fill(ret, float.NaN);
-
-      int i = 0;
-      foreach (var p in frame)
-      {
-        int offset = (int)((p.x_off - x_min) / x_resolution);
-        Buffer.BlockCopy(p.z, 0, ret, (i + offset) * sizeof(float), p.z.Length);
-        i += size;
-      }
-
-      return (x_min, ret);
-    }
-
-    public static async Task<List<Profile>> RetrieveFrameAsync(string db, double y_min, long len)
-    {
-
-      var frame = new List<Profile>();
-      var order = len >= 0 ? "asc" : "desc";
-      var op = len >= 0 ? ">=" : "<";
-      var abslen = Math.Abs(len);
-
-      using var connection = new SqliteConnection("" +
-        new SqliteConnectionStringBuilder
-        {
-          Mode = SqliteOpenMode.ReadOnly,
-          DataSource = db
-        });
-
-      await connection.OpenAsync();
-
-
-      var query = $"select * from PROFILE where y {op} @y_min order by y {order} limit @len";
-      var command = connection.CreateCommand();
-      command.CommandText = query;
-      command.Parameters.AddWithValue("@y_min", y_min);
-      command.Parameters.AddWithValue("@len", abslen);
-
-      using var reader = command.ExecuteReader();
-
-
-      while (reader.Read())
-      {
-        var y = reader.GetDouble(0);
-        var x_off = reader.GetDouble(1);
-        byte[] z = (byte[])reader[2];
-
-        if (len >= 0)
-        {
-          frame.Add(new Profile(y, x_off, z));
-        }
-        else
-        {
-          frame.Insert(0, new Profile(y, x_off, z));
-        }
-      }
-
-      return frame;
+      return (0, ret);
     }
 
     public static async Task<List<Profile>> RetrieveFrameModular(string db, double y_min, long len, long left)

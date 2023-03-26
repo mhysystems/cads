@@ -218,7 +218,7 @@ namespace cads_gui.Data
     {
       var dbpath = Path.GetFullPath(Path.Combine(config.DBPath,belt.name));
       var fs = await NoAsp.RetrieveFrameModular(dbpath, y, num_y_samples,0);
-      return NoAsp.make_same_widthf(fs, belt.x_res);
+      return NoAsp.ProfileToArray(fs);
     }
 
     

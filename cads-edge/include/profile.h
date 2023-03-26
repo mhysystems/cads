@@ -51,6 +51,6 @@ namespace cads
   void recontruct_z(z_type & z,const z_clusters& group);
   double average(const z_type&);
   
-  std::tuple<double,double,z_clusters> pulley_levels_clustered(const z_type &z, std::function<double(const z_type &)> estimator = average);
+  std::tuple<double,double,size_t,size_t,z_clusters> pulley_levels_clustered(const z_type &z, std::function<double(const z_type &)> estimator = average);
 
 }
