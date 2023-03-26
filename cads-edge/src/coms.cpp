@@ -72,7 +72,7 @@ namespace
     size_t input_size = size;
     size_t output_size = output.size();
 
-    BrotliEncoderCompress(BROTLI_DEFAULT_QUALITY,BROTLI_DEFAULT_WINDOW, BROTLI_DEFAULT_MODE, input_size, input, &output_size, output.data());
+    BrotliEncoderCompress(8,BROTLI_DEFAULT_WINDOW, BROTLI_DEFAULT_MODE, input_size, input, &output_size, output.data());
     output.resize(output_size);
     return output;
 
@@ -304,14 +304,14 @@ namespace cads
     auto buf = builder.GetBufferPointer();
     auto size = builder.GetSize();
 
-    //std::vector<uint8_t> bufv = compress(buf,size);
+    std::vector<uint8_t> bufv = compress(buf,size);
 
 
     while (upload_profile)
     {
       cpr::Response r = cpr::Post(endpoint,
-                                  cpr::Body{(char *)buf, size},
-                                  cpr::Header{{"Content-Type", "application/octet-stream"}});
+                                  cpr::Body{(char *)bufv.data(), bufv.size()},
+                                  cpr::Header{{"Content-Encoding", "br"},{"Content-Type", "application/octet-stream"}});
 
       if (cpr::ErrorCode::OK == r.error.code && cpr::status::HTTP_OK == r.status_code)
       {
@@ -558,7 +558,7 @@ namespace cads
         }
         auto end = std::chrono::high_resolution_clock::now();
         auto duration = (end - start) / 1.0s;
-        spdlog::get("cads")->info("Upload RATE(Kb/s):{} ", size / (1000 * duration));
+        spdlog::get("cads")->info("Compressed Upload RATE(Kb/s):{} ", (zs.size()*sizeof(z_element)) / (1000 * duration));
       }
       else
       {
