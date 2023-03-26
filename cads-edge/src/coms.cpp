@@ -304,14 +304,14 @@ namespace cads
     auto buf = builder.GetBufferPointer();
     auto size = builder.GetSize();
 
-    std::vector<uint8_t> bufv = compress(buf,size);
+    //std::vector<uint8_t> bufv = compress(buf,size);
 
 
     while (upload_profile)
     {
       cpr::Response r = cpr::Post(endpoint,
                                   cpr::Body{(char *)bufv.data(), bufv.size()},
-                                  cpr::Header{{"Content-Encoding", "br"},{"Content-Type", "application/octet-stream"}});
+                                  cpr::Header{{"Content-Type", "application/octet-stream"}});
 
       if (cpr::ErrorCode::OK == r.error.code && cpr::status::HTTP_OK == r.status_code)
       {
