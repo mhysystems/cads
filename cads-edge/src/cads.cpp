@@ -249,7 +249,7 @@ namespace
       auto [ileft_edge_index, iright_edge_index] = find_profile_edges_sobel(iz);
 
 
-      if(std::abs(ileft_edge_index - (int)ll) > 2 || std::abs(iright_edge_index - (int)lr) > 12) {
+      if(std::abs(ileft_edge_index - (int)ll) > 2) {
         spdlog::get("cads")->error("sobel & dbscan don't match: sobel({},{}) dbscan({},{})", ileft_edge_index,iright_edge_index,ll,lr);
       }
 

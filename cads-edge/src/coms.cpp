@@ -472,9 +472,9 @@ namespace cads
   {
     using namespace flatbuffers;
     spdlog::get("cads")->info("Entering {}",__func__);
-    auto [now_utc,db_name,uploaded,status] = scan;
+    auto [scanned_utc,db_name,uploaded,status] = scan;
     
-    auto now = chrono::floor<chrono::seconds>(now_utc); // Default sends to much decimal precision for asp.net core
+    auto scanned_at = chrono::floor<chrono::seconds>(scanned_utc); // Default sends to much decimal precision for asp.net core
     
     if(!std::filesystem::exists(db_name))
     {
@@ -506,7 +506,7 @@ namespace cads
     FlatBufferBuilder builder(4096 * 128);
     std::vector<flatbuffers::Offset<CadsFlatbuffers::profile>> profiles_flat;
 
-    auto ts = to_str(now);
+    auto ts = to_str(scanned_at);
     cpr::Url endpoint{mk_post_profile_url(ts)};
 
 
@@ -556,6 +556,9 @@ namespace cads
           size += send_flatbuffer_array(builder, z_resolution, z_offset, idx - communications_config.UploadRows, profiles_flat, endpoint, upload_profile);
           store_scan_uploaded(idx+1,db_name);
         }
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = (end - start) / 1.0s;
+        spdlog::get("cads")->info("Upload RATE(Kb/s):{} ", size / (1000 * duration));
       }
       else
       {
