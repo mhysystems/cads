@@ -558,7 +558,7 @@ namespace cads
         }
         auto end = std::chrono::high_resolution_clock::now();
         auto duration = (end - start) / 1.0s;
-        spdlog::get("cads")->info("Compressed Upload RATE(Kb/s):{} ", (zs.size()*sizeof(z_element)) / (1000 * duration));
+        spdlog::get("cads")->info("Upload RATE(Kb/s):{} ", size / (1000 * duration));
       }
       else
       {
