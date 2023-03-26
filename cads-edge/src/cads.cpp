@@ -386,13 +386,13 @@ namespace cads
   void upload_profile_only(std::string params, std::string db_name)
   {
     auto db = db_name.empty() ? global_config["profile_db_name"].get<std::string>() : db_name;
+    
     if(params == "") {
-      auto [Ymin,Ymax,YmaxN,WidthN,err2] = fetch_belt_dimensions(0,std::numeric_limits<int>::max(),db);
-      http_post_whole_belt(0, (int)YmaxN+1, 0);
+      spdlog::get("cads")->error("--upload argument need to be supplied in the form of [revid,first_idx,last_idx]");
     }else {
       
       auto args = nlohmann::json::parse(params);
-      auto [first_idx,last_idx] = args.get<std::tuple<int,int>>();
+      auto [rev_id,first_idx,last_idx] = args.get<std::tuple<int,int,int>>();
       auto fetch_belt = fetch_belt_coro(0,last_idx,first_idx,256,db);
       auto [belt_id, belt_id_err] = fetch_belt_id();
 
@@ -404,7 +404,7 @@ namespace cads
       meta m;
 
       auto [params, err] = fetch_profile_parameters(db);
-      auto [Ymin,Ymax,YmaxN,WidthN,err2] = fetch_belt_dimensions(first_idx,last_idx,db);
+      auto [Ymin,Ymax,YmaxN,WidthN,err2] = fetch_belt_dimensions(rev_id,last_idx,db);
       auto now = chrono::floor<chrono::seconds>(date::utc_clock::now()); // Default sends to much decimal precision for asp.net core
       auto ts = date::format("%FT%TZ", now);
       
