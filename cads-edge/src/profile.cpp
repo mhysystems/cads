@@ -263,33 +263,42 @@ namespace cads
   }
 
 
-  std::tuple<double,double,z_clusters> pulley_levels_clustered(const z_type &z, std::function<double(const z_type &)> estimator)
+  std::tuple<double,double,size_t,size_t,z_clusters> pulley_levels_clustered(const z_type &z, std::function<double(const z_type &)> estimator)
   {
  
     auto clusters = dbscan(z);
     auto avg_l = 0.0;
     auto avg_r = 0.0;
+    size_t left_edge = 0;
+    size_t right_edge = z.size();
 
     if(clusters.size() == 2) {
       // Only one side of pulley detected.
       // Check heights. Assumes belt is higher than pulley.
-      auto avg = (*begin(clusters[0][0]) < *begin(clusters[1][0])) ? 
-        // Pulley found on left of belt
-        estimator(construct_ztype(clusters[0])) 
-      :
-        // Pulley found on right of belt
-        estimator(construct_ztype(clusters[1])) 
-      ; 
 
-      avg_l = avg;
-      avg_r = avg;
+      if(*begin(clusters[0][0]) < *begin(clusters[1][0])) {
+         // Pulley found on left of belt
+        auto avg = estimator(construct_ztype(clusters[0]));
+        avg_l = avg;
+        avg_r = avg;
+        left_edge = std::distance(z.begin(),begin(clusters[1][0]));
+        right_edge = std::distance(z.begin(),end(clusters[1][0]));
+      }else{
+        // Pulley found on right of belt
+        auto avg = estimator(construct_ztype(clusters[1]));
+        avg_l = avg;
+        avg_r = avg;
+        left_edge = std::distance(z.begin(),begin(clusters[0][0]));
+        right_edge = std::distance(z.begin(),end(clusters[0][0]));
+      }
+      
 
     }else {
       avg_l = estimator(construct_ztype(clusters.front()));
       avg_r = estimator(construct_ztype(clusters.back()));
     }
     
-    return std::make_tuple(avg_l,avg_r,clusters);
+    return std::make_tuple(avg_l,avg_r,left_edge,right_edge,clusters);
   }
 
 

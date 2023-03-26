@@ -174,7 +174,7 @@ namespace cads
           }
 
           valid = false;
-          y_max_length = global_config["y_max_length"].get<double>();
+          y_max_length = global_belt_parameters.Length * 1.02; 
           trigger_length = std::numeric_limits<y_type>::lowest();
           lowest_correlation = std::numeric_limits<double>::max();
         }

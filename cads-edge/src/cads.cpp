@@ -217,10 +217,13 @@ namespace
 
 
       auto p = get<profile>(get<1>(m));
-      auto [pulley_level,pulley_right,clusters] = pulley_levels_clustered(p.z,pulley_estimator);
+      auto [pulley_level,pulley_right,ll,lr,clusters] = pulley_levels_clustered(p.z,pulley_estimator);
       recontruct_z(p.z,clusters);
       p.z.insert(p.z.begin(),filter_window_len,(float)pulley_level);
       p.z.insert(p.z.end(),filter_window_len,(float)pulley_right);
+
+      ll += filter_window_len;
+      lr += filter_window_len;
 
       auto iy = p.y;
       auto ix = p.x_off;
@@ -265,6 +268,11 @@ namespace
       nan_interpolation_last(iz);
 
       auto [ileft_edge_index, iright_edge_index] = find_profile_edges_sobel(iz);
+
+
+      if(std::abs(ileft_edge_index - (int)ll) > 2 || std::abs(iright_edge_index - (int)lr) > 12) {
+        spdlog::get("cads")->error("sobel & dbscan don't match: sobel({},{}) dbscan({},{})", ileft_edge_index,iright_edge_index,ll,lr);
+      }
 
       auto pulley_level_filtered = (z_element)iirfilter_left(pulley_level);
       auto pulley_right_filtered = (z_element)iirfilter_right(pulley_right);
@@ -463,11 +471,11 @@ namespace cads
     }
 
     auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution, gocator_framerate] = get<GocatorProperties>(get<1>(m));
-    store_profile_parameters({y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution, global_config["z_height"].get<double>()});
+    store_profile_parameters({y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution, global_config["clip_height"].get<double>()});
 
     auto store_profile = store_profile_coro();
 
-    auto y_max_length = global_config["y_max_length"].get<double>();
+    auto y_max_length = global_belt_parameters.Length * 1.02; 
     double Y = 0.0;
     int idx = 0;
     double reset_y = 0.0;
@@ -613,7 +621,7 @@ namespace cads
         auto ix = p.x_off;
         auto iz = p.z;
 
-        auto [pulley_left,pulley_right,clusters] = pulley_levels_clustered(p.z,pulley_estimator);
+        auto [pulley_left,pulley_right,ll,lr,clusters] = pulley_levels_clustered(p.z,pulley_estimator);
 
         auto bottom_avg = pulley_left;
         auto bottom_filtered = iirfilter(bottom_avg);
