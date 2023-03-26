@@ -213,7 +213,7 @@ namespace cads
     GoDestroy(dataset);
     if (me->m_gocatorFifo.size_approx() > me->m_buffer_size_warning)
     {
-      spdlog::get("gocator")->error("Cads Showing signs of not being able to keep up with data source. Size {}", me->m_buffer_size_warning);
+      spdlog::get("gocator")->error("Cads {}: Showing signs of not being able to keep up with data source. Size {}", __func__, me->m_buffer_size_warning);
       me->m_buffer_size_warning += 4096;
     }
 
