@@ -151,7 +151,7 @@ namespace {
     double fiducial_y = config["fiducial"]["fiducial_y"].get<double>();
     double fiducial_gap = config["fiducial"]["fiducial_gap"].get<double>();
     bool   dump_match = config["fiducial"]["dump_match"].get<bool>();
-    double cross_correlation_threshold =  config["fiducial"]["cross_correlation_threshold"].get<bool>();
+    double cross_correlation_threshold =  config["fiducial"]["cross_correlation_threshold"].get<double>();
 
     return cads::Fiducial{fiducial_depth,fiducial_x,fiducial_y,fiducial_gap,dump_match,cross_correlation_threshold};
 
