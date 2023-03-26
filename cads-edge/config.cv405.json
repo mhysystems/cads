@@ -1,21 +1,28 @@
 {
   "data_source" : "../../profiles/rawprofile_cv405_2023-03-07.db",
+  
   "sqlite_gocator" : {
     "range" : [0,9007199254740991],
     "fps" : 980,
     "forever" : false,
     "delay" : 98
   },
-   "z_height" : 27.0,
+
+  "fiducial" : {
+    "fiducial_depth" : 3,
+    "fiducial_x" : 50,
+    "fiducial_y" : 67,
+    "fiducial_gap" : 78,
+    "dump_match" : false,
+    "cross_correlation_threshold" : 0.4
+  },
+
   "x_width"  : 1500,
   "width_n" : 1820,
   "clip_height" : 36.0,
   "left_edge_nan" : 10,
   "right_edge_nan" : 10,
-  "fiducial_depth" : 3,
-  "fiducial_x" : 50,
-  "fiducial_y" : 67,
-  "fiducial_gap" : 78,
+
   "daily_upload" : true,
   "daily_start_time" : "04:00",
   "spike_filter" : 5,
@@ -63,7 +70,6 @@
   "state_db_name" : "state.db",
   "transient_db_name" : "transient.db",
   "use_encoder" : false,
-  "belt_cross_correlation_threshold" : 0.4,
 
   "filters" : {
     "SchmittThreshold" : 0.05

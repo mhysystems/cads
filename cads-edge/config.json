@@ -1,11 +1,21 @@
 {
   "data_source" : "../../profiles/profile.db",
   "origin_detector" : "bypass",
+  
   "sqlite_gocator" : {
     "range" : [0,9007199254740991],
     "fps" : 999980,
     "forever" : true,
     "delay" : 98
+  },
+
+  "fiducial" : {
+    "fiducial_depth" : 2,
+    "fiducial_x" : 25,
+    "fiducial_y" : 40,
+    "fiducial_gap" : 40,
+    "dump_match" : false,
+    "cross_correlation_threshold" : 0.6
   },
 
   "z_height" : 27.0,
@@ -14,10 +24,6 @@
   "clip_height" : 36.0,
   "left_edge_nan" : 10,
   "right_edge_nan" : 10,
-  "fiducial_depth" : 2,
-  "fiducial_x" : 25,
-  "fiducial_y" : 40,
-  "fiducial_gap" : 40,
   "daily_upload" : true,
   "daily_start_time" : "now",
   "spike_filter" : 5,
@@ -65,7 +71,6 @@
   "state_db_name" : "state.db",
   "transient_db_name" : "transient.db",
   "use_encoder" : false,
-  "belt_cross_correlation_threshold" : 0.6,
 
   "filters" : {
     "SchmittThreshold" : 0.05

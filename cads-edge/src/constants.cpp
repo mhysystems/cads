@@ -143,6 +143,19 @@ namespace {
     return cads::Communications{NatsUrl,UploadRows};
 
   }
+
+  auto mk_fiducial(nlohmann::json config) {
+
+    double fiducial_depth = config["fiducial"]["fiducial_depth"].get<double>();
+    double fiducial_x = config["fiducial"]["fiducial_x"].get<double>();
+    double fiducial_y = config["fiducial"]["fiducial_y"].get<double>();
+    double fiducial_gap = config["fiducial"]["fiducial_gap"].get<double>();
+    bool   dump_match = config["fiducial"]["dump_match"].get<bool>();
+    double cross_correlation_threshold =  config["fiducial"]["cross_correlation_threshold"].get<bool>();
+
+    return cads::Fiducial{fiducial_depth,fiducial_x,fiducial_y,fiducial_gap,dump_match,cross_correlation_threshold};
+
+  }
 }
 
 namespace cads {  
@@ -158,6 +171,7 @@ namespace cads {
   Dbscan dbscan_config;
   RevolutionSensor revolution_sensor_config;
   Communications communications_config;
+  Fiducial fiducial_config;
 
   
   void init_config(std::string f) {
@@ -174,6 +188,7 @@ namespace cads {
     dbscan_config = mk_dbscan(config);
     revolution_sensor_config = mk_revolution_sensor(config);
     communications_config = mk_communications(config);
+    fiducial_config = mk_fiducial(config);
     global_config = config;
   }
 

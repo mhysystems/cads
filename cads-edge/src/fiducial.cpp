@@ -6,12 +6,11 @@
 #include <chrono>
 #include <fmt/chrono.h>
 
-#include <nlohmann/json.hpp>
+#include <constants.h>
 
 using namespace std;
 using namespace cv;
-using json = nlohmann::json;
-extern json global_config;
+
 
 namespace cads {
 
@@ -34,15 +33,15 @@ Mat make_fiducial(double x_res, double y_res, double fy_mm, double fx_mm, double
 
 Mat make_fiducial(double x_res, double y_res) {
 
-	auto fnrows = global_config["fiducial_y"].get<double>();
-	auto fgap = global_config["fiducial_gap"].get<double>();
-	auto fncols = global_config["fiducial_x"].get<double>();
+	auto fnrows = fiducial_config.fiducial_y;
+	auto fgap = fiducial_config.fiducial_gap;
+	auto fncols = fiducial_config.fiducial_x;
   
 	return make_fiducial(x_res,y_res,fnrows,fncols,fgap);
 
 }
 
-bool fiducial_as_image(Mat m, std::string suf) {
+bool mat_as_image(Mat m, std::string suf) {
   auto now = fmt::format("{:%Y%m%d%H%M%S}",chrono::system_clock::now());
   auto mc = m.clone();
   patchNaNs(mc);
@@ -65,7 +64,7 @@ bool mat_as_image(Mat m, double z_threshold) {
 	cv::Mat grey;
 	cv::threshold(m,grey,z_threshold,1.0,cv::THRESH_BINARY);
 
-	return fiducial_as_image(grey,"b");
+	return mat_as_image(grey,"threshhold");
 
 }
 
@@ -84,15 +83,34 @@ double search_for_fiducial(cv::Mat belt, cv::Mat fiducial, double z_threshold) {
 
 }
 
-double search_for_fiducial(cv::Mat belt, cv::Mat fiducial, cv::Mat& black_belt,cv::Mat& out, double z_threshold) {
+std::tuple<double,cv::Point> search_for_fiducial(cv::Mat belt, cv::Mat fiducial, cv::Mat& black_belt,cv::Mat& out, double z_threshold) {
 	
 	cv::threshold(belt.colRange(0,fiducial.cols*3),black_belt,z_threshold,1.0,cv::THRESH_BINARY);
 	cv::matchTemplate(black_belt,fiducial,out,cv::TM_SQDIFF_NORMED);
 
 	double minVal;
-  minMaxLoc( out, &minVal);
+  cv::Point minLoc;
+  minMaxLoc( out, &minVal, nullptr, &minLoc);
 
-	return minVal;
+	return {minVal,minLoc};
+
 }
+
+#if 0
+double samples_contains_fiducial_gpu(CadsMat belt, CadsMat fiducial, double c_threshold, double z_threshold) {
+	
+	CadsMat black_belt; //.colRange(0,fiducial.cols*2)
+	cv::threshold(belt.colRange(0,fiducial.cols*2),black_belt,z_threshold,1.0,cv::THRESH_BINARY);
+
+	CadsMat out(black_belt.rows - fiducial.rows + 1,black_belt.cols - fiducial.cols + 1, CV_32F);
+	cv::matchTemplate(black_belt,fiducial,out,cv::TM_SQDIFF_NORMED);
+
+	double minVal; double maxVal; cv::Point minLoc; cv::Point maxLoc;
+  minMaxLoc( out, &minVal, &maxVal, &minLoc, &maxLoc, cv::Mat() );
+	
+	return minVal;
+
+}
+#endif
 
 }

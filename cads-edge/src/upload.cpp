@@ -61,15 +61,16 @@ void upload_scan_thread(moodycamel::BlockingReaderWriterQueue<msg> &fifo)
 
   do
   {
-    fifo.wait_dequeue_timed(m, std::chrono::seconds(60));
+    auto have_value = fifo.wait_dequeue_timed(m, std::chrono::seconds(60));
+
+    if(have_value) {
+      spdlog::get("cads")->info("Recieved a scan");
+    }    
 
     switch (get<0>(m))
     {
       case msgid::finished:
         loop = false;
-        break;
-      case msgid::complete_belt:
-        spdlog::get("cads")->info("Recieved a scan");
         break;
       default:
         break;
