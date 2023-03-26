@@ -75,7 +75,7 @@
     "Name" : "cv001",
     "Timezone" : "Australia/Perth",
     "PulleyCircumference" : 4178.32,
-    "MaxSpeed" : 6.09
+    "MaxSpeed" : 6090.0
   },
 
   "belt" : {

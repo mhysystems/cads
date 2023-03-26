@@ -115,6 +115,9 @@ namespace
     if (m_id != cads::msgid::gocator_properties)
     {
       std::throw_with_nested(std::runtime_error("preprocessing:First message must be gocator_properties"));
+    }else {
+      auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution, encoder_framerate] = get<GocatorProperties>(get<1>(m));
+      spdlog::get("cads")->info("Gocator y_resolution:{}, x_resolution:{}, z_resolution:{}, z_offset:{}, encoder_resolution:{}, encoder_framerate:{}",y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution, encoder_framerate);
     }
 
     // Forward gocator gocator_properties
@@ -134,7 +137,8 @@ namespace
     if(global_config.contains("origin_detector") && global_config["origin_detector"] == "bypass") {
       origin_dectection = std::jthread(bypass_fiducial_detection_thread,std::ref(winFifo), std::ref(db_fifo));
     }else {
-      origin_dectection = std::jthread(window_processing_thread, x_resolution, y_resolution, width_n, std::ref(winFifo), std::ref(dynamic_processing_fifo));
+      auto y_res = global_conveyor_parameters.MaxSpeed / encoder_framerate;
+      origin_dectection = std::jthread(window_processing_thread, x_resolution, y_res, width_n, std::ref(winFifo), std::ref(dynamic_processing_fifo));
       dynamic_processing = std::jthread(dynamic_processing_thread, std::ref(dynamic_processing_fifo), std::ref(db_fifo), width_n);
     }
 
