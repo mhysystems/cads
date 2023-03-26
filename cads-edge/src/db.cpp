@@ -107,7 +107,6 @@ namespace cads
 
     for(int retry = 10; retry > 0; --retry) {
 
-        char *errmsg;
         err = sqlite3_prepare_v2(db, zSql, nByte, ppStmt, pzTail);
 
         if (err != SQLITE_OK)
