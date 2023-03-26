@@ -310,7 +310,7 @@ namespace cads
     while (upload_profile)
     {
       cpr::Response r = cpr::Post(endpoint,
-                                  cpr::Body{(char *)bufv.data(), bufv.size()},
+                                  cpr::Body{(char *)buf, size},
                                   cpr::Header{{"Content-Type", "application/octet-stream"}});
 
       if (cpr::ErrorCode::OK == r.error.code && cpr::status::HTTP_OK == r.status_code)
