@@ -8,7 +8,7 @@ import sys
 def process_profile(db: str, y = 0, len = 1) :
     conn = sqlite3.connect(db)
     cur = conn.cursor()
-    for row in cur.execute(f"SELECT y,x_off,z from PROFILE where revid = 0 and idx >= ? order by idx asc limit ?",[y,len]):
+    for row in cur.execute(f"SELECT y,x_off,z from PROFILE where rowid >= ? order by rowid asc limit ?",[y,len]):
         a = yield [row[0],row[1],np.frombuffer(row[2],dtype='f')]
         if a:
             break;

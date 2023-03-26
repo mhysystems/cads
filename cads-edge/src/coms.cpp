@@ -21,6 +21,7 @@
 #include <plot_data_generated.h>
 #include <nats.h>
 #include <coms.h>
+#include <brotli/encode.h>
 
 #pragma GCC diagnostic pop
 
@@ -62,6 +63,45 @@ namespace
     }
 
     return {"", true};
+  }
+
+  void compress(cads::z_type input) {
+
+    std::vector<uint8_t> output(input.size() * sizeof(cads::z_element));
+    
+    size_t input_size = input.size();
+    size_t output_size = output.size();
+
+    BrotliEncoderCompress(BROTLI_DEFAULT_QUALITY,0, BROTLI_DEFAULT_MODE, input_size, (uint8_t*)input.data(), &output_size, output.data());
+    output.resize(output_size);
+    int a = 0;
+
+  }
+
+  void compress(std::vector<short> input) {
+
+    std::vector<uint8_t> output(input.size() * sizeof(cads::z_element));
+    
+    size_t input_size = input.size();
+    size_t output_size = output.size();
+
+    BrotliEncoderCompress(BROTLI_DEFAULT_QUALITY,0, BROTLI_DEFAULT_MODE, input_size, (uint8_t*)input.data(), &output_size, output.data());
+    output.resize(output_size);
+    int a = 0;
+
+  }
+
+    std::vector<uint8_t> compress(uint8_t *input, uint32_t size) {
+
+    std::vector<uint8_t> output(size);
+    
+    size_t input_size = size;
+    size_t output_size = output.size();
+
+    BrotliEncoderCompress(BROTLI_DEFAULT_QUALITY,BROTLI_DEFAULT_WINDOW, BROTLI_DEFAULT_MODE, input_size, input, &output_size, output.data());
+    output.resize(output_size);
+    return output;
+
   }
 }
 
@@ -290,11 +330,14 @@ namespace cads
     auto buf = builder.GetBufferPointer();
     auto size = builder.GetSize();
 
+    std::vector<uint8_t> bufv = compress(buf,size);
+
+
     while (upload_profile)
     {
       cpr::Response r = cpr::Post(endpoint,
-                                  cpr::Body{(char *)buf, size},
-                                  cpr::Header{{"Content-Type", "application/octet-stream"}});
+                                  cpr::Body{(char *)bufv.data(), bufv.size()},
+                                  cpr::Header{{"Content-Encoding", "br"},{"Content-Type", "application/octet-stream"}});
 
       if (cpr::ErrorCode::OK == r.error.code && cpr::status::HTTP_OK == r.status_code)
       {
@@ -670,7 +713,7 @@ namespace cads
         {
           belt_z_max = max(belt_z_max, (double)*max_iter);
         }
-
+ 
         auto tmp_z = zs | sr::views::transform([=](float e) -> int16_t
                                                 { return std::isnan(e) ? std::numeric_limits<int16_t>::lowest() : int16_t(((double)e - z_offset) / z_resolution); });
         std::vector<int16_t> short_z{tmp_z.begin(), tmp_z.end()};

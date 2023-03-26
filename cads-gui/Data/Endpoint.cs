@@ -90,7 +90,8 @@ namespace cads_gui.Data
       using var ms = new MemoryStream();
 
       await Request.Body.CopyToAsync(ms);
-      var bb = new ByteBuffer(ms.ToArray());
+      var jjd = ms.ToArray();
+      var bb = new ByteBuffer(jjd);
       var pa = profile_array.GetRootAsprofile_array(bb);
 
       if (pa.Count < 1)
