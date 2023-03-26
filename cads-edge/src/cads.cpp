@@ -556,6 +556,8 @@ namespace cads
         break;
       }
     }
+    
+    scan_upload_fifo.enqueue({msgid::finished,0});
   }
 
   void generate_signal()
