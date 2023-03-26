@@ -73,8 +73,9 @@
     "Org"  : "bhp",
     "Site" : "jimblebar",
     "Name" : "cv001",
-    "Timezone" : "use_os",
-    "PulleyCircumference" : 4178.32
+    "Timezone" : "Australia/Perth",
+    "PulleyCircumference" : 4178.32,
+    "MaxSpeed" : 6.09
   },
 
   "belt" : {
@@ -98,7 +99,11 @@
     "add_scan" : ["https://server.mhysystems.com/api/scans",true]
   },
 
-  "nats_url" : "10.9.1.1",
+  "communications" : {
+    "NatsUrl" : "10.9.1.1",
+    "UploadRows" : 1024
+  },
+
   "upload_profile" : true,
   "base_url" : "https://server.mhysystems.com/api",
   "lua_window_height" : 2,

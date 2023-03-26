@@ -52,17 +52,14 @@ namespace {
     auto Org = config["conveyor"]["Org"].get<std::string>();
     auto Site = config["conveyor"]["Site"].get<std::string>();
     auto Name = config["conveyor"]["Name"].get<std::string>();
-    auto Timezone =  date::current_zone()->name();
-    
-    if(config["conveyor"]["Timezone"].get<std::string>() != "use_os")
-    {
-      Timezone = config["conveyor"]["Timezone"].get<std::string>();
-    }
+    auto Timezone = config["conveyor"]["Timezone"].get<std::string>();
 
     auto PulleyCircumference = config["conveyor"]["PulleyCircumference"].get<double>();
+    auto MaxSpeed = config["conveyor"]["MaxSpeed"].get<double>();
+    
     int64_t Belt = 0;
 
-    return cads::Conveyor{Id,Org,Site,Name,Timezone,PulleyCircumference,Belt};
+    return cads::Conveyor{Id,Org,Site,Name,Timezone,PulleyCircumference,MaxSpeed,Belt};
 
   }
 
@@ -136,6 +133,16 @@ namespace {
     return cads::RevolutionSensor{source,trigger_num,bias,bidirectional};
 
   }
+
+  auto mk_communications(nlohmann::json config) {
+    using namespace std;
+    
+    auto NatsUrl = config["communications"]["NatsUrl"].get<std::string>();
+    auto UploadRows = config["communications"]["UploadRows"].get<size_t>();
+
+    return cads::Communications{NatsUrl,UploadRows};
+
+  }
 }
 
 namespace cads {  
@@ -150,6 +157,7 @@ namespace cads {
   SqliteGocatorConfig sqlite_gocator_config;
   Dbscan dbscan_config;
   RevolutionSensor revolution_sensor_config;
+  Communications communications_config;
 
   
   void init_config(std::string f) {
@@ -165,6 +173,7 @@ namespace cads {
     sqlite_gocator_config = mk_sqlite_gocator(config);
     dbscan_config = mk_dbscan(config);
     revolution_sensor_config = mk_revolution_sensor(config);
+    communications_config = mk_communications(config);
     global_config = config;
   }
 

@@ -23,10 +23,9 @@ namespace
     auto err = cads::post_scan(scan);
     
     if(!err) {
-      cads::store_scan_status(2,path);
-      //cads::delete_scan_state(path);
-      //std::filesystem::remove(path);
-      //spdlog::get("cads")->info("Removing a posted scan. {}", path);
+      cads::delete_scan_state(path);
+      std::filesystem::remove(path);
+      spdlog::get("cads")->info("Removed posted scan. {}", path);
     }else{
       
     }
@@ -69,8 +68,10 @@ void upload_scan_thread(moodycamel::BlockingReaderWriterQueue<msg> &fifo)
       case msgid::finished:
         loop = false;
         break;
-      default:
+      case msgid::complete_belt:
         spdlog::get("cads")->info("Recieved a scan");
+        break;
+      default:
         break;
     }
 
