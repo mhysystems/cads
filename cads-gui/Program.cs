@@ -36,10 +36,12 @@ builder.Services.Configure<JsonOptions>(options =>
     options.JsonSerializerOptions.Converters.Add(t);
 });
 
-//builder.WebHost.UseWebRoot("wwwroot");
+builder.WebHost.UseWebRoot("wwwroot");
 builder.WebHost.UseStaticWebAssets();
+builder.Services.AddRequestDecompression();
 
 var app = builder.Build();
+
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -63,6 +65,6 @@ app.MapBlazorHub();
 app.MapHub<RealtimeHub>("/realtime");
 app.MapControllers();
 app.MapFallbackToPage("/_Host");
-
+app.UseRequestDecompression();
 app.Run();
 
