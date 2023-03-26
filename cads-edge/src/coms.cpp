@@ -65,33 +65,7 @@ namespace
     return {"", true};
   }
 
-  void compress(cads::z_type input) {
-
-    std::vector<uint8_t> output(input.size() * sizeof(cads::z_element));
-    
-    size_t input_size = input.size();
-    size_t output_size = output.size();
-
-    BrotliEncoderCompress(BROTLI_DEFAULT_QUALITY,0, BROTLI_DEFAULT_MODE, input_size, (uint8_t*)input.data(), &output_size, output.data());
-    output.resize(output_size);
-    int a = 0;
-
-  }
-
-  void compress(std::vector<short> input) {
-
-    std::vector<uint8_t> output(input.size() * sizeof(cads::z_element));
-    
-    size_t input_size = input.size();
-    size_t output_size = output.size();
-
-    BrotliEncoderCompress(BROTLI_DEFAULT_QUALITY,0, BROTLI_DEFAULT_MODE, input_size, (uint8_t*)input.data(), &output_size, output.data());
-    output.resize(output_size);
-    int a = 0;
-
-  }
-
-    std::vector<uint8_t> compress(uint8_t *input, uint32_t size) {
+  std::vector<uint8_t> compress(uint8_t *input, uint32_t size) {
 
     std::vector<uint8_t> output(size);
     
@@ -112,7 +86,7 @@ namespace cads
   void remote_control_thread(moodycamel::BlockingConcurrentQueue<int> &nats_queue, bool &terminate)
   {
 
-    auto endpoint_url = global_config["nats_url"].get<std::string>();
+    auto endpoint_url = communications_config.NatsUrl;
 
     natsConnection *conn = nullptr;
     natsOptions *opts = nullptr;
@@ -168,7 +142,7 @@ namespace cads
   void realtime_publish_thread(bool &terminate)
   {
 
-    auto endpoint_url = global_config["nats_url"].get<std::string>();
+    auto endpoint_url = communications_config.NatsUrl;
 
     natsConnection *conn = nullptr;
     natsOptions *opts = nullptr;
@@ -720,9 +694,9 @@ namespace cads
 
         profiles_flat.push_back(CadsFlatbuffers::CreateprofileDirect(builder, y, 0, &short_z));
 
-        if (profiles_flat.size() == 256)
+        if (profiles_flat.size() == communications_config.UploadRows)
         {
-          size += send_flatbuffer_array(builder, z_resolution, z_offset, idx - 256, profiles_flat, endpoint, upload_profile);
+          size += send_flatbuffer_array(builder, z_resolution, z_offset, idx - communications_config.UploadRows, profiles_flat, endpoint, upload_profile);
           store_scan_uploaded(idx+1,db_name);
         }
       }

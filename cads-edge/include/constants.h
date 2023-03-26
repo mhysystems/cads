@@ -49,6 +49,7 @@ namespace cads {
     std::string Name;
     std::string Timezone;
     double PulleyCircumference;
+    double MaxSpeed;
     int64_t Belt;
 
     operator std::string() const;
@@ -99,6 +100,11 @@ namespace cads {
     bool bidirectional;
   };
 
+  struct Communications {
+    std::string NatsUrl;
+    size_t UploadRows;
+  };
+
 
   extern constraints global_constraints;
   extern profile_parameters global_profile_parameters;
@@ -109,6 +115,7 @@ namespace cads {
   extern SqliteGocatorConfig sqlite_gocator_config;
   extern Dbscan dbscan_config;
   extern RevolutionSensor revolution_sensor_config;
+  extern Communications communications_config;
   
   void init_config(std::string f);
   void drop_config();
