@@ -95,7 +95,7 @@ namespace
     BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
     BlockingReaderWriterQueue<msg> winFifo(4096 * 1024);
 
-    const auto x_width = global_config["x_width"].get<int>();
+    const auto x_width = global_belt_parameters.Width;
     const auto nan_percentage = global_config["nan_%"].get<double>();
     const auto width_n = global_config["width_n"].get<int>();
     const auto clip_height = global_config["clip_height"].get<z_element>();
@@ -137,7 +137,7 @@ namespace
     if(global_config.contains("origin_detector") && global_config["origin_detector"] == "bypass") {
       origin_dectection = std::jthread(bypass_fiducial_detection_thread,std::ref(winFifo), std::ref(db_fifo));
     }else {
-      auto y_res = global_conveyor_parameters.MaxSpeed / encoder_framerate;
+      auto y_res = encoder_framerate != 0.0 ? global_conveyor_parameters.MaxSpeed / encoder_framerate : y_resolution;
       origin_dectection = std::jthread(window_processing_thread, x_resolution, y_res, width_n, std::ref(winFifo), std::ref(dynamic_processing_fifo));
       dynamic_processing = std::jthread(dynamic_processing_thread, std::ref(dynamic_processing_fifo), std::ref(db_fifo), width_n);
     }
@@ -145,7 +145,7 @@ namespace
     auto iirfilter_left = mk_iirfilterSoS();
     auto iirfilter_right = mk_iirfilterSoS();
     auto iirfilter_left_edge = mk_iirfilterSoS();
-    auto iirfilter_right_edge = mk_iirfilterSoS();
+ 
     auto delay = mk_delay(global_config["iirfilter"]["delay"]);
 
     int64_t cnt = 0;
@@ -193,22 +193,27 @@ namespace
         spdlog::get("cads")->debug("Gocator sending rate : {}", 20000*(1000000 / dt.count()));
       }
 
-
-
       auto p = get<profile>(get<1>(m));
-      auto [pulley_level,pulley_right,ll,lr,clusters] = pulley_levels_clustered(p.z,pulley_estimator);
-      recontruct_z(p.z,clusters);
-      p.z.insert(p.z.begin(),filter_window_len,(float)pulley_level);
-      p.z.insert(p.z.end(),filter_window_len,(float)pulley_right);
+      
+      auto iy = p.y;
+      auto ix = p.x_off;
+      auto iz = p.z;
+
+      spike_filter(iz);
+      auto [pulley_level,pulley_right,ll,lr,clusters,cerror] = pulley_levels_clustered(iz,pulley_estimator);
+      
+      if(cerror != ClusterError::None) {
+        spdlog::get("cads")->error("Clustering error : {}", ClusterErrorToString(cerror));
+      }
+
+      recontruct_z(iz,clusters);
+      iz.insert(iz.begin(),filter_window_len,(float)pulley_level);
+      iz.insert(iz.end(),filter_window_len,(float)pulley_right);
 
       ll += filter_window_len;
       lr += filter_window_len;
 
-      auto iy = p.y;
-      auto ix = p.x_off;
-      auto iz = p.z;
- 
-      if (iz.size()*x_resolution < size_t(x_width * 0.75))
+      if (iz.size()*x_resolution < x_width * 0.75)
       {
         spdlog::get("cads")->error("Gocator sending profiles with widths less than 0.75 of expected width");
         if(is_gocator) {
@@ -246,23 +251,21 @@ namespace
 
       nan_interpolation_last(iz);
 
-      auto [ileft_edge_index, iright_edge_index] = find_profile_edges_sobel(iz);
+      auto [pre_left_edge_index, pre_right_edge_index] = find_profile_edges_sobel(iz);
 
 
-      if(std::abs(ileft_edge_index - (int)ll) > 2 && false) {
-        spdlog::get("cads")->error("sobel & dbscan don't match: sobel({},{}) dbscan({},{})", ileft_edge_index,iright_edge_index,ll,lr);
+      if(std::abs(pre_left_edge_index - (int)ll) > 2) {
+        spdlog::get("cads")->error("sobel & dbscan don't match: sobel({},{}) dbscan({},{})", pre_left_edge_index,pre_right_edge_index,ll,lr);
         store_errored_profile(iz);
       }
 
       auto pulley_level_filtered = (z_element)iirfilter_left(pulley_level);
       auto pulley_right_filtered = (z_element)iirfilter_right(pulley_right);
-      
-      auto left_edge_filtered = (z_element)iirfilter_left_edge(ileft_edge_index);
-      auto right_edge_filtered = (z_element)iirfilter_right_edge(iright_edge_index);
+      auto left_edge_filtered = (z_element)iirfilter_left_edge(ll);
       
       auto pulley_level_unbias = dc_filter(pulley_level_filtered);
 
-      auto [delayed, dd] = delay({iy, ix, iz, (int)left_edge_filtered, (int)right_edge_filtered,p.z});
+      auto [delayed, dd] = delay({iy, ix, iz, (int)left_edge_filtered,(int)ll, (int)pre_right_edge_index,p.z});
 
       if (!delayed)
         continue;
@@ -273,7 +276,7 @@ namespace
         continue;
       }
 
-      auto [y, x, z, left_edge_index, right_edge_index, raw_z] = dd;
+      auto [y, x, z, left_edge_index_avg, left_edge_index, right_edge_index, raw_z] = dd;
 
       auto gradient = (pulley_right_filtered - pulley_level_filtered) / (double)z.size();
       regression_compensate(z, 0, z.size(), gradient);
@@ -294,8 +297,6 @@ namespace
         if(is_gocator) {
           status = Process_Status::Stopped;
           break;
-        }else {
-          continue;
         }
       }
 
@@ -309,15 +310,19 @@ namespace
         spdlog::get("cads")->debug("Surface Speed(m/s): {}", speed);
       }
 
-      auto left_edge_index_aligned = left_edge_index;
-
       pulley_level_compensate(z, -pulley_level_filtered, clip_height);
 
+      if(left_edge_index_avg < left_edge_index) {
+        std::fill(z.begin()+left_edge_index_avg,z.begin() + left_edge_index,z[left_edge_index]);
+      }
+      
+      auto [left_edge_index_aligned,right_edge_index_aligned] = find_profile_edges_zero(z);
+      
       if(z.size() < size_t(left_edge_index_aligned + width_n)) {
         //spdlog::get("cads")->debug("Belt width({})[la - {}, l- {}, r - {}] less than required. Filled with zeros",z.size(),left_edge_index_aligned,left_edge_index,right_edge_index);
         //store_errored_profile(raw_z);
         const auto cnt = left_edge_index_aligned + width_n - z.size();
-        z.insert(z.end(),cnt,0);
+        z.insert(z.end(),cnt,z[right_edge_index_aligned-1]);
       }
 
       auto f = z | views::take(left_edge_index_aligned + width_n) | views::drop(left_edge_index_aligned);
@@ -600,7 +605,7 @@ namespace cads
         auto ix = p.x_off;
         auto iz = p.z;
 
-        auto [pulley_left,pulley_right,ll,lr,clusters] = pulley_levels_clustered(p.z,pulley_estimator);
+        auto [pulley_left,pulley_right,ll,lr,clusters,cerror] = pulley_levels_clustered(p.z,pulley_estimator);
 
         auto bottom_avg = pulley_left;
         auto bottom_filtered = iirfilter(bottom_avg);
@@ -608,11 +613,11 @@ namespace cads
         filt << bottom_avg << "," << bottom_filtered << '\n';
         filt.flush();
 
-        auto [delayed, dd] = delay({iy, ix, iz, 0, 0,p.z});
+        auto [delayed, dd] = delay({iy, ix, iz, 0,0, 0,p.z});
         if (!delayed)
           continue;
 
-        auto [y, x, z, ignore_a, ignore_b,ignore_c] = dd;
+        auto [y, x, z, ignore_d, ignore_a, ignore_b,ignore_c] = dd;
       }
 
     } while (std::get<0>(m) != msgid::finished);

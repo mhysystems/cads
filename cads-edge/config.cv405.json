@@ -17,7 +17,6 @@
     "cross_correlation_threshold" : 0.4
   },
 
-  "x_width"  : 1500,
   "width_n" : 1820,
   "clip_height" : 36.0,
   "left_edge_nan" : 10,

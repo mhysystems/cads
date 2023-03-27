@@ -68,5 +68,26 @@ namespace cads
     }
   }
 
+  void nan_interpolation_last(z_type::iterator begin, z_type::iterator end)
+  {
+
+    auto prev_value_it = std::find_if(begin,end, [](z_element a)
+                                     { return !std::isnan(a); });
+    z_element prev_value = prev_value_it != end ? *prev_value_it : std::numeric_limits<z_element>::quiet_NaN();
+
+    auto e = begin;
+    while(e++ < end)
+    {
+      if (!std::isnan(*e))
+      {
+        prev_value = *e;
+      }
+      else
+      {
+        *e = prev_value;
+      }
+    }
+  }
+
 
 }

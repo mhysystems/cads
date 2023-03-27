@@ -12,6 +12,7 @@
 #include <regression.h>
 #include <edge_detection.h>
 #include <stats.hpp>
+#include <interpolation.h>
 
 namespace cads
 {
@@ -240,8 +241,10 @@ namespace cads
         for(; i < begin(r); ++i) {
           *i = std::numeric_limits<z_element>::quiet_NaN();
         }
-
-        i = std::bit_cast<z_type::iterator>(end(r));
+        
+        auto re = std::bit_cast<z_type::iterator>(end(r));
+        nan_interpolation_last(i,re);
+        i = re;
 
       }
     }
@@ -262,8 +265,7 @@ namespace cads
     return std::reduce(v.begin(), v.end()) / count;
   }
 
-
-  std::tuple<double,double,size_t,size_t,z_clusters> pulley_levels_clustered(const z_type &z, std::function<double(const z_type &)> estimator)
+  std::tuple<double,double,size_t,size_t,z_clusters,ClusterError> pulley_levels_clustered(const z_type &z, std::function<double(const z_type &)> estimator)
   {
  
     auto clusters = dbscan(z);
@@ -271,34 +273,54 @@ namespace cads
     auto avg_r = 0.0;
     size_t left_edge = 0;
     size_t right_edge = z.size();
+    ClusterError error = ClusterError::None;
 
-    if(clusters.size() == 2) {
+    if(clusters.size() < 2) {
+      error = ClusterError::NoClusters;
+    }else if(clusters.size() == 2) {
       // Only one side of pulley detected.
       // Check heights. Assumes belt is higher than pulley.
+      // Pulley found on left of belt if index is 1 else right
+      auto pulley = (*begin(clusters[0][0]) < *begin(clusters[1][0])) ? 0 : 1;
+      auto belt = -1*pulley + 1;
 
-      if(*begin(clusters[0][0]) < *begin(clusters[1][0])) {
-         // Pulley found on left of belt
-        auto avg = estimator(construct_ztype(clusters[0]));
-        avg_l = avg;
-        avg_r = avg;
-        left_edge = std::distance(z.begin(),begin(clusters[1][0]));
-        right_edge = std::distance(z.begin(),end(clusters[1][0]));
-      }else{
-        // Pulley found on right of belt
-        auto avg = estimator(construct_ztype(clusters[1]));
-        avg_l = avg;
-        avg_r = avg;
-        left_edge = std::distance(z.begin(),begin(clusters[0][0]));
-        right_edge = std::distance(z.begin(),end(clusters[0][0]));
+      auto avg = estimator(construct_ztype(clusters[pulley]));
+      avg_l = avg;
+      avg_r = avg;
+      auto size = clusters[1].size();
+      left_edge = std::distance(z.begin(),begin(clusters[belt][0]));
+      right_edge = std::distance(z.begin(),end(clusters[belt][size-1]));
+
+      if(size > 1) {
+        error = ClusterError::ExcessiveNeigbours;
       }
+
+    }else if(clusters.size() == 3){
+
+      auto size = clusters[1].size();
+      left_edge = std::distance(z.begin(),begin(clusters[1][0]));
+      right_edge = std::distance(z.begin(),end(clusters[1][size-1]));
       
+      avg_l = estimator(construct_ztype(clusters.front()));
+      avg_r = estimator(construct_ztype(clusters.back()));
+
+      if(size > 1) {
+        error = ClusterError::ExcessiveNeigbours;
+      }
 
     }else {
+      error = ClusterError::ExcessiveClusters;
+
+      auto cluster_size = clusters.size();
+      auto size = clusters[cluster_size - 2].size();
+
+      left_edge = std::distance(z.begin(),begin(clusters[1][0]));
+      right_edge = std::distance(z.begin(),end(clusters[cluster_size - 2][size-1]));
       avg_l = estimator(construct_ztype(clusters.front()));
       avg_r = estimator(construct_ztype(clusters.back()));
     }
     
-    return std::make_tuple(avg_l,avg_r,left_edge,right_edge,clusters);
+    return {avg_l,avg_r,left_edge,right_edge,clusters,error};
   }
 
 

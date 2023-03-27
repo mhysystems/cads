@@ -35,4 +35,6 @@ namespace cads
 
   std::tuple<int,int> find_profile_edges_sobel(const z_type& z, int len = global_profile_parameters.sobel_filter);
 
+  std::tuple<int,int> find_profile_edges_zero(const z_type& z);
+
 } // namespace cads

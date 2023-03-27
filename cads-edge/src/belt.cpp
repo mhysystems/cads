@@ -55,14 +55,17 @@ namespace cads
     auto schmitt_trigger = mk_schmitt_trigger(bias);
     auto time0 = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> dt = time0 - time0;
+    long cnt = 0;
 
     return [=](double pulley_height) mutable -> PulleyRevolution
     {
+      cnt++;
       auto rtn = PulleyRevolution{false, trigger_distance,dt};
       schmitt1 = schmitt_trigger(pulley_height);
       if ((std::signbit(schmitt1) == true && std::signbit(schmitt0) == false) || 
          (bidirectional && (std::signbit(schmitt1) == false && std::signbit(schmitt0) == true)))
       {
+        cnt = 0;
         auto now = std::chrono::high_resolution_clock::now();
         dt = now - time0;
         time0 = now;

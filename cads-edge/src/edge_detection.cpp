@@ -52,6 +52,14 @@ std::tuple<int,int> find_profile_edges_nans(const z_type& z, int len) {
   return std::tuple<int,int>{l, r};
 }
 
+std::tuple<int,int> find_profile_edges_zero(const z_type& z) {
+
+  auto mid = int(z.size() / 2);
+  auto r  = mid + std::count_if(z.begin()+mid, z.end(), [](auto e) {return e > 0;});
+  auto l = z.size() - mid - std::count_if(z.rbegin() + mid ,z.rend(),[](auto e) {return e > 0;});
+  return std::tuple<int,int>{l, r};
+}
+
 
 std::tuple<int,int> find_profile_edges_nans_outer(const z_type& z, int len) {
   
