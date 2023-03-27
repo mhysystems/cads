@@ -17,8 +17,7 @@
     "cross_correlation_threshold" : 0.6
   },
 
-  "x_width"  : 1500,
-  "width_n" : 1960,
+  "width_n" : 1890,
   "clip_height" : 36.0,
   "left_edge_nan" : 10,
   "right_edge_nan" : 10,
@@ -36,7 +35,7 @@
   "revolution_sensor" : {
     "source" : "raw",
     "trigger_num" : 1,
-    "bias" : -34.0,
+    "bias" : -36.0,
     "bidirectional" : false
   },
 

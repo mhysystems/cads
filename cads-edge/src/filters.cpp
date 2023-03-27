@@ -48,7 +48,7 @@ namespace cads
     for (auto &e : z)
     {
       e += z_off;
-      if (e < 5.0f )
+      if (e < 15.0f )
         e = 0;
       if (e > z_max_compendated)
         e = z_max_compendated;
@@ -81,17 +81,17 @@ namespace cads
     };
   }
 
-  std::function<std::tuple<bool, std::tuple<y_type, double, z_type,int,int,z_type>>(std::tuple<y_type, double, z_type,int,int,z_type>)> mk_delay(size_t len)
+  std::function<std::tuple<bool, std::tuple<y_type, double, z_type,int,int,int,z_type>>(std::tuple<y_type, double, z_type,int,int,int,z_type>)> mk_delay(size_t len)
   {
 
-    std::deque<std::tuple<y_type, double, z_type,int,int,z_type>> delay;
-    return [=](std::tuple<y_type, double, z_type,int,int,z_type> p) mutable
+    std::deque<std::tuple<y_type, double, z_type,int,int,int,z_type>> delay;
+    return [=](std::tuple<y_type, double, z_type,int,int,int,z_type> p) mutable
     {
       delay.push_back(p);
 
       if (delay.size() < len)
       {
-        return std::tuple{false, std::tuple<y_type, double, z_type,int,int,z_type>()};
+        return std::tuple{false, std::tuple<y_type, double, z_type,int,int,int,z_type>()};
       }
 
       auto rn = delay.front();

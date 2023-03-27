@@ -6,4 +6,5 @@ namespace cads
 {
   void nan_interpolation_spline(z_type &z);
   void nan_interpolation_last(z_type &z);
+  void nan_interpolation_last(z_type::iterator begin, z_type::iterator end);
 }

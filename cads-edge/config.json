@@ -1,6 +1,5 @@
 {
-  "data_source" : "../../profiles/profile.db",
-  "origin_detector" : "bypass",
+  "data_source" : "../../profiles/rawprofile_cv001_4.db",
   
   "sqlite_gocator" : {
     "range" : [0,9007199254740991],
@@ -19,8 +18,7 @@
   },
 
   "z_height" : 27.0,
-  "x_width"  : 1500,
-  "width_n" : 1960,
+  "width_n" : 1890,
   "clip_height" : 36.0,
   "left_edge_nan" : 10,
   "right_edge_nan" : 10,
@@ -31,14 +29,14 @@
   "nan_%" : 0.15,
 
   "dbscan" : {
-    "InCluster" : 5,
+    "InCluster" : 12,
     "MinPoints" : 20
   },
 
   "revolution_sensor" : {
     "source" : "raw",
     "trigger_num" : 1,
-    "bias" : -33.0,
+    "bias" : -415.0,
     "bidirectional" : false
   },
 
@@ -91,7 +89,7 @@
     "CordDiameter" : 9.1,
     "TopCover" : 14.0,
     "Width" : 1600,
-    "Length" : 60000,
+    "Length" : 12545200,
     "Splices" : 1
   },
 

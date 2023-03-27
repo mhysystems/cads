@@ -77,8 +77,9 @@
     Y = (int)scan.FrameLength;
     X = (int)scan.Xmax;
     Z = (int)scan.z_max;
-    XMin = -scan.Xmax/2;
-    XMax = scan.Xmax/2;
+    var(xmin,xres) = scan.XBegin;
+    XMin = xmin;
+    XMax = scan.Xmax;
 
   }
 

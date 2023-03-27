@@ -556,9 +556,9 @@ namespace cads
           size += send_flatbuffer_array(builder, z_resolution, z_offset, idx - communications_config.UploadRows, profiles_flat, endpoint, upload_profile);
           store_scan_uploaded(idx+1,db_name);
         }
-        auto end = std::chrono::high_resolution_clock::now();
-        auto duration = (end - start) / 1.0s;
-        spdlog::get("cads")->info("Upload RATE(Kb/s):{} ", size / (1000 * duration));
+        //auto end = std::chrono::high_resolution_clock::now();
+        //auto duration = (end - start) / 1.0s;
+        //spdlog::get("cads")->info("Upload RATE(Kb/s):{} ", size / (1000 * duration));
       }
       else
       {
