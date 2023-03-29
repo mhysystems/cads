@@ -106,7 +106,7 @@ namespace cads_gui.Data
     [NotMapped]
     public bool HasData { get { return x_res != 0; } private set { } }
     [NotMapped]
-    public (double,double) XBegin{ get { return (-WidthN * x_res / 2, x_res) ; } private set { } }
+    public (double,double) XBegin{ get { return (0, x_res) ; } private set { } }
 
     public long Belt { get; set; } = 1;
     public int Orientation { get; set; } = -1;

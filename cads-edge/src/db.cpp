@@ -16,21 +16,14 @@
 #include <utils.hpp>
 
 using namespace moodycamel;
+using namespace std::string_literals;
+
+using sqlite3_t = std::unique_ptr<sqlite3, decltype(&sqlite3_close)>;
+using sqlite3_stmt_t = std::unique_ptr<sqlite3_stmt, decltype(&sqlite3_finalize)>;
 
 namespace
 {
-
-
-}
-
-namespace cads
-{
-
-  using namespace std;
-  using sqlite3_t = std::unique_ptr<sqlite3, decltype(&sqlite3_close)>;
-  using sqlite3_stmt_t = std::unique_ptr<sqlite3_stmt, decltype(&sqlite3_finalize)>;
-  
-  auto db_exec(sqlite3* db,  string query)
+  auto db_exec(sqlite3* db,  std::string query)
   {
     std::string func_name = __func__;
     int err = SQLITE_ERROR;
@@ -96,16 +89,17 @@ namespace cads
   
   int sqlite3_prepare_retry
   (
-  sqlite3 *db,            /* Database handle */
-  const char *zSql,       /* SQL statement, UTF-8 encoded */
-  int nByte,              /* Maximum length of zSql in bytes. */
-  sqlite3_stmt **ppStmt,  /* OUT: Statement handle */
-  const char **pzTail     /* OUT: Pointer to unused portion of zSql */
+  sqlite3 *db,
+  const char *zSql,
+  int nByte,
+  sqlite3_stmt **ppStmt,
+  const char **pzTail,
+  int retry = 16
 )
   {
         int err = SQLITE_ERROR;
 
-    for(int retry = 10; retry > 0; --retry) {
+    for(; retry > 0; --retry) {
 
         err = sqlite3_prepare_v2(db, zSql, nByte, ppStmt, pzTail);
 
@@ -121,7 +115,7 @@ namespace cads
     return err;
   }
 
-  tuple<sqlite3_stmt_t,sqlite3_t> prepare_query(string db_config_name, string query, int flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX)
+  std::tuple<sqlite3_stmt_t,sqlite3_t> prepare_query(std::string db_config_name, std::string query, int flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX)
   {
 
     sqlite3 *db_raw = nullptr;
@@ -130,7 +124,8 @@ namespace cads
 
     if (err != SQLITE_OK)
     {
-      std::throw_with_nested(std::runtime_error("prepare_querysqlite3_open_v2"));
+      auto errmsg = sqlite3_errstr(err);
+      std::throw_with_nested(std::runtime_error(fmt::format("{} : sqlite3_open_v2 {},{}",__func__,err, errmsg)));
     }
 
     sqlite3_t db(db_raw, &sqlite3_close);
@@ -140,7 +135,8 @@ namespace cads
 
     if (err != SQLITE_OK)
     {
-      std::throw_with_nested(std::runtime_error("prepare_query:sqlite3_prepare_v2"));
+      auto errmsg = sqlite3_errstr(err);
+      std::throw_with_nested(std::runtime_error(fmt::format("{} : sqlite3_prepare_retry {},{}",__func__,err, errmsg)));
     }
 
     sqlite3_stmt_t stmt(stmt_raw, &sqlite3_finalize);
@@ -149,7 +145,7 @@ namespace cads
     return {move(stmt),move(db)};
   }
 
-  tuple<int, sqlite3_stmt_t> db_step(sqlite3_stmt_t stmt)
+  std::tuple<int, sqlite3_stmt_t> db_step(sqlite3_stmt_t stmt)
   {
     auto err = sqlite3_step(stmt.get());
     auto attempts = 512;
@@ -162,7 +158,12 @@ namespace cads
 
     return {err, move(stmt)};
   }
- 
+
+}
+
+namespace cads
+{
+
   int store_daily_upload(date::utc_clock::time_point datetime, std::string name)
   {
     auto query = R"(UPDATE STATE SET DAILYUPLOAD = ? WHERE ROWID = 1)"s;
@@ -361,7 +362,7 @@ namespace cads
   {
     auto db_name = name.empty() ? global_config["profile_db_name"].get<std::string>() : name;
 
-    vector<string> tables{
+    std::vector<std::string> tables{
         R"(PRAGMA journal_mode=WAL)"s,
         R"(DROP TABLE IF EXISTS PROFILE;)"s,
         R"(DROP TABLE IF EXISTS PARAMETERS;)"s,
@@ -401,7 +402,7 @@ namespace cads
       st >> parse("%R", run_in);
 
       date::zoned_time now{ date::current_zone(), std::chrono::system_clock::now()};
-      auto trigger = chrono::floor<chrono::days>(now.get_local_time()) + run_in;
+      auto trigger = std::chrono::floor<std::chrono::days>(now.get_local_time()) + run_in;
       
       date::zoned_time trigger_local{ date::current_zone(), trigger};
       auto trigger_utc = date::make_zoned("UTC", trigger_local);
@@ -413,7 +414,7 @@ namespace cads
       ts = to_str(date::utc_clock::now());
     }
 
-    vector<string> tables{
+    std::vector<std::string> tables{
       R"(CREATE TABLE IF NOT EXISTS STATE (DAILYUPLOAD TEXT NOT NULL, ConveyorId INTEGER NOT NULL, BeltId INTEGER NOT NULL))",
       R"(CREATE TABLE IF NOT EXISTS SCANS (ScanBegin TEXT NOT NULL, Path TEXT NOT NULL, Uploaded INTEGER NOT NULL, Status INTEGER NOT NULL))",
       fmt::format(R"(INSERT INTO STATE(DAILYUPLOAD,ConveyorId,BeltId) SELECT '{}',{},{} WHERE NOT EXISTS (SELECT * FROM STATE))", ts,0,0),
@@ -435,10 +436,10 @@ namespace cads
 
     auto db_name = name.empty() ? global_config["transient_db_name"].get<std::string>() : name;
     
-    vector<string> tables{
+    std::vector<std::string> tables{
       R"(PRAGMA journal_mode=WAL)"s,
       R"(CREATE TABLE IF NOT EXISTS Transients (LastY REAL NOT NULL))",
-      R"(CREATE TABLE IF NOT EXISTS ErroredProfile (z BLOB NOT NULL))",
+      R"(CREATE TABLE IF NOT EXISTS ErroredProfile (Id TEXT, z BLOB NOT NULL))",
       fmt::format(R"(INSERT INTO Transients(LastY) SELECT {} WHERE NOT EXISTS (SELECT * FROM Transients))",-1.0)
     };
 
@@ -517,7 +518,7 @@ namespace cads
 
       if (err != SQLITE_DONE)
       {
-        spdlog::get("db")->error("SQLite Error Code:{}", err);
+        spdlog::get("db")->error("{} : sqlite error ({},{})", __func__, err,sqlite3_errstr(err));
       }
 
     }
@@ -526,16 +527,17 @@ namespace cads
     co_return err;
   }
 
-  void store_errored_profile(const cads::z_type &z, std::string name)
+  void store_errored_profile(const cads::z_type &z, std::string id, std::string name)
   {
-    auto query = R"(INSERT INTO ErroredProfile (z) VALUES (?))"s;
+    auto query = R"(INSERT INTO ErroredProfile (Id,z) VALUES (?,?))"s;
     auto db_config_name = name.empty() ? global_config["transient_db_name"].get<std::string>() : name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
     
     sqlite3_exec(db.get(), R"(PRAGMA synchronous=OFF)"s.c_str(), nullptr, nullptr, nullptr);
     
+    sqlite3_bind_text(stmt.get(), 1, id.c_str(), id.size(),nullptr);
     auto n = z.size() * sizeof(z_element);
-    sqlite3_bind_blob(stmt.get(), 1, z.data(), (int)n, SQLITE_STATIC);
+    sqlite3_bind_blob(stmt.get(), 2, z.data(), (int)n, SQLITE_STATIC);
 
     sqlite3_step(stmt.get());
   }
@@ -608,7 +610,7 @@ namespace cads
     return rtn;
   }
 
-  long count_with_width_n(string name, int revid, int width_n) {
+  long count_with_width_n(std::string name, int revid, int width_n) {
     auto query = fmt::format(R"(SELECT count(idx) FROM PROFILE WHERE REVID = {} AND LENGTH(z) = ?)", revid);
     auto db_config_name = name.empty() ? global_config["profile_db_name"].get<std::string>() : name;
     auto [stmt,db] = prepare_query(db_config_name, query);
@@ -861,7 +863,7 @@ namespace cads
     auto db_config_name = db_name.empty() ? global_config["state_db_name"].get<std::string>() : db_name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
     
-    auto ScanBegin = date::format("%FT%TZ",chrono::floor<chrono::seconds>(date::utc_clock::now()));
+    auto ScanBegin = date::format("%FT%TZ",std::chrono::floor<std::chrono::seconds>(date::utc_clock::now()));
     auto Path = scan_db;
 
     auto err = sqlite3_bind_text(stmt.get(), 1, ScanBegin.c_str(), ScanBegin.size(),nullptr);

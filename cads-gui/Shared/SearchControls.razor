@@ -5,10 +5,6 @@
     <MudButton Class="mud-theme-secondary" StartIcon="@Icons.Material.Filled.ImageSearch" Size="Size.Large" OnClick="@Search" />
   </MudTooltip>
   
-  <!--<MudAutocomplete Label="Saved Z Depth" @bind-Value="@selectedZDepthParams" T="SavedZDepthParams" ResetValueOnEmptyText="true"
-   CoreceText="false" CoerceValue="true" ToStringFunc="@ToStringFunc" SearchFunc="GetSavedZDepthParams" Dense="true" ListClass="mud-palette-text-secondary mud-theme-secondary ma-0 flex-grow-0" />
-  -->
-
   <MudAutocomplete Label="Saved Z Depth" Class="mud-palette-secondary"  @bind-Value="@selectedZDepthParamsString" T="string" ResetValueOnEmptyText="true" Clearable="true"
    CoreceText="false" CoerceValue="true"Dense="true" SearchFunc="GetSavedZDepthParamsAsync" ListClass="overload-mud-list-item-secondary" />
 
@@ -21,8 +17,8 @@
     <MudButton Color="Color.Primary" StartIcon="@Icons.Material.Filled.FastRewind" Size="Size.Large" OnClick="@StepBackAsync" />
   </MudTooltip>
   <MudTooltip Text="Jump">
-    <MudNumericField Color="Color.Secondary" HideSpinButtons="true" ValueChanged="@JumpTo" Class="ma-0 flex-grow-0"
-      Variant="Variant.Text" Min="0" Max="@(scan.Ymax / 1000)" />
+    <MudNumericField @bind-Value="@YPos" Color="Color.Secondary" HideSpinButtons="true" Class="ma-0 flex-grow-0"
+      Variant="Variant.Text" Min="0" Max="@(scan.Ymax / 1000)" Format="N2" OnInternalInputChanged="@fn"/>
   </MudTooltip>
   <MudTooltip Text="Step Forward">
     <MudButton Color="Color.Primary" StartIcon="@Icons.Material.Filled.FastForward" Size="Size.Large"
@@ -110,6 +106,12 @@
   [Parameter]
   public EventCallback<DateTime?> DateChanged { get; set; }
 
+  [Parameter]
+  public double YPos { get; set; }
+
+  [Parameter]
+  public EventCallback<double> YPosChanged { get; set; }
+
 
   protected override async Task OnInitializedAsync()
   {
@@ -151,24 +153,20 @@
     await SaveZQueryParams.InvokeAsync(_selectedZDepthParamsString);
   }
 
-
-  protected string ToStringFunc(SavedZDepthParams p) {
-    if(p is null)
-    {
-      return string.Empty;
-    }else {
-      return p.Name;
-    }
+  private async Task  fn(ChangeEventArgs e)
+  {
+    await YPosChanged.InvokeAsync(YPos);
   }
 
-    protected async Task<IEnumerable<string>> GetSavedZDepthParamsAsync(string value)
-    {
-      if (string.IsNullOrEmpty(value)){
-        return savedZDepthParams.Select(e => e.Name);
-      }
-      
-      return await Task.Run(() => savedZDepthParams.Where(x => x.Name.Contains(value, StringComparison.InvariantCultureIgnoreCase)).Select(e => e.Name));
+
+  protected async Task<IEnumerable<string>> GetSavedZDepthParamsAsync(string value)
+  {
+    if (string.IsNullOrEmpty(value)){
+      return savedZDepthParams.Select(e => e.Name);
     }
+    
+    return await Task.Run(() => savedZDepthParams.Where(x => x.Name.Contains(value, StringComparison.InvariantCultureIgnoreCase)).Select(e => e.Name));
+  }
 
 
 }

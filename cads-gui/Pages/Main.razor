@@ -17,7 +17,7 @@
 <SiteHeader ShowDraw site="@site" conveyor="@conveyor">
   <SearchControls SelectZDepthParams="@LoadZDepthParamsAsync" DateChanged="@DateChanged" Scan="@scan"
     JumpTo="@JumpToAsync" StepBack="@StepBackward" StepForward="@StepForward" Search="@SearchBelt"
-    SaveZQueryParams="SaveZQueryParams" savedZDepthParams="savedZDepthParams" />
+    SaveZQueryParams="SaveZQueryParams" savedZDepthParams="savedZDepthParams" @bind-YPos="@currentY"/>
 </SiteHeader>
 
 <MudContainer MaxWidth="MaxWidth.False" Class="ma-0 pa-0"

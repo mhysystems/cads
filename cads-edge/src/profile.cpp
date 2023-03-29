@@ -16,6 +16,23 @@
 
 namespace cads
 {
+
+  std::string ClusterErrorToString(ClusterError error)
+  {
+    using namespace std::string_literals;
+    switch (error)
+    {
+    case ClusterError::NoClusters:
+      return "NoClusters"s;
+    case ClusterError::ExcessiveClusters:
+      return "ExcessiveClusters"s;
+    case ClusterError::ExcessiveNeigbours:
+      return "ExcessiveNeigbours"s;
+    default:
+      return "None"s;
+    }
+  }
+  
   std::tuple<z_element, z_element> find_minmax_z(const z_type &ps)
   {
 
