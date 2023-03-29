@@ -64,6 +64,6 @@ namespace cads
 
   // transients
   coro<int, double, 1> store_last_y_coro(std::string name = "");  
-  void store_errored_profile(const cads::z_type &z, std::string name ="");
+  void store_errored_profile(const cads::z_type &z, std::string id, std::string name ="");
 
 }

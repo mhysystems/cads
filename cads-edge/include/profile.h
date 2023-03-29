@@ -74,21 +74,8 @@ namespace cads
     ExcessiveClusters,
     ExcessiveNeigbours
   };
-  constexpr std::string ClusterErrorToString(ClusterError error)
-  {
-    using namespace std::string_literals;
-    switch (error)
-    {
-    case ClusterError::NoClusters:
-      return "NoClusters"s;
-    case ClusterError::ExcessiveClusters:
-      return "ExcessiveClusters"s;
-    case ClusterError::ExcessiveNeigbours:
-      return "ExcessiveNeigbours"s;
-    default:
-      return "None"s;
-    }
-  }
+  
+  std::string ClusterErrorToString(ClusterError error);
   std::tuple<double, double, size_t, size_t, z_clusters, ClusterError> pulley_levels_clustered(const z_type &z, std::function<double(const z_type &)> estimator = average);
 
 }

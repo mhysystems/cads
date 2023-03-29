@@ -165,7 +165,8 @@ namespace
     //auto fn = encoder_distance_id(csp); 
     auto fn = encoder_distance_estimation(csp); 
 
-    auto pulley_estimator = mk_pulleyfitter(z_resolution,-212.0);
+    auto pulley_estimator = mk_pulleyfitter(z_resolution,-15.0);
+    auto belt_estimator = mk_pulleyfitter(z_resolution,0.0);
 
     auto filter_window_len = global_config["sobel_filter"].get<size_t>();
 
@@ -204,6 +205,7 @@ namespace
       
       if(cerror != ClusterError::None) {
         spdlog::get("cads")->error("Clustering error : {}", ClusterErrorToString(cerror));
+        store_errored_profile(p.z,ClusterErrorToString(cerror));
       }
 
       recontruct_z(iz,clusters);
@@ -256,7 +258,7 @@ namespace
 
       if(std::abs(pre_left_edge_index - (int)ll) > 2) {
         spdlog::get("cads")->error("sobel & dbscan don't match: sobel({},{}) dbscan({},{})", pre_left_edge_index,pre_right_edge_index,ll,lr);
-        store_errored_profile(iz);
+        store_errored_profile(p.z,"sobel");
       }
 
       auto pulley_level_filtered = (z_element)iirfilter_left(pulley_level);
@@ -300,7 +302,7 @@ namespace
         }
       }
 
-      if (cnt % (2000 * 10) == 0)
+      if (cnt % (1000 * 20) == 0)
       {
         publish_PulleyOscillation(amplitude);
         publish_SurfaceSpeed(speed);
@@ -308,6 +310,18 @@ namespace
         spdlog::get("cads")->debug("Pulley Oscillation(mm): {}",amplitude);
         spdlog::get("cads")->debug("Pulley Frequency(Hz): {}", frequency);
         spdlog::get("cads")->debug("Surface Speed(m/s): {}", speed);
+      }
+
+      if (cnt % (1000 * 60) == 0)
+      {
+        auto belt_level = belt_estimator(z_type(z.begin()+left_edge_index,z.begin()+right_edge_index));
+        spdlog::get("cads")->info("Pulley Level: {} | Belt Level: {} | Height: {}", pulley_level_filtered,belt_level, belt_level - pulley_level_filtered);
+      }
+
+      if (cnt % (1000 * 5 * 60) == 0)
+      {
+        auto s = fmt::format("raw_{:.1f}",pulley_level_filtered);
+        store_errored_profile(raw_z,s);  
       }
 
       pulley_level_compensate(z, -pulley_level_filtered, clip_height);
@@ -333,7 +347,7 @@ namespace
       }
       else 
       {
-        fn.resume({ps,cads::profile{y, x + left_edge_index_aligned * x_resolution, {f.begin(), f.end()}}});
+        fn.resume({ps,cads::profile{y, pulley_level_filtered, {f.begin(), f.end()}}});
       }
 
     } while (std::get<0>(m) != msgid::finished);

@@ -34,14 +34,6 @@ surface-plot > div {
   height:100%;
 }
 
-color-range {
-  width:2%;
-  height:100%;
-  display:flex;
-  align-items: center;
-}
-
-
 #color-slider {
   -webkit-appearance: slider-vertical;
   transform: rotate(180deg);
