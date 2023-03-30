@@ -17,7 +17,7 @@ if __name__ == "__main__":
     q = ""
     match args.table:
         case "transient":
-            q = "select z from ErroredProfile"
+            q = "select z from ErroredProfile where id like 'raw_%'"
         case _:
             q = "select z from profile;"
 
