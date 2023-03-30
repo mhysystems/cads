@@ -1,5 +1,5 @@
 {
-  "data_source" : "../../profiles/rawprofile_cv001_4.db",
+  "data_source" : "../../profiles/rawprofile_032922.db",
   
   "sqlite_gocator" : {
     "range" : [0,9007199254740991],
@@ -36,7 +36,7 @@
   "revolution_sensor" : {
     "source" : "raw",
     "trigger_num" : 1,
-    "bias" : -415.0,
+    "bias" : -36.0,
     "bidirectional" : false
   },
 

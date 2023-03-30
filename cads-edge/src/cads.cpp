@@ -225,7 +225,7 @@ namespace
       auto [pulley_level,pulley_right,ll,lr,clusters,cerror] = pulley_levels_clustered(iz,pulley_estimator);
       
       if(cerror != ClusterError::None) {
-        spdlog::get("cads")->error("Clustering error : {}", ClusterErrorToString(cerror));
+        spdlog::get("cads")->debug("Clustering error : {}", ClusterErrorToString(cerror));
         store_errored_profile(p.z,ClusterErrorToString(cerror));
       }
 
@@ -278,7 +278,7 @@ namespace
 
 
       if(std::abs(pre_left_edge_index - (int)ll) > 2) {
-        spdlog::get("cads")->error("sobel & dbscan don't match: sobel({},{}) dbscan({},{})", pre_left_edge_index,pre_right_edge_index,ll,lr);
+        spdlog::get("cads")->debug("sobel & dbscan don't match: sobel({},{}) dbscan({},{})", pre_left_edge_index,pre_right_edge_index,ll,lr);
         store_errored_profile(p.z,"sobel");
       }
 

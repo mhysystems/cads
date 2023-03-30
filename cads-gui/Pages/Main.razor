@@ -17,7 +17,7 @@
 <SiteHeader ShowDraw site="@site" conveyor="@conveyor">
   <SearchControls SelectZDepthParams="@LoadZDepthParamsAsync" DateChanged="@DateChanged" Scan="@scan"
     JumpTo="@JumpToAsync" StepBack="@StepBackward" StepForward="@StepForward" Search="@SearchBelt"
-    SaveZQueryParams="SaveZQueryParams" savedZDepthParams="savedZDepthParams" @bind-YPos="@currentY"/>
+    SaveZQueryParams="SaveZQueryParams" savedZDepthParams="savedZDepthParams" @bind-YPos:get="@currentY" @bind-YPos:set="@JumpToAsync"/>
 </SiteHeader>
 
 <MudContainer MaxWidth="MaxWidth.False" Class="ma-0 pa-0"
@@ -175,7 +175,7 @@
     }
 
     progressPercentage = 100 * p;
-    await InvokeAsync(() => StateHasChanged());
+    //await InvokeAsync(() => StateHasChanged());
 
   }
 
@@ -232,7 +232,7 @@
 
   async Task JumpToAsync(double y)
   {
-    await UpdateYAsync(1000 * y);
+    await UpdateYAsync(y);
   }
 
   async Task DateChanged(DateTime? date)

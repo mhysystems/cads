@@ -17,8 +17,8 @@
     <MudButton Color="Color.Primary" StartIcon="@Icons.Material.Filled.FastRewind" Size="Size.Large" OnClick="@StepBackAsync" />
   </MudTooltip>
   <MudTooltip Text="Jump">
-    <MudNumericField @bind-Value="@YPos" Color="Color.Secondary" HideSpinButtons="true" Class="ma-0 flex-grow-0"
-      Variant="Variant.Text" Min="0" Max="@(scan.Ymax / 1000)" Format="N2" OnInternalInputChanged="@fn"/>
+    <MudNumericField @bind-Value="@Y" Color="Color.Secondary" HideSpinButtons="true" Class="ma-0 flex-grow-0"
+      Variant="Variant.Text" Min="0" Max="@(scan.Ymax / 1000)" Format="N2" />
   </MudTooltip>
   <MudTooltip Text="Step Forward">
     <MudButton Color="Color.Primary" StartIcon="@Icons.Material.Filled.FastForward" Size="Size.Large"
@@ -39,6 +39,8 @@
 @code {
 
   protected DateTime? _scanDate = null;
+
+  protected string ss = "30";
 
   protected DateTime? scanDate
   {
@@ -106,8 +108,36 @@
   [Parameter]
   public EventCallback<DateTime?> DateChanged { get; set; }
 
+  double _YPos;
   [Parameter]
-  public double YPos { get; set; }
+  public double YPos { 
+    get { return _YPos; }
+    set
+    {
+      var v = value;
+      if(_YPos != v) {
+        _YPos= v;
+        if(_Y != _YPos / 1000) {
+          Y = _YPos / 1000;
+        }
+      }
+    }
+   }
+
+    double _Y;
+    public double Y { 
+    get { return _Y; }
+    set
+    { 
+      if(_Y != value) {
+        _Y = value;
+        if(_YPos != _Y * 1000) {
+          _YPos = _Y * 1000;
+          YPosChanged.InvokeAsync(_YPos).AndForget();
+        }
+      }
+    }
+   }
 
   [Parameter]
   public EventCallback<double> YPosChanged { get; set; }
@@ -152,12 +182,6 @@
   {
     await SaveZQueryParams.InvokeAsync(_selectedZDepthParamsString);
   }
-
-  private async Task  fn(ChangeEventArgs e)
-  {
-    await YPosChanged.InvokeAsync(YPos);
-  }
-
 
   protected async Task<IEnumerable<string>> GetSavedZDepthParamsAsync(string value)
   {
