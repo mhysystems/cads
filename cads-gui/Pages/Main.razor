@@ -45,7 +45,7 @@
     </MudItem>
 
     <MudItem xs="12" Style="height:50%">
-      <MudProgressLinear Color="Color.Secondary" Class="my-0" Value="@progressPercentage" />
+      <Progress @ref="progress" />
       <SurfacePlot @ref="surfacePlot" Scan="@scan" YIndex="@UpdateProfilePlotAsync"></SurfacePlot>
     </MudItem>
     <MudItem xs="12" Style="height:10%">
@@ -68,6 +68,7 @@
   ProfilePlot profilePlot = new();
   ZDepthQuery zDepthQuery = new();
   DoughnutPlot doughnutPlot = new();
+  Progress progress = new();
 
   List<SavedZDepthParams> savedZDepthParams = new();
 
@@ -85,7 +86,6 @@
       Dispatcher.Dispatch(action);
     }
   }
-  double progressPercentage = 0;
 
   protected Scan scan { get; set; } = new();
   protected Belt belt { get; set; } = new();
@@ -174,8 +174,7 @@
       p = 1;
     }
 
-    progressPercentage = 100 * p;
-    //await InvokeAsync(() => StateHasChanged());
+    await progress.Update(p);
 
   }
 

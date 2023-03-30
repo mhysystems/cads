@@ -1,0 +1,12 @@
+ <MudProgressLinear Color="Color.Secondary" Class="my-0" Value="@progressPercentage" />
+
+ @code 
+ {
+  double progressPercentage = 0;
+
+  public async Task Update(double v) {
+    progressPercentage = v * 100;
+    await InvokeAsync(() => StateHasChanged());
+  }
+
+ }
