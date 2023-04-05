@@ -1,5 +1,5 @@
 {
-  "data_source" : "../../profiles/rawprofile_032922.db",
+  "data_source" : "gocator",
   
   "sqlite_gocator" : {
     "range" : [0,9007199254740991],
@@ -24,12 +24,12 @@
   "right_edge_nan" : 10,
   "daily_upload" : true,
   "daily_start_time" : "now",
-  "spike_filter" : 5,
+  "spike_filter" : 3,
   "sobel_filter" : 5,
   "nan_%" : 0.15,
 
   "dbscan" : {
-    "InCluster" : 12,
+    "InCluster" : 4,
     "MinPoints" : 20
   },
 

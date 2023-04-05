@@ -200,7 +200,7 @@ namespace
       auto ix = p.x_off;
       auto iz = p.z;
 
-      spike_filter(iz);
+      //spike_filter(iz);
       auto [pulley_level,pulley_right,ll,lr,clusters,cerror] = pulley_levels_clustered(iz,pulley_estimator);
       
       if(cerror != ClusterError::None) {

@@ -71,6 +71,7 @@ namespace cads
     return hist;
   }
 
+
   auto mk_zrange(const z_type &z) {
     return zrange{z.cbegin(),z.cend()};
   }
@@ -155,12 +156,10 @@ namespace cads
 
   // Return sequence of clustered z values and offset into profile
   // Input is a slice of profile, hence tracking offset
-  std::tuple<zrange,size_t> cluster(zrange z, z_element origin)
+  std::tuple<zrange,size_t> cluster(zrange z, z_element origin, z_element max_diff = dbscan_config.InCluster, z_element dis = dbscan_config.MinPoints )
   {
 
     namespace sr = std::ranges;
-
-    const z_element max_diff = 5;
 
     if (empty(z))
     {
@@ -183,7 +182,7 @@ namespace cads
       }
     }
 
-    if (d > 20)
+    if (d > dis)
     {
       auto [c,cd] = cluster({i,end(z)},e);
       if(cd > 0) {
@@ -196,10 +195,13 @@ namespace cads
     }
   }
   
-  
+  void something(z_type &&zz) {
+    zzrange gg(zz.begin(),zz.end());
+  }
   
   std::tuple<zrange,size_t> cluster(const z_type &z)
   {
+
     return cluster(mk_zrange(z),z[0]);
   }
 
@@ -300,6 +302,8 @@ namespace cads
       // Pulley found on left of belt if index is 1 else right
       auto pulley = (*begin(clusters[0][0]) < *begin(clusters[1][0])) ? 0 : 1;
       auto belt = -1*pulley + 1;
+
+      //nan_interpolation_spline(clusters[0]);
 
       auto avg = estimator(construct_ztype(clusters[pulley]));
       avg_l = avg;

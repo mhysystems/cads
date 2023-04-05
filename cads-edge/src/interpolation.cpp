@@ -4,10 +4,31 @@
 
 #include <interpolation.h>
 
-
 namespace cads
 {
-  void nan_interpolation_spline(z_type &z) {
+  
+  void nan_interpolation_spline(zzrange z) {
+    std::vector<double> x,y;
+
+    double cnt = 0;
+    for(auto i : z) {
+      if(!std::isnan(i)) {
+        x.push_back(cnt);
+        y.push_back(i);
+      }
+
+      ++cnt;
+    }
+
+    tk::spline s(x,y);
+
+    for(double i = 0; i < (double)z.size(); ++i) {
+      *(z.begin() + (int)i) = s(i);
+    }
+    
+  }
+  
+  void nan_interpolation_spline2(z_type &z) {
     
     std::vector<double> x,y;
     

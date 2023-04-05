@@ -8,12 +8,15 @@
 #include <functional>
 #include <chrono>
 #include <string>
+#include <ranges>
 
 namespace cads
 {
   using z_element = float; // int16_t;
   using y_type = double;
   using z_type = std::vector<z_element>;
+  using zzrange = std::ranges::subrange<z_type::iterator>;
+  
   using zrange = std::tuple<z_type::const_iterator, z_type::const_iterator>;
   using z_cluster = std::vector<zrange>;
   using z_clusters = std::vector<z_cluster>;
