@@ -16,9 +16,6 @@ namespace cads
     if (max_window_size > z_size)
       return;
 
-    // Force start with NaN. Can get poor quality single value at the start of profile before chain of NaN.
-    z[0] = std::numeric_limits<z_element>::quiet_NaN();
-
     for (auto i = 0; i < z_size - 3; i++)
     {
 

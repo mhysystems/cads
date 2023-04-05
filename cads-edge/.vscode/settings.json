@@ -89,7 +89,10 @@
     "*.ipp": "cpp",
     "hash_set": "cpp",
     "alignedvector3": "cpp",
-    "nonlinearoptimization": "cpp"
+    "nonlinearoptimization": "cpp",
+    "bvh": "cpp",
+    "fft": "cpp",
+    "*.txx": "cpp"
   },
   "cmake.configureOnOpen": false
 }
