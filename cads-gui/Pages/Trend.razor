@@ -64,7 +64,7 @@
   {
     if (firstRender)
     {
-      var (XOffset,z) = await Beltservice.GetBeltProfileAsync(yCoord, 1, scan);
+      var z = await Beltservice.GetBeltProfileAsync(yCoord, 1, scan);
       var color = trendControls.DatePickerColor[0];
       await trendPlot.UpdatePlotAsync(0,z,color);
       await UpdateWearPlot(1000);
@@ -84,7 +84,7 @@
     List<Scan> b = Beltservice.GetBelts(site, conveyor, date.Value);
 
     if(b is not null && b.Any()) {
-      var (XOffset,z) = await Beltservice.GetBeltProfileAsync(Y, 1, b.First());
+      var z = await Beltservice.GetBeltProfileAsync(Y, 1, b.First());
       await trendPlot.UpdatePlotAsync(index,z,color);
     }else{
       Snackbar.Add($"No data for selected date", Severity.Error);

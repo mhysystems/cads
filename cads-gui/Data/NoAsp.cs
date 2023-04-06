@@ -36,7 +36,7 @@ namespace cads_gui.Data
       return b;
     }
 
-    public static (double, float[]) ProfileToArray(List<Profile> frame)
+    public static float[] ProfileToArray(List<Profile> frame)
     {
 
       int size = 0;
@@ -56,7 +56,7 @@ namespace cads_gui.Data
         i += p.z.Length;
       }
 
-      return (0, ret);
+      return ret;
     }
 
     public static async Task<List<Profile>> RetrieveFrameModular(string db, double y_min, long len, long left)
