@@ -105,11 +105,10 @@ class PlotDataCache {
 
   async deserialization(buf) {
     const plotDataBuf = plot_data.getRootAsplot_data(new ByteBuffer(new Uint8Array(buf)));
-    const x_min = plotDataBuf.xOff();
     const y_axis = plotDataBuf.ySamplesArray();
     const z_surface = plotDataBuf.zSamplesArray();
 
-    return { xMin: x_min, yAxis: y_axis, zSurface: z_surface }
+    return {yAxis: y_axis, zSurface: z_surface }
   }
 
   async fetchData(belt, y, windowLen, leftLen) {
@@ -397,7 +396,7 @@ class ProfilePlot {
 
     yIndex = (yIndex || 0);
 
-    const x_min = plotData.xMin / 1000; //convert mm to m
+    const x_min = 0;
     const rows = plotData.yAxis.length;
     const columns = plotData.zSurface.length / rows;
     const x_resolution = this.xRes / 1000; // convert mm to m
@@ -441,7 +440,7 @@ class ProfilePlot {
 
     yIndex = (yIndex || 0);
 
-    const x_min = plotDataTop.xMin / 1000; //convert mm to m
+    const x_min = 0;
     const rows = plotDataTop.yAxis.length;
     const columns = plotDataTop.zSurface.length / rows;
     const x_resolution = this.xRes / 1000; // convert mm to m
@@ -617,7 +616,7 @@ class SurfacePlot {
     const plotDataTop = await plotDataPromiseTop;
     const plotDataBottom = await plotDataPromiseBottom;
 
-    const x_min = plotDataTop.xMin / 1000; //mm to m
+    const x_min = 0;
     const y_axis = plotDataTop.yAxis.map( y => y / 1000); //mm to m
     const rows = plotDataTop.yAxis.length;
     let columns = plotDataTop.zSurface.length / rows;
@@ -673,7 +672,7 @@ class SurfacePlot {
   async updatePlotData(plotDataPromise) {
 
     const plotData = await plotDataPromise;
-    const x_min = plotData.xMin / 1000; //mm to m
+    const x_min = 0;
     const y_axis = plotData.yAxis.map( y => y / 1000); //mm to m
     const rows = plotData.yAxis.length;
     let columns = plotData.zSurface.length / rows;

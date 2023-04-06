@@ -39,7 +39,6 @@ namespace cads_gui.Data
 
         var data = CadsFlatbuffers.plot_data.Createplot_data(
           builder,
-          frame.First().x_off,
           CadsFlatbuffers.plot_data.CreateYSamplesVector(builder, frame.Skip(1).SkipLast(1).Select(x => x.y).ToArray()),
           CadsFlatbuffers.plot_data.CreateZSamplesVector(builder, NoAsp.b2f(dbg)),
           frame.Last().y,
