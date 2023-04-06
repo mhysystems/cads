@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 using System.Collections.Concurrent;
+using cads_gui.Data;
 
 namespace cads_gui.BeltN;
 public static class Search
@@ -11,15 +12,6 @@ public static class Search
   public record Result(int Count, int Width, int Length, ZMinCoord ZMin);
   public record ResultCoord(long Col, long Row, Result Result);
   public record SearchResult(long Col, long Row, long Width, long Length, double Percent, ZMinCoord ZMin);
-
-  public static float[] ConvertBytesToFloats(byte[] a)
-  {
-
-    var z_ptr = new ReadOnlySpan<byte>(a);
-    var j = MemoryMarshal.Cast<byte, float>(z_ptr);
-    return j.ToArray();
-
-  }
 
   public static async IAsyncEnumerable<R> DBReadQuery<R>(string name, Func<SqliteCommand, SqliteCommand> cmdBuild, Func<SqliteDataReader, R> rows, [EnumeratorCancellation] CancellationToken stop = default)
   {
@@ -76,7 +68,7 @@ public static class Search
 
     float[] Read(SqliteDataReader reader)
     {
-      var z = ConvertBytesToFloats((byte[])reader[0]);
+      var z = NoAsp.ConvertBytesToFloats((byte[])reader[0]);
       return z;
     }
 

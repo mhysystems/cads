@@ -49,8 +49,9 @@
     if(jsPlot is not null && scan.HasData) 
     {  
       var (xMin,xRes) = scan.XBegin;
-      var xAxis = from x in Enumerable.Range(0,z.Count()) select (xMin + x * xRes) / 1000; 
-      await jsPlot.InvokeVoidAsync("updatePlot",index,xAxis.ToArray(), z, color);
+      var xAxisE = from x in Enumerable.Range(0,z.Count()) select (xMin + x * xRes) / 1000; 
+      var xAxis = xAxisE.ToArray();
+      await jsPlot.InvokeVoidAsync("updatePlot",index,xAxis, z, color);
     }else {
       updatePlot = (index,z,color);
     }

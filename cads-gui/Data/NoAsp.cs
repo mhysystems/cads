@@ -16,8 +16,7 @@ namespace cads_gui.Data
 {
 
   public record Profile<T>(double Y, T[] Z);
-  public record Profile(double y, byte[] z);
-
+  public record Profile(double y, float[] z);
 
   public static class NoAsp
   {
@@ -29,34 +28,18 @@ namespace cads_gui.Data
       return b;
     }
 
-    public static float[] b2f(byte[] z)
+    public static byte[] ConvertFloatsToBytes(float[] a)
     {
-      var b = new float[z.Length / sizeof(float)];
-      Buffer.BlockCopy(z, 0, b, 0, z.Length);
-      return b;
+      var z_ptr = new ReadOnlySpan<float>(a);
+      var j = MemoryMarshal.Cast<float, byte>(z_ptr);
+      return j.ToArray();
     }
 
-    public static float[] ProfileToArray(List<Profile> frame)
+    public static float[] ConvertBytesToFloats(byte[] a)
     {
-
-      int size = 0;
-
-      foreach (var p in frame)
-      {
-        size += p.z.Length;
-      }
-
-      float[] ret = new float[size];
-      Array.Fill(ret, float.NaN);
-
-      int i = 0;
-      foreach (var p in frame)
-      {
-        Buffer.BlockCopy(p.z, 0, ret, i * sizeof(float), p.z.Length);
-        i += p.z.Length;
-      }
-
-      return ret;
+      var z_ptr = new ReadOnlySpan<byte>(a);
+      var j = MemoryMarshal.Cast<byte, float>(z_ptr);
+      return j.ToArray();
     }
 
     public static async Task<List<Profile>> RetrieveFrameModular(string db, double y_min, long len, long left)
@@ -115,7 +98,7 @@ namespace cads_gui.Data
       while (reader.Read())
       {
         var y = reader.GetDouble(0);
-        byte[] z = (byte[])reader[1];
+        var z = ConvertBytesToFloats((byte[])reader[1]);
 
         if (len >= 0)
         {

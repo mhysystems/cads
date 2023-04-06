@@ -34,13 +34,13 @@ namespace cads_gui.Data
 
         var dbpath = Path.GetFullPath(Path.Combine(beltservice.config.DBPath,belt));
         var frame = await NoAsp.RetrieveFrameModular(dbpath, y, len+1, left+1);
-        var dbg = frame.Skip(1).SkipLast(1).SelectMany(x => x.z).ToArray();
+        var z = frame.Skip(1).SkipLast(1).SelectMany(x => x.z).ToArray();
         var builder = new FlatBufferBuilder(frame.Capacity);
 
         var data = CadsFlatbuffers.plot_data.Createplot_data(
           builder,
           CadsFlatbuffers.plot_data.CreateYSamplesVector(builder, frame.Skip(1).SkipLast(1).Select(x => x.y).ToArray()),
-          CadsFlatbuffers.plot_data.CreateZSamplesVector(builder, NoAsp.b2f(dbg)),
+          CadsFlatbuffers.plot_data.CreateZSamplesVector(builder, z),
           frame.Last().y,
           frame.First().y
         );
