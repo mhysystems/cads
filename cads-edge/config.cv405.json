@@ -75,7 +75,8 @@
   },
 
   "conveyor" : {
-   "Site" : "whaleback",
+    "Org"  : "bhp",
+    "Site" : "whaleback",
     "Name" : "cv405",
     "Timezone" : "Australia/Perth",
     "PulleyCircumference" : 2613.8,

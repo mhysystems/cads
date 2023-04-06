@@ -88,30 +88,6 @@ public static class Search
     }
   }
 
-  public static async Task<(double, double, double, double, double)> RetrieveBeltAttributesAsync(string db, CancellationToken stop = default)
-  {
-
-    SqliteCommand CmdBuilder(SqliteCommand cmd)
-    {
-      var query = $"select length(z),(select count(rowid) from PROFILE),y,x_off from PROFILE where rowid = 1";
-      cmd.CommandText = query;
-      return cmd;
-    }
-
-    (double, double, double, double, double) Read(SqliteDataReader reader)
-    {
-
-      var width = reader.GetDouble(0) / sizeof(float);
-      var length = reader.GetDouble(1);
-      var xRes = 1.0d;
-      var yRes = reader.GetDouble(2);
-      var xOff = reader.GetDouble(3);
-      return (width, length, xRes, yRes, xOff);
-    }
-
-    return await DBReadQuerySingle(db, CmdBuilder, Read, stop);
-  }
-
   public static (int, ZMinCoord) CountIf(ReadOnlySpan<float> sq, Func<int, bool> fx, Func<float, bool> fz, int x)
   {
 

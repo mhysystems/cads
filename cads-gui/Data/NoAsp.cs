@@ -16,7 +16,7 @@ namespace cads_gui.Data
 {
 
   public record Profile<T>(double Y, T[] Z);
-  public record Profile(double y, double x_off, byte[] z);
+  public record Profile(double y, byte[] z);
 
 
   public static class NoAsp
@@ -99,7 +99,7 @@ namespace cads_gui.Data
       var mask = rowBegin > row - left || Mod(row - left + len, max) < row - left + len ? 1.0 : 0.0;
       
 
-      var query = $"select (rowid - @mask*@rowmax)*@yres,x_off,z from PROFILE where rowid >= @row union all select rowid*@yres,x_off,z from profile limit @len";
+      var query = $"select (rowid - @mask*@rowmax)*@yres,z from PROFILE where rowid >= @row union all select rowid*@yres,z from profile limit @len";
       var command = connection.CreateCommand();
       command.CommandText = query;
       command.Parameters.AddWithValue("@row", rowBegin);
@@ -115,16 +115,15 @@ namespace cads_gui.Data
       while (reader.Read())
       {
         var y = reader.GetDouble(0);
-        var x_off = reader.GetDouble(1);
-        byte[] z = (byte[])reader[2];
+        byte[] z = (byte[])reader[1];
 
         if (len >= 0)
         {
-          frame.Add(new Profile(y, x_off, z));
+          frame.Add(new Profile(y,z));
         }
         else
         {
-          frame.Insert(0, new Profile(y, x_off, z));
+          frame.Insert(0, new Profile(y,z));
         }
       }
 

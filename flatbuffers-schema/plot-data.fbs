@@ -1,7 +1,6 @@
 namespace CadsFlatbuffers;
 
 table plot_data {
-	x_off : double;
 	y_samples : [double];
 	z_samples : [float];
   y_next : double;
