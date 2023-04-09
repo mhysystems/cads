@@ -17,7 +17,6 @@ def process_profile(db: str, rowid = 0, ztype: str ='f') :
 def process_profile_out(db: str, trans, ztype: str ='f') :
     conn = sqlite3.connect(db)
     cur = conn.cursor()
-    cur.execute("drop table if exists PROFILE")
     cur.execute("create table PROFILE (y REAL , x_off REAL NOT NULL, z BLOB NOT NULL)")
     
     query = "INSERT INTO PROFILE (rowid,y,x_off,z) VALUES (?,?,?,?)"
