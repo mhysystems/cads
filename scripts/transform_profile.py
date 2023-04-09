@@ -20,7 +20,7 @@ def process_profile_out(db: str, trans, ztype: str ='f') :
     cur.execute("drop table if exists PROFILE")
     cur.execute("create table PROFILE (y REAL , x_off REAL NOT NULL, z BLOB NOT NULL)")
     
-    query = "INSERT INTO PROFILE (y,x_off,z) VALUES (?,?,?)"
+    query = "INSERT INTO PROFILE (rowid,y,x_off,z) VALUES (?,?,?,?)"
 
     while(True):
         (q,row) = (yield)
@@ -29,7 +29,7 @@ def process_profile_out(db: str, trans, ztype: str ='f') :
             break
         
         (y,x_off,z,rowid) = trans(row) 
-        cur.execute(query,(y,x_off,z))    
+        cur.execute(query,(rowid,y,x_off,z))    
     
     conn.commit()
     conn.close()
