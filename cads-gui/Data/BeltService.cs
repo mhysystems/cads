@@ -257,7 +257,7 @@ namespace cads_gui.Data
 
       var X = search.Width;
       var Y = search.Length;
-      var Z = search.Depth;
+      var Z = search.ZMax;
       var P = search.Percentage;
 
       var xMinIndex = (int)Math.Max(Math.Floor(search.XMin / belt.x_res),0);
