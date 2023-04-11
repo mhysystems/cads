@@ -14,34 +14,38 @@
   <MudItem Style="height:50%" xs="12">
     <canvas id="three"></canvas>
   </MudItem>
-  <MudItem xs="12" Class="d-flex gap-0 ">
+  <MudItem xs="12" Class="d-flex gap-1 ">
     <MudTooltip Text="X Range Minimum">
       <MudNumericField HideSpinButtons="true" Immediate="true" Class="XMin queryInput mt-0" T="double" @bind-Value="@XMin"
-        Min="0" Max="@((int)(scan.Xmax / 2))" Variant="Variant.Text" Format="N0">
+        Min="0" Max="@(scan.Xmax / 2)" Variant="Variant.Text" Format="F0">
       </MudNumericField>
     </MudTooltip>
     <MudTooltip Text="X Range Maximum">
       <MudNumericField HideSpinButtons="true" Immediate="true" Class="XMax queryInput mt-0" T="double" @bind-Value="@XMax"
-        Min="@((int)(scan.Xmax / 2))" Max="@((int)scan.Xmax)" Variant="Variant.Text" Format="N0"> 
+        Min="@(scan.Xmax / 2)" Max="@(scan.Xmax)" Variant="Variant.Text" Format="F0"> 
+      </MudNumericField>
+    </MudTooltip>
+        <MudTooltip Text="Z Range Minimum">
+      <MudNumericField HideSpinButtons="true" Immediate="true" Class="ZMin queryInput mt-0" T="double" @bind-Value="@ZMin"
+        Min="scan.z_min" Max="scan.z_max" Variant="Variant.Text" Format="F0">
+      </MudNumericField>
+    </MudTooltip>
+    <MudTooltip Text="Z Range Maximum">
+      <MudNumericField HideSpinButtons="true" Immediate="true" Class="ZMax queryInput mt-0" T="double" @bind-Value="@ZMax"
+        Min="scan.z_min" Max="scan.z_max" Variant="Variant.Text" Format="F0">
       </MudNumericField>
     </MudTooltip>
   </MudItem>
-  <MudItem xs="12" Class="d-flex gap-0 ">
+  <MudItem xs="12" Class="d-flex gap-1 ">
 
     <MudTooltip Text="X">
-      <MudNumericField HideSpinButtons="true" Immediate="true" Class="X queryInput mt-0" T="int" @bind-Value="@X"
-        Min="0" Max="(int)scan.Xmax" Variant="Variant.Text">
+      <MudNumericField HideSpinButtons="true" Immediate="true" Class="X queryInput mt-0" T="double" @bind-Value="@X"
+        Min="0" Max="scan.Xmax" Variant="Variant.Text" Format="F0">
       </MudNumericField>
     </MudTooltip>
-
     <MudTooltip Text="Y">
-      <MudNumericField HideSpinButtons="true" Immediate="true" Class="Y queryInput mt-0" T="int" @bind-Value="@Y"
-        Min="0" Max="(int)scan.FrameLength" Variant="Variant.Text">
-      </MudNumericField>
-    </MudTooltip>
-    <MudTooltip Text="Z">
-      <MudNumericField HideSpinButtons="true" Immediate="true" Class="Z queryInput mt-0" T="int" @bind-Value="@Z"
-        Min="(int)scan.z_min" Max="(int)scan.z_max" Variant="Variant.Text">
+      <MudNumericField HideSpinButtons="true" Immediate="true" Class="Y queryInput mt-0" T="double" @bind-Value="@Y"
+        Min="0" Max="scan.FrameLength" Variant="Variant.Text" Format="F0">
       </MudNumericField>
     </MudTooltip>
     <MudTooltip Text="%">
@@ -54,10 +58,11 @@
 
 
 @code {
-  protected int X = 1600;
-  protected int Y = 4000;
-  protected int Z = 90;
-  protected double P = 1;
+  protected double X;
+  protected double Y;
+  protected double ZMax;
+  protected double ZMin;
+  protected double P = 100;
 
   protected double XMin = 0;
   protected double XMax = 0;
@@ -67,16 +72,17 @@
   [Parameter]
   public Scan scan { get; set; } = new();
 
-  public ZDepthQueryParameters SearchParameters { get { return new ZDepthQueryParameters(X, Y, Z, P / 100, XMin, XMax); } private set { } }
+  public ZDepthQueryParameters SearchParameters { get { return new ZDepthQueryParameters(X, Y, ZMax, P, XMin, XMax, ZMin); } private set { } }
 
 
   protected IJSObjectReference? module;
 
   protected override void OnInitialized()
   {
-    Y = (int)scan.FrameLength;
-    X = (int)scan.Xmax;
-    Z = (int)scan.z_max;
+    Y = scan.FrameLength;
+    X = scan.Xmax;
+    ZMax = scan.z_max;
+    ZMin = scan.z_min;
     var(xmin,xres) = scan.XBegin;
     XMin = xmin;
     XMax = scan.Xmax;
@@ -89,23 +95,24 @@
     {
       module = await JS.InvokeAsync<IJSObjectReference>("import", "./querybuilder.js");
       await module.InvokeVoidAsync("initThree", scan.Xmax, scan.FrameLength, scan.z_max - scan.z_min);
-      await module.InvokeVoidAsync("update", X, Y, Z);
+      await module.InvokeVoidAsync("update", X, Y, ZMax);
     }
 
   }
 
   protected async Task LoadDamageAsync(SavedZDepthParams d)
   {
-    X = (int)d.Width;
-    Y = (int)d.Length;
-    Z = (int)d.ZMax;
+    X = d.Width;
+    Y = d.Length;
+    ZMax = d.ZMax;
+    ZMin = d.ZMin;
     P = d.Percentage * 100;
     XMin = d.XMin;
     XMax = d.XMax;
 
     if (module is not null)
     {
-      await module.InvokeVoidAsync("update", X, Y, Z, P);
+      await module.InvokeVoidAsync("update", X, Y, ZMax, P);
     }
 
     StateHasChanged();
@@ -114,7 +121,7 @@
 
   public Func<float, bool> MakeAreaOfInterest()
   {
-    return z => z < Z;
+    return z => z < ZMax;
   }
 
 

@@ -257,7 +257,8 @@ namespace cads_gui.Data
 
       var X = search.Width;
       var Y = search.Length;
-      var Z = search.ZMax;
+      var ZMax = search.ZMax;
+      var ZMin = search.ZMin;
       var P = search.Percentage;
 
       var xMinIndex = (int)Math.Max(Math.Floor(search.XMin / belt.x_res),0);
@@ -268,7 +269,7 @@ namespace cads_gui.Data
 
       bool fz(float z) 
       {
-        return z < Z;
+        return ZMin < z && z < ZMax;
       }
 
       bool fp(Search.SearchResult p) 

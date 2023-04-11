@@ -12,7 +12,7 @@ export function change() {
   const nodes = [...document.querySelectorAll(queryInput)];
 	const dx = findInput(nodes,'.X');
   const dy = findInput(nodes,'.Y');
-  const dz = findInput(nodes,'.Z');
+  const dz = findInput(nodes,'.ZMax');
 
 	const x = parseInt(dx.value);
 	const y = parseInt(dy.value);
@@ -98,7 +98,7 @@ export function initThree(x,y,z) {
 	const canvas = document.querySelector("#three");
 	document.querySelector("div .X input").addEventListener("input", change);
 	document.querySelector("div .Y input").addEventListener("input", change);
-	document.querySelector("div .Z input").addEventListener("input", change);
+	document.querySelector("div .ZMax input").addEventListener("input", change);
 
 	[...document.querySelectorAll(queryInput)].forEach(node => node.addEventListener("change", change));
 	

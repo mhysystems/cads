@@ -9,7 +9,7 @@ namespace cads_gui.Data
   public enum SurfaceOrientation { Top, Bottom };
 
 
-  public record ZDepthQueryParameters(double Width, double Length, double ZMax, double Percentage, double XMin, double XMax);
+  public record ZDepthQueryParameters(double Width, double Length, double ZMax, double Percentage, double XMin, double XMax, double ZMin);
 
   public class SavedZDepthParams
   {
