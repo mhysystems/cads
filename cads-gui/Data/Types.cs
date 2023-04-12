@@ -9,7 +9,7 @@ namespace cads_gui.Data
   public enum SurfaceOrientation { Top, Bottom };
 
 
-  public record ZDepthQueryParameters(double Width, double Length, double Depth, double Percentage, double XMin, double XMax);
+  public record ZDepthQueryParameters(double Width, double Length, double ZMax, double Percentage, double XMin, double XMax, double ZMin);
 
   public class SavedZDepthParams
   {
@@ -19,10 +19,11 @@ namespace cads_gui.Data
     public string Conveyor { get; set; } = String.Empty;
     public double Width { get; set; } = 0;
     public double Length { get; set; } = 0;
-    public double Depth { get; set; } = 0;
+    public double ZMax { get; set; } = 0;
     public double Percentage { get; set; } = 1;
     public double XMin { get; set; } = 0;
     public double XMax { get; set; } = 0;
+    public double ZMin { get; set; } = 0;
   };
 
   public class Realtime
