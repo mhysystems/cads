@@ -72,6 +72,7 @@
   [Parameter]
   public Scan scan { get; set; } = new();
 
+
   public ZDepthQueryParameters SearchParameters { get { return new ZDepthQueryParameters(X, Y, ZMax, P, XMin, XMax, ZMin); } private set { } }
 
 
@@ -79,10 +80,11 @@
 
   protected override void OnInitialized()
   {
+    var belt = Beltservice.GetBelt(scan).Last();
     Y = scan.FrameLength;
     X = scan.Xmax;
     ZMax = scan.z_max;
-    ZMin = scan.z_min;
+    ZMin = belt.PulleyCover + belt.CordDiameter;
     var(xmin,xres) = scan.XBegin;
     XMin = xmin;
     XMax = scan.Xmax;
@@ -95,7 +97,7 @@
     {
       module = await JS.InvokeAsync<IJSObjectReference>("import", "./querybuilder.js");
       await module.InvokeVoidAsync("initThree", scan.Xmax, scan.FrameLength, scan.z_max - scan.z_min);
-      await module.InvokeVoidAsync("update", X, Y, ZMax);
+      await module.InvokeVoidAsync("update", X, Y, ZMax-ZMin, ZMin);
     }
 
   }

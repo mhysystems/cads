@@ -12,17 +12,20 @@ export function change() {
   const nodes = [...document.querySelectorAll(queryInput)];
 	const dx = findInput(nodes,'.X');
   const dy = findInput(nodes,'.Y');
-  const dz = findInput(nodes,'.ZMax');
+  const zMax = findInput(nodes,'.ZMax');
+  const zMinNode = findInput(nodes,'.ZMin');
+  
+  const zMin = Math.min(parseInt(zMinNode.value), bZ)
+	const x = Math.min(parseInt(dx.value),bX);
+	const y = Math.min(parseInt(dy.value),bY);
+	const z = Math.min(parseInt(zMax.value) - zMin ,bZ);
 
-	const x = parseInt(dx.value);
-	const y = parseInt(dy.value);
-	const z = parseInt(dz.value);
-
-	initMesh(scene, x, z*3, y)
+  // swap z and y around. 
+	initMesh(scene, x, z*3, y, zMin*3)
 }
 
-export function update(x,y,z) {
-  initMesh(scene, x, z*3, y)
+export function update(x,y,z, oz) {
+  initMesh(scene, x, z*3, y, oz*3)
 }
 
 function clearThree(obj) {
@@ -44,13 +47,13 @@ function clearThree(obj) {
 	}
 }
 
-function initMesh(sc, nx, ny, nz) {
+function initMesh(sc, nx, ny, nz, oz) {
 	clearThree(scene)
 	const geometry = new THREE.BoxGeometry(nx, ny, nz);
 	let geo = new THREE.EdgesGeometry(geometry);
 	let mat = new THREE.LineBasicMaterial({ color: 0x051d4b,  linewidth : 2 });
 	let wireframe = new THREE.LineSegments(geo, mat);
-	wireframe.position.set(0, (-bZ + ny) /  2, (bY - nz) / 2)
+	wireframe.position.set(0, ((-bZ + ny) /  2) + oz , ((bY - nz) / 2))
 	sc.add(wireframe);
 
 	drawBelt(sc);
@@ -115,7 +118,7 @@ export function initThree(x,y,z) {
 	renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas });
 	renderer.setSize(width, height);
 	renderer.setPixelRatio(window.devicePixelRatio);
-	initMesh(scene, bX, bZ, bY)
+	initMesh(scene, bX, bZ, bY, 0)
 
 	var render = function () {
 		requestAnimationFrame(render);
