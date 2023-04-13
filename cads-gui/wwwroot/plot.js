@@ -368,7 +368,10 @@ class ProfilePlot {
       fillcolor: "#f77f00",
       stackgroup: "profile",
       showlegend: false,
-      mode : 'none'
+      mode : 'none',
+      hoverlabel : {
+        namelength : -1
+      }
     };
 
     const cord = {
