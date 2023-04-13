@@ -380,7 +380,12 @@ class ProfilePlot {
       fill: 'tonexty',
       fillcolor: '#e8e8e8',
       showlegend: false,
-      mode : 'none'
+      mode : 'none',
+      hoverlabel : {
+        font : {
+          color : 'black'
+        }
+      }
     };
     
     const pulleyCover = {
