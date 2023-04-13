@@ -362,6 +362,7 @@ class ProfilePlot {
 
 
     const topCover = {
+      name : 'Total Thickness',
       type: 'scatter',
       fill: 'tonexty',
       fillcolor: "#f77f00",
@@ -371,6 +372,7 @@ class ProfilePlot {
     };
 
     const cord = {
+      name : 'Cord Layer',
       type: 'scatter',
       fill: 'tonexty',
       fillcolor: '#e8e8e8',
@@ -379,6 +381,7 @@ class ProfilePlot {
     };
     
     const pulleyCover = {
+      name : 'Bottom Cover',
       type: 'scatter',
       fill: 'tozeroy',
       fillcolor: '#867f74',
