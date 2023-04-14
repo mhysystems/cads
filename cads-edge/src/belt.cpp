@@ -13,6 +13,7 @@
 #include <profile.h>
 #include <regression.h>
 #include <edge_detection.h>
+#include <utils.hpp>
 
 namespace
 {
@@ -56,12 +57,36 @@ namespace cads
     auto time0 = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> dt = time0 - time0;
     long cnt = 0;
+    unsigned long big_cnt = 0;
+
+    auto avg_max_fn = mk_online_mean(bias);
+    auto avg_min_fn = mk_online_mean(bias);
+
+    auto avg_max = bias;
+    auto avg_min = bias;
 
     return [=](double pulley_height) mutable -> PulleyRevolution
     {
       cnt++;
       auto rtn = PulleyRevolution{false, trigger_distance,dt};
       schmitt1 = schmitt_trigger(pulley_height);
+
+      auto max = std::max(avg_max,pulley_height);
+      auto min = std::min(avg_min,pulley_height);
+
+
+      // Keep avg falling to middle of min max values so avg max/min 
+      // don't get stuck at a particular value.
+      max = max * (1 + std::signbit(avg_max) * 0.00001);
+      min = min * (1 - std::signbit(avg_min) * 0.00001);
+      avg_max = avg_max_fn(max);
+      avg_min = avg_min_fn(min);
+      bias = avg_min * 0.75 + avg_max * (1 - 0.75);
+      
+      if(big_cnt++ % 2000 == 0) {
+          spdlog::get("cads")->debug("schmitt trigger level: {}, avgmax: {}, avgmin: {}",bias, avg_max, avg_min);
+      }
+
       if ((std::signbit(schmitt1) == true && std::signbit(schmitt0) == false) || 
          (bidirectional && (std::signbit(schmitt1) == false && std::signbit(schmitt0) == true)))
       {
@@ -71,6 +96,7 @@ namespace cads
         time0 = now;
         std::get<0>(rtn) = true;
         std::get<2>(rtn) = dt;
+
       }
 
       schmitt0 = schmitt1;
