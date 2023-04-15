@@ -225,8 +225,8 @@ namespace
       auto [pulley_level,pulley_right,ll,lr,clusters,cerror] = pulley_levels_clustered(iz,pulley_estimator);
       
       if(cerror != ClusterError::None) {
-        spdlog::get("cads")->debug("Clustering error : {}", ClusterErrorToString(cerror));
-        store_errored_profile(p.z,ClusterErrorToString(cerror));
+        //spdlog::get("cads")->debug("Clustering error : {}", ClusterErrorToString(cerror));
+        //store_errored_profile(p.z,ClusterErrorToString(cerror));
       }
 
       recontruct_z(iz,clusters);
@@ -278,8 +278,8 @@ namespace
 
 
       if(std::abs(pre_left_edge_index - (int)ll) > 2) {
-        spdlog::get("cads")->debug("sobel & dbscan don't match: sobel({},{}) dbscan({},{})", pre_left_edge_index,pre_right_edge_index,ll,lr);
-        store_errored_profile(p.z,"sobel");
+        //spdlog::get("cads")->debug("sobel & dbscan don't match: sobel({},{}) dbscan({},{})", pre_left_edge_index,pre_right_edge_index,ll,lr);
+        //store_errored_profile(p.z,"sobel");
       }
 
       auto pulley_level_filtered = (z_element)iirfilter_left(pulley_level);
@@ -342,8 +342,8 @@ namespace
 
       if (cnt % (1000 * 5 * 60) == 0)
       {
-        auto s = fmt::format("raw_{:.1f}",pulley_level_filtered);
-        store_errored_profile(raw_z,s);  
+        //auto s = fmt::format("raw_{:.1f}",pulley_level_filtered);
+        //store_errored_profile(raw_z,s);  
       }
 
       pulley_level_compensate(z, -pulley_level_filtered, clip_height);

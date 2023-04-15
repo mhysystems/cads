@@ -86,7 +86,7 @@ namespace cads
     cv::Mat m1(fiducial.rows, int(fiducial.cols * 1.5), CV_32F, cv::Scalar::all(0.0f));
     cv::Mat out(m1.rows - fiducial.rows + 1, m1.cols - fiducial.cols + 1, CV_32F, cv::Scalar::all(0.0f));
 
-    auto y_max_length = global_belt_parameters.Length * 1.02; 
+    auto y_max_length = std::get<1>(global_constraints.CurrentLength); 
     auto trigger_length = std::numeric_limits<y_type>::lowest();
     y_type y_offset = 0;
     double y_lowest_correlation = 0;
@@ -121,7 +121,7 @@ namespace cads
           matrix_correlation = belt.clone();
         }
 
-        if (correlation < belt_crosscorr_threshold)
+        if (correlation < belt_crosscorr_threshold && between(global_constraints.CurrentLength,y))
         {
           ++sequence_cnt;
           spdlog::get("cads")->info("Correlation : {} at y : {} with threshold: {} and count : {}", correlation, y, cv_threshhold,ccnt);
@@ -131,12 +131,11 @@ namespace cads
 
           if(sequence_cnt > 1) {
             publish_RotationPeriod(period); //TODO
-            y_max_length =  y * 1.05; //TODO
             trigger_length = y * 0.95; //TODO
           }
           
           if(sequence_cnt == 1) {
-            trigger_length = y_max_length * 0.90; //TODO
+            trigger_length = y_max_length * 0.95; //TODO
           }
 
           if(dump_match) {
