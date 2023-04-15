@@ -5,7 +5,6 @@
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 
 #include <spdlog/spdlog.h>
-#include <opencv2/core.hpp>
 
 #pragma GCC diagnostic pop
 
@@ -15,43 +14,55 @@
 #include <coro.hpp>
 #include <intermessage.h>
 #include <filters.h>
+#include <opencv2/core.hpp>
 
 using namespace moodycamel;
 
 namespace cads
 {
-using window = std::deque<profile>;
+  using window = std::deque<profile>;
 
-double left_edge_avg_height(const cv::Mat& belt, const cv::Mat& fiducial) {
+  double left_edge_avg_height(const cv::Mat& belt, const cv::Mat& fiducial) {
 
-  cv::Mat mout;
-  cv::multiply(belt.colRange(0,fiducial.cols),fiducial,mout);
-  auto avg_val = cv::sum(mout)[0] / cv::countNonZero(mout);
-  return avg_val;
+    cv::Mat mout;
+    cv::multiply(belt.rowRange(0,fiducial.rows),fiducial,mout);
+    auto avg_val = cv::sum(mout)[0] / cv::countNonZero(mout);
+    return avg_val;
 
-}
-  cv::Mat window_to_mat_fixed(const window& win, int width) {
-
-  if(win.size() < 1) return cv::Mat(0,0,CV_32F);
-
-  cv::Mat mat(win.size(),width,CV_32F,cv::Scalar::all(0.0f));
-	
-  int i = 0;
-  for(auto p : win) {
-
-    auto m = mat.ptr<float>(i++);
-
-    int j = 0;
-    
-    for(auto z : p.z) {
-       m[j++] = (float)z;
-    }
   }
 
-	return mat;
-}
+  cv::Mat window_to_mat_fixed(const window& win, int width) {
 
-  void shift_Mat(cv::Mat &m)
+    if(win.size() < 1) return cv::Mat(0,0,CV_32F);
+
+    cv::Mat mat(win.size(),width,CV_32F,cv::Scalar::all(0.0f));
+    
+    int i = 0;
+    for(auto p : win) {
+
+      auto m = mat.ptr<float>(i++);
+
+      int j = 0;
+      
+      for(auto z : p.z) {
+        m[j++] = (float)z;
+      }
+    }
+
+    return mat;
+  }
+
+  cv::Mat window_to_mat_fixed_transposed(const window& win, int width) {
+
+    cv::Mat mat;
+
+    cv::transpose(window_to_mat_fixed(win,width),mat);
+
+    return mat;
+  }
+
+
+  void shift_Mat_rows(cv::Mat &m)
   {
     for (int i = m.rows - 1; i > 0; --i)
     {
@@ -59,7 +70,22 @@ double left_edge_avg_height(const cv::Mat& belt, const cv::Mat& fiducial) {
     }
   }
 
-  void prepend_Mat(cv::Mat &m, const z_type &z)
+  void shift_Mat_cols(cv::Mat &m)
+  {
+    for(auto i = 0; i < m.rows; i++) {
+      std::rotate(m.ptr<float>(i),m.ptr<float>(i)+1, m.ptr<float>(i) + m.cols);
+    }
+  }
+  
+  void prepend_Mat_cols(cv::Mat &m, const z_type &zs)
+  {
+    auto j = 0;
+    for(auto z : zs) {
+      *m.ptr<float>(j++) = z;
+    }
+  }
+  
+  void prepend_Mat_rows(cv::Mat &m, const z_type &z)
   {
     if constexpr (std::is_same_v<z_element, float>)
     {
@@ -86,8 +112,9 @@ double left_edge_avg_height(const cv::Mat& belt, const cv::Mat& fiducial) {
 
   coro<std::tuple<profile,double,bool>,profile,1> origin_detection_coro(double x_resolution, double y_resolution, int width_n)
   {
-    auto fiducial = make_fiducial(x_resolution, y_resolution);
-    //mat_as_image(fiducial,"fid");
+    cv::Mat fiducial;
+    cv::transpose(make_fiducial(x_resolution, y_resolution),fiducial);
+    mat_as_image(fiducial,"fid");
     
     window profile_buffer;
 
@@ -101,22 +128,24 @@ double left_edge_avg_height(const cv::Mat& belt, const cv::Mat& fiducial) {
 
     // Fill buffer
     std::tie(p,terminate) = co_yield {null_profile,0.0,false};
-    for (int j = 0; j < fiducial.rows; j++)
+    for (int j = 0; j < fiducial.cols; j++)
     {
       std::tie(p,terminate) = co_yield {p,p.y,false};
       profile_buffer.push_back(p);
     }
 
-    cv::Mat belt = window_to_mat_fixed(profile_buffer, width_n);
+    cv::Mat belt = window_to_mat_fixed_transposed(profile_buffer, width_n);
     if (!belt.isContinuous())
     {
       std::throw_with_nested(std::runtime_error("window_processing:OpenCV matrix must be continuous for row shifting using memcpy"));
     }
 
-    cv::Mat m1(fiducial.rows, int(fiducial.cols * 1.5), CV_32F, cv::Scalar::all(0.0f));
+    //mat_as_image(belt,"belt");
+
+    cv::Mat m1(fiducial.rows*3, belt.cols, CV_32F, cv::Scalar::all(0.0f));
     cv::Mat out(m1.rows - fiducial.rows + 1, m1.cols - fiducial.cols + 1, CV_32F, cv::Scalar::all(0.0f));
 
-    auto y_max_length = global_belt_parameters.Length * 1.02; 
+    auto y_max_length = std::get<1>(global_constraints.CurrentLength); 
     auto trigger_length = std::numeric_limits<y_type>::lowest();
     y_type y_offset = 0;
     double y_lowest_correlation = 0;
@@ -161,12 +190,11 @@ double left_edge_avg_height(const cv::Mat& belt, const cv::Mat& fiducial) {
 
           if(sequence_cnt > 1) {
             publish_RotationPeriod(period); //TODO
-            y_max_length =  y * 1.05; //TODO
             trigger_length = y * 0.95; //TODO
           }
           
           if(sequence_cnt == 1) {
-            trigger_length = y_max_length * 0.90; //TODO
+            trigger_length = y_max_length * 0.95; //TODO
           }
 
           if(dump_match) {
@@ -214,8 +242,8 @@ double left_edge_avg_height(const cv::Mat& belt, const cv::Mat& fiducial) {
 
       if(terminate) break;
 
-      shift_Mat(belt);
-      prepend_Mat(belt, p.z);
+      shift_Mat_cols(belt);
+      prepend_Mat_cols(belt, p.z);
 
       profile_buffer.pop_front();
       profile_buffer.push_back({p.y - y_offset, p.x_off, p.z});

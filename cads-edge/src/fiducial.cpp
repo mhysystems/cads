@@ -19,13 +19,13 @@ Mat make_fiducial(double x_res, double y_res, double fy_mm, double fx_mm, double
 	int nrows = round(fy_mm / y_res); // Y direction(belt length)
 	int gap = round(fg_mm / y_res);
 	int ncols = round(fx_mm / x_res); // X direction
-  int border_y = ceil(0 / y_res);
-  int border_x = ceil(0 / x_res);
+  int border_y = ceil(fy_mm / y_res);
+  int border_x = ceil(10 / x_res);
 
-	Mat fiducial(gap + 2*nrows + 2*border_y,ncols + 2*border_x,CV_32F,{1.0});
+	Mat fiducial(gap + 2*nrows + 2*border_y,ncols + border_x,CV_32F,{1.0});
 
-	rectangle(fiducial,{border_x,border_y,ncols,nrows},{0.0},-1);
-	rectangle(fiducial,{border_x,border_y+nrows+gap,ncols,nrows},{0.0},-1);
+	rectangle(fiducial,{0,border_y,ncols,nrows},{0.0},-1);
+	rectangle(fiducial,{0,border_y+nrows+gap,ncols,nrows},{0.0},-1);
 
 	return fiducial;
 
@@ -83,9 +83,22 @@ double search_for_fiducial(cv::Mat belt, cv::Mat fiducial, double z_threshold) {
 
 }
 
+std::tuple<double,cv::Point> search_for_fiducial2(cv::Mat belt, cv::Mat fiducial, cv::Mat& black_belt,cv::Mat& out, double z_threshold) {
+	
+	cv::threshold(belt,black_belt,z_threshold,1.0,cv::THRESH_BINARY);
+	cv::matchTemplate(black_belt,fiducial,out,cv::TM_SQDIFF_NORMED);
+
+	double minVal;
+  cv::Point minLoc;
+  minMaxLoc( out, &minVal, nullptr, &minLoc);
+
+	return {minVal,minLoc};
+
+}
+
 std::tuple<double,cv::Point> search_for_fiducial(cv::Mat belt, cv::Mat fiducial, cv::Mat& black_belt,cv::Mat& out, double z_threshold) {
 	
-	cv::threshold(belt.colRange(0,fiducial.cols*3),black_belt,z_threshold,1.0,cv::THRESH_BINARY);
+	cv::threshold(belt.rowRange(0,fiducial.rows*3),black_belt,z_threshold,1.0,cv::THRESH_BINARY);
 	cv::matchTemplate(black_belt,fiducial,out,cv::TM_SQDIFF_NORMED);
 
 	double minVal;
