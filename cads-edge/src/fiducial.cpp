@@ -83,9 +83,22 @@ double search_for_fiducial(cv::Mat belt, cv::Mat fiducial, double z_threshold) {
 
 }
 
-std::tuple<double,cv::Point> search_for_fiducial(cv::Mat belt, cv::Mat fiducial, cv::Mat& black_belt,cv::Mat& out, double z_threshold) {
+std::tuple<double,cv::Point> search_for_fiducial2(cv::Mat belt, cv::Mat fiducial, cv::Mat& black_belt,cv::Mat& out, double z_threshold) {
 	
 	cv::threshold(belt.colRange(0,fiducial.cols*3),black_belt,z_threshold,1.0,cv::THRESH_BINARY);
+	cv::matchTemplate(black_belt,fiducial,out,cv::TM_SQDIFF_NORMED);
+
+	double minVal;
+  cv::Point minLoc;
+  minMaxLoc( out, &minVal, nullptr, &minLoc);
+
+	return {minVal,minLoc};
+
+}
+
+std::tuple<double,cv::Point> search_for_fiducial(cv::Mat belt, cv::Mat fiducial, cv::Mat& black_belt,cv::Mat& out, double z_threshold) {
+	
+	cv::threshold(belt.rowRange(0,fiducial.rows*3),black_belt,z_threshold,1.0,cv::THRESH_BINARY);
 	cv::matchTemplate(black_belt,fiducial,out,cv::TM_SQDIFF_NORMED);
 
 	double minVal;

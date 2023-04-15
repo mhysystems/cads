@@ -50,6 +50,15 @@ cv::Mat window_to_mat(const window& win, double x_res) {
 	return mat;
 }
 
+cv::Mat window_to_mat_fixed_transposed(const window& win, int width) {
+
+  cv::Mat mat;
+
+  cv::transpose(window_to_mat_fixed(win,width),mat);
+
+	return mat;
+}
+
 cv::Mat window_to_mat_fixed(const window& win, int width) {
 
   if(win.size() < 1) return cv::Mat(0,0,CV_32F);
@@ -106,10 +115,19 @@ vector<tuple<double,z_element>> histogram(const window& ps, z_element min, z_ele
   return hist;
 }
 
-double left_edge_avg_height(const cv::Mat& belt, const cv::Mat& fiducial) {
+double left_edge_avg_height2(const cv::Mat& belt, const cv::Mat& fiducial) {
 
   cv::Mat mout;
   cv::multiply(belt.colRange(0,fiducial.cols),fiducial,mout);
+  auto avg_val = cv::sum(mout)[0] / cv::countNonZero(mout);
+  return avg_val;
+
+}
+
+double left_edge_avg_height(const cv::Mat& belt, const cv::Mat& fiducial) {
+
+  cv::Mat mout;
+  cv::multiply(belt.rowRange(0,fiducial.rows),fiducial,mout);
   auto avg_val = cv::sum(mout)[0] / cv::countNonZero(mout);
   return avg_val;
 

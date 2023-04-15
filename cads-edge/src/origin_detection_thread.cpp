@@ -15,13 +15,14 @@
 #include <coro.hpp>
 #include <intermessage.h>
 #include <filters.h>
+#include <opencv2/core.hpp>
 
 using namespace moodycamel;
 
 namespace cads
 {
 
-  void shift_Mat(cv::Mat &m)
+  void shift_Mat_rows(cv::Mat &m)
   {
     for (int i = m.rows - 1; i > 0; --i)
     {
@@ -29,7 +30,22 @@ namespace cads
     }
   }
 
-  void prepend_Mat(cv::Mat &m, const z_type &z)
+  void shift_Mat_cols(cv::Mat &m)
+  {
+    for(auto i = 0; i < m.rows; i++) {
+      std::rotate(m.ptr<float>(i),m.ptr<float>(i)+1, m.ptr<float>(i) + m.cols);
+    }
+  }
+  
+  void prepend_Mat_cols(cv::Mat &m, const z_type &zs)
+  {
+    auto j = 0;
+    for(auto z : zs) {
+      *m.ptr<float>(j++) = z;
+    }
+  }
+  
+  void prepend_Mat_rows(cv::Mat &m, const z_type &z)
   {
     if constexpr (std::is_same_v<z_element, float>)
     {
@@ -56,7 +72,8 @@ namespace cads
 
   coro<std::tuple<profile,double,bool>,profile,1> origin_detection_coro(double x_resolution, double y_resolution, int width_n)
   {
-    auto fiducial = make_fiducial(x_resolution, y_resolution);
+    cv::Mat fiducial;
+    cv::transpose(make_fiducial(x_resolution, y_resolution),fiducial);
     //mat_as_image(fiducial,"fid");
     
     window profile_buffer;
@@ -71,17 +88,19 @@ namespace cads
 
     // Fill buffer
     std::tie(p,terminate) = co_yield {null_profile,0.0,false};
-    for (int j = 0; j < fiducial.rows; j++)
+    for (int j = 0; j < fiducial.cols; j++)
     {
       std::tie(p,terminate) = co_yield {p,p.y,false};
       profile_buffer.push_back(p);
     }
 
-    cv::Mat belt = window_to_mat_fixed(profile_buffer, width_n);
+    cv::Mat belt = window_to_mat_fixed_transposed(profile_buffer, width_n);
     if (!belt.isContinuous())
     {
       std::throw_with_nested(std::runtime_error("window_processing:OpenCV matrix must be continuous for row shifting using memcpy"));
     }
+
+    mat_as_image(belt,"belt");
 
     cv::Mat m1(fiducial.rows, int(fiducial.cols * 1.5), CV_32F, cv::Scalar::all(0.0f));
     cv::Mat out(m1.rows - fiducial.rows + 1, m1.cols - fiducial.cols + 1, CV_32F, cv::Scalar::all(0.0f));
@@ -183,8 +202,8 @@ namespace cads
 
       if(terminate) break;
 
-      shift_Mat(belt);
-      prepend_Mat(belt, p.z);
+      shift_Mat_rows(belt);
+      prepend_Mat_rows(belt, p.z);
 
       profile_buffer.pop_front();
       profile_buffer.push_back({p.y - y_offset, p.x_off, p.z});
