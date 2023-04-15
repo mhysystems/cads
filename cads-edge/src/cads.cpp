@@ -9,7 +9,6 @@
 #include <coms.h>
 #include <constants.h>
 #include <fiducial.h>
-#include <window.hpp>
 #include <readerwriterqueue.h>
 #include <gocator_reader.h>
 #include <sqlite_gocator_reader.h>
