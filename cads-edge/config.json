@@ -2,7 +2,7 @@
   "data_source" : "../../profiles/rawprofile_cv001_2.db",
   
   "sqlite_gocator" : {
-    "range" : [0,9007199254740991],
+    "range" : [1058749,9007199254740991],
     "fps" : 999980,
     "forever" : true,
     "delay" : 98
@@ -10,11 +10,11 @@
 
   "fiducial" : {
     "fiducial_depth" : 2,
-    "fiducial_x" : 25,
+    "fiducial_x" : 50,
     "fiducial_y" : 40,
     "fiducial_gap" : 40,
-    "dump_match" : false,
-    "cross_correlation_threshold" : 0.6
+    "dump_match" : true,
+    "cross_correlation_threshold" : 0.19
   },
 
   "z_height" : 27.0,

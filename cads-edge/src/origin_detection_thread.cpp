@@ -74,7 +74,7 @@ namespace cads
   {
     cv::Mat fiducial;
     cv::transpose(make_fiducial(x_resolution, y_resolution),fiducial);
-    //mat_as_image(fiducial,"fid");
+    mat_as_image(fiducial,"fid");
     
     window profile_buffer;
 
@@ -100,9 +100,9 @@ namespace cads
       std::throw_with_nested(std::runtime_error("window_processing:OpenCV matrix must be continuous for row shifting using memcpy"));
     }
 
-    mat_as_image(belt,"belt");
+    //mat_as_image(belt,"belt");
 
-    cv::Mat m1(fiducial.rows, int(fiducial.cols * 1.5), CV_32F, cv::Scalar::all(0.0f));
+    cv::Mat m1(fiducial.rows*3, belt.cols, CV_32F, cv::Scalar::all(0.0f));
     cv::Mat out(m1.rows - fiducial.rows + 1, m1.cols - fiducial.cols + 1, CV_32F, cv::Scalar::all(0.0f));
 
     auto y_max_length = std::get<1>(global_constraints.CurrentLength); 
@@ -140,7 +140,7 @@ namespace cads
           matrix_correlation = belt.clone();
         }
 
-        if (correlation < belt_crosscorr_threshold && between(global_constraints.CurrentLength,y))
+        if (correlation < belt_crosscorr_threshold)
         {
           ++sequence_cnt;
           spdlog::get("cads")->info("Correlation : {} at y : {} with threshold: {} and count : {}", correlation, y, cv_threshhold,ccnt);
@@ -202,8 +202,8 @@ namespace cads
 
       if(terminate) break;
 
-      shift_Mat_rows(belt);
-      prepend_Mat_rows(belt, p.z);
+      shift_Mat_cols(belt);
+      prepend_Mat_cols(belt, p.z);
 
       profile_buffer.pop_front();
       profile_buffer.push_back({p.y - y_offset, p.x_off, p.z});
