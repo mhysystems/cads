@@ -68,7 +68,6 @@
   "state_db_name" : "state.db",
   "transient_db_name" : "transient.db",
   "use_encoder" : false,
-  "belt_cross_correlation_threshold" : 0.6,
 
   "filters" : {
     "SchmittThreshold" : 0.05
@@ -79,7 +78,7 @@
     "Site" : "jimblebar",
     "Name" : "cv001",
     "Timezone" : "Australia/Perth",
-    "PulleyCircumference" : 4197.66,
+    "PulleyCircumference" : 4178.32,
     "MaxSpeed" : 6090.0
   },
 

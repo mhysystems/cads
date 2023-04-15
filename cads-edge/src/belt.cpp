@@ -104,7 +104,7 @@ namespace cads
     };
   }
 
-  coro<int, std::tuple<PulleyRevolution, profile>> encoder_distance_estimation(std::function<void(profile)> next)
+  coro<int, std::tuple<PulleyRevolution, profile>> encoder_distance_estimation(std::function<void(profile)> next, double stride)
   {
     namespace sml = boost::sml;
 
@@ -125,10 +125,12 @@ namespace cads
     struct global_t
     {
       double distance = 0;
+      double stride;
       std::deque<profile> fifo;
       decltype(next) csp;
     } global;
 
+    global.stride = stride;
     global.csp = next;
 
     class transitions
@@ -141,10 +143,12 @@ namespace cads
         auto drain_action = [](global_t &global, const root_event &o) mutable
         {
           auto step_size = o.root_distance / global.fifo.size();
-          for (std::size_t i = 0; i < global.fifo.size(); i++)
+          auto decimation_factor = global.stride / step_size;
+
+          for (double i = 0; std::size_t(i) < global.fifo.size(); i+= decimation_factor)
           {
-            auto e = global.fifo[i];
-            e.y = global.distance + i * step_size;
+            auto e = global.fifo[std::size_t(i)];
+            e.y = global.distance + std::size_t(i) * global.stride;
             global.csp(e);
           }
 
