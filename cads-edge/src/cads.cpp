@@ -183,7 +183,8 @@ namespace
     };
 
     //auto fn = encoder_distance_id(csp); 
-    auto fn = encoder_distance_estimation(csp); 
+    auto stride = global_conveyor_parameters.MaxSpeed / encoder_framerate;
+    auto fn = encoder_distance_estimation(csp,stride); 
 
     auto pulley_estimator = mk_pulleyfitter(z_resolution,-15.0);
     auto belt_estimator = mk_pulleyfitter(z_resolution,0.0);

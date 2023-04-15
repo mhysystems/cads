@@ -26,7 +26,8 @@ namespace cads
 
     cv::Mat mout;
     cv::multiply(belt.rowRange(0,fiducial.rows),fiducial,mout);
-    auto avg_val = cv::sum(mout)[0] / cv::countNonZero(mout);
+    double div = cv::countNonZero(mout);
+    auto avg_val = cv::sum(mout)[0] / div;
     return avg_val;
 
   }
@@ -142,10 +143,10 @@ namespace cads
 
     //mat_as_image(belt,"belt");
 
-    cv::Mat m1(fiducial.rows*3, belt.cols, CV_32F, cv::Scalar::all(0.0f));
+    cv::Mat m1(fiducial.rows*2, belt.cols, CV_32F, cv::Scalar::all(0.0f));
     cv::Mat out(m1.rows - fiducial.rows + 1, m1.cols - fiducial.cols + 1, CV_32F, cv::Scalar::all(0.0f));
 
-    auto y_max_length = std::get<1>(global_constraints.CurrentLength); 
+    auto y_max_length = global_belt_parameters.Length * 1.02; 
     auto trigger_length = std::numeric_limits<y_type>::lowest();
     y_type y_offset = 0;
     double y_lowest_correlation = 0;
@@ -153,17 +154,15 @@ namespace cads
     cv::Mat matrix_correlation = belt.clone();
     long sequence_cnt = 0;
     auto valid = false;
-    long cnt = 1;
-    uint64_t ccnt = 0;
+    long cnt = 0;
 
     auto start = std::chrono::high_resolution_clock::now();
 
     while (true)
     {
       y_type y = profile_buffer.front().y;
-      ccnt++;
-
-      if(sequence_cnt > 0 && (cnt++ % 10000) == 0) {
+ 
+      if((cnt++ % 10000) == 0 && sequence_cnt > 0 ) {
         publish_CadsToOrigin(y); //TODO
       }
 
@@ -183,10 +182,11 @@ namespace cads
         if (correlation < belt_crosscorr_threshold)
         {
           ++sequence_cnt;
-          spdlog::get("cads")->info("Correlation : {} at y : {} with threshold: {} and count : {}", correlation, y, cv_threshhold,ccnt);
+          spdlog::get("cads")->info("Correlation : {} at y : {} with threshold: {} and count : {}", correlation, y, cv_threshhold, cnt);
           auto now = std::chrono::high_resolution_clock::now();
           auto period = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
           start = now;
+          cnt = 0;
 
           if(sequence_cnt > 1) {
             publish_RotationPeriod(period); //TODO

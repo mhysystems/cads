@@ -3,7 +3,7 @@
   
   "sqlite_gocator" : {
     "range" : [1058749,9007199254740991],
-    "fps" : 999980,
+    "fps" : 984,
     "forever" : true,
     "delay" : 98
   },
