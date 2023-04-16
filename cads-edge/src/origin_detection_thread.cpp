@@ -179,6 +179,10 @@ namespace cads
           matrix_correlation = belt.clone();
         }
 
+        if((cnt++ % 10000) == 0) {
+          spdlog::get("cads")->info("Sample correlation: {}, lowest: {}", correlation, lowest_correlation);
+        }
+
         if (correlation < belt_crosscorr_threshold)
         {
           ++sequence_cnt;
