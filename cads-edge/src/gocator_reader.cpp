@@ -195,8 +195,9 @@ namespace cads
     m_frame_rate = GoSetup_FrameRate(setup);
   }
 
-  GocatorReader::GocatorReader(moodycamel::BlockingReaderWriterQueue<msg> &gocatorFifo, bool use_encoder, std::string ip_add) : GocatorReader(gocatorFifo, ip_add)
+  GocatorReader::GocatorReader(moodycamel::BlockingReaderWriterQueue<msg> &gocatorFifo, bool use_encoder, bool trim, std::string ip_add) : GocatorReader(gocatorFifo, ip_add)
   {
+    m_trim = trim;
     m_use_encoder = use_encoder;
   }
 
@@ -326,15 +327,17 @@ namespace cads
     }
 
     // Trim invalid values
-    k16s *profile_end = profile + profileWidth - 1;
-    for (; profile_end >= profile && *profile_end == k16S_NULL; --profile_end)
-    {
-    }
-    profile_end++;
-
+    auto profile_end = profile + profileWidth;
     auto profile_begin = profile;
-    for (; profile_begin < profile_end && *profile_begin == k16S_NULL; ++profile_begin)
-    {
+
+    if(m_trim) {    
+      for (; profile_end > profile && *(profile_end-1) == k16S_NULL; --profile_end)
+      {
+      }
+
+      for (; profile_begin < profile_end && *profile_begin == k16S_NULL; ++profile_begin)
+      {
+      }
     }
 
     auto samples_width = (double)distance(profile, profile_begin);
