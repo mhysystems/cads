@@ -63,6 +63,25 @@ namespace cads
     } 
   }
 
+  std::function<void(z_type &z)> mk_pulley_damp() {
+    auto d = global_filters.LeftDamp;
+    auto off = global_filters.LeftDampOff;
+
+    return [=](z_type &z) {
+      auto zi = z.begin();
+      auto di = d.begin();
+
+      while(zi < z.end() && di < d.end()) {
+        auto v = *zi + off;
+        v *= *di;
+        *zi = v - off;
+        
+        zi++;di++;
+      }
+
+    };
+  }
+
 
   std::function<double(double)> mk_iirfilterSoS()
   {

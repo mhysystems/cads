@@ -16,5 +16,6 @@ namespace cads
   std::function<cads::z_element(cads::z_element)> mk_schmitt_trigger(const cads::z_element bias = 0.0);
   std::function<cads::z_element(cads::z_element,bool)> mk_amplitude_extraction();
   std::function<double(double)> mk_dc_filter();
+  std::function<void(z_type &z)> mk_pulley_damp();
 
 } // namespace cads

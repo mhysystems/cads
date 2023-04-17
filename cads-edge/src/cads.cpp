@@ -194,6 +194,7 @@ namespace
     auto time0 = std::chrono::high_resolution_clock::now();
     
     auto pulley_rev =  mk_pulley_revolution();
+    auto pulley_damp = mk_pulley_damp();
 
     do
     {
@@ -222,6 +223,7 @@ namespace
       auto iz = p.z;
 
       //spike_filter(iz);
+      pulley_damp(iz);
       auto [pulley_level,pulley_right,ll,lr,clusters,cerror] = pulley_levels_clustered(iz,pulley_estimator);
       
       if(cerror != ClusterError::None) {
@@ -331,7 +333,7 @@ namespace
 
         spdlog::get("cads")->debug("Pulley Oscillation(mm): {}",amplitude);
         spdlog::get("cads")->debug("Pulley Frequency(Hz): {}", frequency);
-        spdlog::get("cads")->debug("Surface Speed(m/s): {}", speed);
+        spdlog::get("cads")->info("Surface Speed(m/s): {}", speed);
       }
 
       if (cnt % (1000 * 60) == 0)
