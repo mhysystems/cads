@@ -87,6 +87,7 @@ namespace cads
         auto last = std::find_if(p.z.rbegin(), p.z.rend(), [](z_element z)
                                  { return !std::isnan(z); });
 
+        auto dis = std::distance(p.z.begin(),first);
         m_gocatorFifo.enqueue({msgid::scan, profile{p.y, p.x_off, z_type(first, last.base())}});
         
         auto now = std::chrono::high_resolution_clock::now();

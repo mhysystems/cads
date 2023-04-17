@@ -180,7 +180,7 @@ namespace cads
         }
 
         if((cnt % 10000) == 0) {
-          spdlog::get("cads")->info("SampleCorrelation: {}, Threshold: {}, Lowest: {}", correlation, cv_threshhold, lowest_correlation);
+          //spdlog::get("cads")->info("SampleCorrelation: {}, Threshold: {}, Lowest: {}", correlation, cv_threshhold, lowest_correlation);
         }
 
         if (correlation < belt_crosscorr_threshold)

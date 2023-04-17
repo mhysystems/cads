@@ -105,8 +105,10 @@ namespace {
   auto mk_filters(nlohmann::json config) {
     
     auto SchmittThreshold = config["filters"]["SchmittThreshold"].get<double>();
+    auto LeftDamp = config["filters"]["LeftDamp"].get<std::vector<float>>();
+    auto LeftDampOff =  config["filters"]["LeftDampOff"].get<float>();
 
-    return cads::Filters{SchmittThreshold};
+    return cads::Filters{SchmittThreshold,LeftDamp,LeftDampOff};
 
   }
 
