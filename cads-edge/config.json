@@ -1,8 +1,8 @@
 {
-  "data_source" : "../../profiles/rawprofile_cv001_2.db",
+  "data_source" : "../../profiles/rawprofile_2023-04-17.db",
   
   "sqlite_gocator" : {
-    "range" : [1058749,9007199254740991],
+    "range" : [0,9007199254740991],
     "fps" : 984,
     "forever" : true,
     "delay" : 98
@@ -36,7 +36,7 @@
   "revolution_sensor" : {
     "source" : "raw",
     "trigger_num" : 1,
-    "bias" : -416.0,
+    "bias" : -32.5,
     "bidirectional" : false
   },
 

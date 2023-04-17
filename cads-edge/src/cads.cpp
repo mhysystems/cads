@@ -86,15 +86,15 @@ namespace
     }
   }
 
-  std::tuple<unique_ptr<GocatorReaderBase>,bool> mk_gocator(BlockingReaderWriterQueue<msg> &gocatorFifo, bool force_gocator = false, bool use_encoder = false)
+  std::tuple<unique_ptr<GocatorReaderBase>,bool> mk_gocator(BlockingReaderWriterQueue<msg> &gocatorFifo, bool trim = true, bool use_encoder = false)
   {
     auto data_src = global_config["data_source"].get<std::string>();
 
-    if (data_src == "gocator"s || force_gocator)
+    if (data_src == "gocator"s)
     {
       bool connect_via_ip = global_config.contains("gocator_ip");
       spdlog::get("cads")->debug("Using gocator as data source");
-      auto gocator = connect_via_ip ? make_unique<GocatorReader>(gocatorFifo, use_encoder, global_config.at("gocator_ip"s).get<std::string>()) : make_unique<GocatorReader>(gocatorFifo,use_encoder);
+      auto gocator = connect_via_ip ? make_unique<GocatorReader>(gocatorFifo, use_encoder, trim, global_config.at("gocator_ip"s).get<std::string>()) : make_unique<GocatorReader>(gocatorFifo,use_encoder,trim);
       return {std::move(gocator),true};
     }
     else
@@ -473,7 +473,7 @@ namespace cads
     BlockingReaderWriterQueue<msg> gocatorFifo;
     std::jthread remote_control(remote_control_thread,std::ref(nats_queue),std::ref(terminate_subscribe));
 
-    auto [gocator, is_gocator] = mk_gocator(gocatorFifo);
+    auto [gocator, is_gocator] = mk_gocator(gocatorFifo,false);
 
     gocator->Start();
 

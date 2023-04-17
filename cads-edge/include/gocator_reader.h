@@ -31,6 +31,7 @@ protected:
 	void* m_assembly;
 	void* m_sensor;
   bool m_use_encoder = true;
+  bool m_trim = true;
   std::atomic<k64s> m_yOffset = 0;
   std::atomic<size_t> m_buffer_size_warning = 4096;
   
@@ -45,7 +46,7 @@ public:
 	void Stop();
   void Log();
 	GocatorReader(moodycamel::BlockingReaderWriterQueue<cads::msg>&, std::string ip_add = "");
-  GocatorReader(moodycamel::BlockingReaderWriterQueue<cads::msg>&, bool, std::string ip_add = "");
+  GocatorReader(moodycamel::BlockingReaderWriterQueue<cads::msg>&, bool, bool trim = true, std::string ip_add = "");
 	virtual ~GocatorReader();
 };
 
