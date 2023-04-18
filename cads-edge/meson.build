@@ -24,7 +24,8 @@ boost = dependency('boost', modules : ['program_options'])
 sqlite = dependency('sqlite3')
 opencv = dependency('opencv4', required:false, include_type:'system')
 tbb = dependency('tbb')
-#gsl = dependency('gsl')
+gsl = dependency('gsl')
+
 
 if not opencv.found()
 	opencv = dependency('opencv',include_type:'system')
@@ -58,7 +59,7 @@ cadsInc = include_directories('include')
 cadsSrc = []
 cadsEntry = []
 
-libdep = [opencv, tbb, thread, boost, sqlite, http_stuff,log_stuff, flatbuffers, fmt_dep, nlohmann_json_dep,date_dep,tz_dep,iir1_dep,lua_dep,eigen_dep, natsc_dep, brotli_enc_dep]
+libdep = [opencv, tbb, thread, boost, sqlite, http_stuff,log_stuff, flatbuffers, fmt_dep, nlohmann_json_dep,date_dep,tz_dep,iir1_dep,lua_dep,eigen_dep, natsc_dep, brotli_enc_dep, gsl]
 # Returns z_config 
 # Represents header files
 subdir('flatbuffers')

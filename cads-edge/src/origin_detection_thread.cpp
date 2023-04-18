@@ -15,6 +15,7 @@
 #include <intermessage.h>
 #include <filters.h>
 #include <opencv2/core.hpp>
+#include <utils.hpp>
 
 using namespace moodycamel;
 
@@ -124,6 +125,9 @@ namespace cads
     double belt_crosscorr_threshold = config_origin_detection.cross_correlation_threshold;
     auto dump_match = config_origin_detection.dump_match;
 
+    auto edge_height = global_belt_parameters.PulleyCover + global_belt_parameters.CordDiameter + global_belt_parameters.TopCover;
+    auto avg_threshold_fn = mk_online_mean(edge_height - fiducial_config.fiducial_depth);
+
     profile p;
     bool terminate = false;
 
@@ -169,7 +173,8 @@ namespace cads
 
       if (y >= trigger_length)
       {
-        const auto cv_threshhold = left_edge_avg_height(belt, fiducial) - fdepth;
+        auto l = left_edge_avg_height(belt, fiducial) - fdepth;
+        const auto cv_threshhold = l;//avg_threshold_fn(l);
         auto [correlation,loc] = search_for_fiducial(belt, fiducial, m1, out, cv_threshhold);
 
         if(correlation <= lowest_correlation) {

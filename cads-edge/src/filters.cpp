@@ -1,9 +1,18 @@
-#include <filters.h>
-#include <constants.h>
 #include <algorithm>
 #include <ranges>
 
+#include <gsl/gsl_math.h>
+#include <gsl/gsl_filter.h>
+#include <gsl/gsl_rng.h>
+#include <gsl/gsl_randist.h>
+#include <gsl/gsl_vector.h>
 #include <Iir.h>
+
+#include <filters.h>
+#include <constants.h>
+
+
+
 
 namespace cads
 {
@@ -31,6 +40,43 @@ namespace cads
           }
           i += j - 1 - 1; // Extra -1 is due to for(...,i++)
           break;
+        }
+      }
+    }
+  }
+
+  void spike_filter(z_type &z, int window_size, int lead)
+  {
+
+    int z_size = (int)z.size();
+
+    if (window_size > z_size && window_size == 0)
+      return;
+
+    for (auto i = 0; i < z_size - 2*lead + 1; i++)
+    {
+
+      if (!std::isnan(z[i]))
+        continue;
+
+      auto b = 1; // begin
+      while(std::isnan(z[i + b]) && (b < lead)) ++b;
+
+      if(b != lead)
+        continue;
+
+      for(auto ws = 1; (ws <= window_size) && ((i + 2*lead + ws) < z_size); ws++) {
+        if (!std::isnan(z[i + lead + ws + 1]))
+          continue;
+
+        auto e = 1; //end
+        while(std::isnan(z[i + lead + ws + e]) && (e < lead)) ++e;
+
+        if(e != lead)
+          continue;
+
+        for(auto j = 0; j < ws; ++j) {
+          z[i + j + lead] = std::numeric_limits<z_element>::quiet_NaN();
         }
       }
     }
@@ -171,37 +217,34 @@ namespace cads
     };
   }
 
-} // namespace cads
-
-
-#if 0
-
-  #include <gsl/gsl_math.h>
-  #include <gsl/gsl_filter.h>
-  #include <gsl/gsl_rng.h>
-  #include <gsl/gsl_randist.h>
-  #include <gsl/gsl_vector.h>
-
   void gaussian(z_type& z) 
   {
-    gsl_vector *x = gsl_vector_alloc(z.size());
-    gsl_vector *yv = gsl_vector_alloc(z.size());
-    gsl_filter_gaussian_workspace *gauss_p = gsl_filter_gaussian_alloc(51);
+    gsl_vector *x = ::gsl_vector_alloc(z.size());
+    gsl_vector *yv = ::gsl_vector_alloc(z.size());
+    gsl_filter_gaussian_workspace *gauss_p = ::gsl_filter_gaussian_alloc(51);
 
     for(auto i=0; i < z.size(); i++) {
       gsl_vector_set(x, i,z[i]);
     }
 
-    gsl_filter_gaussian(GSL_FILTER_END_PADVALUE, 10.0, 0, x, yv, gauss_p);
+    ::gsl_filter_gaussian(GSL_FILTER_END_PADVALUE, 10.0, 0, x, yv, gauss_p);
 
     for(auto i=0; i < z.size(); i++) {
-      if(!std::isnan(z[i])) {
+      //if(!std::isnan(z[i])) {
         z[i] = gsl_vector_get(yv, i);
-      }
+      //}
     }
 
     gsl_vector_free(x);
     gsl_vector_free(yv);
     gsl_filter_gaussian_free(gauss_p);
   }
-#endif
+
+} // namespace cads
+
+
+
+
+
+
+

@@ -7,7 +7,7 @@
 namespace cads
 {
   
-  void nan_interpolation_spline(zzrange z) {
+  zrange nan_interpolation_spline(zrange z) {
     std::vector<double> x,y;
 
     double cnt = 0;
@@ -25,10 +25,12 @@ namespace cads
     for(double i = 0; i < (double)z.size(); ++i) {
       *(z.begin() + (int)i) = s(i);
     }
+
+    return z;
     
   }
   
-  void nan_interpolation_spline2(z_type &z) {
+  void nan_interpolation_spline(z_type &z) {
     
     std::vector<double> x,y;
     
