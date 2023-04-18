@@ -90,12 +90,11 @@ namespace cads
       }
 
       auto rtn = PulleyRevolution{false, trigger_distance,dt};
-      if(cnt < cnt_est * 0.9) return rtn; // probably false trigger
-      
+
       schmitt1 = schmitt_trigger(pulley_height);
 
-      if ((std::signbit(schmitt1) == true && std::signbit(schmitt0) == false) || 
-         (bidirectional && (std::signbit(schmitt1) == false && std::signbit(schmitt0) == true)))
+      if ((cnt > (cnt_est * 0.9)) && ((std::signbit(schmitt1) == true && std::signbit(schmitt0) == false) || 
+         (bidirectional && (std::signbit(schmitt1) == false && std::signbit(schmitt0) == true))))
       {
         cnt = 0;
         auto now = std::chrono::high_resolution_clock::now();
