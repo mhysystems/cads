@@ -193,7 +193,7 @@ namespace
 
     auto time0 = std::chrono::high_resolution_clock::now();
     
-    auto pulley_rev =  mk_pulley_revolution();
+    auto pulley_rev =  mk_pulley_revolution(encoder_framerate);
     auto pulley_damp = mk_pulley_damp();
 
     do

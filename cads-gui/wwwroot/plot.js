@@ -378,7 +378,7 @@ class ProfilePlot {
       name : 'Cord Layer',
       type: 'scatter',
       fill: 'tonexty',
-      fillcolor: '#e8e8e8',
+      fillcolor: '#B17A43',
       showlegend: false,
       mode : 'none'
     };
@@ -509,6 +509,7 @@ class SurfacePlot {
         t: 0,
       },
       scene: {
+        dragmode : "pan",
         camera: {
           center: {
             x: 0,

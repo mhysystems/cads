@@ -121,8 +121,8 @@ namespace cads
 
     auto fdepth = fiducial_config.fiducial_depth;
     double lowest_correlation = std::numeric_limits<double>::max();
-    double belt_crosscorr_threshold = fiducial_config.cross_correlation_threshold;
-    auto dump_match = fiducial_config.dump_match;
+    double belt_crosscorr_threshold = config_origin_detection.cross_correlation_threshold;
+    auto dump_match = config_origin_detection.dump_match;
 
     profile p;
     bool terminate = false;
@@ -183,7 +183,7 @@ namespace cads
           //spdlog::get("cads")->info("SampleCorrelation: {}, Threshold: {}, Lowest: {}", correlation, cv_threshhold, lowest_correlation);
         }
 
-        if (correlation < belt_crosscorr_threshold)
+        if (correlation < belt_crosscorr_threshold && (!(sequence_cnt > 0) || between(config_origin_detection.belt_length,y)))
         {
           ++sequence_cnt;
           spdlog::get("cads")->info("Correlation : {} at y : {} with threshold: {} and count : {}", correlation, y, cv_threshhold, cnt);

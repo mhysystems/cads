@@ -112,8 +112,14 @@ namespace cads {
     double fiducial_x;
     double fiducial_y;
     double fiducial_gap;
-    bool   dump_match;
+
+  };
+
+  struct OriginDetection {
+    using value_type = std::tuple<double,double>;
+    value_type belt_length;
     double cross_correlation_threshold;
+    bool   dump_match;
   };
 
   extern constraints global_constraints;
@@ -127,6 +133,7 @@ namespace cads {
   extern RevolutionSensor revolution_sensor_config;
   extern Communications communications_config;
   extern Fiducial fiducial_config;
+  extern OriginDetection config_origin_detection;
   
   void init_config(std::string f);
   void drop_config();

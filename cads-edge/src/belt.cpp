@@ -45,13 +45,16 @@ namespace cads
 {
 
  std::function<PulleyRevolution(double)> 
-  mk_pulley_revolution()
+  mk_pulley_revolution(double fps)
   {
     auto n = revolution_sensor_config.trigger_num;
     auto bidirectional = revolution_sensor_config.bidirectional;
     auto bias = revolution_sensor_config.bias;
     auto pully_circumfrence = global_conveyor_parameters.PulleyCircumference; // In mm
     auto trigger_distance = pully_circumfrence / n;
+    auto period = global_conveyor_parameters.PulleyCircumference / global_conveyor_parameters.MaxSpeed;
+    long cnt_est = period * fps;
+
     double schmitt1 = 1.0, schmitt0 = -1.0;
     auto schmitt_trigger = mk_schmitt_trigger(bias);
     auto time0 = std::chrono::high_resolution_clock::now();
@@ -68,8 +71,7 @@ namespace cads
     return [=](double pulley_height) mutable -> PulleyRevolution
     {
       cnt++;
-      auto rtn = PulleyRevolution{false, trigger_distance,dt};
-      schmitt1 = schmitt_trigger(pulley_height);
+
 
       auto max = std::max(avg_max,pulley_height);
       auto min = std::min(avg_min,pulley_height);
@@ -86,6 +88,11 @@ namespace cads
       if(big_cnt++ % 2000 == 0) {
           spdlog::get("cads")->debug("schmitt trigger level: {}, avgmax: {}, avgmin: {}",bias, avg_max, avg_min);
       }
+
+      auto rtn = PulleyRevolution{false, trigger_distance,dt};
+      if(cnt < cnt_est * 0.9) return rtn; // probably false trigger
+      
+      schmitt1 = schmitt_trigger(pulley_height);
 
       if ((std::signbit(schmitt1) == true && std::signbit(schmitt0) == false) || 
          (bidirectional && (std::signbit(schmitt1) == false && std::signbit(schmitt0) == true)))
