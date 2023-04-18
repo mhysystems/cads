@@ -152,11 +152,18 @@ namespace {
     double fiducial_x = config["fiducial"]["fiducial_x"].get<double>();
     double fiducial_y = config["fiducial"]["fiducial_y"].get<double>();
     double fiducial_gap = config["fiducial"]["fiducial_gap"].get<double>();
-    bool   dump_match = config["fiducial"]["dump_match"].get<bool>();
-    double cross_correlation_threshold =  config["fiducial"]["cross_correlation_threshold"].get<double>();
 
-    return cads::Fiducial{fiducial_depth,fiducial_x,fiducial_y,fiducial_gap,dump_match,cross_correlation_threshold};
 
+    return cads::Fiducial{fiducial_depth,fiducial_x,fiducial_y,fiducial_gap};
+  }
+
+  auto mk_origin_detection(nlohmann::json config) {
+
+    auto belt_length = config["OriginDetection"]["BeltLength"].get<cads::OriginDetection::value_type>();
+    auto cross_correlation_threshold = config["OriginDetection"]["cross_correlation_threshold"].get<double>();
+    bool  dump_match = config["OriginDetection"]["dump_match"].get<bool>();
+
+    return cads::OriginDetection{belt_length,cross_correlation_threshold,dump_match};
   }
 }
 
@@ -174,8 +181,8 @@ namespace cads {
   RevolutionSensor revolution_sensor_config;
   Communications communications_config;
   Fiducial fiducial_config;
-
-  
+  OriginDetection config_origin_detection;
+    
   void init_config(std::string f) {
     auto json = slurpfile(f);
 		auto config = nlohmann::json::parse(json);
@@ -191,6 +198,7 @@ namespace cads {
     revolution_sensor_config = mk_revolution_sensor(config);
     communications_config = mk_communications(config);
     fiducial_config = mk_fiducial(config);
+    config_origin_detection = mk_origin_detection(config);
     global_config = config;
   }
 

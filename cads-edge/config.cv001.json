@@ -12,9 +12,13 @@
     "fiducial_depth" : 2,
     "fiducial_x" : 25,
     "fiducial_y" : 40,
-    "fiducial_gap" : 40,
-    "dump_match" : true,
-    "cross_correlation_threshold" : 0.6
+    "fiducial_gap" : 40
+  },
+
+  "OriginDetection" : {
+    "BeltLength": [12555200,12575200],
+    "cross_correlation_threshold" : 0.6,
+    "dump_match" : true
   },
 
   "width_n" : 1890,
@@ -35,7 +39,7 @@
   "revolution_sensor" : {
     "source" : "raw",
     "trigger_num" : 1,
-    "bias" : -36.0,
+    "bias" : -32.5,
     "bidirectional" : false
   },
 
