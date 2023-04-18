@@ -217,25 +217,9 @@ namespace
       }
 
       auto p = get<profile>(get<1>(m));
-      
-      auto iy = p.y;
-      auto ix = p.x_off;
-      auto iz = p.z;
 
-      auto [pulley_level,pulley_right,ll,lr,cerror] = pulley_levels_clustered(iz,pulley_estimator);
-      
-      if(cerror != ClusterError::None) {
-        //spdlog::get("cads")->debug("Clustering error : {}", ClusterErrorToString(cerror));
-        //store_errored_profile(p.z,ClusterErrorToString(cerror));
-      }
 
-      iz.insert(iz.begin(),filter_window_len,(float)pulley_level);
-      iz.insert(iz.end(),filter_window_len,(float)pulley_right);
-
-      ll += filter_window_len;
-      lr += filter_window_len;
-
-      if (iz.size()*x_resolution < x_width * 0.75)
+      if (p.z.size()*x_resolution < x_width * 0.75)
       {
         spdlog::get("cads")->error("Gocator sending profiles with widths less than 0.75 of expected width");
         if(is_gocator) {
@@ -246,9 +230,9 @@ namespace
         }
       }
 
-      if (iz.size() < (size_t)width_n)
+      if (p.z.size() < (size_t)width_n)
       {
-        spdlog::get("cads")->error("Gocator sending profiles with sample number {} less than {}", iz.size(), width_n);
+        spdlog::get("cads")->error("Gocator sending profiles with sample number {} less than {}", p.z.size(), width_n);
         if(is_gocator) {
           status = Process_Status::Error;
           break;
@@ -257,10 +241,10 @@ namespace
         }
       }
 
-      double nan_cnt = std::count_if(iz.begin(), iz.end(), [](z_element z)
+      double nan_cnt = std::count_if(p.z.begin(), p.z.end(), [](z_element z)
                                    { return std::isnan(z); });
 
-      if ((nan_cnt / iz.size()) > nan_percentage )
+      if ((nan_cnt / p.z.size()) > nan_percentage )
       {
         spdlog::get("cads")->error("Percentage of nan({}) in profile > {}%", nan_cnt,nan_percentage * 100);
         if(is_gocator) {
@@ -269,17 +253,27 @@ namespace
         }else {
           continue;
         }
+      }      
+      
+      auto iy = p.y;
+      auto ix = p.x_off;
+      auto iz = p.z;
+
+      pulley_damp(iz);
+      auto [pulley_level,pulley_right,ll,lr,cerror] = pulley_levels_clustered(iz,pulley_estimator);
+      
+      if(cerror != ClusterError::None) {
+        //spdlog::get("cads")->debug("Clustering error : {}", ClusterErrorToString(cerror));
+        //store_errored_profile(p.z,ClusterErrorToString(cerror));
       }
 
-      nan_interpolation_last(iz);
+      iz.insert(iz.begin(),filter_window_len,(float)pulley_level);
+      iz.insert(iz.end(),filter_window_len,(float)pulley_right);
+      ll += filter_window_len;
+      lr += filter_window_len;
 
-      auto [pre_left_edge_index, pre_right_edge_index] = find_profile_edges_sobel(iz);
-
-
-      if(std::abs(pre_left_edge_index - (int)ll) > 2) {
-        //spdlog::get("cads")->debug("sobel & dbscan don't match: sobel({},{}) dbscan({},{})", pre_left_edge_index,pre_right_edge_index,ll,lr);
-        //store_errored_profile(p.z,"sobel");
-      }
+      std::fill(iz.begin(),iz.begin()+ll,pulley_level);
+      std::fill(iz.begin()+lr,iz.end(),pulley_right);
 
       auto pulley_level_filtered = (z_element)iirfilter_left(pulley_level);
       auto pulley_right_filtered = (z_element)iirfilter_right(pulley_right);
@@ -287,7 +281,7 @@ namespace
       
       auto pulley_level_unbias = dc_filter(pulley_level_filtered);
 
-      auto [delayed, dd] = delay({iy, ix, iz, (int)left_edge_filtered,(int)ll, (int)pre_right_edge_index,p.z});
+      auto [delayed, dd] = delay({iy, ix, iz, (int)left_edge_filtered,(int)ll, (int)lr,p.z});
 
       if (!delayed)
         continue;
