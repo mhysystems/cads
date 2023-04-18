@@ -13,6 +13,7 @@
 #include <edge_detection.h>
 #include <stats.hpp>
 #include <interpolation.h>
+#include <filters.h>
 
 namespace cads
 {
@@ -72,24 +73,12 @@ namespace cads
   }
 
 
-  auto mk_zrange(const z_type &z) {
-    return zrange{z.cbegin(),z.cend()};
+  auto mk_zrange(z_type &z) {
+    return zrange{z.begin(),z.end()};
   }
 
-  auto size(zrange r) {
-     return std::distance(std::get<0>(r),std::get<1>(r));
-  }
-  
-  auto empty(zrange r) {
-    return 0 == size(r);
-  }
-
-  auto begin(zrange r) {
-    return std::get<0>(r);
-  }
-
-  auto end(zrange r) {
-    return std::get<1>(r);
+  auto mk_zrange(z_cluster &c) {
+    return zrange{c.front().begin(),c.back().end()};
   }
 
   auto average_zrange(zrange r) {
@@ -154,6 +143,19 @@ namespace cads
     return out;
   }
 
+  auto construct_ztype(zrange zv) {
+    
+    if(zv.size() < 1) {
+      return z_type();
+    }
+    
+    z_type out;
+
+    std::copy(begin(zv),end(zv),std::back_inserter(out));
+
+    return out;
+  }
+
   // Return sequence of clustered z values and offset into profile
   // Input is a slice of profile, hence tracking offset
   std::tuple<zrange,size_t> cluster(zrange z, z_element origin, z_element max_diff = dbscan_config.InCluster, z_element dis = dbscan_config.MinPoints )
@@ -195,11 +197,8 @@ namespace cads
     }
   }
   
-  void something(z_type &&zz) {
-    zzrange gg(zz.begin(),zz.end());
-  }
   
-  std::tuple<zrange,size_t> cluster(const z_type &z)
+  std::tuple<zrange,size_t> cluster(z_type &z)
   {
 
     return cluster(mk_zrange(z),z[0]);
@@ -244,7 +243,7 @@ namespace cads
     return group;
   }
 
-  z_clusters dbscan(const z_type &z)
+  z_clusters dbscan(z_type &z)
   {
     return dbscan(mk_zrange(z));
 
@@ -275,7 +274,7 @@ namespace cads
   }
 
 
-  double average(const z_type & v){
+  double average(z_type & v){
     if(v.empty()){
         return 0;
     }
@@ -284,9 +283,10 @@ namespace cads
     return std::reduce(v.begin(), v.end()) / count;
   }
 
-  std::tuple<double,double,size_t,size_t,z_clusters,ClusterError> pulley_levels_clustered(const z_type &z, std::function<double(const z_type &)> estimator)
+  std::tuple<double,double,size_t,size_t,ClusterError> pulley_levels_clustered(z_type &z, std::function<double(const z_type &)> estimator)
   {
  
+    spike_filter(z);
     auto clusters = dbscan(z);
     auto avg_l = 0.0;
     auto avg_r = 0.0;
@@ -303,27 +303,26 @@ namespace cads
       auto pulley = (*begin(clusters[0][0]) < *begin(clusters[1][0])) ? 0 : 1;
       auto belt = -1*pulley + 1;
 
-      //nan_interpolation_spline(clusters[0]);
-
-      auto avg = estimator(construct_ztype(clusters[pulley]));
+      auto b = mk_zrange(clusters[pulley]);
+      auto avg = estimator(construct_ztype(b));
       avg_l = avg;
       avg_r = avg;
-      auto size = clusters[1].size();
-      left_edge = std::distance(z.begin(),begin(clusters[belt][0]));
-      right_edge = std::distance(z.begin(),end(clusters[belt][size-1]));
+ 
+      left_edge = std::distance(z.begin(),clusters[belt].front().begin());
+      right_edge = std::distance(z.begin(),clusters[belt].back().end());
 
-      if(size > 1) {
+      if(clusters[pulley].size() > 1) {
         error = ClusterError::ExcessiveNeigbours;
       }
 
     }else if(clusters.size() == 3){
 
       auto size = clusters[1].size();
-      left_edge = std::distance(z.begin(),begin(clusters[1][0]));
-      right_edge = std::distance(z.begin(),end(clusters[1][size-1]));
+      left_edge = std::distance(z.begin(),clusters[1].front().begin());
+      right_edge = std::distance(z.begin(),clusters[1].back().end());
       
-      avg_l = estimator(construct_ztype(clusters.front()));
-      avg_r = estimator(construct_ztype(clusters.back()));
+      avg_l = estimator(construct_ztype(mk_zrange(clusters.front())));
+      avg_r = estimator(construct_ztype(mk_zrange(clusters.back())));
 
       if(size > 1) {
         error = ClusterError::ExcessiveNeigbours;
@@ -333,15 +332,14 @@ namespace cads
       error = ClusterError::ExcessiveClusters;
 
       auto cluster_size = clusters.size();
-      auto size = clusters[cluster_size - 2].size();
 
-      left_edge = std::distance(z.begin(),begin(clusters[1][0]));
-      right_edge = std::distance(z.begin(),end(clusters[cluster_size - 2][size-1]));
-      avg_l = estimator(construct_ztype(clusters.front()));
-      avg_r = estimator(construct_ztype(clusters.back()));
+      left_edge = std::distance(z.begin(),clusters[1].front().end());
+      right_edge = std::distance(z.begin(),clusters[cluster_size - 2].back().end());
+      avg_l = estimator(construct_ztype(mk_zrange(clusters.front())));
+      avg_r = estimator(construct_ztype(mk_zrange(clusters.back())));
     }
     
-    return {avg_l,avg_r,left_edge,right_edge,clusters,error};
+    return {avg_l,avg_r,left_edge,right_edge,error};
   }
 
 

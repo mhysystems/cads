@@ -17,18 +17,18 @@
 
   "OriginDetection" : {
     "BeltLength": [12555200,12575200],
-    "cross_correlation_threshold" : 0.6,
+    "cross_correlation_threshold" : 0.285,
     "dump_match" : true
   },
 
   "z_height" : 27.0,
   "width_n" : 1890,
   "clip_height" : 36.0,
-  "left_edge_nan" : 10,
-  "right_edge_nan" : 10,
+  "left_edge_nan" : 3,
+  "right_edge_nan" : 3,
   "daily_upload" : true,
   "daily_start_time" : "now",
-  "spike_filter" : 3,
+  "spike_filter" : 2,
   "sobel_filter" : 5,
   "nan_%" : 0.15,
 

@@ -7,7 +7,8 @@
 
 namespace cads
 {
-  void spike_filter(z_type& z, int window_size = global_profile_parameters.spike_filter);
+  //void spike_filter(z_type& z, int window_size = global_profile_parameters.spike_filter);
+  void spike_filter(z_type& z, int window_size = global_profile_parameters.spike_filter, int lead = global_profile_parameters.left_edge_nan);
   void pulley_level_compensate(z_type& z, z_element z_off, z_element z_max);
   void constraint_clipping(z_type& z, z_element z_off, z_element z_max);
   std::function<double(double)> mk_iirfilterSoS();
@@ -17,5 +18,5 @@ namespace cads
   std::function<cads::z_element(cads::z_element,bool)> mk_amplitude_extraction();
   std::function<double(double)> mk_dc_filter();
   std::function<void(z_type &z)> mk_pulley_damp();
-
+  void gaussian(z_type& z);
 } // namespace cads

@@ -15,9 +15,8 @@ namespace cads
   using z_element = float; // int16_t;
   using y_type = double;
   using z_type = std::vector<z_element>;
-  using zzrange = std::ranges::subrange<z_type::iterator>;
-  
-  using zrange = std::tuple<z_type::const_iterator, z_type::const_iterator>;
+  using zrange = std::ranges::subrange<z_type::iterator>;
+
   using z_cluster = std::vector<zrange>;
   using z_clusters = std::vector<z_cluster>;
 
@@ -79,6 +78,6 @@ namespace cads
   };
   
   std::string ClusterErrorToString(ClusterError error);
-  std::tuple<double, double, size_t, size_t, z_clusters, ClusterError> pulley_levels_clustered(const z_type &z, std::function<double(const z_type &)> estimator = average);
+  std::tuple<double, double, size_t, size_t, ClusterError> pulley_levels_clustered(z_type &z, std::function<double(const z_type &)> estimator = average);
 
 }

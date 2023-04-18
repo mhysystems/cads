@@ -222,16 +222,13 @@ namespace
       auto ix = p.x_off;
       auto iz = p.z;
 
-      //spike_filter(iz);
-      pulley_damp(iz);
-      auto [pulley_level,pulley_right,ll,lr,clusters,cerror] = pulley_levels_clustered(iz,pulley_estimator);
+      auto [pulley_level,pulley_right,ll,lr,cerror] = pulley_levels_clustered(iz,pulley_estimator);
       
       if(cerror != ClusterError::None) {
         //spdlog::get("cads")->debug("Clustering error : {}", ClusterErrorToString(cerror));
         //store_errored_profile(p.z,ClusterErrorToString(cerror));
       }
 
-      recontruct_z(iz,clusters);
       iz.insert(iz.begin(),filter_window_len,(float)pulley_level);
       iz.insert(iz.end(),filter_window_len,(float)pulley_right);
 
@@ -643,7 +640,7 @@ namespace cads
         auto ix = p.x_off;
         auto iz = p.z;
 
-        auto [pulley_left,pulley_right,ll,lr,clusters,cerror] = pulley_levels_clustered(p.z,pulley_estimator);
+        auto [pulley_left,pulley_right,ll,lr,cerror] = pulley_levels_clustered(p.z,pulley_estimator);
 
         auto bottom_avg = pulley_left;
         auto bottom_filtered = iirfilter(bottom_avg);
