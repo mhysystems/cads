@@ -10,8 +10,10 @@
 #include <iterator>
 #include <ranges>
 #include <tuple>
+#include <type_traits>
 
-namespace cads
+
+namespace 
 {
   template <class ForwardIterator>
   auto interquartile_range(ForwardIterator first, ForwardIterator last)
@@ -60,15 +62,37 @@ namespace cads
     }
   }
 
+}
+
+
+namespace cads
+{
+  
+
+  template<typename T, class Container>
+  auto interquartile_range(std::ranges::subrange<T> z, Container)
+  {
+    using namespace std::ranges;
+    using CType = std::iterator_traits<T>;
+
+    auto f = z | views::filter([](CType::value_type a) { return !std::isnan(a); });
+    
+    Container tmp(f.begin(),f.end()); // range filter view iterator not random access
+    return ::interquartile_range(std::begin(tmp), std::end(tmp));
+  }
+
   template <class Container>
   auto interquartile_range(Container &z)
   {
     using namespace std::ranges;
+    using CType = std::remove_reference<Container>::type;
 
-    auto f = z | views::filter([](z_element a) { return !std::isnan(a); });
+    auto f = z | views::filter([](CType::value_type a) { return !std::isnan(a); });
     
-    Container tmp(f.begin(),f.end()); // range filter view iterator nor random access
-    return interquartile_range(std::begin(tmp), std::end(tmp));
+    Container tmp(f.begin(),f.end()); // range filter view iterator not random access
+    return ::interquartile_range(std::begin(tmp), std::end(tmp));
   }
+
+
 
 }

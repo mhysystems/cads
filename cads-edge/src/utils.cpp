@@ -1,7 +1,10 @@
 #include <sstream>
 #include <tuple>
+#include <algorithm>
+#include <numeric>
 
 #include <utils.hpp>
+#include <stats.hpp>
 
 
 namespace {
@@ -44,4 +47,31 @@ namespace cads
       return std::get<1>(existing_aggregate);
     };
   }
+
+  double interquartile_mean(std::vector<float> &z) 
+  {
+    using namespace std::ranges;
+    std::ranges::subrange<std::vector<float>::iterator> bbb;
+    auto [q1,q3] = interquartile_range(z);
+    auto quartile_filtered = z | views::filter([=](float a){ return a >= q1 && a <= q3;});
+    auto sum = std::reduce(quartile_filtered.begin(),quartile_filtered.end());
+    auto count = (double)std::ranges::distance(quartile_filtered.begin(),quartile_filtered.end());
+    auto mean = sum / count;
+
+    return mean;
+  }
+
+  double interquartile_mean(std::ranges::subrange<std::vector<float>::iterator>  z) 
+  {
+    using namespace std::ranges;
+    auto [q1,q3] = interquartile_range(z,std::vector<float>{});
+    auto quartile_filtered = z | views::filter([=](float a){ return a >= q1 && a <= q3;});
+    auto sum = std::reduce(quartile_filtered.begin(),quartile_filtered.end());
+    auto count = (double)std::ranges::distance(quartile_filtered.begin(),quartile_filtered.end());
+    auto mean = sum / count;
+
+    return mean;
+  }
+
+
 }
