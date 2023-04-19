@@ -345,7 +345,7 @@ namespace
       pulley_level_compensate(z, -pulley_level_filtered, clip_height);
 
       if(left_edge_index_avg < left_edge_index) {
-        std::fill(z.begin()+left_edge_index_avg,z.begin() + left_edge_index,z[left_edge_index]);
+        std::fill(z.begin()+left_edge_index_avg,z.begin() + left_edge_index, interquartile_mean(zrange(z.begin()+left_edge_index,z.begin()+left_edge_index+20)));
       }
       
       auto [left_edge_index_aligned,right_edge_index_aligned] = find_profile_edges_zero(z);
