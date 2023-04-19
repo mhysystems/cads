@@ -27,8 +27,7 @@ namespace cads
 
     cv::Mat mout;
     cv::multiply(belt.rowRange(0,fiducial.rows),fiducial,mout);
-    double div = cv::countNonZero(mout);
-    auto avg_val = cv::sum(mout)[0] / div;
+    auto avg_val = cv::sum(mout)[0] / cv::countNonZero(mout);
     return avg_val;
 
   }

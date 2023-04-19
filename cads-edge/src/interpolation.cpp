@@ -3,6 +3,7 @@
 #include <spline.h>
 
 #include <interpolation.h>
+#include <utils.hpp>
 
 namespace cads
 {
@@ -110,6 +111,44 @@ namespace cads
         *e = prev_value;
       }
     }
+  }
+
+  void nan_interpolation_mean(z_type &z) {
+
+    float p = 0;
+    for(auto i = z.begin(); i < z.end();) {
+      i = std::find_if(i,z.end(), [](z_element a) { return std::isnan(a); });
+      auto l = i;
+      
+      auto cnt = 10;
+      
+      while(l >= z.begin() && cnt > 0) {
+        if(!std::isnan(*l)) {
+          --cnt;
+        }
+        --l;
+      }
+
+      cnt = 10;
+
+      auto r = i;
+      while(r < z.end() && cnt > 0) {
+        if(!std::isnan(*r)) {
+          --cnt;
+        }
+        ++r;
+      }
+
+      auto v = interquartile_mean(std::ranges::subrange(l,r));
+      if(!std::isnan(v)) {
+        *i = v;
+        p = v;
+      }else{
+        *i = p;
+      }
+
+    }
+
   }
 
 

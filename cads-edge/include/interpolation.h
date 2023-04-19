@@ -8,4 +8,5 @@ namespace cads
   zrange nan_interpolation_spline(zrange z);
   void nan_interpolation_last(z_type &z);
   void nan_interpolation_last(z_type::iterator begin, z_type::iterator end);
+  void nan_interpolation_mean(z_type &z);
 }

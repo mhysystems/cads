@@ -49,6 +49,7 @@
 #include <belt.h>
 #include <interpolation.h>
 #include <upload.h>
+#include <utils.hpp>
 
 using namespace std;
 using namespace moodycamel;
@@ -275,6 +276,8 @@ namespace
       std::fill(iz.begin(),iz.begin()+ll,pulley_level);
       std::fill(iz.begin()+lr,iz.end(),pulley_right);
 
+      nan_interpolation_mean(iz);
+
       auto pulley_level_filtered = (z_element)iirfilter_left(pulley_level);
       auto pulley_right_filtered = (z_element)iirfilter_right(pulley_right);
       auto left_edge_filtered = (z_element)iirfilter_left_edge(ll);
@@ -351,7 +354,7 @@ namespace
         //spdlog::get("cads")->debug("Belt width({})[la - {}, l- {}, r - {}] less than required. Filled with zeros",z.size(),left_edge_index_aligned,left_edge_index,right_edge_index);
         //store_errored_profile(raw_z);
         const auto cnt = left_edge_index_aligned + width_n - z.size();
-        z.insert(z.end(),cnt,z[right_edge_index_aligned-1]);
+        z.insert(z.end(),cnt,  interquartile_mean(zrange(z.begin()+right_edge_index_aligned-20,z.begin()+right_edge_index_aligned-1)));
       }
 
       auto f = z | views::take(left_edge_index_aligned + width_n) | views::drop(left_edge_index_aligned);
