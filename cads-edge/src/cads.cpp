@@ -195,7 +195,6 @@ namespace
     auto time0 = std::chrono::high_resolution_clock::now();
     
     auto pulley_rev =  mk_pulley_revolution(encoder_framerate);
-    auto pulley_damp = mk_pulley_damp();
 
     do
     {
@@ -260,7 +259,6 @@ namespace
       auto ix = p.x_off;
       auto iz = p.z;
 
-      pulley_damp(iz);
       auto [pulley_level,pulley_right,ll,lr,cerror] = pulley_levels_clustered(iz,pulley_estimator);
       
       if(cerror != ClusterError::None) {
@@ -343,12 +341,14 @@ namespace
       }
 
       pulley_level_compensate(z, -pulley_level_filtered, clip_height);
+      interpolation_nearest(z.begin()+left_edge_index_avg, z.begin()+right_edge_index, [](float a){return a == 0;});
 
-      if(left_edge_index_avg < left_edge_index) {
-        std::fill(z.begin()+left_edge_index_avg,z.begin() + left_edge_index, interquartile_mean(zrange(z.begin()+left_edge_index,z.begin()+left_edge_index+20)));
-      }
+      //if(left_edge_index_avg < left_edge_index) {
+      //  std::fill(z.begin()+left_edge_index_avg,z.begin() + left_edge_index, interquartile_mean(zrange(z.begin()+left_edge_index,z.begin()+left_edge_index+20)));
+      //}
       
-      auto [left_edge_index_aligned,right_edge_index_aligned] = find_profile_edges_zero(z);
+      auto left_edge_index_aligned = left_edge_index_avg;
+      auto right_edge_index_aligned = right_edge_index;
       
       if(z.size() < size_t(left_edge_index_aligned + width_n)) {
         //spdlog::get("cads")->debug("Belt width({})[la - {}, l- {}, r - {}] less than required. Filled with zeros",z.size(),left_edge_index_aligned,left_edge_index,right_edge_index);
