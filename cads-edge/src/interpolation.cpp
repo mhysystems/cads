@@ -7,13 +7,42 @@
 
 namespace cads
 {
-  
-  zrange nan_interpolation_spline(zrange z) {
-    std::vector<double> x,y;
+
+  void interpolation_nearest(z_type::iterator begin, z_type::iterator end, std::function<bool(z_element)> is)
+  {
+
+    if (begin >= end) return;
+
+    for (auto i = begin; i < end;)
+    {
+      i = std::find_if(i, end, is);
+      auto iv = i == begin ? *i : *(i - 1); 
+
+      auto n = std::find_if_not(i,end,is);
+      auto nv = n == end ? *(n - 1) : *n;
+
+      auto inc = !is(iv);
+      auto dec = !is(nv);
+
+      while(i <= n) {
+        *i = iv;
+        *n = nv;
+
+        i += 1*inc;
+        n -= 1*dec;
+      }
+    }
+  }
+
+  zrange nan_interpolation_spline(zrange z)
+  {
+    std::vector<double> x, y;
 
     double cnt = 0;
-    for(auto i : z) {
-      if(!std::isnan(i)) {
+    for (auto i : z)
+    {
+      if (!std::isnan(i))
+      {
         x.push_back(cnt);
         y.push_back(i);
       }
@@ -21,23 +50,26 @@ namespace cads
       ++cnt;
     }
 
-    tk::spline s(x,y);
+    tk::spline s(x, y);
 
-    for(double i = 0; i < (double)z.size(); ++i) {
+    for (double i = 0; i < (double)z.size(); ++i)
+    {
       *(z.begin() + (int)i) = s(i);
     }
 
     return z;
-    
   }
-  
-  void nan_interpolation_spline(z_type &z) {
-    
-    std::vector<double> x,y;
-    
+
+  void nan_interpolation_spline(z_type &z)
+  {
+
+    std::vector<double> x, y;
+
     double cnt = 0;
-    for(auto i : z) {
-      if(!std::isnan(i)) {
+    for (auto i : z)
+    {
+      if (!std::isnan(i))
+      {
         x.push_back(cnt);
         y.push_back(i);
       }
@@ -45,12 +77,12 @@ namespace cads
       ++cnt;
     }
 
-    tk::spline s(x,y);
+    tk::spline s(x, y);
 
-    for(double i = 0; i < (double)z.size(); ++i) {
+    for (double i = 0; i < (double)z.size(); ++i)
+    {
       z[(int)i] = s(i);
     }
-    
   }
 
   void nan_interpolation_last(z_type &z)
@@ -95,12 +127,12 @@ namespace cads
   void nan_interpolation_last(z_type::iterator begin, z_type::iterator end)
   {
 
-    auto prev_value_it = std::find_if(begin,end, [](z_element a)
-                                     { return !std::isnan(a); });
+    auto prev_value_it = std::find_if(begin, end, [](z_element a)
+                                      { return !std::isnan(a); });
     z_element prev_value = prev_value_it != end ? *prev_value_it : std::numeric_limits<z_element>::quiet_NaN();
 
     auto e = begin;
-    while(e++ < end)
+    while (e++ < end)
     {
       if (!std::isnan(*e))
       {
@@ -113,17 +145,22 @@ namespace cads
     }
   }
 
-  void nan_interpolation_mean(z_type &z) {
+  void nan_interpolation_mean(z_type &z)
+  {
 
     float p = 0;
-    for(auto i = z.begin(); i < z.end();) {
-      i = std::find_if(i,z.end(), [](z_element a) { return std::isnan(a); });
+    for (auto i = z.begin(); i < z.end();)
+    {
+      i = std::find_if(i, z.end(), [](z_element a)
+                       { return std::isnan(a); });
       auto l = i;
-      
+
       auto cnt = 10;
-      
-      while(l >= z.begin() && cnt > 0) {
-        if(!std::isnan(*l)) {
+
+      while (l >= z.begin() && cnt > 0)
+      {
+        if (!std::isnan(*l))
+        {
           --cnt;
         }
         --l;
@@ -132,24 +169,25 @@ namespace cads
       cnt = 10;
 
       auto r = i;
-      while(r < z.end() && cnt > 0) {
-        if(!std::isnan(*r)) {
+      while (r < z.end() && cnt > 0)
+      {
+        if (!std::isnan(*r))
+        {
           --cnt;
         }
         ++r;
       }
 
-      auto v = interquartile_mean(std::ranges::subrange(l,r));
-      if(!std::isnan(v)) {
+      auto v = interquartile_mean(std::ranges::subrange(l, r));
+      if (!std::isnan(v))
+      {
         *i = v;
         p = v;
-      }else{
+      }
+      else
+      {
         *i = p;
       }
-
     }
-
   }
-
-
 }
