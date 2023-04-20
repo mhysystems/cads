@@ -24,6 +24,8 @@ namespace cads
       auto inc = !is(iv);
       auto dec = !is(nv);
 
+      if(!inc && !dec) break;
+
       while(i <= n) {
         *i = iv;
         *n = nv;
