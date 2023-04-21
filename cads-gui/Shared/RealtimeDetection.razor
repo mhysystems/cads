@@ -12,9 +12,9 @@
   </MudTooltip>
   <MudTable Style="height:100%" Class="overflow-scroll" Items="@messages" @ref="@mudTable" Breakpoint="Breakpoint.Sm" T="Realtime">
     <HeaderContent>
-        <MudTh><MudText Typo="Typo.h5">Time</MudText></MudTh>
-        <MudTh><MudText Typo="Typo.h5">Y</MudText></MudTh>
-        <MudTh><MudText Typo="Typo.h5"> Total </MudText></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<Realtime, object>(e=>e.Time)"><MudText Typo="Typo.h5">Time</MudText></MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<Realtime, object>(e=>e.YArea)"><MudText Typo="Typo.h5">Y</MudText></MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<Realtime, object>(e=>e.Value)"><MudText Typo="Typo.h5"> Total </MudText></MudTableSortLabel></MudTh>
     </HeaderContent>
     <RowTemplate>
             <MudTd Typo="Typo.h5" DataLabel="Time" >@(string.Format("{0:d}:{0:t}", @context.Time))</MudTd>
@@ -53,7 +53,7 @@
         
         hubConnection.On<Realtime>("ReceiveMessageRealtime", (message) =>
         {
-            messages.Add(message);
+            messages.Prepend(message);
             InvokeAsync(StateHasChanged);
         });
 
