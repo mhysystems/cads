@@ -11,7 +11,7 @@
   <MudTooltip Text="Damage detected based on search criteria below.">
     <MudText Class="flex-grow-0 " Typo="Typo.h5">Real-Time Detection:</MudText>
   </MudTooltip>
-  <MudTable  Class="flex-grow-1 ma-0 pa-0 overflow-scroll" Items="@messages" @ref="@mudTable" Breakpoint="Breakpoint.Sm" T="Realtime">
+  <MudTable  Class="flex-grow-1 ma-0 pa-0 overflow-scroll" Items="@messages" @ref="@mudTable" Breakpoint="Breakpoint.Sm" OnRowClick="@RowClickEventAsync" T="Realtime">
     <HeaderContent>
         <MudTh><MudTableSortLabel SortBy="new Func<Realtime, object>(e=>e.Time)"><MudText Typo="Typo.h5">Time</MudText></MudTableSortLabel></MudTh>
         <MudTh><MudTableSortLabel SortBy="new Func<Realtime, object>(e=>e.YArea)"><MudText Typo="Typo.h5">Y</MudText></MudTableSortLabel></MudTh>
@@ -28,52 +28,63 @@
 </MudContainer>
 
 @code {
-    [Parameter]
-    public string Site { get; set; } = String.Empty;
 
-    [Parameter]
-    public string Conveyor { get; set; } = String.Empty;
+  [Parameter]
+  public string Site { get; set; } = String.Empty;
+
+  [Parameter]
+  public string Conveyor { get; set; } = String.Empty;
+  [Parameter]
+  public EventCallback<double> selectedRow { get; set; }
     
 
-    protected MudTable<Realtime> mudTable = new();
-    private HubConnection? hubConnection;
-    private List<Realtime> messages = new();
-   
+  protected MudTable<Realtime> mudTable = new();
+  private HubConnection? hubConnection;
+  private List<Realtime> messages = new();
+  
 
-    protected override async Task OnInitializedAsync()
-    {
-        if(string.IsNullOrWhiteSpace(_appsettings.Value.Authorization))
-        {
-          hubConnection = new HubConnectionBuilder()
-          .WithUrl(NavigationManager.ToAbsoluteUri("/realtime"))
+  protected override async Task OnInitializedAsync()
+  {
+      if(string.IsNullOrWhiteSpace(_appsettings.Value.Authorization))
+      {
+        hubConnection = new HubConnectionBuilder()
+        .WithUrl(NavigationManager.ToAbsoluteUri("/realtime"))
+        .Build();
+      } else {
+        hubConnection = new HubConnectionBuilder()
+          .WithUrl(NavigationManager.ToAbsoluteUri("/realtime"), options => {options.Headers.Add("authorization",_appsettings.Value.Authorization);})
           .Build();
-        } else {
-          hubConnection = new HubConnectionBuilder()
-            .WithUrl(NavigationManager.ToAbsoluteUri("/realtime"), options => {options.Headers.Add("authorization",_appsettings.Value.Authorization);})
-            .Build();
-        }
-        
-        var timezone = beltservice.GetConveyorTimezone(Site,Conveyor);
-        hubConnection.On<Realtime>("ReceiveMessageRealtime", (message) =>
-        {
-            message.Time = TimeZoneInfo.ConvertTimeFromUtc(message.Time, timezone);
-            messages.Insert(0,message);
-            InvokeAsync(StateHasChanged);
-        });
+      }
+      
+      var timezone = beltservice.GetConveyorTimezone(Site,Conveyor);
+      hubConnection.On<Realtime>("ReceiveMessageRealtime", (message) =>
+      {
+          message.Time = TimeZoneInfo.ConvertTimeFromUtc(message.Time, timezone);
+          messages.Insert(0,message);
+          InvokeAsync(StateHasChanged);
+      });
 
-        await hubConnection.StartAsync();
-        await hubConnection.InvokeAsync("JoinGroup","/realtime"+Site+Conveyor);
-    }
+      await hubConnection.StartAsync();
+      await hubConnection.InvokeAsync("JoinGroup","/realtime"+Site+Conveyor);
+  }
 
-    public bool IsConnected =>
-        hubConnection?.State == HubConnectionState.Connected;
+  public bool IsConnected =>
+      hubConnection?.State == HubConnectionState.Connected;
 
-    public async ValueTask DisposeAsync()
-    {
-        if (hubConnection is not null)
-        {
-          await hubConnection.InvokeAsync("LeaveGroup","/realtime"+Site+Conveyor);
-          await hubConnection.DisposeAsync();
-        }
-    }
+  public async ValueTask DisposeAsync()
+  {
+      if (hubConnection is not null)
+      {
+        await hubConnection.InvokeAsync("LeaveGroup","/realtime"+Site+Conveyor);
+        await hubConnection.DisposeAsync();
+      }
+  }
+
+
+
+  protected async Task RowClickEventAsync(TableRowClickEventArgs<Realtime> tableRowClickEventArgs)
+  {
+    await selectedRow.InvokeAsync(tableRowClickEventArgs.Item.YArea);
+  }
+
 }
