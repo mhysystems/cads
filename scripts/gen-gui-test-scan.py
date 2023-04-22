@@ -34,7 +34,7 @@ def fill_scan_db(db: str, width: int, n: int) :
 
 
 def gen_row(width : int, n : int) :
-  row = [0] * 12
+  row = [0] * 14
   row[0] = 'localdev' # site
   row[1] = 'test' # conveyor
   row[2] = '2023-03-08 12:00:00' # chono
@@ -44,16 +44,33 @@ def gen_row(width : int, n : int) :
   row[6] = 0.0     # z_off
   row[7] = 31.0    # z_max
   row[8] = 0.0     # z_min
-  row[9] = n * 6.0 
-  row[10] = n
-  row[11] = width
+  row[9] = n * 6.0 # Ymax
+  row[10] = n      # YmaxN  
+  row[11] = width  # WidthN
+  row[12] = 1      # Belt
+  row[13] = 1      # Orientation
   return row
 
 def insert_scan(appdb: str, row) :
   conn = sqlite3.connect(appdb)
   cur = conn.cursor()
-  last_row = cur.execute(f"select count(rowid) from belt").fetchone()[0]
-  cur.execute(f"INSERT into belt VALUES({last_row+1},?,?,?,?,?,?,?,?,?,?,?,?)",row)
+  last_row = cur.execute(f"select count(rowid) from scans").fetchone()[0]
+  cur.execute(f"INSERT into scans(rowid,site,conveyor,chrono,x_res,y_res,z_res,z_off,z_max,z_min,Ymax,YmaxN,WidthN,Belt,Orientation) VALUES({last_row+1},?,?,?,?,?,?,?,?,?,?,?,?,?,?)",row)
+  conn.commit()
+  conn.close()
+
+def insert_conveyor(appdb : str, row):
+  conn = sqlite3.connect(appdb)
+  cur = conn.cursor()
+  cur.execute(f"INSERT into conveyors(Id,Belt,Name,Site,Timezone,PulleyCircumference) VALUES(?,?,?,?,?,?)",row)
+  conn.commit()
+  conn.close()
+
+
+def insert_belt(appdb : str, row):
+  conn = sqlite3.connect(appdb)
+  cur = conn.cursor()
+  cur.execute(f"INSERT into belts(Id,Conveyor,Installed,PulleyCover,CordDiameter,TopCover,Length,Width,Splices) VALUES(?,?,?,?,?,?,?,?,?)",row)
   conn.commit()
   conn.close()
 
@@ -72,3 +89,5 @@ if __name__ == "__main__":
     fill_scan_db(scan_db,args.cols,args.rows)
     r = gen_row(args.cols,args.rows)
     insert_scan(args.appdb,r)
+    insert_conveyor(args.appdb,(1,1,"test","localdev","Australia/Perth",2000))
+    insert_belt(args.appdb,(1,1,"2023-01-14 00:00:00",10,10,10,args.rows*6.0,args.cols,1))

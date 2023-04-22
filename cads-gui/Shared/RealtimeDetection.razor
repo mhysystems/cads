@@ -2,7 +2,8 @@
 @using Microsoft.Extensions.Options
 
 @inject NavigationManager NavigationManager
-@inject IOptions<AppSettings> _appsettings;
+@inject IOptions<AppSettings> _appsettings
+@inject BeltService beltservice
 
 @implements IAsyncDisposable
 
@@ -37,6 +38,7 @@
     protected MudTable<Realtime> mudTable = new();
     private HubConnection? hubConnection;
     private List<Realtime> messages = new();
+   
 
     protected override async Task OnInitializedAsync()
     {
@@ -51,9 +53,11 @@
             .Build();
         }
         
+        var timezone = beltservice.GetConveyorTimezone(Site,Conveyor);
         hubConnection.On<Realtime>("ReceiveMessageRealtime", (message) =>
         {
-            messages.Prepend(message);
+            message.Time = TimeZoneInfo.ConvertTimeFromUtc(message.Time, timezone);
+            messages.Insert(0,message);
             InvokeAsync(StateHasChanged);
         });
 

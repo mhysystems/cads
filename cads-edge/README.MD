@@ -62,5 +62,7 @@ VCPKG_DEFAULT_TRIPLET=x64-windows
 maybe cross file
 meson setup --cross-file meson-vcpkg.txt win
 
+{"Site":"localdev","Conveyor":"test","Time": "2023-04-22T02:17:06.00Z", "YArea":1000,"Value":15}
+
 
 

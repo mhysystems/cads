@@ -19,8 +19,6 @@ namespace cads_gui.Data
           }
         protected override void OnModelCreating(ModelBuilder modelBuilder) {
 
-
-          
           modelBuilder.Entity<Scan>().HasKey(e => e.rowid);
           modelBuilder.Entity<Scan>().Property(b => b.rowid).ValueGeneratedOnAdd();
           modelBuilder.Entity<Scan>().Ignore(b => b.ConveyorID);
