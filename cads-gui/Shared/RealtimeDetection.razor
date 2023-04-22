@@ -7,11 +7,11 @@
 
 @implements IAsyncDisposable
 
-<MudContainer Style="height:100%">
+<MudContainer Style="height:100%" Class="ma-0 pa-0 d-flex flex-column">
   <MudTooltip Text="Damage detected based on search criteria below.">
-    <MudText Typo="Typo.h5">Real-Time Detection:</MudText>
+    <MudText Class="flex-grow-0 " Typo="Typo.h5">Real-Time Detection:</MudText>
   </MudTooltip>
-  <MudTable Style="height:100%" Class="overflow-scroll" Items="@messages" @ref="@mudTable" Breakpoint="Breakpoint.Sm" T="Realtime">
+  <MudTable  Class="flex-grow-1 ma-0 pa-0 overflow-scroll" Items="@messages" @ref="@mudTable" Breakpoint="Breakpoint.Sm" T="Realtime">
     <HeaderContent>
         <MudTh><MudTableSortLabel SortBy="new Func<Realtime, object>(e=>e.Time)"><MudText Typo="Typo.h5">Time</MudText></MudTableSortLabel></MudTh>
         <MudTh><MudTableSortLabel SortBy="new Func<Realtime, object>(e=>e.YArea)"><MudText Typo="Typo.h5">Y</MudText></MudTableSortLabel></MudTh>
