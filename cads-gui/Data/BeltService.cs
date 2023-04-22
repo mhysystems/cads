@@ -70,6 +70,20 @@ namespace cads_gui.Data
       return data.Distinct().ToList();
     }
 
+    public DateTime GetChronoAtTimezone(Scan s) {
+      using var context = dBContext.CreateDbContext();
+      var data = from a in context.Conveyors where a.Belt == s.Belt select TimeZoneInfo.ConvertTimeFromUtc(s.chrono, a.Timezone);
+
+      return data.First();
+    }
+
+    public TimeZoneInfo GetConveyorTimezone(string site, string conveyor) {
+      using var context = dBContext.CreateDbContext();
+      var data = from a in context.Conveyors where a.Site == site && a.Name == conveyor select a;
+
+      return data.First().Timezone;
+    }
+
     public IEnumerable<Scan> GetScans(string site, string belt)
     {
       using var context = dBContext.CreateDbContext();
@@ -111,32 +125,6 @@ namespace cads_gui.Data
       return await Task.Run(() => (from a in context.Scans orderby a.chrono where a.site == belt.site && a.conveyor == belt.conveyor select a.chrono).ToArray());
     }
 
-    public async Task UpdateBeltPropertyYmax(string site, string belt, DateTime chrono, double ymax, long ymaxn)
-    {
-      using var context = dBContext.CreateDbContext();
-      var data = from a in context.Scans where a.site == site && a.conveyor == belt && a.chrono == chrono select a;
-
-      if (data.Any())
-      {
-        var row = data.First();
-        row.Ymax = ymax;
-        row.YmaxN = ymaxn;
-        await context.SaveChangesAsync();
-      }
-    }
-
-    public async Task UpdateBeltPropertyWidthN(string site, string belt, DateTime chrono, double param)
-    {
-      using var context = dBContext.CreateDbContext();
-      var data = from a in context.Scans where a.site == site && a.conveyor == belt && a.chrono == chrono select a;
-
-      if (data.Any())
-      {
-        var row = data.First();
-        row.WidthN = param;
-        await context.SaveChangesAsync();
-      }
-    }
 
     public async Task UpdateBeltPropertyZmax(string site, string belt, DateTime chrono, double param)
     {

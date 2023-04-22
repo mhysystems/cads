@@ -32,7 +32,7 @@
   "nan_%" : 0.15,
 
   "dbscan" : {
-    "InCluster" : 5,
+    "InCluster" : 12,
     "MinPoints" : 20
   },
 
