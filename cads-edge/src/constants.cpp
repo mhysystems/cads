@@ -182,6 +182,7 @@ namespace cads {
   Communications communications_config;
   Fiducial fiducial_config;
   OriginDetection config_origin_detection;
+  Measure measurements;
     
   void init_config(std::string f) {
     auto json = slurpfile(f);
@@ -200,6 +201,8 @@ namespace cads {
     fiducial_config = mk_fiducial(config);
     config_origin_detection = mk_origin_detection(config);
     global_config = config;
+
+    measurements.init(); // Needs to be last
   }
 
   void drop_config() {

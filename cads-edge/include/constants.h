@@ -8,6 +8,7 @@
 #include <date/date.h>
 #include <nlohmann/json.hpp>
 #include <GoSdk/GoSdkDef.h>
+#include <measurements.h>
 
 extern nlohmann::json global_config;
 constexpr size_t buffer_warning_increment = 4096;
@@ -134,6 +135,7 @@ namespace cads {
   extern Communications communications_config;
   extern Fiducial fiducial_config;
   extern OriginDetection config_origin_detection;
+  extern Measure measurements;
   
   void init_config(std::string f);
   void drop_config();

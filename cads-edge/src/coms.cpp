@@ -139,6 +139,55 @@ namespace cads
     nats_Close();
   }
 
+
+  cads::coro<int, std::tuple<std::string, std::string>, 1>  realtime_metrics_coro()
+  {
+
+    auto endpoint_url = communications_config.NatsUrl;
+
+    natsConnection *conn = nullptr;
+    natsOptions *opts = nullptr;
+    bool terminate = false;
+
+    for (; !terminate;)
+    {
+      auto status = natsOptions_Create(&opts);
+      if (status != NATS_OK)
+        goto drop_msg;
+
+      natsOptions_SetAllowReconnect(opts, true);
+      natsOptions_SetURL(opts, endpoint_url.c_str());
+
+      status = natsConnection_Connect(&conn, opts);
+      if (status != NATS_OK)
+        goto cleanup_opts;
+
+      for (auto loop = true; loop && !terminate;)
+      {
+        auto [msg, co_terminate] = co_yield 0;
+
+        if(co_terminate) {
+          terminate = true;
+          continue;
+        }
+
+        auto s = natsConnection_PublishString(conn, get<0>(msg).c_str(), get<1>(msg).c_str());
+        if (s == NATS_CONNECTION_CLOSED)
+        {
+          loop = false;
+        }
+      }
+
+      natsConnection_Destroy(conn);
+    cleanup_opts:
+      natsOptions_Destroy(opts);
+    drop_msg:
+      co_yield 0;
+    }
+
+    nats_Close();
+  }
+
   void realtime_publish_thread(bool &terminate)
   {
 
