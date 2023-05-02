@@ -13,7 +13,7 @@
 
 #pragma GCC diagnostic pop
 
-#include <readerwriterqueue.h>
+#include <blockingconcurrentqueue.h>
 
 
 namespace cads
@@ -25,7 +25,7 @@ namespace cads
     enum MeasureType{mDouble,mString};
     using MeasureMsg = std::tuple<std::string,std::variant<double,std::string>,date::utc_clock::time_point>;
 
-    friend void measurement_thread(moodycamel::BlockingReaderWriterQueue<Measure::MeasureMsg>&, bool&);
+    friend void measurement_thread(moodycamel::BlockingConcurrentQueue<Measure::MeasureMsg>&, bool&);
 
     Measure(const Measure &) = delete;
     Measure& operator= (const Measure&) = delete;
@@ -40,7 +40,7 @@ namespace cads
     protected:
     
     bool terminate = false;
-    moodycamel::BlockingReaderWriterQueue<MeasureMsg> fifo;
+    moodycamel::BlockingConcurrentQueue<MeasureMsg> fifo;
     std::jthread thread;
      
   };
