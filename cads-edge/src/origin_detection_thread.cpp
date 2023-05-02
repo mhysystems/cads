@@ -112,17 +112,21 @@ namespace cads
   }
 
   coro<std::tuple<profile,double,bool>,profile,1> origin_detection_coro(double x_resolution, double y_resolution, int width_n)
-  {
+  {    
+    auto dump_match = config_origin_detection.dump_match;
     cv::Mat fiducial;
     cv::transpose(make_fiducial(x_resolution, y_resolution),fiducial);
-    mat_as_image(fiducial,"fid");
+    
+    if(dump_match) {
+      mat_as_image(fiducial,"fid");
+    }
     
     window profile_buffer;
 
     auto fdepth = fiducial_config.fiducial_depth;
     double lowest_correlation = std::numeric_limits<double>::max();
     double belt_crosscorr_threshold = config_origin_detection.cross_correlation_threshold;
-    auto dump_match = config_origin_detection.dump_match;
+
 
     auto edge_height = global_belt_parameters.PulleyCover + global_belt_parameters.CordDiameter + global_belt_parameters.TopCover;
     auto avg_threshold_fn = mk_online_mean(edge_height - fiducial_config.fiducial_depth);
@@ -165,6 +169,10 @@ namespace cads
     {
       y_type y = profile_buffer.front().y;
  
+      if(sequence_cnt > 1) {
+        measurements.send("cadstoorigin",y);
+      }
+
       if((cnt++ % 10000) == 0 && sequence_cnt > 0 ) {
         publish_CadsToOrigin(y); //TODO
       }
@@ -296,6 +304,7 @@ namespace cads
                 }
 
                 if(origin_sequence_cnt > 0) {
+                  measurements.send("beltlength",estimated_belt_length);
                   publish_CurrentLength(estimated_belt_length);
                   next_fifo.enqueue({msgid::complete_belt, estimated_belt_length});
                 }
