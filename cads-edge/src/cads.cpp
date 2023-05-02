@@ -51,6 +51,7 @@
 #include <upload.h>
 #include <utils.hpp>
 
+
 using namespace std;
 using namespace moodycamel;
 using namespace std::chrono;
@@ -317,6 +318,8 @@ namespace
         }
       }
 
+
+      measurements.send("pulleyspeed",speed);
       if (cnt % (1000 * 20) == 0)
       {
         publish_PulleyOscillation(amplitude);
@@ -544,9 +547,9 @@ namespace cads
   }
 
   
-
   void process()
   {
+    
     BlockingReaderWriterQueue<msg> scan_upload_fifo(4096 * 1024);
     std::jthread save_send(upload_scan_thread, std::ref(scan_upload_fifo));
 
