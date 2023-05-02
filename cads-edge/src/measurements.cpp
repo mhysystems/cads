@@ -31,7 +31,7 @@ namespace {
 namespace cads {
 
 
-  void measurement_thread(moodycamel::BlockingReaderWriterQueue<Measure::MeasureMsg> &measure, bool &terminate)
+  void measurement_thread(moodycamel::BlockingConcurrentQueue<Measure::MeasureMsg> &measure, bool &terminate)
   {
     auto realtime_metrics = realtime_metrics_coro();
     
