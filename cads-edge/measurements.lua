@@ -1,5 +1,5 @@
 json = require "json"
-wNbD-eZ9RtqKCSQ9Ft63HWwn8jlfvaLKmjIFHfLEPrB_ZB2Jg-7fEAjmGl1V6Mec5g-4-7cAqh9MlMG84z0N8Q==
+
 measurements = {}
 
 function timeToString(time)
@@ -19,7 +19,12 @@ function make(now)
   local p = 5
   local m = {
     pulleyspeed = {period = p, time0 = now},
-    pulleyLevel = {period = p, time0 = now}
+    pulleylevel = {period = p, time0 = now},
+    beltlength  = {period = p, time0 = now},
+    cadstoorigin = {period = p, time0 = now},
+    beltedgeposition = {period = p, time0 = now},
+    pulleyoscillation = {period = p, time0 = now},
+    nancount = {period = p, time0 = now}
   }
 
   local cnt = 0

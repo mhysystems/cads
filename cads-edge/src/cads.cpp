@@ -245,6 +245,8 @@ namespace
       double nan_cnt = std::count_if(p.z.begin(), p.z.end(), [](z_element z)
                                    { return std::isnan(z); });
 
+      measurements.send("nancount",nan_cnt);
+      
       if ((nan_cnt / p.z.size()) > nan_percentage )
       {
         spdlog::get("cads")->error("Percentage of nan({}) in profile > {}%", nan_cnt,nan_percentage * 100);
@@ -280,6 +282,9 @@ namespace
       auto pulley_level_filtered = (z_element)iirfilter_left(pulley_level);
       auto pulley_right_filtered = (z_element)iirfilter_right(pulley_right);
       auto left_edge_filtered = (z_element)iirfilter_left_edge(ll);
+
+      measurements.send("pulleylevel",pulley_level_filtered);
+      measurements.send("beltedgeposition",left_edge_filtered);
       
       auto pulley_level_unbias = dc_filter(pulley_level_filtered);
 
@@ -320,6 +325,8 @@ namespace
 
 
       measurements.send("pulleyspeed",speed);
+      measurements.send("pulleyoscillation",amplitude);
+
       if (cnt % (1000 * 20) == 0)
       {
         publish_PulleyOscillation(amplitude);
