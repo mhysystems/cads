@@ -335,7 +335,7 @@ namespace
 
         spdlog::get("cads")->debug("Pulley Oscillation(mm): {}",amplitude);
         spdlog::get("cads")->debug("Pulley Frequency(Hz): {}", frequency);
-        spdlog::get("cads")->info("Surface Speed(m/s): {}", speed);
+        spdlog::get("cads")->debug("Surface Speed(m/s): {}", speed);
       }
 
       if (cnt % (1000 * 60) == 0)
