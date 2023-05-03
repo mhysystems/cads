@@ -193,6 +193,15 @@ namespace cads_gui.Data
     public long Conveyor { get; set; } = 1;
   }
 
+  public class Grafana 
+  {
+    public int Id { get; set;} = 1;
+    public string Url { get; set;} = "";
+    public int Row { get; set;} = 0;
+    public int Col { get; set;} = 0;
+    public bool Visible { get; set;} = false;
+  }
+
   public class PlotInfo
   {
     public double start { get; set; } = 0;

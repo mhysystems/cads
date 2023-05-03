@@ -1,0 +1,37 @@
+@page "/site/prediction/{site}/{conveyor}"
+
+@using Cads
+
+@inject BeltService Beltservice
+@inject ISnackbar Snackbar
+@inject ILogger<Trend> logger
+
+
+
+<SiteHeader ShowDraw site="@site" conveyor="@conveyor">
+  <MudSpacer/>
+  <MudSpacer/>
+</SiteHeader>
+
+
+<MudContainer MaxWidth="MaxWidth.False" Class="ma-0 pa-0"
+  Style="width:calc(98vw - var(--mud-drawer-width-mini-left));height:calc(96vh - var(--mud-appbar-height)">
+  <MudGrid Class="ma-0" Style="height:100%" Spacing=0>
+
+<MudItem xs="12">
+<iframe sandbox src="/grafana/d-solo/db32f030-4f7b-4a5a-a386-1706ed2a2466/jimblebar-cv001-pulleyspeed?orgId=1&from=1683061002994&to=1683082602994&panelId=1" width="450" height="200" frameborder="0"></iframe>
+</MudItem>
+</MudGrid>
+</MudContainer>
+
+
+@code {
+  
+
+  [Parameter]
+  public string site { get; set; } = string.Empty;
+  [Parameter]
+  public string conveyor { get; set; } = string.Empty;
+  
+
+}

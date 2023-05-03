@@ -34,6 +34,9 @@ namespace cads_gui.Data
           
           modelBuilder.Entity<Belt>().HasKey(e => e.Id);
           modelBuilder.Entity<Belt>().Property(b => b.Id).ValueGeneratedOnAdd();
+
+          modelBuilder.Entity<Grafana>().HasKey(e => e.Id);
+          modelBuilder.Entity<Grafana>().Property(b => b.Id).ValueGeneratedOnAdd();
         }
 
 
@@ -41,5 +44,7 @@ namespace cads_gui.Data
         public DbSet<Belt> Belts { get; set; }
 				public DbSet<SavedZDepthParams> SavedZDepthParams { get; set; }
 				public DbSet<Conveyor> Conveyors { get; set; }
+
+        public DbSet<Grafana> Plots { get; set;}
     }
 }
