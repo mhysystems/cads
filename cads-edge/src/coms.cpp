@@ -155,6 +155,7 @@ namespace cads
       if (status != NATS_OK)
         goto drop_msg;
 
+      natsOptions_SetSendAsap(opts,true);
       natsOptions_SetAllowReconnect(opts, true);
       natsOptions_SetURL(opts, endpoint_url.c_str());
 
@@ -171,10 +172,15 @@ namespace cads
           continue;
         }
 
+        spdlog::get("cads")->debug("{}:natsConnection_PublishString {},{}",__func__,get<0>(msg).c_str(), get<1>(msg).c_str());
+        
         auto s = natsConnection_PublishString(conn, get<0>(msg).c_str(), get<1>(msg).c_str());
-        if (s == NATS_CONNECTION_CLOSED)
-        {
-          loop = false;
+        if(s != NATS_OK) {
+          spdlog::get("cads")->error("{}:natsConnection_PublishString->{}",__func__,s);
+          if (s == NATS_CONNECTION_CLOSED)
+          { 
+            loop = false;
+          }
         }
       }
 
@@ -202,6 +208,7 @@ namespace cads
       if (status != NATS_OK)
         goto drop_msg;
 
+      natsOptions_SetSendAsap(opts,true);
       natsOptions_SetAllowReconnect(opts, true);
       natsOptions_SetURL(opts, endpoint_url.c_str());
 
@@ -217,10 +224,14 @@ namespace cads
           continue; // graceful thread terminate
         }
 
+        spdlog::get("cads")->debug("{}:natsConnection_PublishString {},{}",__func__,get<0>(msg).c_str(), get<1>(msg).c_str());
         auto s = natsConnection_PublishString(conn, get<0>(msg).c_str(), get<1>(msg).c_str());
-        if (s == NATS_CONNECTION_CLOSED)
-        {
-          loop = false;
+        if(s != NATS_OK) {
+          spdlog::get("cads")->error("{}:natsConnection_PublishString->{}",__func__,s);
+          if (s == NATS_CONNECTION_CLOSED)
+          { 
+            loop = false;
+          }
         }
       }
 
