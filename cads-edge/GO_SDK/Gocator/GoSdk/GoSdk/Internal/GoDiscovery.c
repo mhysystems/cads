@@ -964,7 +964,7 @@ GoFx(kStatus) GoDiscovery_OnEnumElapsed(GoDiscovery discovery, kPeriodic timer)
     if (!obj->enumPending)
     {
         kStatus status = kOK;
-
+        kCheck(kLock_Exit(obj->enumLock));
         kCheck(kLock_Enter(obj->enumLock));
 
         kTry
