@@ -71,7 +71,7 @@ namespace cads
     {
       throw runtime_error{"GoSensor_Start: "s + to_string(status)};
     }else{
-      spdlog::get("gocator")->info("GoSensor Starting");
+      spdlog::get("cads")->info("GoSensor Starting");
     }
   }
 
@@ -82,9 +82,9 @@ namespace cads
 
     if (kIsError(status))
     {
-      spdlog::get("gocator")->error("GoSensor_Stop(m_sensor) -> {}", status);
+      spdlog::get("cads")->error("GoSensor_Stop(m_sensor) -> {}", status);
     } else {
-      spdlog::get("gocator")->info("GoSensor Stopped");
+      spdlog::get("cads")->info("GoSensor Stopped");
     }
   }
 
@@ -118,7 +118,7 @@ namespace cads
     }
     else
     {
-      spdlog::get("gocator")->info("Number of Camera's found: {}", sensor_count);
+      spdlog::get("cads")->info("Number of Camera's found: {}", sensor_count);
     }
 
     if (!ip_add.empty())
@@ -214,7 +214,7 @@ namespace cads
     GoDestroy(dataset);
     if (me->m_gocatorFifo.size_approx() > me->m_buffer_size_warning)
     {
-      spdlog::get("gocator")->error("Cads {}: Showing signs of not being able to keep up with data source. Size {}", __func__, me->m_buffer_size_warning);
+      spdlog::get("cads")->error("Cads {}: Showing signs of not being able to keep up with data source. Size {}", __func__, me->m_buffer_size_warning);
       me->m_buffer_size_warning += 4096;
     }
 
@@ -230,13 +230,13 @@ namespace cads
   {
     Stop();
     GoSensor_EnableData(m_sensor,kFALSE);
-    spdlog::get("gocator")->debug("GoSensor_EnableData Disabled");
+    spdlog::get("cads")->debug("GoSensor_EnableData Disabled");
     GoSensor_Disconnect(m_sensor);
-    spdlog::get("gocator")->debug("GoSensor_Disconnect");
+    spdlog::get("cads")->debug("GoSensor_Disconnect");
     GoDestroy(m_system);
-    spdlog::get("gocator")->debug("GoDestroy system");
+    spdlog::get("cads")->debug("GoDestroy system");
     GoDestroy(m_assembly);
-    spdlog::get("gocator")->debug("GoDestroy assembly");
+    spdlog::get("cads")->debug("GoDestroy assembly");
   }
 
 
