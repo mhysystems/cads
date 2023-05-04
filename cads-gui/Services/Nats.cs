@@ -64,6 +64,7 @@ public class NatsConsumerHostedService : BackgroundService
           await Task.Delay(Timeout.Infinite, stoppingToken);
         }
 
+        _logger.LogInformation("Leaving Nats background service");
         break;
 
       }
