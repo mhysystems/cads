@@ -229,14 +229,26 @@ namespace cads
   GocatorReader::~GocatorReader()
   {
     Stop();
-    GoSensor_EnableData(m_sensor,kFALSE);
-    spdlog::get("cads")->debug("GoSensor_EnableData Disabled");
-    GoSensor_Disconnect(m_sensor);
-    spdlog::get("cads")->debug("GoSensor_Disconnect");
-    GoDestroy(m_system);
-    spdlog::get("cads")->debug("GoDestroy system");
-    GoDestroy(m_assembly);
-    spdlog::get("cads")->debug("GoDestroy assembly");
+    kStatus status = kOK;
+
+    status = GoSensor_EnableData(m_sensor,kFALSE);
+    if(kIsError(status)) {
+      spdlog::get("cads")->error("GoSensor_EnableData:{}",status);
+    }
+    status = GoSensor_Disconnect(m_sensor);
+    if(kIsError(status)) {    
+      spdlog::get("cads")->error("GoSensor_Disconnect:{}",status);
+    }
+    
+    status = GoDestroy(m_system);
+    if(kIsError(status)) {    
+      spdlog::get("cads")->error("GoDestroy system:{}",status);
+    }
+    
+    status = GoDestroy(m_assembly);
+    if(kIsError(status)) {
+      spdlog::get("cads")->error("GoDestroy assembly:{}",status);
+    }
   }
 
 
