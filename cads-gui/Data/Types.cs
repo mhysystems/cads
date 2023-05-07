@@ -200,6 +200,7 @@ namespace cads_gui.Data
     public int Row { get; set;} = 0;
     public int Col { get; set;} = 0;
     public bool Visible { get; set;} = false;
+    public long Belt { get; set; } = 0;
   }
 
   public class PlotInfo

@@ -202,6 +202,8 @@ namespace cads_gui.Data
       }
     }
 
+
+
     public async Task<float[]> GetBeltProfileAsync(double y, long num_y_samples, Scan belt)
     {
       var dbpath = Path.GetFullPath(Path.Combine(config.DBPath,belt.name));
