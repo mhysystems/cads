@@ -2,7 +2,7 @@
 
 @using Cads
 
-@inject BeltService Beltservice
+@inject BeltService dataservice
 @inject ISnackbar Snackbar
 @inject ILogger<Trend> logger
 
@@ -14,13 +14,22 @@
 </SiteHeader>
 
 
-<MudContainer MaxWidth="MaxWidth.False" Class="ma-0 pa-0"
-  Style="width:calc(98vw - var(--mud-drawer-width-mini-left));height:calc(96vh - var(--mud-appbar-height)">
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="ma-0 pa-0"
+  Style="height:calc(100vh - var(--mud-appbar-height)">
   <MudGrid Class="ma-0" Style="height:100%" Spacing=0>
 
-<MudItem xs="12">
-<iframe sandbox src="/grafana/d-solo/db32f030-4f7b-4a5a-a386-1706ed2a2466/jimblebar-cv001-pulleyspeed?orgId=1&from=1683061002994&to=1683082602994&panelId=1" width="450" height="200" frameborder="0"></iframe>
-</MudItem>
+@for(var i = 0; i < urls.GetLength(0); i++) {
+  @for(var j = 0; j < urls.GetLength(1); j++ ) {
+    var jl = j;
+    var il = i;
+    <MudItem xs="@xs">
+      @if(urls[il,jl] is not null) {
+      <iframe src="@urls[il,jl]" width="450" height="200" frameborder="0"></iframe>
+      }
+    </MudItem>
+  }
+}
+
 </MudGrid>
 </MudContainer>
 
@@ -32,6 +41,29 @@
   public string site { get; set; } = string.Empty;
   [Parameter]
   public string conveyor { get; set; } = string.Empty;
+
+  protected string[,] urls = new string[0,0];
+  protected int xs = 12;
+
+  protected override async Task OnInitializedAsync()
+  {
+    var belt = await dataservice.GetBelt(site,conveyor);
+    var plots = await dataservice.GetGrafanaPlotsAsync(belt);
+    
+    if(plots.Any()) {
+      var Cols = plots.Max(e => e.Col) + 1;
+      var Rows = plots.Max(e => e.Row) + 1;
+
+      xs = (int) xs / Cols;
+
+      urls = new string[Rows,Cols];
+
+      foreach(var p in plots) {
+        urls[p.Row,p.Col] = p.Url;
+      }
+    }
+    
+  }
   
 
 }
