@@ -92,7 +92,17 @@ namespace cads_gui.Data
       return data.ToList();
     }
 
-    public List<Scan> GetBelts(string site, string belt, DateTime chrono)
+
+    public async Task<Belt> GetBelt(string site, string belt)
+    {
+      using var context = await dBContext.CreateDbContextAsync();
+      var beltId = (from a in context.Conveyors where a.Site== site && a.Name == belt select a.Belt).First();
+      var data = from b in context.Belts where b.Id == beltId select b;
+      
+      return data.First();
+    }
+
+    public List<Scan> GetScans(string site, string belt, DateTime chrono)
     {
       using var context = dBContext.CreateDbContext();
       var data = from a in context.Scans orderby a.chrono where a.site == site && a.conveyor == belt && a.chrono.Date == chrono.Date select a;
@@ -100,7 +110,7 @@ namespace cads_gui.Data
       return data.ToList();
     }
 
-    public IEnumerable<Scan> GetBeltsAsync(string site, string conveyor)
+    public IEnumerable<Scan> GetScansAsync(string site, string conveyor)
     {
       using var context = dBContext.CreateDbContext();
       var data = from a in context.Scans orderby a.chrono where a.site == site && a.conveyor == conveyor select a;
@@ -202,6 +212,12 @@ namespace cads_gui.Data
       }
     }
 
+    public async Task<IEnumerable<Grafana>> GetGrafanaPlotsAsync(Belt belt) {
+      using var context = await dBContext.CreateDbContextAsync();
+      var beltplots = from b in context.Plots where b.Belt == belt.Id && b.Visible select b;
+
+      return beltplots.ToList();
+    }
 
 
     public async Task<float[]> GetBeltProfileAsync(double y, long num_y_samples, Scan belt)

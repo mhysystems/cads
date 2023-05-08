@@ -81,7 +81,7 @@
     }
 
     var Y = GuiState?.Value.Y ?? 0;
-    List<Scan> b = Beltservice.GetBelts(site, conveyor, date.Value);
+    List<Scan> b = Beltservice.GetScans(site, conveyor, date.Value);
 
     if(b is not null && b.Any()) {
       var z = await Beltservice.GetBeltProfileAsync(Y, 1, b.First());
@@ -99,7 +99,7 @@
     var tasks = new List<Task<(DateTime,(bool,float))>>();
 
     var Y = GuiState?.Value.Y ?? 0;
-    foreach (var b in Beltservice.GetBeltsAsync(site, conveyor)) {
+    foreach (var b in Beltservice.GetScansAsync(site, conveyor)) {
       var beltFullPath = Beltservice.AppendPath(b.name);
       tasks.Add(Task.Run(() => (b.chrono,NoAsp.RetrievePoint(beltFullPath,Y,x_index))));
     }
