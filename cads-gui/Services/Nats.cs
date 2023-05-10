@@ -26,38 +26,48 @@ public class NatsConsumerHostedService : BackgroundService
 
   protected async override Task ExecuteAsync(CancellationToken stoppingToken)
   {
-    while (true)
+    while (!stoppingToken.IsCancellationRequested)
     {
       try
       {
+        var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        ArgumentNullException.ThrowIfNull(env);
+        
         var args = ConnectionFactory.GetDefaultOptions();
         args.Url = _config.NatsUrl;
         using var c = new ConnectionFactory().CreateConnection(args);
-        EventHandler<MsgHandlerEventArgs> msgHandler = (sender, args) =>
+
+        void msgHandler(object? sender, MsgHandlerEventArgs args)
         {
-
-          if (args.Message.Subject == "/realtime")
-          {
-            var msg = new ReadOnlySpan<byte>(args.Message.Data);
-            var json = JsonSerializer.Deserialize<Realtime>(msg);
-            if (json is not null)
-            {
-              _realtimehubContext.Clients.Group("/realtime" + json.Site + json.Conveyor).SendAsync("ReceiveMessageRealtime", json);
+          if(args.Message.HasHeaders && args.Message.Header["category"] is not null) {
+            var category = args.Message.Header["category"];
+            if(category == "measure") {
+              var json = JsonSerializer.Deserialize<MetaRealtime>(new ReadOnlySpan<byte>(args.Message.Data));
+              if (json is not null)
+              {
+                _realtimehubContext.Clients.Group("measurements" + json.Site + json.Conveyor).SendAsync("ReceiveMessage", json,stoppingToken);
+              }else {
+                _logger.LogError("Nats message unable to be deserialised to JSON. {}",System.Text.Encoding.UTF8.GetString(args.Message.Data));
+              }
+            
+            }else if(category == "anonaly") {
+              var json = JsonSerializer.Deserialize<Realtime>(new ReadOnlySpan<byte>(args.Message.Data));
+              if (json is not null)
+              {
+                _realtimehubContext.Clients.Group("anomalies" + json.Site + json.Conveyor).SendAsync("ReceiveMessage", json,stoppingToken);
+              }else {
+                _logger.LogError("Nats message unable to be deserialised to JSON. {}",System.Text.Encoding.UTF8.GetString(args.Message.Data));
+              }
+            }else {
+              _logger.LogError("Unexpected header {}",category);
             }
+          }else {
+            _logger.LogError("Nats message missing header");
           }
-          else if (args.Message.Subject == "/realtimemeta")
-          {
-
-            var json = JsonSerializer.Deserialize<MetaRealtime>(new ReadOnlySpan<byte>(args.Message.Data));
-            if (json is not null)
-            {
-              _realtimehubContext.Clients.Group("/realtimemeta" + json.Site + json.Conveyor).SendAsync("ReceiveMessageMeta", json);
-            }
-          }
-
         };
 
-        using IAsyncSubscription s = c.SubscribeAsync(">", msgHandler);
+        using IAsyncSubscription measure = c.SubscribeAsync(env, msgHandler);
+
         while (!stoppingToken.IsCancellationRequested)
         {
           _logger.LogInformation("Connected to Nats and waiting for messages");
@@ -65,7 +75,6 @@ public class NatsConsumerHostedService : BackgroundService
         }
 
         _logger.LogInformation("Leaving Nats background service");
-        break;
 
       }
       catch (NATSConnectionException e)

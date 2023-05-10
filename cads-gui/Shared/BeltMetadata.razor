@@ -73,7 +73,7 @@
             .Build();
         }
 
-        hubConnection.On<MetaRealtime>("ReceiveMessageMeta", (message) =>
+        hubConnection.On<MetaRealtime>("ReceiveMessage", (message) =>
         {
             switch(message.Id) {
               case "SurfaceSpeed":
@@ -98,7 +98,7 @@
         });
 
         await hubConnection.StartAsync();
-        await hubConnection.InvokeAsync("JoinGroup","/realtimemeta"+Site+Conveyor);
+        await hubConnection.InvokeAsync("JoinGroup","measurements"+Site+Conveyor);
     }
 
     public bool IsConnected =>
