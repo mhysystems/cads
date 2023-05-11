@@ -16,9 +16,12 @@ public class NatsConsumerHostedService : BackgroundService
 
   protected readonly AppSettings _config;
 
+  protected readonly IWebHostEnvironment _env;
 
-  public NatsConsumerHostedService(ILogger<NatsConsumerHostedService> logger, IOptions<AppSettings> config, IHubContext<RealtimeHub> realtimehubContext)
+
+  public NatsConsumerHostedService(IWebHostEnvironment env, ILogger<NatsConsumerHostedService> logger, IOptions<AppSettings> config, IHubContext<RealtimeHub> realtimehubContext)
   {
+    _env = env;
     _logger = logger;
     _realtimehubContext = realtimehubContext;
     _config = config.Value;
@@ -30,7 +33,7 @@ public class NatsConsumerHostedService : BackgroundService
     {
       try
       {
-        var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        var env = _env.EnvironmentName;
         ArgumentNullException.ThrowIfNull(env);
         
         var args = ConnectionFactory.GetDefaultOptions();
