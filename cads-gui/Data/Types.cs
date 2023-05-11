@@ -26,22 +26,27 @@ namespace cads_gui.Data
     public double ZMin { get; set; } = 0;
   };
 
-  public class Realtime
+  public class AnomalyMsg
   {
+    public string Measurement { get; set; } = String.Empty;
     public string Site { get; set; } = String.Empty;
     public string Conveyor { get; set; } = String.Empty;
-    public DateTime Time { get; set; } = DateTime.Now;
-    public double YArea { get; set; } = 0;
+    public int Quality { get; set; } = -1;
+    public int Revision { get; set; } = -1;
     public double Value { get; set; } = 0;
+    public double Location { get; set; } = 0;
+    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
   }
 
-  public class MetaRealtime
+  public class MeasureMsg
   {
+    public string Measurement { get; set; } = String.Empty;
     public string Site { get; set; } = String.Empty;
     public string Conveyor { get; set; } = String.Empty;
-    public string Id { get; set; } = String.Empty;
+    public int Quality { get; set; } = -1;
+    public int Revision { get; set; } = -1;
     public double Value { get; set; } = 0;
-    public bool Valid { get; set; } = false;
+    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
   }
 
   public class SiteName

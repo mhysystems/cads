@@ -101,7 +101,6 @@ namespace cads
     cads::msg m;
     bool terminate = false;
     std::unordered_set<double> anomolies;
-    std::future<void> anoms_fut;
 
     do
     {
@@ -130,7 +129,7 @@ namespace cads
           result = eval_lua_process(L,width,height);
           auto location = std::round(p.y / 1000) * 1000;
           if(result > 0 /*&& !anomolies.contains(location)*/) {
-            anoms_fut = std::async(http_post_realtime,location, result);
+            measurements.send("anomaly",0,std::make_tuple(result,location));
             //anomolies.insert(location);
           }
         }

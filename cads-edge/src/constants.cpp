@@ -20,21 +20,6 @@ namespace {
     return cads::SqliteGocatorConfig{current_length,fps,forever,delay};
   }
 
-  auto mk_contraints(nlohmann::json config) {
-    using namespace std;
-
-    auto current_length = config["constraints"]["current_length"].get<cads::constraints::value_type>();
-    auto surface_speed = config["constraints"]["surface_speed"].get<cads::constraints::value_type>();
-    auto pulley_oscillation = config["constraints"]["pulley_oscillation"].get<cads::constraints::value_type>();
-    auto cads_to_origin = config["constraints"]["cads_to_origin"].get<cads::constraints::value_type>();
-    auto rotation_period = config["constraints"]["rotation_period"].get<cads::constraints::value_type>();
-    auto barrel_height = config["constraints"]["barrel_height"].get<cads::constraints::value_type>();
-    auto z_unbiased = config["constraints"]["z_unbiased"].get<cads::constraints::value_type>();
-
-    return cads::constraints{current_length,surface_speed,pulley_oscillation,cads_to_origin,rotation_period,barrel_height,z_unbiased};
-
-  }
-
   auto mk_profile_parameters(nlohmann::json config) {
     using namespace std;
     auto left_edge_nan = config["left_edge_nan"].get<int>();
@@ -169,7 +154,6 @@ namespace {
 
 namespace cads {  
 
-  constraints global_constraints;
   profile_parameters global_profile_parameters;
   Conveyor global_conveyor_parameters;
   Belt global_belt_parameters;
@@ -187,7 +171,6 @@ namespace cads {
   void init_config(std::string f) {
     auto json = slurpfile(f);
 		auto config = nlohmann::json::parse(json);
-    global_constraints = mk_contraints(config);
     global_profile_parameters = mk_profile_parameters(config);
     global_conveyor_parameters = mk_conveyor_parameters(config);
     global_belt_parameters = mk_belt_parameters(config);
@@ -209,7 +192,7 @@ namespace cads {
     global_config = nlohmann::json();
   }
 
-  bool between(constraints::value_type range, double value) {
+  bool between(std::tuple<double,double> range, double value) {
     return get<0>(range) <= value && value <= get<1>(range);  
   }
 

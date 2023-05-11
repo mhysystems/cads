@@ -1,5 +1,5 @@
 {
-  "data_source" : "../../profiles/rawprofile_cv001_2.db",
+  "data_source" : "gocator",
   
   "sqlite_gocator" : {
     "range" : [0,9007199254740991],
@@ -111,7 +111,7 @@
   },
 
   "communications" : {
-    "NatsUrl" : "192.168.2.121",
+    "NatsUrl" : "127.0.0.1",
     "UploadRows" : 1024
   },
 

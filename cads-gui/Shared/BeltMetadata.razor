@@ -73,23 +73,23 @@
             .Build();
         }
 
-        hubConnection.On<MetaRealtime>("ReceiveMessageMeta", (message) =>
+        hubConnection.On<MeasureMsg>("ReceiveMessage", (message) =>
         {
-            switch(message.Id) {
-              case "SurfaceSpeed":
-                SurfaceSpeed = message.Valid ? message.Value.ToString("F2") : string.Empty;
+            switch(message.Measurement.ToLower()) {
+              case "pulleyspeed":
+                SurfaceSpeed = message.Quality == 0 ? message.Value.ToString("F2") : string.Empty;
               break;
-              case "CurrentLength":
-                CurrentLength = message.Valid ? (message.Value / 1000).ToString("F2") : string.Empty;
+              case "beltlength":
+                CurrentLength = message.Quality == 0 ? (message.Value / 1000).ToString("F2") : string.Empty;
               break;
-              case "RotationPeriod":
-                RotationPeriod = message.Valid ? TimeSpan.FromMilliseconds(message.Value).ToString(@"mm\:ss") : string.Empty;
+              case "beltrotationperiod":
+                RotationPeriod = message.Quality == 0 ? TimeSpan.FromMilliseconds(message.Value).ToString(@"mm\:ss") : string.Empty;
               break;
-              case "CadsToOrigin":
-                CadsToOrigin = message.Valid ? (message.Value / 1000).ToString("F2") : string.Empty;
+              case "cadstoorigin":
+                CadsToOrigin = message.Quality == 0 ? (message.Value / 1000).ToString("F2") : string.Empty;
               break;
-              case "PulleyOscillation":
-                PulleyOscillation = message.Valid ? message.Value.ToString("F2") : string.Empty;
+              case "pulleyoscillation":
+                PulleyOscillation = message.Quality == 0 ? message.Value.ToString("F2") : string.Empty;
               break;
               default:
               break;
@@ -98,7 +98,7 @@
         });
 
         await hubConnection.StartAsync();
-        await hubConnection.InvokeAsync("JoinGroup","/realtimemeta"+Site+Conveyor);
+        await hubConnection.InvokeAsync("JoinGroup","measurements"+Site+Conveyor);
     }
 
     public bool IsConnected =>
@@ -108,7 +108,7 @@
     {
         if (hubConnection is not null)
         {
-          await hubConnection.InvokeAsync("LeaveGroup","/realtimemeta"+Site+Conveyor);
+          await hubConnection.InvokeAsync("LeaveGroup","measurements"+Site+Conveyor);
           await hubConnection.DisposeAsync();
         }
     }

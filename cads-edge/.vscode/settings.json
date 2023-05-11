@@ -92,7 +92,9 @@
     "nonlinearoptimization": "cpp",
     "bvh": "cpp",
     "fft": "cpp",
-    "*.txx": "cpp"
+    "*.txx": "cpp",
+    "format": "cpp",
+    "stdfloat": "cpp"
   },
   "cmake.configureOnOpen": false
 }

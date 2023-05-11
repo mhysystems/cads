@@ -4,6 +4,7 @@
 #include <string>
 #include <variant>
 #include <thread>
+#include <functional>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wuseless-cast"
@@ -22,8 +23,7 @@ namespace cads
 
   class Measure {
     
-    enum MeasureType{mDouble,mString};
-    using MeasureMsg = std::tuple<std::string,std::variant<double,std::string>,date::utc_clock::time_point>;
+    using MeasureMsg = std::tuple<std::string,int,date::utc_clock::time_point,std::variant<double,std::string,std::function<double()>,std::function<std::string()>, std::tuple<double,double>>>;
 
     friend void measurement_thread(moodycamel::BlockingConcurrentQueue<Measure::MeasureMsg>&, bool&);
 
@@ -34,8 +34,11 @@ namespace cads
     Measure() = default;  
     ~Measure();
     void init();
-    void send(std::string, double);
-    void send(std::string, std::string);
+    void send(std::string, int quality, double);
+    void send(std::string, int quality, std::string);
+    void send(std::string, int quality, std::function<double()>);
+    void send(std::string, int quality, std::function<std::string()>);
+    void send(std::string, int quality, std::tuple<double,double>);
 
     protected:
     

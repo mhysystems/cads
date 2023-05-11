@@ -21,15 +21,12 @@
 
 namespace cads
 {
-  void realtime_publish_thread(bool&);
   void remote_control_thread(moodycamel::BlockingConcurrentQueue<int> &,bool&);
-  void publish_meta_realtime(std::string Id, double value, bool valid);
-  void http_post_realtime(double y_area, double value);
   bool post_scan(state::scan db_name);
   std::vector<profile> http_get_frame(double y, int len, date::utc_clock::time_point chrono);
   std::tuple<int,bool> remote_addconveyor(Conveyor params); 
   std::tuple<int,bool> remote_addbelt(Belt params); 
 
   cads::coro<int, cads::profile, 1> post_profiles_coro(cads::meta meta);
-  cads::coro<int, std::tuple<std::string, std::string>, 1>  realtime_metrics_coro();
+  cads::coro<int, std::tuple<std::string, std::string, std::string>, 1>  realtime_metrics_coro();
 }

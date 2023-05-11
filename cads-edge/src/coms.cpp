@@ -81,7 +81,6 @@ namespace
 
 namespace cads
 {
-  moodycamel::BlockingConcurrentQueue<std::tuple<std::string, std::string>> nats_queue;
 
   void remote_control_thread(moodycamel::BlockingConcurrentQueue<int> &nats_queue, bool &terminate)
   {
@@ -140,13 +139,14 @@ namespace cads
   }
 
 
-  cads::coro<int, std::tuple<std::string, std::string>, 1>  realtime_metrics_coro()
+  cads::coro<int, std::tuple<std::string, std::string, std::string>, 1>  realtime_metrics_coro()
   {
 
     auto endpoint_url = communications_config.NatsUrl;
 
     natsConnection *conn = nullptr;
     natsOptions *opts = nullptr;
+
     bool terminate = false;
 
     for (; !terminate;)
@@ -165,6 +165,7 @@ namespace cads
 
       for (auto loop = true; loop && !terminate;)
       {
+
         auto [msg, co_terminate] = co_yield 0;
 
         if(co_terminate) {
@@ -172,9 +173,26 @@ namespace cads
           continue;
         }
 
-        spdlog::get("cads")->debug("{}:natsConnection_PublishString {},{}",__func__,get<0>(msg).c_str(), get<1>(msg).c_str());
+        auto [sub,head,data] = msg;
+
+        spdlog::get("cads")->debug("{}:natsConnection_PublishString {},{}",__func__,sub.c_str(), data.c_str());
         
-        auto s = natsConnection_PublishString(conn, get<0>(msg).c_str(), get<1>(msg).c_str());
+        natsMsg *nats_msg = nullptr;
+        auto s = natsMsg_Create(&nats_msg,sub.c_str(),nullptr,data.c_str(),data.size());
+        
+        if(s != NATS_OK){
+          spdlog::get("cads")->error("{}:natsMsg_Create->{}",__func__,s);
+          continue;
+        }
+
+        s = natsMsgHeader_Add(nats_msg,"category",head.c_str());
+        if(s != NATS_OK){
+          spdlog::get("cads")->error("{}:natsMsgHeader_Add->{}",__func__,s);
+          goto free_nats_msg;
+        }
+
+        s = natsConnection_PublishMsg(conn,nats_msg);
+        
         if(s != NATS_OK) {
           spdlog::get("cads")->error("{}:natsConnection_PublishString->{}",__func__,s);
           if (s == NATS_CONNECTION_CLOSED)
@@ -182,6 +200,9 @@ namespace cads
             loop = false;
           }
         }
+
+        free_nats_msg:
+          natsMsg_Destroy(nats_msg);
       }
 
       natsConnection_Destroy(conn);
@@ -194,64 +215,7 @@ namespace cads
     nats_Close();
   }
 
-  void realtime_publish_thread(bool &terminate)
-  {
-
-    auto endpoint_url = communications_config.NatsUrl;
-
-    natsConnection *conn = nullptr;
-    natsOptions *opts = nullptr;
-
-    for (; !terminate;)
-    {
-      auto status = natsOptions_Create(&opts);
-      if (status != NATS_OK)
-        goto drop_msg;
-
-      natsOptions_SetSendAsap(opts,true);
-      natsOptions_SetAllowReconnect(opts, true);
-      natsOptions_SetURL(opts, endpoint_url.c_str());
-
-      status = natsConnection_Connect(&conn, opts);
-      if (status != NATS_OK)
-        goto cleanup_opts;
-
-      for (auto loop = true; loop && !terminate;)
-      {
-        std::tuple<std::string, std::string> msg;
-        if (!nats_queue.wait_dequeue_timed(msg, std::chrono::milliseconds(1000)))
-        {
-          continue; // graceful thread terminate
-        }
-
-        spdlog::get("cads")->debug("{}:natsConnection_PublishString {},{}",__func__,get<0>(msg).c_str(), get<1>(msg).c_str());
-        auto s = natsConnection_PublishString(conn, get<0>(msg).c_str(), get<1>(msg).c_str());
-        if(s != NATS_OK) {
-          spdlog::get("cads")->error("{}:natsConnection_PublishString->{}",__func__,s);
-          if (s == NATS_CONNECTION_CLOSED)
-          { 
-            loop = false;
-          }
-        }
-      }
-
-      natsConnection_Destroy(conn);
-    cleanup_opts:
-      natsOptions_Destroy(opts);
-    drop_msg:
-      if (!terminate)
-      {
-        std::tuple<std::string, std::string> dropped_msg;
-        if (nats_queue.wait_dequeue_timed(dropped_msg, std::chrono::seconds(1)))
-        {
-          goto drop_msg;
-        }
-      }
-    }
-
-    nats_Close();
-  }
-
+  
   std::string ReplaceString(std::string subject, const std::string &search,
                             const std::string &replace)
   {
@@ -387,38 +351,6 @@ namespace cads
     profiles_flat.clear();
 
     return size;
-  }
-
-  void http_post_realtime(double y_area, double value)
-  {
-
-    auto now = chrono::floor<chrono::seconds>(date::utc_clock::now()); // Default sends to much decimal precision for asp.net core
-    auto ts = date::format("%FT%TZ", now);
-
-    nlohmann::json params_json;
-    params_json["Site"] = global_conveyor_parameters.Site;
-    params_json["Conveyor"] = global_conveyor_parameters.Name;
-    params_json["Time"] = ts;
-    params_json["YArea"] = y_area;
-    params_json["Value"] = value;
-
-    nats_queue.enqueue({"/realtime", params_json.dump()});
-  }
-
-  void publish_meta_realtime(std::string Id, double value, bool valid)
-  {
-
-    if (isnan(value) || isinf(value))
-      return;
-
-    nlohmann::json params_json;
-    params_json["Site"] = global_conveyor_parameters.Site;
-    params_json["Conveyor"] = global_conveyor_parameters.Name;
-    params_json["Id"] = Id;
-    params_json["Value"] = value;
-    params_json["Valid"] = valid;
-
-    nats_queue.enqueue({"/realtimemeta", params_json.dump()});
   }
 
   void http_post_profile_properties_json(std::string json)
