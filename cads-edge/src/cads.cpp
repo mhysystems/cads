@@ -565,7 +565,7 @@ namespace cads
     BlockingReaderWriterQueue<msg> scan_upload_fifo(4096 * 1024);
     std::jthread save_send(upload_scan_thread, std::ref(scan_upload_fifo));
 
-    for (int sleep_wait = 1;;)
+    for (int sleep_wait = 5;;)
     {
 
       auto start = std::chrono::high_resolution_clock::now();
@@ -575,20 +575,11 @@ namespace cads
       auto now = std::chrono::high_resolution_clock::now();
       auto period = std::chrono::duration_cast<std::chrono::seconds>(now - start).count();
 
-      if (period > sleep_wait * 60)
-      {
-        sleep_wait = 1;
-      }
-
       if (status == Process_Status::Error)
       {
         spdlog::get("cads")->info("Sleeping for {} minutes", sleep_wait);
         std::this_thread::sleep_for(std::chrono::seconds(sleep_wait * 60));
 
-        if (sleep_wait < 32)
-        {
-          sleep_wait *= 2;
-        }
       }
       else if (status == Process_Status::Stopped)
       {
