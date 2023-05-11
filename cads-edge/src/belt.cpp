@@ -223,7 +223,7 @@ namespace cads
 
     auto pulley_circumfrence = global_conveyor_parameters.PulleyCircumference;
     auto avg_speed = global_conveyor_parameters.MaxSpeed;
-    auto T0 = pulley_circumfrence / avg_speed; // in ms
+    auto T0 = 1000 * pulley_circumfrence / avg_speed; // in ms
     auto T1 = 2 * T0;  // in ms
     auto barrel_origin_time = std::chrono::high_resolution_clock::now();
     
