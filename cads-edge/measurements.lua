@@ -10,7 +10,7 @@ function out(sub, json) -- overwritten externally
 end
 
 function encode(category, msg) 
-  out("Development",category,json.encode(msg))
+  out("bhp",category,json.encode(msg))
 end
 
 function msgAppendList(root, keys, values)

@@ -67,7 +67,7 @@ public class NatsConsumerHostedService : BackgroundService
                 _logger.LogError("Nats message unable to be deserialised to JSON. {}",System.Text.Encoding.UTF8.GetString(args.Message.Data));
               }
             }else {
-              _logger.LogError("Unexpected header {}",category);
+              
             }
           }else {
             _logger.LogError("Nats message missing header");
