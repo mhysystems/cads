@@ -8,7 +8,6 @@
 
 #include <belt.h>
 #include <filters.h>
-#include <intermessage.h>
 #include <constants.h>
 #include <profile.h>
 #include <regression.h>
@@ -223,7 +222,7 @@ namespace cads
     using namespace std::placeholders;
 
     auto pulley_circumfrence = global_conveyor_parameters.PulleyCircumference;
-    auto avg_speed = (std::get<0>(global_constraints.SurfaceSpeed) + std::get<0>(global_constraints.SurfaceSpeed)) / 2;
+    auto avg_speed = global_conveyor_parameters.MaxSpeed;
     auto T0 = pulley_circumfrence / avg_speed; // in ms
     auto T1 = 2 * T0;  // in ms
     auto barrel_origin_time = std::chrono::high_resolution_clock::now();

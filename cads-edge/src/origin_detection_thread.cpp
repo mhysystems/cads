@@ -12,7 +12,6 @@
 #include <fiducial.h>
 #include <constants.h>
 #include <coro.hpp>
-#include <intermessage.h>
 #include <filters.h>
 #include <opencv2/core.hpp>
 #include <utils.hpp>
@@ -169,14 +168,9 @@ namespace cads
     {
       y_type y = profile_buffer.front().y;
  
-      if(sequence_cnt > 1) {
-        measurements.send("cadstoorigin",y);
+      if(sequence_cnt >= 1) {
+        measurements.send("cadstoorigin",0,y);
       }
-
-      if((cnt++ % 10000) == 0 && sequence_cnt > 0 ) {
-        publish_CadsToOrigin(y); //TODO
-      }
-
 
       if (y >= trigger_length)
       {
@@ -191,10 +185,6 @@ namespace cads
           matrix_correlation = belt.clone();
         }
 
-        if((cnt % 10000) == 0) {
-          //spdlog::get("cads")->info("SampleCorrelation: {}, Threshold: {}, Lowest: {}", correlation, cv_threshhold, lowest_correlation);
-        }
-
         if (correlation < belt_crosscorr_threshold && (!(sequence_cnt > 0) || between(config_origin_detection.belt_length,y)))
         {
           ++sequence_cnt;
@@ -205,7 +195,7 @@ namespace cads
           cnt = 0;
 
           if(sequence_cnt > 1) {
-            publish_RotationPeriod(period); //TODO
+            measurements.send("beltrotationperiod",0,period); 
             trigger_length = y * 0.95; //TODO
           }
           
@@ -304,8 +294,7 @@ namespace cads
                 }
 
                 if(origin_sequence_cnt > 0) {
-                  measurements.send("beltlength",estimated_belt_length);
-                  publish_CurrentLength(estimated_belt_length);
+                  measurements.send("beltlength",0,estimated_belt_length);
                   next_fifo.enqueue({msgid::complete_belt, estimated_belt_length});
                 }
                 
@@ -429,7 +418,7 @@ namespace cads
 
                 if(origin_sequence_cnt > 0) {
                   spdlog::get("cads")->info("Estimated Belt Length(m): {}", estimated_belt_length / 1000);
-                  publish_CurrentLength(estimated_belt_length);
+                  measurements.send("beltlength",0,estimated_belt_length);
                   next_fifo.enqueue({msgid::complete_belt, estimated_belt_length});
                 }
                 

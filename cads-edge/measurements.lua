@@ -2,29 +2,52 @@ json = require "json"
 
 measurements = {}
 
-function timeToString(time)
-  tostring(time)
+function timeToString(time) -- overwritten externally
+  return tostring(time)
 end
 
-function out(sub, json) 
+function out(sub, json) -- overwritten externally
 end
 
-function mkjson(name, value, time) 
-  local t = timeToString(time)
-  out("bhp",json.encode({measurement = name, site = "jimblebar", conveyor = "cv001", value = value, timestamp = t}))
+function encode(category, msg) 
+  out("Development",category,json.encode(msg))
+end
+
+function msgAppendList(root, keys, values)
+  
+  for i,v in ipairs(values) do 
+    root[keys[i]] = (type(v) == "function") and v() or v
+  end
+  
+  return root
+end
+
+function msgAppendTable(root, t)
+  
+  for k,v in pairs(t) do 
+    root[k] = v
+  end
+  
+  return root
 end
 
 function make(now)
 
   local p = 5
+  local tag = {revision = 0}
+  local field = {"value"}
+  local cat = "all"
+
   local m = {
-    pulleyspeed = {period = p, time0 = now},
-    pulleylevel = {period = p, time0 = now},
-    beltlength  = {period = p, time0 = now},
-    cadstoorigin = {period = p, time0 = now},
-    beltedgeposition = {period = p, time0 = now},
-    pulleyoscillation = {period = p, time0 = now},
-    nancount = {period = p, time0 = now}
+    pulleyspeed = {category = "measure", period = p, time0 = now, tags = tag, fields = field},
+    pulleylevel = {category = cat, period = p, time0 = now, tags = tag, fields = field},
+    beltlength  = {category = "measure", period = p, time0 = now, tags = tag, fields = field},
+    cadstoorigin = {category = "measure", period = p, time0 = now ,tags = tag, fields = field},
+    beltrotationperiod = {category = "measure", period = p, time0 = now ,tags = tag, fields = field},
+    beltedgeposition = {category = cat, period = p, time0 = now, tags = tag, fields = field},
+    pulleyoscillation = {category = "measure", period = p, time0 = now, tags = tag, fields = field},
+    nancount = {category = cat, period = p, time0 = now, tags = tag, fields = field},
+    anomaly = {category = "anomaly", period = 1, time0 = now, tags = tag, fields = {"value", "location"}}
   }
 
   local cnt = 0
@@ -39,13 +62,26 @@ function make(now)
   measurements = m
 end
 
-function send(name,value,time)
-  if(measurements[name]) then
+function send(name,quality,time,...)
+
+  if measurements[name] then
+
     local m = measurements[name]
     local elapsedTime = time - m.time0
-
-    if(elapsedTime > m.period) then
-      mkjson(name,value,time)
+    
+    if elapsedTime >= m.period then 
+    
+      local msg = {
+        measurement = name, 
+        site = "jimblebar", 
+        conveyor = "cv001", 
+        timestamp = timeToString(time),
+        quality = quality
+      }
+      
+      msgAppendTable(msg,measurements[name].tags)
+      msgAppendList(msg,measurements[name].fields, {...})
+      encode(measurements[name].category, msg)
       m.time0 = time
     end
 

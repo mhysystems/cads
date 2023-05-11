@@ -25,16 +25,6 @@ namespace cads {
     double delay;
   };
   
-  struct constraints {
-    using value_type = std::tuple<double,double>;
-    value_type CurrentLength;
-    value_type SurfaceSpeed;
-    value_type PulleyOcillation;
-    value_type CadsToOrigin;
-    value_type RotationPeriod;
-    value_type BarrelHeight;
-    value_type ZUnbiased;
-  };
 
   struct profile_parameters {
     int left_edge_nan;
@@ -123,7 +113,6 @@ namespace cads {
     bool   dump_match;
   };
 
-  extern constraints global_constraints;
   extern profile_parameters global_profile_parameters;
   extern Conveyor global_conveyor_parameters;
   extern Belt global_belt_parameters;
@@ -139,7 +128,7 @@ namespace cads {
   
   void init_config(std::string f);
   void drop_config();
-  bool between(constraints::value_type range, double value);
+  bool between(std::tuple<double,double> range, double value);
   
 }
 

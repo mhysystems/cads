@@ -37,24 +37,29 @@ public class NatsConsumerHostedService : BackgroundService
         args.Url = _config.NatsUrl;
         using var c = new ConnectionFactory().CreateConnection(args);
 
-        void msgHandler(object? sender, MsgHandlerEventArgs args)
+        async void msgHandler(object? sender, MsgHandlerEventArgs args)
         {
+          var options = new JsonSerializerOptions
+          {
+            PropertyNameCaseInsensitive = true
+          };
+
           if(args.Message.HasHeaders && args.Message.Header["category"] is not null) {
             var category = args.Message.Header["category"];
             if(category == "measure") {
-              var json = JsonSerializer.Deserialize<MetaRealtime>(new ReadOnlySpan<byte>(args.Message.Data));
-              if (json is not null)
+              var json = JsonSerializer.Deserialize<MeasureMsg>(new ReadOnlySpan<byte>(args.Message.Data),options);
+              if (json is not null && json.Quality != -1)
               {
-                _realtimehubContext.Clients.Group("measurements" + json.Site + json.Conveyor).SendAsync("ReceiveMessage", json,stoppingToken);
+                await _realtimehubContext.Clients.Group("measurements" + json.Site + json.Conveyor).SendAsync("ReceiveMessage", json,stoppingToken);
               }else {
                 _logger.LogError("Nats message unable to be deserialised to JSON. {}",System.Text.Encoding.UTF8.GetString(args.Message.Data));
               }
             
-            }else if(category == "anonaly") {
-              var json = JsonSerializer.Deserialize<Realtime>(new ReadOnlySpan<byte>(args.Message.Data));
-              if (json is not null)
+            }else if(category == "anomaly") {
+              var json = JsonSerializer.Deserialize<AnomalyMsg>(new ReadOnlySpan<byte>(args.Message.Data),options);
+              if (json is not null && json.Quality != -1)
               {
-                _realtimehubContext.Clients.Group("anomalies" + json.Site + json.Conveyor).SendAsync("ReceiveMessage", json,stoppingToken);
+                await _realtimehubContext.Clients.Group("anomalies" + json.Site + json.Conveyor).SendAsync("ReceiveMessage", json,stoppingToken);
               }else {
                 _logger.LogError("Nats message unable to be deserialised to JSON. {}",System.Text.Encoding.UTF8.GetString(args.Message.Data));
               }

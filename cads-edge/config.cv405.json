@@ -54,15 +54,6 @@
             [ 1.00000000e+00, -1.99930017e+00, 1.00000000e+00, 1.00000000e+00, -1.99319414e+00, 9.93592594e-01],
             [ 1.00000000e+00, -1.99933782e+00, 1.00000000e+00, 1.00000000e+00, -1.99752113e+00, 9.97907883e-01]]
   },
-  "constraints" : {
-    "current_length" : [903000,907000],
-    "surface_speed" : [4.5,9.9],
-    "pulley_oscillation" : [0,5],
-    "cads_to_origin" : [0,907000],
-    "rotation_period" : [140000,210000],
-    "barrel_height" : [-36.5,-31.0],
-    "z_unbiased" : [-37.0,4.0]
-  },
 
   "startup_delete_db" : true,
   "profile_db_name" : "profile.db",

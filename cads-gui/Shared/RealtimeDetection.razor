@@ -11,15 +11,15 @@
   <MudTooltip Text="Damage detected based on search criteria below.">
     <MudText Class="flex-grow-0 " Typo="Typo.h5">Real-Time Detection:</MudText>
   </MudTooltip>
-  <MudTable  Class="flex-grow-1 ma-0 pa-0 overflow-scroll" Items="@messages" @ref="@mudTable" Breakpoint="Breakpoint.Sm" OnRowClick="@RowClickEventAsync" T="Realtime">
+  <MudTable  Class="flex-grow-1 ma-0 pa-0 overflow-scroll" Items="@messages" @ref="@mudTable" Breakpoint="Breakpoint.Sm" OnRowClick="@RowClickEventAsync" T="AnomalyMsg">
     <HeaderContent>
-        <MudTh><MudTableSortLabel SortBy="new Func<Realtime, object>(e=>e.Time)"><MudText Typo="Typo.h5">Time</MudText></MudTableSortLabel></MudTh>
-        <MudTh><MudTableSortLabel SortBy="new Func<Realtime, object>(e=>e.YArea)"><MudText Typo="Typo.h5">Y</MudText></MudTableSortLabel></MudTh>
-        <MudTh><MudTableSortLabel SortBy="new Func<Realtime, object>(e=>e.Value)"><MudText Typo="Typo.h5"> Total </MudText></MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<AnomalyMsg, object>(e=>e.Timestamp)"><MudText Typo="Typo.h5">Time</MudText></MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<AnomalyMsg, object>(e=>e.Location)"><MudText Typo="Typo.h5">Y</MudText></MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<AnomalyMsg, object>(e=>e.Value)"><MudText Typo="Typo.h5"> Total </MudText></MudTableSortLabel></MudTh>
     </HeaderContent>
     <RowTemplate>
-            <MudTd Typo="Typo.h5" DataLabel="Time" >@(string.Format("{0:d}:{0:t}", @context.Time))</MudTd>
-            <MudTd Typo="Typo.h5" DataLabel="Y" >@(string.Format("{0}", @context.YArea/1000))</MudTd>
+            <MudTd Typo="Typo.h5" DataLabel="Time" >@(string.Format("{0:d}:{0:t}", @context.Timestamp))</MudTd>
+            <MudTd Typo="Typo.h5" DataLabel="Y" >@(string.Format("{0}", @context.Location/1000))</MudTd>
             <MudTd Typo="Typo.h5" DataLabel="Total" >@(string.Format("{0}", @context.Value))</MudTd>
     </RowTemplate>
   </MudTable>
@@ -38,9 +38,9 @@
   public EventCallback<double> selectedRow { get; set; }
     
 
-  protected MudTable<Realtime> mudTable = new();
+  protected MudTable<AnomalyMsg> mudTable = new();
   private HubConnection? hubConnection;
-  private List<Realtime> messages = new();
+  private List<AnomalyMsg> messages = new();
   
 
   protected override async Task OnInitializedAsync()
@@ -57,15 +57,15 @@
       }
       
       var timezone = beltservice.GetConveyorTimezone(Site,Conveyor);
-      hubConnection.On<Realtime>("ReceiveMessageRealtime", (message) =>
+      hubConnection.On<AnomalyMsg>("ReceiveMessage", (message) =>
       {
-          message.Time = TimeZoneInfo.ConvertTimeFromUtc(message.Time, timezone);
+          message.Timestamp = TimeZoneInfo.ConvertTimeFromUtc(message.Timestamp, timezone);
           messages.Insert(0,message);
           InvokeAsync(StateHasChanged);
       });
 
       await hubConnection.StartAsync();
-      await hubConnection.InvokeAsync("JoinGroup","/realtime"+Site+Conveyor);
+      await hubConnection.InvokeAsync("JoinGroup","anomalies"+Site+Conveyor);
   }
 
   public bool IsConnected =>
@@ -75,16 +75,16 @@
   {
       if (hubConnection is not null)
       {
-        await hubConnection.InvokeAsync("LeaveGroup","/realtime"+Site+Conveyor);
+        await hubConnection.InvokeAsync("LeaveGroup","anomalies"+Site+Conveyor);
         await hubConnection.DisposeAsync();
       }
   }
 
 
 
-  protected async Task RowClickEventAsync(TableRowClickEventArgs<Realtime> tableRowClickEventArgs)
+  protected async Task RowClickEventAsync(TableRowClickEventArgs<AnomalyMsg> tableRowClickEventArgs)
   {
-    await selectedRow.InvokeAsync(tableRowClickEventArgs.Item.YArea);
+    await selectedRow.InvokeAsync(tableRowClickEventArgs.Item.Location);
   }
 
 }
