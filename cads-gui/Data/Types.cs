@@ -70,6 +70,8 @@ namespace cads_gui.Data
 
   public class AppSettings
   {
+    public string InfluxDB { get; set; } = "http://127.0.0.1:8086";
+    public string InfluxAuth { get; set; } = String.Empty;
     public string NatsUrl { get; set; } = "127.0.0.1";
     public string Authorization { get; set; } = String.Empty;
     public string DBPath { get; set; } = String.Empty;
