@@ -71,7 +71,7 @@ namespace cads_gui.Data
           |> filter(fn: (r) => r["_field"] == "location" or r["_field"] == "value")
           |> filter(fn: (r) => r["conveyor"] == "{{conveyor}}")
           |> filter(fn: (r) => r["site"] == "{{site}}")
-          |> map(fn: (r) => ({r with _time: date.time(t: r._time, location : timezone.location(name: "{{timezone}}"))}))
+          |> map(fn: (r) => ({r with _time: date.time(t: r._time, location : timezone.location(name: "{{timezone.Id}}"))}))
           |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
           |> limit(n:64)
         else
