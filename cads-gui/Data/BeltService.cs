@@ -42,6 +42,50 @@ namespace cads_gui.Data
       return config.DoubleSided;
     }
 
+
+    public async Task<List<(string,double)>> GetLastMeasures(string site, string conveyor)
+    {
+
+      var bucket = _env.EnvironmentName;
+      var results = new List<(string,double)>();
+
+      try
+      {
+        using var client = new InfluxDBClient(config.InfluxDB, config.InfluxAuth);
+
+        var query = $"""
+        from(bucket: "{bucket}")
+        |> range(start: -1d)
+        |> filter(fn: (r) =>  r._measurement == "beltrotationperiod" or 
+                              r._measurement == "pulleyspeed" or 
+                              r._measurement == "beltlength" or
+                              r._measurement == "cadstoorigin" or
+                              r._measurement == "pulleyoscillation")
+        |> filter(fn :(r) => r.conveyor == "{conveyor}" and r.site == "{site}")
+        |> last()
+      """;
+
+        var fluxTables = await client.GetQueryApi().QueryAsync(query, "MHY");
+        
+        foreach (var data in fluxTables)
+        {
+          var records = data.Records;
+          foreach (var rec in records)
+          {
+            results.Add((rec.GetMeasurement(),(double)rec.GetValue()));
+          }
+        }
+
+      }
+      catch (Exception e)
+      {
+        _logger.LogError("{}", e.Message);
+      }
+
+      return results;
+
+    }
+
     public async Task<List<AnomalyMsg>> GetAnomalies(string site, string conveyor)
     {
       var bucket = _env.EnvironmentName;
@@ -103,8 +147,9 @@ namespace cads_gui.Data
           }
         }
       }
-      catch (Exception e) { 
-        _logger.LogError(e.Message);   
+      catch (Exception e)
+      {
+        _logger.LogError("{}", e.Message);
       }
 
       return results;

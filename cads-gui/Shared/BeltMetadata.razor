@@ -1,8 +1,9 @@
 @using Microsoft.AspNetCore.SignalR.Client
 @using Microsoft.Extensions.Options
 
+@inject BeltService beltservice
 @inject NavigationManager NavigationManager
-@inject IOptions<AppSettings> _appsettings;
+@inject IOptions<AppSettings> _appsettings
 
 @implements IAsyncDisposable
 
@@ -62,6 +63,31 @@
 
     protected override async Task OnInitializedAsync()
     {
+        
+        var initMeaures = await beltservice.GetLastMeasures(Site,Conveyor);
+
+        foreach(var (k,v) in initMeaures) {
+            switch(k.ToLower()) {
+              case "pulleyspeed":
+                SurfaceSpeed =  v.ToString("F2");
+              break;
+              case "beltlength":
+                CurrentLength =  (v / 1000).ToString("F2");
+              break;
+              case "beltrotationperiod":
+                RotationPeriod =  TimeSpan.FromMilliseconds(v).ToString(@"mm\:ss");
+              break;
+              case "cadstoorigin":
+                CadsToOrigin =  (v / 1000).ToString("F2");
+              break;
+              case "pulleyoscillation":
+                PulleyOscillation =  v.ToString("F2");
+              break;
+              default:
+              break;
+            }
+        }
+        
         if(string.IsNullOrWhiteSpace(_appsettings.Value.Authorization))
         {
           hubConnection = new HubConnectionBuilder()
