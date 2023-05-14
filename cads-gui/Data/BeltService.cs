@@ -118,6 +118,7 @@ namespace cads_gui.Data
           |> map(fn: (r) => ({r with _time: date.time(t: r._time, location : timezone.location(name: "{{timezone.Id}}"))}))
           |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
           |> limit(n:64)
+          |> sort(columns: ["_time"], desc: true)
         else
         from(bucket: "{{bucket}}")
           |> range(start: 0, stop: 1)
