@@ -568,12 +568,7 @@ namespace cads
     for (int sleep_wait = 5;;)
     {
 
-      auto start = std::chrono::high_resolution_clock::now();
-
       auto status = process_impl(scan_upload_fifo);
-
-      auto now = std::chrono::high_resolution_clock::now();
-      auto period = std::chrono::duration_cast<std::chrono::seconds>(now - start).count();
 
       if (status == Process_Status::Error)
       {

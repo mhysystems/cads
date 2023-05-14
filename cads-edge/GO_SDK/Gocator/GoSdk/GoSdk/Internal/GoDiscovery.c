@@ -960,12 +960,11 @@ GoFx(kStatus) GoDiscovery_SendGetExtendedInfo(GoDiscovery discovery, GoDiscovery
 GoFx(kStatus) GoDiscovery_OnEnumElapsed(GoDiscovery discovery, kPeriodic timer)
 {
     kObj(GoDiscovery, discovery);
-
+    kCheck(kLock_Enter(obj->enumLock));
+    
     if (!obj->enumPending)
     {
         kStatus status = kOK;
-        kCheck(kLock_Exit(obj->enumLock));
-        kCheck(kLock_Enter(obj->enumLock));
 
         kTry
         {
@@ -983,9 +982,10 @@ GoFx(kStatus) GoDiscovery_OnEnumElapsed(GoDiscovery discovery, kPeriodic timer)
     }
     else
     {
-        kCheck(GoDiscovery_OnEnumElapsedRecv(discovery, timer));
+      GoDiscovery_OnEnumElapsedRecv(discovery, timer);
     }
 
+    kCheck(kLock_Exit(obj->enumLock));
     return kOK;
 }
 
@@ -1006,7 +1006,6 @@ GoFx(kStatus) GoDiscovery_OnEnumElapsedRecv(GoDiscovery discovery, kPeriodic tim
     }
     kFinally
     {
-        kCheck(kLock_Exit(obj->enumLock));
         kEndFinally();
     }
 

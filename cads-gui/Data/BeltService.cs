@@ -1,25 +1,9 @@
-using System;
-using System.Linq;
-using System.Threading.Tasks;
-using System.IO;
-using System.Collections.Generic;
-using Microsoft.Data.Sqlite;
-using System.Diagnostics;
-using System.Text.Json;
-using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-
-using Microsoft.CodeAnalysis.CSharp.Scripting;
-using Microsoft.CodeAnalysis.Scripting;
-
-using Microsoft.AspNetCore.SignalR;
-
-using System.Reactive;
 using System.Reactive.Linq;
-
-using SQLitePCL;
-using static SQLitePCL.raw;
+using InfluxDB.Client;
+using InfluxDB.Client.Api.Domain;
+using InfluxDB.Client.Core;
 
 using cads_gui.BeltN;
 
@@ -37,9 +21,11 @@ namespace cads_gui.Data
     private readonly IDbContextFactory<SQLiteDBContext> dBContext;
     private readonly ILogger<BeltService> _logger;
     public readonly AppSettings config;
+    private readonly IWebHostEnvironment _env;
 
-    public BeltService(IDbContextFactory<SQLiteDBContext> db, ILogger<BeltService> logger, IOptions<AppSettings> config)
+    public BeltService(IDbContextFactory<SQLiteDBContext> db, ILogger<BeltService> logger, IOptions<AppSettings> config, IWebHostEnvironment env)
     {
+      _env = env;
       this.dBContext = db;
       this._logger = logger;
       this.config = config.Value;
@@ -56,6 +42,74 @@ namespace cads_gui.Data
       return config.DoubleSided;
     }
 
+    public async Task<List<AnomalyMsg>> GetAnomalies(string site, string conveyor)
+    {
+      var bucket = _env.EnvironmentName;
+      var timezone = GetConveyorTimezone(site, conveyor);
+      var results = new List<AnomalyMsg>();
+
+      try
+      {
+        using var client = new InfluxDBClient(config.InfluxDB, config.InfluxAuth);
+
+        var query = $$"""
+        import "timezone"
+        import "date"
+
+        lastm = from(bucket: "{{bucket}}")
+          |> range(start: 0)
+          |> filter(fn: (r) => r["_measurement"] == "anomaly")
+          |> filter(fn: (r) => r["_field"] == "location" or r["_field"] == "value")
+          |> filter(fn: (r) => r["conveyor"] == "{{conveyor}}")
+          |> filter(fn: (r) => r["site"] == "{{site}}")
+          |> last()
+          |> findColumn(fn: (key) => true, column: "_time")
+        if length(arr:lastm) > 0 then
+        from(bucket: "{{bucket}}")
+          |> range(start: date.add(to:lastm[0], d:-30m), stop: date.add(to:lastm[0], d:1s))
+          |> filter(fn: (r) => r["_measurement"] == "anomaly")
+          |> filter(fn: (r) => r["_field"] == "location" or r["_field"] == "value")
+          |> filter(fn: (r) => r["conveyor"] == "{{conveyor}}")
+          |> filter(fn: (r) => r["site"] == "{{site}}")
+          |> map(fn: (r) => ({r with _time: date.time(t: r._time, location : timezone.location(name: "{{timezone}}"))}))
+          |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
+          |> limit(n:64)
+        else
+        from(bucket: "{{bucket}}")
+          |> range(start: 0, stop: 1)
+          |> filter(fn: (r) => false)
+      """;
+
+        var fluxTables = await client.GetQueryApi().QueryAsync(query, "MHY");
+
+        foreach (var data in fluxTables)
+        {
+          var records = data.Records;
+          foreach (var rec in records)
+          {
+            var a = new AnomalyMsg
+            {
+              Measurement = rec.GetMeasurement(),
+              Site = (string)rec.GetValueByKey("site"),
+              Conveyor = (string)rec.GetValueByKey("conveyor"),
+              Quality = 0,
+              Revision = Convert.ToInt32(rec.GetValueByKey("revison")),
+              Value = (double)rec.GetValueByKey("value"),
+              Location = (double)rec.GetValueByKey("location"),
+              Timestamp = rec.GetTimeInDateTime().GetValueOrDefault(DateTime.Now)
+            };
+
+            results.Add(a);
+          }
+        }
+      }
+      catch (Exception e) { 
+        _logger.LogError(e.Message);   
+      }
+
+      return results;
+    }
+
     public IEnumerable<Conveyor> GetConveyors(string site)
     {
       using var context = dBContext.CreateDbContext();
@@ -70,14 +124,16 @@ namespace cads_gui.Data
       return data.Distinct().ToList();
     }
 
-    public DateTime GetChronoAtTimezone(Scan s) {
+    public DateTime GetChronoAtTimezone(Scan s)
+    {
       using var context = dBContext.CreateDbContext();
       var data = from a in context.Conveyors where a.Belt == s.Belt select TimeZoneInfo.ConvertTimeFromUtc(s.chrono, a.Timezone);
 
       return data.First();
     }
 
-    public TimeZoneInfo GetConveyorTimezone(string site, string conveyor) {
+    public TimeZoneInfo GetConveyorTimezone(string site, string conveyor)
+    {
       using var context = dBContext.CreateDbContext();
       var data = from a in context.Conveyors where a.Site == site && a.Name == conveyor select a;
 
@@ -88,7 +144,7 @@ namespace cads_gui.Data
     {
       using var context = dBContext.CreateDbContext();
       var data = from a in context.Scans orderby a.chrono where a.site == site && a.conveyor == belt select a;
-      
+
       return data.ToList();
     }
 
@@ -96,9 +152,9 @@ namespace cads_gui.Data
     public async Task<Belt> GetBelt(string site, string belt)
     {
       using var context = await dBContext.CreateDbContextAsync();
-      var beltId = (from a in context.Conveyors where a.Site== site && a.Name == belt select a.Belt).First();
+      var beltId = (from a in context.Conveyors where a.Site == site && a.Name == belt select a.Belt).First();
       var data = from b in context.Belts where b.Id == beltId select b;
-      
+
       return data.First();
     }
 
@@ -106,7 +162,7 @@ namespace cads_gui.Data
     {
       using var context = dBContext.CreateDbContext();
       var data = from a in context.Scans orderby a.chrono where a.site == site && a.conveyor == belt && a.chrono.Date == chrono.Date select a;
-      
+
       return data.ToList();
     }
 
@@ -114,9 +170,9 @@ namespace cads_gui.Data
     {
       using var context = dBContext.CreateDbContext();
       var data = from a in context.Scans orderby a.chrono where a.site == site && a.conveyor == conveyor select a;
-      
+
       // context will be disposed without evaluation of data
-      return data.ToArray(); 
+      return data.ToArray();
 
     }
 
@@ -124,8 +180,8 @@ namespace cads_gui.Data
     {
       using var context = dBContext.CreateDbContext();
       var data = from a in context.Belts where a.Id == scan.Belt select a;
-      
-      return data.ToArray(); 
+
+      return data.ToArray();
 
     }
 
@@ -178,7 +234,7 @@ namespace cads_gui.Data
     public async Task StoreBeltConstantsAsync(Scan entry)
     {
       using var context = dBContext.CreateDbContext();
-      DateTime.SpecifyKind(entry.chrono,DateTimeKind.Utc);
+      DateTime.SpecifyKind(entry.chrono, DateTimeKind.Utc);
       context.Scans.Add(entry);
       await context.SaveChangesAsync();
     }
@@ -187,32 +243,39 @@ namespace cads_gui.Data
     {
       using var context = dBContext.CreateDbContext();
       var q = context.Conveyors.Where(e => e.Name == entry.Name && e.Site == entry.Site);
-      
-      if(q.Any()) {
+
+      if (q.Any())
+      {
         return q.First().Id;
-      }else {
+      }
+      else
+      {
         context.Conveyors.Add(entry);
-        await context.SaveChangesAsync(); 
+        await context.SaveChangesAsync();
         return entry.Id;
       }
-      
+
     }
 
     public async Task<long> AddBeltsAsync(Belt entry)
     {
       using var context = dBContext.CreateDbContext();
       var q = context.Belts.Where(e => e.Conveyor == entry.Conveyor && e.Installed == entry.Installed);
-      
-      if(q.Any()) {
+
+      if (q.Any())
+      {
         return q.First().Id;
-      }else {
+      }
+      else
+      {
         context.Belts.Add(entry);
-        await context.SaveChangesAsync(); 
+        await context.SaveChangesAsync();
         return entry.Id;
       }
     }
 
-    public async Task<IEnumerable<Grafana>> GetGrafanaPlotsAsync(Belt belt) {
+    public async Task<IEnumerable<Grafana>> GetGrafanaPlotsAsync(Belt belt)
+    {
       using var context = await dBContext.CreateDbContextAsync();
       var beltplots = from b in context.Plots where b.Belt == belt.Id && b.Visible select b;
 
@@ -222,18 +285,19 @@ namespace cads_gui.Data
 
     public async Task<float[]> GetBeltProfileAsync(double y, long num_y_samples, Scan belt)
     {
-      var dbpath = Path.GetFullPath(Path.Combine(config.DBPath,belt.name));
-      var fs = await NoAsp.RetrieveFrameModular(dbpath, y, num_y_samples,0);
-      var z = fs.SelectMany( f => f.z).ToArray();
+      var dbpath = Path.GetFullPath(Path.Combine(config.DBPath, belt.name));
+      var fs = await NoAsp.RetrieveFrameModular(dbpath, y, num_y_samples, 0);
+      var z = fs.SelectMany(f => f.z).ToArray();
       return z;
     }
 
-    
-    public string AppendPath(string belt) {
-      return Path.GetFullPath(Path.Combine(config.DBPath,belt));
+
+    public string AppendPath(string belt)
+    {
+      return Path.GetFullPath(Path.Combine(config.DBPath, belt));
     }
 
-    
+
     public List<SavedZDepthParams> GetSavedZDepthParams(Scan belt)
     {
       using var context = dBContext.CreateDbContext();
@@ -245,19 +309,23 @@ namespace cads_gui.Data
     {
       using var context = dBContext.CreateDbContext();
       var q = context.SavedZDepthParams.Where(e => e.Name == entry.Name && e.Site == entry.Site && e.Conveyor == entry.Conveyor);
-      if(q.Any()) {
+      if (q.Any())
+      {
         context.SavedZDepthParams.Update(entry);
-      }else{
+      }
+      else
+      {
         context.SavedZDepthParams.Add(entry);
       }
       context.SaveChanges();
 
     }
 
-     public async Task<List<ZDepth>> BeltScanAsync2(ZDepthQueryParameters search, Scan belt, long limit) {
-      
-      var db = AppendPath(NoAsp.EndpointToSQliteDbName(belt.site,belt.conveyor,belt.chrono));
-       
+    public async Task<List<ZDepth>> BeltScanAsync2(ZDepthQueryParameters search, Scan belt, long limit)
+    {
+
+      var db = AppendPath(NoAsp.EndpointToSQliteDbName(belt.site, belt.conveyor, belt.chrono));
+
       var dx = belt.x_res;
       var dy = belt.y_res;
 
@@ -267,38 +335,40 @@ namespace cads_gui.Data
       var ZMin = search.ZMin;
       var P = search.Percentage;
 
-      var xMinIndex = (int)Math.Max(Math.Floor(search.XMin / belt.x_res),0);
-      var xMaxIndex = (int)Math.Min(Math.Floor(search.XMax / belt.x_res),belt.WidthN);
+      var xMinIndex = (int)Math.Max(Math.Floor(search.XMin / belt.x_res), 0);
+      var xMaxIndex = (int)Math.Min(Math.Floor(search.XMax / belt.x_res), belt.WidthN);
 
       var columns = (int)Math.Ceiling(belt.Xmax / X);
       var rows = (int)Math.Ceiling(belt.Ymax / Y);
 
-      bool fz(float z) 
+      bool fz(float z)
       {
         return ZMin < z && z < ZMax;
       }
 
-      bool fp(Search.SearchResult p) 
+      bool fp(Search.SearchResult p)
       {
         return p.Percent > P;
       }
 
-      bool xRange(int xIndex) {
+      bool xRange(int xIndex)
+      {
         return xMinIndex <= xIndex && xIndex < xMaxIndex;
       }
 
       var req = new List<ZDepth>();
 
-      var x = await Search.SearchParallelAsync(db,columns,rows,(int)belt.WidthN,(long)belt.YmaxN,limit,xRange, fz, fp);
+      var x = await Search.SearchParallelAsync(db, columns, rows, (int)belt.WidthN, (long)belt.YmaxN, limit, xRange, fz, fp);
 
-      foreach (var r in x) {
-        req.Add(new (r.Col*dx,r.Row*dy,r.Width*dx,r.Length*dy,r.Percent,new(r.ZMin.X*dx,r.ZMin.Y*dy,r.ZMin.Z)));
+      foreach (var r in x)
+      {
+        req.Add(new(r.Col * dx, r.Row * dy, r.Width * dx, r.Length * dy, r.Percent, new(r.ZMin.X * dx, r.ZMin.Y * dy, r.ZMin.Z)));
       }
 
       return req;
 
     }
- 
+
   } // class
 
 } // namespace

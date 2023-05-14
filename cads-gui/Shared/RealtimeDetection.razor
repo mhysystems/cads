@@ -45,6 +45,7 @@
 
   protected override async Task OnInitializedAsync()
   {
+      messages = await beltservice.GetAnomalies(Site,Conveyor);
       if(string.IsNullOrWhiteSpace(_appsettings.Value.Authorization))
       {
         hubConnection = new HubConnectionBuilder()
@@ -60,7 +61,12 @@
       hubConnection.On<AnomalyMsg>("ReceiveMessage", (message) =>
       {
           message.Timestamp = TimeZoneInfo.ConvertTimeFromUtc(message.Timestamp, timezone);
-          messages.Insert(0,message);
+          if(messages.Count > 64) {
+            messages.RemoveAt(messages.Count - 1);
+            messages.Insert(0,message);
+          }else {
+            messages.Insert(0,message);
+          }
           InvokeAsync(StateHasChanged);
       });
 
