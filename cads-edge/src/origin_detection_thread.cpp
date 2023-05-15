@@ -252,7 +252,7 @@ namespace cads
       prepend_Mat_cols(belt, p.z);
 
       profile_buffer.pop_front();
-      profile_buffer.push_back({p.y - y_offset, p.x_off, p.z});
+      profile_buffer.push_back({p.time,p.y - y_offset, p.x_off, p.z});
 
     }
   }
@@ -358,7 +358,7 @@ namespace cads
       {
         y_offset = y;
       }
-      p = {p.y - y_offset, p.x_off, p.z};
+      p = {p.time,p.y - y_offset, p.x_off, p.z};
 
       std::tie(p,terminate) = co_yield {p,y,true};  
     }

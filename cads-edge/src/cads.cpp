@@ -220,7 +220,7 @@ namespace
 
       if (cnt % 20000 == 0)
       {
-        auto now = std::chrono::high_resolution_clock::now();
+        std::chrono::time_point  now = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::micro> dt = now - time0;
         time0 = now;
         spdlog::get("cads")->debug("Gocator sending rate : {}", 20000 * (1000000 / dt.count()));
@@ -306,7 +306,7 @@ namespace
 
       auto pulley_level_unbias = dc_filter(pulley_level_filtered);
 
-      auto [delayed, dd] = delay({iy, ix, iz, (int)left_edge_filtered, (int)ll, (int)lr, p.z});
+      auto [delayed, dd] = delay({{p.time,iy,ix,iz}, (int)left_edge_filtered, (int)ll, (int)lr, p.z});
 
       if (!delayed)
         continue;
@@ -317,7 +317,10 @@ namespace
         continue;
       }
 
-      auto [y, x, z, left_edge_index_avg, left_edge_index, right_edge_index, raw_z] = dd;
+      auto [delayed_profile, left_edge_index_avg, left_edge_index, right_edge_index, raw_z] = dd;
+      auto y = delayed_profile.y;
+      auto x = delayed_profile.x_off;
+      auto z = delayed_profile.z;
 
       auto gradient = (pulley_right_filtered - pulley_level_filtered) / (double)z.size();
       regression_compensate(z, 0, z.size(), gradient);
@@ -377,11 +380,11 @@ namespace
 
       if (use_encoder)
       {
-        winFifo.enqueue({msgid::scan, cads::profile{y, x + left_edge_index_aligned * x_resolution, {f.begin(), f.end()}}});
+        winFifo.enqueue({msgid::scan, cads::profile{delayed_profile.time,y, x + left_edge_index_aligned * x_resolution, {f.begin(), f.end()}}});
       }
       else
       {
-        fn.resume({ps, cads::profile{y, pulley_level_filtered, {f.begin(), f.end()}}});
+        fn.resume({ps, cads::profile{delayed_profile.time,y, pulley_level_filtered, {f.begin(), f.end()}}});
       }
 
     } while (std::get<0>(m) != msgid::finished);
@@ -470,7 +473,7 @@ namespace cads
         }
 
         auto f = p.z | views::take(int(WidthN));
-        post_profile.resume(cads::profile{p.y, p.x_off, {f.begin(), f.end()}});
+        post_profile.resume(cads::profile{p.time,p.y, p.x_off, {f.begin(), f.end()}});
       }
     }
   }
@@ -634,9 +637,6 @@ namespace cads
       {
 
         auto p = get<profile>(get<1>(m));
-        auto iy = p.y;
-        auto ix = p.x_off;
-        auto iz = p.z;
 
         auto [pulley_left, pulley_right, ll, lr, cerror] = pulley_levels_clustered(p.z, pulley_estimator);
 
@@ -646,11 +646,11 @@ namespace cads
         filt << bottom_avg << "," << bottom_filtered << '\n';
         filt.flush();
 
-        auto [delayed, dd] = delay({iy, ix, iz, 0, 0, 0, p.z});
+        auto [delayed, dd] = delay({p, 0, 0, 0, p.z});
         if (!delayed)
           continue;
 
-        auto [y, x, z, ignore_d, ignore_a, ignore_b, ignore_c] = dd;
+        auto [delayed_profile, ignore_d, ignore_a, ignore_b, ignore_c] = dd;
       }
 
     } while (std::get<0>(m) != msgid::finished);

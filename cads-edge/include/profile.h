@@ -22,6 +22,7 @@ namespace cads
 
   struct profile
   {
+    std::chrono::time_point<std::chrono::system_clock> time;
     y_type y;
     double x_off;
     z_type z;
@@ -29,7 +30,7 @@ namespace cads
   using profile_window = std::deque<profile>;
   bool operator==(const profile &, const profile &);
 
-  const cads::profile null_profile{std::numeric_limits<cads::y_type>::max(), std::numeric_limits<double>::max(), {}};
+  const cads::profile null_profile{ std::chrono::time_point<std::chrono::system_clock>::min(),std::numeric_limits<cads::y_type>::max(), std::numeric_limits<double>::max(), {}};
 
   struct profile_params
   {

@@ -651,6 +651,7 @@ namespace cads
     co_return 0;
   }
 
+#if 0
   std::vector<profile> http_get_frame(double y, int len, date::utc_clock::time_point chrono)
   {
     using namespace flatbuffers;
@@ -672,5 +673,5 @@ namespace cads
 
     return rtn;
   }
-
+#endif
 }

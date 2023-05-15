@@ -754,7 +754,7 @@ namespace cads
         z_element *z = (z_element *)sqlite3_column_blob(stmt.get(), 3); // Freed on next call to sqlite3_step
         int len = sqlite3_column_bytes(stmt.get(), 3) / sizeof(*z);
 
-        rtn.push_back({idx, {y, x_off, {z, z + len}}});
+        rtn.push_back({idx, {std::chrono::high_resolution_clock::now(),y, x_off, {z, z + len}}}); //FIXME
       }
       else if (err == SQLITE_DONE)
       {

@@ -15,8 +15,6 @@
 #include <constants.h>
 
 
-
-
 namespace cads
 {
   void spike_filter(z_type &z, int max_window_size)
@@ -145,17 +143,17 @@ namespace cads
     };
   }
 
-  std::function<std::tuple<bool, std::tuple<y_type, double, z_type,int,int,int,z_type>>(std::tuple<y_type, double, z_type,int,int,int,z_type>)> mk_delay(size_t len)
+  std::function<std::tuple<bool, std::tuple<profile,int,int,int,z_type>>(std::tuple<profile,int,int,int,z_type>)> mk_delay(size_t len)
   {
 
-    std::deque<std::tuple<y_type, double, z_type,int,int,int,z_type>> delay;
-    return [=](std::tuple<y_type, double, z_type,int,int,int,z_type> p) mutable
+    std::deque<std::tuple<profile,int,int,int,z_type>> delay;
+    return [=](std::tuple<profile,int,int,int,z_type> p) mutable
     {
       delay.push_back(p);
 
       if (delay.size() < len)
       {
-        return std::tuple{false, std::tuple<y_type, double, z_type,int,int,int,z_type>()};
+        return std::tuple{false, std::tuple<profile,int,int,int,z_type>()};
       }
 
       auto rn = delay.front();
