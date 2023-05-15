@@ -9,7 +9,7 @@
 
 namespace cads
 {
-  using PulleyRevolution = std::tuple<bool, double, std::chrono::duration<double>>;
+  using PulleyRevolution = std::tuple<bool, double>;
 
   std::function<PulleyRevolution(double)> mk_pulley_revolution(double);
   std::function<std::tuple<double,double,double>(PulleyRevolution,double)> mk_pulley_stats(double init = global_conveyor_parameters.MaxSpeed);

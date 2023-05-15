@@ -52,15 +52,12 @@ namespace cads
     auto pully_circumfrence = global_conveyor_parameters.PulleyCircumference; // In mm
     auto trigger_distance = pully_circumfrence / n;
     auto period = global_conveyor_parameters.PulleyCircumference / global_conveyor_parameters.MaxSpeed;
-    long cnt_est = period * fps;
+    long cnt_est_threshold = period * fps * 0.9;
 
     double schmitt1 = 1.0, schmitt0 = -1.0;
     auto schmitt_trigger = mk_schmitt_trigger(bias);
-    auto time0 = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> dt = time0 - time0;
-    long cnt = 0;
-    unsigned long big_cnt = 0;
 
+    long cnt = 0;
     auto avg_max_fn = mk_online_mean(bias);
     auto avg_min_fn = mk_online_mean(bias);
 
@@ -84,24 +81,15 @@ namespace cads
       avg_min = avg_min_fn(min);
       bias = avg_min * 0.75 + avg_max * (1 - 0.75);
       
-      if(big_cnt++ % 2000 == 0) {
-          spdlog::get("cads")->debug("schmitt trigger level: {}, avgmax: {}, avgmin: {}",bias, avg_max, avg_min);
-      }
-
-      auto rtn = PulleyRevolution{false, trigger_distance,dt};
+      auto rtn = PulleyRevolution{false, trigger_distance};
 
       schmitt1 = schmitt_trigger(pulley_height);
 
-      if ((cnt > (cnt_est * 0.9)) && ((std::signbit(schmitt1) == true && std::signbit(schmitt0) == false) || 
+      if ((cnt > cnt_est_threshold) && ((std::signbit(schmitt1) == true && std::signbit(schmitt0) == false) || 
          (bidirectional && (std::signbit(schmitt1) == false && std::signbit(schmitt0) == true))))
       {
         cnt = 0;
-        auto now = std::chrono::high_resolution_clock::now();
-        dt = now - time0;
-        time0 = now;
         std::get<0>(rtn) = true;
-        std::get<2>(rtn) = dt;
-
       }
 
       schmitt0 = schmitt1;
@@ -185,7 +173,7 @@ namespace cads
       if (terminate)
         continue;
 
-      auto [root, root_distance, time] = pulley_revolution;
+      auto [root, root_distance] = pulley_revolution;
 
       if (root)
       {
@@ -238,7 +226,7 @@ namespace cads
 
     return [=](PulleyRevolution pulley_revolution, double pulley_osc) mutable -> std::tuple<double,double,double>
     {
-      auto [root, root_distance, root_dt] = pulley_revolution;
+      auto [root, root_distance] = pulley_revolution;
 
       auto now = std::chrono::high_resolution_clock::now();
       std::chrono::duration<double, std::milli> dt = now - barrel_origin_time;
