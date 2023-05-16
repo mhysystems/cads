@@ -335,7 +335,7 @@ namespace
         ps = pulley_rev(pulley_level_unbias);
       }
 
-      auto [speed, frequency, amplitude] = pulley_speed(ps, pulley_level_unbias);
+      auto [speed, frequency, amplitude] = pulley_speed(ps, pulley_level_unbias, delayed_profile.time);
 
       if (speed == 0)
       {

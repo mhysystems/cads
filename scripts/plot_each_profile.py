@@ -10,7 +10,7 @@ if __name__ == "__main__":
     parser.add_argument("db", help="Sqlite belt profiles")
     parser.add_argument("--begin","-b", help="Begin Position", default=0)
     parser.add_argument("--table","-l", help="Source Table", default="profile")
-    parser.add_argument("--s", help="Sub NaN with", default=-40.00)
+    parser.add_argument("--s", help="Sub NaN with", default=-15.00)
     parser.add_argument("--hist","-t", help="Histogram plot", action='store_true')
 
     args = parser.parse_args()

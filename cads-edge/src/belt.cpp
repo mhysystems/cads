@@ -23,7 +23,8 @@ namespace
 
     if (milliseconds >= T0)
     {
-      auto c = -m * (milliseconds) + (1 + m * T0);
+      const auto period = milliseconds - T0;
+      auto c = 1 - m * period;
       if (c > 0.0)
       {
         return c;
@@ -205,14 +206,14 @@ namespace cads
 
 
  
-  std::function<std::tuple<double,double,double>(PulleyRevolution,double)> mk_pulley_stats(double init)
+  std::function<std::tuple<double,double,double>(PulleyRevolution,double,std::chrono::time_point<std::chrono::system_clock>)> mk_pulley_stats(double init)
   {
     using namespace std::placeholders;
 
     auto pulley_circumfrence = global_conveyor_parameters.PulleyCircumference;
     auto avg_speed = global_conveyor_parameters.MaxSpeed;
-    auto T0 = 1000 * pulley_circumfrence / avg_speed; // in ms
-    auto T1 = 2 * T0;  // in ms
+    auto T0 = 1; //pulley_circumfrence / avg_speed; // in ms
+    auto T1 = 10 * T0;  // in ms
     auto barrel_origin_time = std::chrono::high_resolution_clock::now();
     
     double period = 1.0;
@@ -224,11 +225,10 @@ namespace cads
     double amplitude = 0;
     double frequency = 0;
 
-    return [=](PulleyRevolution pulley_revolution, double pulley_osc) mutable -> std::tuple<double,double,double>
+    return [=](PulleyRevolution pulley_revolution, double pulley_osc, std::chrono::time_point<std::chrono::system_clock> now) mutable -> std::tuple<double,double,double>
     {
       auto [root, root_distance] = pulley_revolution;
 
-      auto now = std::chrono::high_resolution_clock::now();
       std::chrono::duration<double, std::milli> dt = now - barrel_origin_time;
       period = dt.count();
       amplitude_extraction(pulley_osc, false);
@@ -245,7 +245,7 @@ namespace cads
 
       if (cnt == 0)
       {
-        barrel_origin_time = std::chrono::high_resolution_clock::now();
+        barrel_origin_time = now;
         cnt++;
       }
 
