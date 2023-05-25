@@ -1,0 +1,9 @@
+[wrap-file]
+directory = SCAMP-4.0.0
+source_url = https://github.com/zpzim/SCAMP/archive/refs/tags/v4.0.0.zip
+source_filename = scamp-4.0.0.zip
+source_hash = fc918eb7ff121118f6bf3f8a3358f0525481ed6218b1c7b5c7fd3d25240483a4
+patch_directory = scamp-4.0.0
+
+[provide]
+scamp = scamp_dep

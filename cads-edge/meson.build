@@ -46,6 +46,7 @@ lua_dep = subproject('lua').get_variable('lua_dep')
 eigen_dep = subproject('eigen').get_variable('eigen_dep')
 natsc_dep = subproject('nats.c').get_variable('natsc_dep')
 brotli_enc_dep = subproject('google-brotli').get_variable('brotli_encoder_dep')
+scamp_dep = subproject('scamp').get_variable('scamp_dep')
 
 flatc_exe = subproject('flatbuffers').get_variable('flatc')
 copy = find_program('cp')
@@ -59,7 +60,7 @@ cadsInc = include_directories('include')
 cadsSrc = []
 cadsEntry = []
 
-libdep = [opencv, tbb, thread, boost, sqlite, http_stuff,log_stuff, flatbuffers, fmt_dep, nlohmann_json_dep,date_dep,tz_dep,iir1_dep,lua_dep,eigen_dep, natsc_dep, brotli_enc_dep, gsl]
+libdep = [opencv, tbb, thread, boost, sqlite, http_stuff,log_stuff, flatbuffers, fmt_dep, nlohmann_json_dep,date_dep,tz_dep,iir1_dep,lua_dep,eigen_dep, natsc_dep, brotli_enc_dep, gsl, scamp_dep]
 # Returns z_config 
 # Represents header files
 subdir('flatbuffers')

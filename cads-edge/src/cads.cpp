@@ -24,6 +24,7 @@
 #include <iostream>
 
 #include <spdlog/spdlog.h>
+#include <core/SCAMP.h>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wuseless-cast"
@@ -593,7 +594,7 @@ namespace cads
     scan_upload_fifo.enqueue({msgid::finished, 0});
   }
 
-  void generate_signal()
+  void generate_signal2()
   {
 
     BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
@@ -657,6 +658,80 @@ namespace cads
 
     gocator->Stop();
     spdlog::get("cads")->info("Gocator Stopped");
+  }
+
+  void generate_signal()
+  {
+
+    BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
+
+    auto [gocator, is_gocator] = mk_gocator(gocatorFifo);
+    gocator->Start();
+
+    cads::msg m;
+
+    gocatorFifo.wait_dequeue(m);
+    auto m_id = get<0>(m);
+
+    if (m_id == cads::msgid::finished)
+    {
+      return;
+    }
+
+    if (m_id != cads::msgid::gocator_properties)
+    {
+      std::throw_with_nested(std::runtime_error("preprocessing:First message must be gocator_properties"));
+    }
+
+    auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution, encoder_framerate] = get<GocatorProperties>(get<1>(m));
+    std::ofstream filt("filt.txt");
+
+    long cnt = 0;
+    std::vector<float> p0(3000,-380.0f);
+    std::vector<decltype(mk_online_mean(-380.0))> mean0(3000);
+
+    for(auto &e : mean0) {
+      e = mk_online_mean(-380.0);
+    }
+
+    do
+    {
+
+      gocatorFifo.wait_dequeue(m);
+      auto m_id = get<0>(m);
+      cnt++;
+
+      if (m_id == cads::msgid::scan)
+      {
+
+        auto p = get<profile>(get<1>(m));
+        auto z = p.z;
+
+        auto sum = 0.0;
+        auto k = 300;
+        for(auto i = z.begin() + 300; i < z.end()-300; ++i, ++k) {
+
+          auto v = *i;
+          if(std::isnan(v)) v = -380.0;
+
+          double mm = mean0[k](v);
+
+          auto v2 = mm;
+          sum += (v - v2)*(v - v2);
+          p0[k] = v;
+        }
+
+        auto jjj = std::sqrt(sum);
+        //auto jj = mean(jjj);
+        auto d = jjj;// - jj;
+        filt << d << "," << d << '\n';
+        filt.flush();
+        
+      }
+
+    } while (std::get<0>(m) != msgid::finished);
+
+    gocator->Stop();
   }
 
   void stop_gocator()

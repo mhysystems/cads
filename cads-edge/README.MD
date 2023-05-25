@@ -7,7 +7,7 @@ sudo apt update && sudo apt upgrade -y
 
 
 1) Install needed libraries and programs
-	sudo apt-get install libsqlite3-dev sqlite3 ninja-build libssl-dev libcurl4 libcurl4-openssl-dev libtbb-dev python3-pip libprotobuf-c-dev libboost-all-dev
+	sudo apt-get install libsqlite3-dev sqlite3 ninja-build libssl-dev libcurl4 libcurl4-openssl-dev libtbb-dev python3-pip libprotobuf-c-dev libboost-all-dev libgsl-dev libprotobuf-c-dev
 
 	## Nano ##
   	Compiles with GPU enabled
@@ -62,7 +62,8 @@ VCPKG_DEFAULT_TRIPLET=x64-windows
 maybe cross file
 meson setup --cross-file meson-vcpkg.txt win
 
-{"Site":"localdev","Conveyor":"test","Time": "2023-04-22T02:17:06.00Z", "YArea":1000,"Value":15}
+#Cuda on nano to stop the driver killing the app
+echo N > /sys/kernel/debug/gpu.0/timeouts_enabled
 
 
 

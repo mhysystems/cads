@@ -1,9 +1,9 @@
 {
-  "data_source" : "gocator",
+  "data_source" : "../../profiles/rawprofile_cv001_2.db",
   
   "sqlite_gocator" : {
     "range" : [0,9007199254740991],
-    "fps" : 984,
+    "fps" : 999999999999999,
     "forever" : false,
     "delay" : 98
   },
