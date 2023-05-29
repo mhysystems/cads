@@ -5,6 +5,8 @@
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 
 #include <spdlog/spdlog.h>
+#include <common/scamp_interface.h>
+
 
 #pragma GCC diagnostic pop
 
@@ -15,6 +17,8 @@
 #include <filters.h>
 #include <opencv2/core.hpp>
 #include <utils.hpp>
+
+
 
 using namespace moodycamel;
 
@@ -460,4 +464,128 @@ namespace cads
     next_fifo.enqueue({msgid::finished, 0});
     spdlog::get("cads")->info("window_processing_thread");
   }
+
+coro<double,profile,1> anomaly_detection_coro(double x_resolution, double y_resolution, int width_n)
+  {    
+    using namespace SCAMP;
+    
+    profile p;
+    bool terminate = false;
+    
+    int window_size = 333;
+    std::vector<double> belt_thickness_estimates;
+
+    SCAMPArgs args;
+    args.window = window_size;
+    args.max_tile_size = 1 << 17;
+    args.has_b = false;
+    args.distributed_start_row = -1;
+    args.distributed_start_col = -1;
+    args.distance_threshold = 0.0;
+    args.computing_columns = true;
+    args.computing_rows = true;
+    args.profile_a.type = SCAMP::PROFILE_TYPE_1NN_INDEX;
+    args.profile_b.type = SCAMP::PROFILE_TYPE_INVALID;
+    args.precision_type = SCAMP::PRECISION_DOUBLE;
+    args.profile_type = SCAMP::PROFILE_TYPE_1NN_INDEX;
+    args.keep_rows_separate = false;
+    args.is_aligned = false;
+    
+    args.timeseries_b = std::vector<double>();
+    args.silent_mode = true;
+    args.max_matches_per_column = 5;
+    args.matrix_height = 50;
+    args.matrix_width = 50;
+
+    while (true)
+    {
+      std::tie(p,terminate) = co_yield {0.0};
+      if(terminate) break;
+
+      auto belt_thickness_estimate = interquartile_mean(p.z);
+
+      for(int i = 0; i < window_size * 2; ++i) {
+        belt_thickness_estimates.push_back(belt_thickness_estimate);
+        co_yield {0.0};
+      }
+      
+      args.timeseries_a = belt_thickness_estimates;
+      do_SCAMP(&args, std::vector<int>(), 1);
+      auto s = 0;
+
+    }
+  }
+
+  void splice_detection_thread(double x_resolution, double y_resolution, int width_n, BlockingReaderWriterQueue<msg> &profile_fifo)
+  {
+
+    cads::msg m;
+
+    auto start = std::chrono::high_resolution_clock::now();
+    int64_t cnt = 0;
+    auto buffer_size_warning = buffer_warning_increment;
+
+
+    auto origin_detection = anomaly_detection_coro(x_resolution,y_resolution,width_n);
+
+    long origin_sequence_cnt = 0;
+
+    for (auto loop = true;loop;++cnt)
+    {
+      
+      profile_fifo.wait_dequeue(m);
+
+      switch(std::get<0>(m)) {
+
+        case msgid::scan: {
+          auto p = get<profile>(get<1>(m));
+          auto [coro_end,result] = origin_detection.resume(p);
+          
+          if(!coro_end) {
+
+            if(true) {
+
+            
+          }else {
+            loop = false;
+            spdlog::get("cads")->error("Origin decetor stopped");
+          }
+          break;
+        }
+        }
+        case msgid::finished:
+
+          loop = false;
+          break;
+        default:
+          break;
+      }
+
+      if (profile_fifo.size_approx() > buffer_size_warning)
+      {
+        spdlog::get("cads")->warn("Cads Origin Detection showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
+        buffer_size_warning += buffer_warning_increment;
+      }
+    }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    auto rate = duration != 0 ? (double)cnt / duration : 0;
+    spdlog::get("cads")->info("ORIGIN DETECTION - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, rate);
+  }
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
 }

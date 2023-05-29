@@ -168,7 +168,8 @@ namespace
     else
     {
       auto y_res = encoder_framerate != 0.0 ? global_conveyor_parameters.MaxSpeed / encoder_framerate : y_resolution;
-      origin_dectection = std::jthread(window_processing_thread, x_resolution, y_res, width_n, std::ref(winFifo), std::ref(dynamic_processing_fifo));
+      //origin_dectection = std::jthread(window_processing_thread, x_resolution, y_res, width_n, std::ref(winFifo), std::ref(dynamic_processing_fifo));
+      origin_dectection = std::jthread(splice_detection_thread, x_resolution, y_res, width_n, std::ref(winFifo));
       dynamic_processing = std::jthread(dynamic_processing_thread, std::ref(dynamic_processing_fifo), std::ref(db_fifo), width_n);
     }
 
@@ -385,7 +386,8 @@ namespace
       }
       else
       {
-        fn.resume({ps, cads::profile{delayed_profile.time,y, pulley_level_filtered, {f.begin(), f.end()}}});
+        winFifo.enqueue({msgid::scan, cads::profile{delayed_profile.time,y, x + left_edge_index_aligned * x_resolution, {f.begin(), f.end()}}});
+        //fn.resume({ps, cads::profile{delayed_profile.time,y, pulley_level_filtered, {f.begin(), f.end()}}});
       }
 
     } while (std::get<0>(m) != msgid::finished);
