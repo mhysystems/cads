@@ -6,7 +6,8 @@
 
 #include <spdlog/spdlog.h>
 #include <common/scamp_interface.h>
-
+#include <common/scamp_args.h>
+#include <common/scamp_utils.h>
 
 #pragma GCC diagnostic pop
 
@@ -485,7 +486,7 @@ coro<double,profile,1> anomaly_detection_coro(double x_resolution, double y_reso
     args.computing_columns = true;
     args.computing_rows = true;
     args.profile_a.type = SCAMP::PROFILE_TYPE_1NN_INDEX;
-    args.profile_b.type = SCAMP::PROFILE_TYPE_INVALID;
+    args.profile_b.type = SCAMP::PROFILE_TYPE_1NN_INDEX;
     args.precision_type = SCAMP::PRECISION_DOUBLE;
     args.profile_type = SCAMP::PROFILE_TYPE_1NN_INDEX;
     args.keep_rows_separate = false;
@@ -497,26 +498,34 @@ coro<double,profile,1> anomaly_detection_coro(double x_resolution, double y_reso
     args.matrix_height = 50;
     args.matrix_width = 50;
 
+    long cnt = 0;
     while (true)
     {
       std::tie(p,terminate) = co_yield {0.0};
       if(terminate) break;
 
-      auto belt_thickness_estimate = interquartile_mean(p.z);
+      if(cnt++ < 0) continue;
 
-      for(int i = 0; i < window_size * 2; ++i) {
-        belt_thickness_estimates.push_back(belt_thickness_estimate);
-        co_yield {0.0};
+      auto belt_thickness_estimate = interquartile_mean(p.z);
+      belt_thickness_estimates.push_back(belt_thickness_estimate);
+      
+      if(cnt++ < 1000)
+      {
+        continue;
       }
       
       args.timeseries_a = belt_thickness_estimates;
       do_SCAMP(&args, std::vector<int>(), 1);
+      auto [mp,mi] = ProfileToVector(args.profile_a, false, window_size);
+      auto ii = std::max_element(mp.begin(),mp.end());
+      auto d = std::distance(mp.begin(),ii);
+      auto iii = mi[d];
       auto s = 0;
 
     }
   }
 
-  void splice_detection_thread(double x_resolution, double y_resolution, int width_n, BlockingReaderWriterQueue<msg> &profile_fifo)
+  void splice_detection_thread(double x_resolution, double y_resolution, int width_n, BlockingReaderWriterQueue<msg> &profile_fifo,BlockingReaderWriterQueue<msg> &next_fifo)
   {
 
     cads::msg m;
@@ -556,6 +565,7 @@ coro<double,profile,1> anomaly_detection_coro(double x_resolution, double y_reso
         case msgid::finished:
 
           loop = false;
+          next_fifo.enqueue(m);
           break;
         default:
           break;

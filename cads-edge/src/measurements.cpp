@@ -57,75 +57,92 @@ namespace cads {
 
   void measurement_thread(moodycamel::BlockingConcurrentQueue<Measure::MeasureMsg> &measure, bool &terminate)
   {
+    using Lua = std::unique_ptr<lua_State, decltype(&lua_close)>;
     auto realtime_metrics = realtime_metrics_coro();
     
-    auto lua = luaL_newstate();
-    luaL_openlibs( lua );
-    int lua_status = luaL_dofile(lua,"../measurements.lua");
+    auto consume_fifo_onerror = [&]() {
+      for (;!terminate;)
+      {  
+        Measure::MeasureMsg m;
+      
+        if (!measure.wait_dequeue_timed(m, std::chrono::milliseconds(1000)))
+        {
+          continue; // graceful thread terminate
+        }
+      }
+    };
+
+    auto L = Lua{luaL_newstate(),lua_close};
+    luaL_openlibs( L.get() );
+
+    int lua_status = luaL_dofile(L.get(),"../measurements.lua");
     
     if(lua_status != LUA_OK) {
       spdlog::get("cads")->error("{}:luaL_dofile {}",__func__,lua_status);
+      return consume_fifo_onerror();
     }
 
-    lua_pushlightuserdata(lua, &realtime_metrics);
-    lua_pushcclosure(lua, send_metrics, 1);
-    lua_setglobal(lua, "out");
+    lua_pushlightuserdata(L.get(), &realtime_metrics);
+    lua_pushcclosure(L.get(), send_metrics, 1);
+    lua_setglobal(L.get(), "out");
 
-    lua_pushcfunction(lua,time_str);
-    lua_setglobal(lua,"timeToString");
+    lua_pushcfunction(L.get(),time_str);
+    lua_setglobal(L.get(),"timeToString");
 
-    lua_getglobal(lua,"make");
+    lua_getglobal(L.get(),"make");
     auto tp = std::chrono::duration<double>(date::utc_clock::now().time_since_epoch());
     double tpd = tp.count();
-    lua_pushnumber(lua, tpd);
-    lua_status = lua_pcall(lua, 1, 0, 0);
+    lua_pushnumber(L.get(), tpd);
+    lua_status = lua_pcall(L.get(), 1, 0, 0);
 
     if(lua_status != LUA_OK) {
       spdlog::get("cads")->error("{}:lua_pcall {}",__func__,lua_status);
+      return consume_fifo_onerror();
     }
-
-    Measure::MeasureMsg m;
+  
     for (;!terminate;)
-    {
+    {  
+      Measure::MeasureMsg m;
+      
       if (!measure.wait_dequeue_timed(m, std::chrono::milliseconds(1000)))
       {
         continue; // graceful thread terminate
       }
       
       auto [sub,quality,time,value] = m;
-      lua_getglobal(lua,"send");
-      lua_pushstring(lua,sub.c_str());
-      lua_pushnumber(lua,quality);
+      lua_getglobal(L.get(),"send");
+      lua_pushstring(L.get(),sub.c_str());
+      lua_pushnumber(L.get(),quality);
       tp = std::chrono::duration<double>(get<2>(m).time_since_epoch());
-      lua_pushnumber(lua, tp.count());
+      lua_pushnumber(L.get(), tp.count());
       int param_number = 4;
       
       switch (value.index()) {
         case 0:
-          lua_pushnumber(lua, get<double>(value));      
+          lua_pushnumber(L.get(), get<double>(value));      
           break;
         case 1:
-          lua_pushstring(lua, get<std::string>(value).c_str());
+          lua_pushstring(L.get(), get<std::string>(value).c_str());
           break;
         case 2: 
-          lua_pushlightuserdata(lua, &value);
-          lua_pushcclosure(lua, execute_func2<double>, 1);
+          lua_pushlightuserdata(L.get(), &value);
+          lua_pushcclosure(L.get(), execute_func2<double>, 1);
           break;
          case 3: 
-          lua_pushlightuserdata(lua, &value);
-          lua_pushcclosure(lua, execute_func2<std::string>, 1);
+          lua_pushlightuserdata(L.get(), &value);
+          lua_pushcclosure(L.get(), execute_func2<std::string>, 1);
           break;
         case 4: {
           auto [v,location] = get<std::tuple<double,double>>(value);
-          lua_pushnumber(lua, v); 
-          lua_pushnumber(lua, location); 
+          lua_pushnumber(L.get(), v); 
+          lua_pushnumber(L.get(), location); 
           param_number++;
           break;
         }
         default: break;
       }
 
-      lua_status = lua_pcall(lua, param_number, 0, 0);
+      lua_status = lua_pcall(L.get(), param_number, 0, 0);
       
       if(lua_status != LUA_OK) {
         spdlog::get("cads")->error("{}:lua_pcall {}",__func__,lua_status);
@@ -145,22 +162,22 @@ namespace cads {
   }
   
   void Measure::send(std::string measure, int quality, double value) {
-    fifo.enqueue({measure,quality,date::utc_clock::now(),value});
+    fifo.try_enqueue({measure,quality,date::utc_clock::now(),value});
   }
 
   void Measure::send(std::string measure, int quality, std::string value) {
-    fifo.enqueue({measure,quality,date::utc_clock::now(),value});
+    fifo.try_enqueue({measure,quality,date::utc_clock::now(),value});
   }
   
   void Measure::send(std::string measure, int quality, std::function<double()> value) {
-    fifo.enqueue({measure,quality,date::utc_clock::now(),value});
+    fifo.try_enqueue({measure,quality,date::utc_clock::now(),value});
   }
 
   void Measure::send(std::string measure, int quality, std::function<std::string()> value) {
-    fifo.enqueue({measure,quality,date::utc_clock::now(),value});
+    fifo.try_enqueue({measure,quality,date::utc_clock::now(),value});
   }
 
   void Measure::send(std::string measure, int quality, std::tuple<double,double> value) {
-    fifo.enqueue({measure,quality,date::utc_clock::now(),value});
+    fifo.try_enqueue({measure,quality,date::utc_clock::now(),value});
   }
 }

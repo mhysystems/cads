@@ -1,6 +1,6 @@
 project('cads', ['c','cpp'],
   version : '1.0',
-  default_options : ['warning_level=3'])
+  default_options : ['warning_level=3','cpp_std=c++20'])
 
 message('Host system type: ' + host_machine.system())
 
@@ -31,17 +31,17 @@ if not opencv.found()
 	opencv = dependency('opencv',include_type:'system')
 endif
 
-http_stuff = subproject('cpr',default_options : ['warning_level=0']).get_variable('cpr_dep')
-log_stuff = subproject('spdlog').get_variable('spdlog_dep')
+http_stuff = subproject('cpr',default_options : ['warning_level=0','tests=disabled']).get_variable('cpr_dep')
+log_stuff = subproject('spdlog',default_options : ['tests=false']).get_variable('spdlog_dep')
 flatbuffers = subproject('flatbuffers').get_variable('flatbuffers_dep')
 flatc = subproject('flatbuffers').get_variable('flatc')
-gtest_dep = subproject('gtest').get_variable('gtest_dep')
-gtest_main = subproject('gtest').get_variable('gtest_main_dep')
+#gtest_dep = subproject('gtest').get_variable('gtest_dep')
+#gtest_main = subproject('gtest').get_variable('gtest_main_dep')
 fmt_dep = subproject('fmt').get_variable('fmt_dep')
 date_dep = subproject('hinnant-date', default_options : ['warning_level=0']).get_variable('date_dep')
 tz_dep = subproject('hinnant-date').get_variable('tz_dep')
 nlohmann_json_dep = subproject('nlohmann_json').get_variable('nlohmann_json_dep')
-iir1_dep = subproject('iir1').get_variable('iir1_dep')
+iir1_dep = subproject('iir').get_variable('libiir_dep')
 lua_dep = subproject('lua').get_variable('lua_dep')
 eigen_dep = subproject('eigen').get_variable('eigen_dep')
 natsc_dep = subproject('nats.c').get_variable('natsc_dep')
@@ -68,7 +68,8 @@ subdir('flatbuffers')
 subdir('src')
 #subdir('test')
 
-
+fs = import('fs')
+fs.copyfile('json.lua')
 
 cads = executable(
 	'cads', 
@@ -78,5 +79,5 @@ cads = executable(
   link_with : [GoSdkLib,kApiLib],
   #link_args : ['-fsanitize=address'], # GCC Address Sanitzer
   #cpp_args : ['-std=c++20','-fcoroutines', '-fsanitize=address'] # GCC Address Sanitzer
-  cpp_args : ['-std=c++20','-fcoroutines'] 
+  cpp_args : ['-march=native','-fcoroutines'] 
 )

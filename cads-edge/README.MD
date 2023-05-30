@@ -46,7 +46,7 @@ sudo apt update && sudo apt upgrade -y
 
 # Memory Leaks
 Valgrind
-valgrind --tool=memcheck --leak-check=full --show-leak-kinds=all --log-file="val.log" ./cads -c ../config.json 
+valgrind --tool=memcheck --track-origins=yes --leak-check=full --show-leak-kinds=all --log-file="val.log" ./cads -c ../config.json 
 
 GCC Address Sanitzer
 Uncomment meson.build
@@ -64,6 +64,9 @@ meson setup --cross-file meson-vcpkg.txt win
 
 #Cuda on nano to stop the driver killing the app
 echo N > /sys/kernel/debug/gpu.0/timeouts_enabled
+
+matrix profile with length of 31323 and window = 333 on nano takes about 1sec.
+
 
 
 

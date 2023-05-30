@@ -65,17 +65,17 @@ namespace
     return {"", true};
   }
 
-  std::vector<uint8_t> compress(uint8_t *input, uint32_t size) {
+  std::vector<uint8_t> compress(uint8_t *input, uint32_t size)
+  {
 
     std::vector<uint8_t> output(size);
-    
+
     size_t input_size = size;
     size_t output_size = output.size();
 
-    BrotliEncoderCompress(8,BROTLI_DEFAULT_WINDOW, BROTLI_DEFAULT_MODE, input_size, input, &output_size, output.data());
+    BrotliEncoderCompress(8, BROTLI_DEFAULT_WINDOW, BROTLI_DEFAULT_MODE, input_size, input, &output_size, output.data());
     output.resize(output_size);
     return output;
-
   }
 }
 
@@ -138,84 +138,83 @@ namespace cads
     nats_Close();
   }
 
-
-  cads::coro<int, std::tuple<std::string, std::string, std::string>, 1>  realtime_metrics_coro()
+  cads::coro<int, std::tuple<std::string, std::string, std::string>, 1> realtime_metrics_coro()
   {
 
+    using NC = std::unique_ptr<natsConnection, decltype(&natsConnection_Destroy)>;
+    using NO = std::unique_ptr<natsOptions, decltype(&natsOptions_Destroy)>;
+    using NM = std::unique_ptr<natsMsg, decltype(&natsMsg_Destroy)>;
+    
     auto endpoint_url = communications_config.NatsUrl;
-
-    natsConnection *conn = nullptr;
-    natsOptions *opts = nullptr;
-
     bool terminate = false;
 
-    for (; !terminate;)
+    for (std::tuple<std::string, std::string, std::string> msg; !terminate;  std::tie(msg, terminate) = co_yield 0)
     {
-      auto status = natsOptions_Create(&opts);
-      if (status != NATS_OK)
-        goto drop_msg;
+      natsOptions *opts_raw = nullptr;
+      auto status = natsOptions_Create(&opts_raw);
+      if (status != NATS_OK){ 
+        spdlog::get("cads")->error("{}:natsOptions_Create->{}", __func__, status);
+        continue;
+      }
 
-      natsOptions_SetSendAsap(opts,true);
-      natsOptions_SetAllowReconnect(opts, true);
-      natsOptions_SetURL(opts, endpoint_url.c_str());
+      NO opts{opts_raw,natsOptions_Destroy};
 
-      status = natsConnection_Connect(&conn, opts);
-      if (status != NATS_OK)
-        goto cleanup_opts;
+      if((status = natsOptions_SetSendAsap(opts.get(), true)) != NATS_OK) {
+        spdlog::get("cads")->error("{}:natsOptions_SetSendAsap->{}", __func__, status);
+        continue;
+      }
+      if((status = natsOptions_SetAllowReconnect(opts.get(), false)) != NATS_OK){ 
+        spdlog::get("cads")->error("{}:natsOptions_SetAllowReconnect->{}", __func__, status);
+        continue;
+      }
+      if((status = natsOptions_SetURL(opts.get(), endpoint_url.c_str())) != NATS_OK) { 
+        spdlog::get("cads")->error("{}:natsOptions_SetURL->{}", __func__, status);
+        continue;
+      }
+      natsConnection *conn_raw = nullptr;
+      status = natsConnection_Connect(&conn_raw, opts.get());
+      if (status != NATS_OK) continue;
+
+      NC conn{conn_raw,natsConnection_Destroy};
 
       for (auto loop = true; loop && !terminate;)
       {
 
-        auto [msg, co_terminate] = co_yield 0;
+        std::tie(msg, terminate) = co_yield 0;
 
-        if(co_terminate) {
-          terminate = true;
+        if (terminate) continue;
+
+        auto [sub, head, data] = msg;
+
+        spdlog::get("cads")->debug("{}:natsConnection_PublishString {},{}", __func__, sub.c_str(), data.c_str());
+
+        natsMsg *nats_msg_raw = nullptr;
+ 
+        if ((status = natsMsg_Create(&nats_msg_raw, sub.c_str(), nullptr, data.c_str(), data.size())) != NATS_OK)
+        {
+          spdlog::get("cads")->error("{}:natsMsg_Create->{}", __func__, status);
           continue;
         }
 
-        auto [sub,head,data] = msg;
+        NM nats_msg{nats_msg_raw,natsMsg_Destroy};
 
-        spdlog::get("cads")->debug("{}:natsConnection_PublishString {},{}",__func__,sub.c_str(), data.c_str());
-        
-        natsMsg *nats_msg = nullptr;
-        auto s = natsMsg_Create(&nats_msg,sub.c_str(),nullptr,data.c_str(),data.size());
-        
-        if(s != NATS_OK){
-          spdlog::get("cads")->error("{}:natsMsg_Create->{}",__func__,s);
+        if ((status = natsMsgHeader_Add(nats_msg.get(), "category", head.c_str())) != NATS_OK)
+        {
+          spdlog::get("cads")->error("{}:natsMsgHeader_Add->{}", __func__, status);
           continue;
         }
 
-        s = natsMsgHeader_Add(nats_msg,"category",head.c_str());
-        if(s != NATS_OK){
-          spdlog::get("cads")->error("{}:natsMsgHeader_Add->{}",__func__,s);
-          goto free_nats_msg;
+        if ((status = natsConnection_PublishMsg(conn.get(), nats_msg.get())) != NATS_OK)
+        {
+          spdlog::get("cads")->error("{}:natsConnection_PublishString->{}", __func__, status);
+          loop = false;
         }
-
-        s = natsConnection_PublishMsg(conn,nats_msg);
-        
-        if(s != NATS_OK) {
-          spdlog::get("cads")->error("{}:natsConnection_PublishString->{}",__func__,s);
-          if (s == NATS_CONNECTION_CLOSED)
-          { 
-            loop = false;
-          }
-        }
-
-        free_nats_msg:
-          natsMsg_Destroy(nats_msg);
       }
-
-      natsConnection_Destroy(conn);
-    cleanup_opts:
-      natsOptions_Destroy(opts);
-    drop_msg:
-      co_yield 0;
     }
 
     nats_Close();
   }
 
-  
   std::string ReplaceString(std::string subject, const std::string &search,
                             const std::string &replace)
   {
@@ -328,14 +327,13 @@ namespace cads
     auto buf = builder.GetBufferPointer();
     auto size = builder.GetSize();
 
-    std::vector<uint8_t> bufv = compress(buf,size);
-
+    std::vector<uint8_t> bufv = compress(buf, size);
 
     while (upload_profile)
     {
       cpr::Response r = cpr::Post(endpoint,
                                   cpr::Body{(char *)bufv.data(), bufv.size()},
-                                  cpr::Header{{"Content-Encoding", "br"},{"Content-Type", "application/octet-stream"}});
+                                  cpr::Header{{"Content-Encoding", "br"}, {"Content-Type", "application/octet-stream"}});
 
       if (cpr::ErrorCode::OK == r.error.code && cpr::status::HTTP_OK == r.status_code)
       {
@@ -455,22 +453,20 @@ namespace cads
     params_json["YmaxN"] = meta.YmaxN;
     params_json["WidthN"] = meta.WidthN;
 
-
     http_post_profile_properties_json(params_json.dump());
-
   }
 
   bool post_scan(state::scan scan)
   {
     using namespace flatbuffers;
-    spdlog::get("cads")->info("Entering {}",__func__);
-    auto [scanned_utc,db_name,uploaded,status] = scan;
-    
+    spdlog::get("cads")->info("Entering {}", __func__);
+    auto [scanned_utc, db_name, uploaded, status] = scan;
+
     auto scanned_at = chrono::floor<chrono::seconds>(scanned_utc); // Default sends to much decimal precision for asp.net core
-    
-    if(!std::filesystem::exists(db_name))
+
+    if (!std::filesystem::exists(db_name))
     {
-      spdlog::get("cads")->info("{}: {} doesn't exist. Scan not uploaded",__func__, db_name);
+      spdlog::get("cads")->info("{}: {} doesn't exist. Scan not uploaded", __func__, db_name);
       return true;
     }
 
@@ -480,20 +476,20 @@ namespace cads
 
     if (endpoint_url == "null")
     {
-      spdlog::get("cads")->info("{} endpoint_url set to null. Scan not uploaded",__func__);
+      spdlog::get("cads")->info("{} endpoint_url set to null. Scan not uploaded", __func__);
       return true;
     }
 
     auto [params, err] = fetch_scan_gocator(db_name);
-   
+
     if (err < 0)
     {
-      spdlog::get("cads")->info("{} fetch_scan_gocator failed - {}",__func__, db_name);
+      spdlog::get("cads")->info("{} fetch_scan_gocator failed - {}", __func__, db_name);
       return true;
     }
 
-    auto [rowid,ignored]  = fetch_scan_uploaded(db_name);
-    auto fetch_profile = fetch_scan_coro(rowid,std::numeric_limits<int>::max(),db_name);
+    auto [rowid, ignored] = fetch_scan_uploaded(db_name);
+    auto fetch_profile = fetch_scan_coro(rowid, std::numeric_limits<int>::max(), db_name);
 
     FlatBufferBuilder builder(4096 * 128);
     std::vector<flatbuffers::Offset<CadsFlatbuffers::profile>> profiles_flat;
@@ -501,14 +497,11 @@ namespace cads
     auto ts = to_str(scanned_at);
     cpr::Url endpoint{mk_post_profile_url(ts)};
 
-
-  
     auto YmaxN = zs_count(db_name);
 
     auto z_resolution = std::get<0>(params);
     auto z_offset = std::get<1>(params);
     auto y_step = global_belt_parameters.Length / (YmaxN);
-
 
     auto start = std::chrono::high_resolution_clock::now();
     int64_t size = 0;
@@ -528,7 +521,7 @@ namespace cads
       {
         namespace sr = std::ranges;
 
-        auto y = (idx - 1) * y_step;// Sqlite rowid starts a 1
+        auto y = (idx - 1) * y_step; // Sqlite rowid starts a 1
 
         auto max_iter = max_element(zs.begin(), zs.end());
 
@@ -536,9 +529,9 @@ namespace cads
         {
           belt_z_max = max(belt_z_max, (double)*max_iter);
         }
- 
+
         auto tmp_z = zs | sr::views::transform([=](float e) -> int16_t
-                                                { return std::isnan(e) ? std::numeric_limits<int16_t>::lowest() : int16_t(((double)e - z_offset) / z_resolution); });
+                                               { return std::isnan(e) ? std::numeric_limits<int16_t>::lowest() : int16_t(((double)e - z_offset) / z_resolution); });
         std::vector<int16_t> short_z{tmp_z.begin(), tmp_z.end()};
 
         profiles_flat.push_back(CadsFlatbuffers::CreateprofileDirect(builder, y, 0, &short_z));
@@ -546,44 +539,42 @@ namespace cads
         if (profiles_flat.size() == communications_config.UploadRows)
         {
           size += send_flatbuffer_array(builder, z_resolution, z_offset, idx - communications_config.UploadRows, profiles_flat, endpoint, upload_profile);
-          store_scan_uploaded(idx+1,db_name);
+          store_scan_uploaded(idx + 1, db_name);
         }
-        //auto end = std::chrono::high_resolution_clock::now();
-        //auto duration = (end - start) / 1.0s;
-        //spdlog::get("cads")->info("Upload RATE(Kb/s):{} ", size / (1000 * duration));
+        // auto end = std::chrono::high_resolution_clock::now();
+        // auto duration = (end - start) / 1.0s;
+        // spdlog::get("cads")->info("Upload RATE(Kb/s):{} ", size / (1000 * duration));
       }
       else
       {
         if (profiles_flat.size() > 0)
         {
           size += send_flatbuffer_array(builder, z_resolution, z_offset, idx - profiles_flat.size(), profiles_flat, endpoint, upload_profile);
-          store_scan_uploaded(idx+1,db_name);
+          store_scan_uploaded(idx + 1, db_name);
         }
         final_idx = idx;
         break;
       }
     }
 
-
     bool failure = false;
     if (final_idx == YmaxN)
     {
       http_post_profile_properties2(ts, YmaxN, y_step);
-    }else
+    }
+    else
     {
       failure = true;
       spdlog::get("cads")->error("{}: Number of profiles sent {} not matching expected {}", __func__, final_idx, YmaxN);
     }
-    
+
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start).count() + 1; // Add one second to avoid divide by zero
 
     spdlog::get("cads")->info("ZMAX: {}, SIZE: {}, DUR:{}, RATE(Kb/s):{} ", belt_z_max, size, duration, size / (1000 * duration));
-    spdlog::get("cads")->info("Leaving {}",__func__);
+    spdlog::get("cads")->info("Leaving {}", __func__);
     return failure;
-
   }
-
 
   cads::coro<int, cads::profile, 1> post_profiles_coro(cads::meta meta)
   {
@@ -594,7 +585,7 @@ namespace cads
     FlatBufferBuilder builder(4096 * 128);
     std::vector<flatbuffers::Offset<CadsFlatbuffers::profile>> profiles_flat;
 
-    cpr::Url endpoint{mk_post_profile_url(endpoint_url,meta.chrono)};
+    cpr::Url endpoint{mk_post_profile_url(endpoint_url, meta.chrono)};
 
     int64_t size = 0;
     int64_t frame_idx = -1;

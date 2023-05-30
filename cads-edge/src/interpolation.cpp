@@ -155,10 +155,10 @@ namespace cads
     {
       i = std::find_if(i, z.end(), [](z_element a)
                        { return std::isnan(a); });
-      auto l = i;
+    
 
       auto cnt = 10;
-
+      auto l = i;
       while (l >= z.begin() && cnt > 0)
       {
         if (!std::isnan(*l))

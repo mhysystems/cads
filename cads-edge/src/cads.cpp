@@ -116,7 +116,7 @@ namespace
   Process_Status process_impl(BlockingReaderWriterQueue<msg> &next)
   {
 
-    std::jthread uploading_conveyorbelt_parameters(upload_conveyorbelt_parameters);
+    //std::jthread uploading_conveyorbelt_parameters(upload_conveyorbelt_parameters);
 
     BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
     BlockingReaderWriterQueue<msg> winFifo(4096 * 1024);
@@ -169,7 +169,7 @@ namespace
     {
       auto y_res = encoder_framerate != 0.0 ? global_conveyor_parameters.MaxSpeed / encoder_framerate : y_resolution;
       //origin_dectection = std::jthread(window_processing_thread, x_resolution, y_res, width_n, std::ref(winFifo), std::ref(dynamic_processing_fifo));
-      origin_dectection = std::jthread(splice_detection_thread, x_resolution, y_res, width_n, std::ref(winFifo));
+      origin_dectection = std::jthread(splice_detection_thread, x_resolution, y_res, width_n, std::ref(winFifo),std::ref(dynamic_processing_fifo));
       dynamic_processing = std::jthread(dynamic_processing_thread, std::ref(dynamic_processing_fifo), std::ref(db_fifo), width_n);
     }
 
