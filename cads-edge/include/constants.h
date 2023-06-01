@@ -113,6 +113,11 @@ namespace cads {
     bool   dump_match;
   };
 
+  struct AnomalyDetection {
+    double WindowLength;
+    double BeltPartitionLength;
+  };
+
   extern profile_parameters global_profile_parameters;
   extern Conveyor global_conveyor_parameters;
   extern Belt global_belt_parameters;
@@ -125,6 +130,7 @@ namespace cads {
   extern Fiducial fiducial_config;
   extern OriginDetection config_origin_detection;
   extern Measure measurements;
+  extern AnomalyDetection anomalies_config;
   
   void init_config(std::string f);
   void drop_config();

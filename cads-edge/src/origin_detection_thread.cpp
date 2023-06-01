@@ -473,7 +473,8 @@ coro<double,profile,1> anomaly_detection_coro(double x_resolution, double y_reso
     profile p;
     bool terminate = false;
     
-    int window_size = 333;
+    int window_size = anomalies_config.WindowLength / y_resolution;
+    int partition_size = anomalies_config.BeltPartitionLength / y_resolution;
     std::vector<double> belt_thickness_estimates;
 
     SCAMPArgs args;
@@ -509,13 +510,13 @@ coro<double,profile,1> anomaly_detection_coro(double x_resolution, double y_reso
       auto belt_thickness_estimate = interquartile_mean(p.z);
       belt_thickness_estimates.push_back(belt_thickness_estimate);
       
-      if(cnt++ < 1000)
+      if(cnt++ < 30000)
       {
         continue;
       }
       
       args.timeseries_a = belt_thickness_estimates;
-      do_SCAMP(&args, std::vector<int>(), 1);
+      do_SCAMP(&args, std::vector<int>(), 16);
       auto [mp,mi] = ProfileToVector(args.profile_a, false, window_size);
       auto ii = std::max_element(mp.begin(),mp.end());
       auto d = std::distance(mp.begin(),ii);
@@ -562,12 +563,19 @@ coro<double,profile,1> anomaly_detection_coro(double x_resolution, double y_reso
           break;
         }
         }
+        case msgid::gocator_properties: {
+          auto p = get<GocatorProperties>(get<1>(m));
+          y_resolution = get<0>(p);
+          next_fifo.enqueue(m);
+          break;
+        }
         case msgid::finished:
 
           loop = false;
           next_fifo.enqueue(m);
           break;
         default:
+          next_fifo.enqueue(m);
           break;
       }
 

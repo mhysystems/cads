@@ -1,8 +1,10 @@
 #include <tuple>
 #include <algorithm> 
 #include <sstream>
+#include <filesystem>
 
 #include <date/tz.h>
+#include <lua.hpp>
 
 #include <constants.h>
 #include <init.h>
@@ -167,9 +169,53 @@ namespace cads {
   Fiducial fiducial_config;
   OriginDetection config_origin_detection;
   Measure measurements;
+  AnomalyDetection anomalies_config;
+
+  int lua_transition(std::string f) {
+    
+    using Lua = std::unique_ptr<lua_State, decltype(&lua_close)>;
+    namespace fs = std::filesystem;
+
+    fs::path luafile{f};
+    luafile.replace_extension("lua");
+
+    auto L = Lua{luaL_newstate(),lua_close};
+    luaL_openlibs( L.get() );
+
+    auto lua_status = luaL_dofile(L.get(),luafile.string().c_str());
+    
+    if(lua_status != LUA_OK) {
+      return -1;
+    }
+
+    AnomalyDetection config;
+
+    auto anomaly = lua_getglobal(L.get(),"anomaly");
+
+    if (lua_istable(L.get(), -1)) { 
+        lua_pushstring(L.get(), "WindowLength"); 
+        lua_gettable(L.get(), -2); 
+
+        if (lua_isnumber(L.get(), -1)) { 
+          config.WindowLength = lua_tonumber(L.get(), -1); 
+        }
+
+        lua_pushstring(L.get(), "BeltPartitionLength"); 
+        lua_gettable(L.get(), -2); 
+
+        if (lua_isnumber(L.get(), -1)) { 
+          config.BeltPartitionLength = lua_tonumber(L.get(), -1); 
+        }
+    }
+
+    anomalies_config = config;
+
+    return 0;
+  }
     
   void init_config(std::string f) {
     auto json = slurpfile(f);
+    lua_transition(f);
 		auto config = nlohmann::json::parse(json);
     global_profile_parameters = mk_profile_parameters(config);
     global_conveyor_parameters = mk_conveyor_parameters(config);
