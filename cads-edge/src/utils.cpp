@@ -2,6 +2,7 @@
 #include <tuple>
 #include <algorithm>
 #include <numeric>
+#include <fstream>
 
 #include <utils.hpp>
 #include <stats.hpp>
@@ -51,7 +52,12 @@ namespace cads
   }
 
 
-
+  void write_vector(std::vector<double> xs,std::string name) {
+    std::ofstream file{name};
+    for(auto x : xs ) {
+      file << x << '\n';
+    }
+  }
 
   std::string to_str(date::utc_clock::time_point c)
   {
@@ -98,6 +104,29 @@ namespace cads
     auto mean = sum / count;
 
     return mean;
+  }
+
+  std::array<size_t,2> minmin_element(const std::vector<double> & xs) {
+    
+    std::array<double,2> min = {std::numeric_limits<double>::max(),std::numeric_limits<double>::max()};
+    std::array<size_t,2> mini = {xs.size(),xs.size()}; 
+
+    size_t i = 0;
+    for(auto x : xs) {
+      if(x < min[1]) {
+        min[1] = x;
+        mini[1] = i;
+      }
+      
+      if(min[0] > min[1]) {
+        std::swap(min[0],min[1]);
+        std::swap(mini[0],mini[1]);
+      }
+
+      ++i;
+    }
+
+    return mini;
   }
 
 

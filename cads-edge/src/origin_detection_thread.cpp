@@ -1,4 +1,7 @@
 
+#include <future>
+#include <chrono>
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstringop-overflow="
 #pragma GCC diagnostic ignored "-Wuseless-cast"
@@ -18,10 +21,76 @@
 #include <filters.h>
 #include <opencv2/core.hpp>
 #include <utils.hpp>
+#include <db.h>
 
 
 
 using namespace moodycamel;
+
+namespace 
+{
+    auto scamp_impl(std::vector<double> timeseries_a, size_t window_size, std::vector<double> timeseries_b) {
+      using namespace cads;
+      using namespace SCAMP;
+
+      SCAMPArgs args;
+      args.window = window_size;
+      args.max_tile_size = 1 << 17;
+      args.has_b = timeseries_b.size() > 0;
+      args.distributed_start_row = -1;
+      args.distributed_start_col = -1;
+      args.distance_threshold = 0.0;
+      args.computing_columns = true;
+      args.computing_rows = true;
+      args.profile_a.type = SCAMP::PROFILE_TYPE_1NN_INDEX;
+      args.profile_b.type = SCAMP::PROFILE_TYPE_1NN_INDEX;
+      args.precision_type = SCAMP::PRECISION_DOUBLE;
+      args.profile_type = SCAMP::PROFILE_TYPE_1NN_INDEX;
+      args.keep_rows_separate = false;
+      args.is_aligned = false;
+      
+      args.timeseries_b = timeseries_b;
+      args.silent_mode = true;
+      args.max_matches_per_column = 5;
+      args.matrix_height = 50;
+      args.matrix_width = 50;
+
+      args.timeseries_a = std::move(timeseries_a);
+      
+      do_SCAMP(&args);
+
+      return args;
+
+    };
+
+
+    auto scamp_dischord(std::vector<double> timeseries_a, size_t window_size) {
+      auto args = scamp_impl(timeseries_a,window_size,{});
+      auto [mp,mi] = ProfileToVector(args.profile_a, false, window_size);
+      auto dischord = std::max_element(mp.begin(),mp.end());
+      auto d = std::distance(mp.begin(),dischord);
+      std::vector<double> motif(args.timeseries_a.begin()+d,args.timeseries_a.begin() + d + window_size);
+      return std::make_tuple(d,*dischord,motif);
+    }
+
+    auto scamp_range(std::vector<double> timeseries_a, std::vector<double> timeseries_b) {
+      using namespace std;
+
+      auto args = scamp_impl(timeseries_a,timeseries_b.size(),timeseries_b);
+      auto [mp,mi] = ProfileToVector(args.profile_a, false, timeseries_b.size());
+      auto min = cads::minmin_element(mp);
+
+      return make_tuple(make_tuple(min[0],mp[min[0]]),make_tuple(min[1],mp[min[1]])); 
+
+    }
+
+    auto scamp_single(std::vector<double> timeseries_a,std::vector<double> timeseries_b) {
+      return std::get<0>(scamp_range(timeseries_a,timeseries_b));
+    }
+
+}
+
+
 
 namespace cads
 {
@@ -466,62 +535,120 @@ namespace cads
     spdlog::get("cads")->info("window_processing_thread");
   }
 
-coro<double,profile,1> anomaly_detection_coro(double x_resolution, double y_resolution, int width_n)
+
+coro<std::tuple<size_t,double,std::vector<double>>,double,1> find_dischord_motif_coro(size_t window_size, size_t partition_size)
+{
+    using namespace std::chrono_literals;  
+
+    std::vector<double> xs;
+    double x = 0;
+    auto terminate = false;
+    auto empty_return = std::make_tuple(size_t(0),0.0,std::vector<double>());
+    for (;!terminate && xs.size() < partition_size;)
+    {
+      std::tie(x,terminate) = co_yield empty_return;
+      if(terminate) continue;
+
+      xs.push_back(x);
+    }
+
+    auto scamp_fut = std::async(scamp_dischord,xs,window_size);
+
+    for (;!terminate && (scamp_fut.wait_for(0s) != std::future_status::ready);)
+    {
+        std::tie(x,terminate) = co_yield empty_return;
+    }
+
+    co_return scamp_fut.get();
+
+}
+
+
+
+coro<std::tuple<bool,size_t,double>,profile,1> anomaly_detection_coro(double y_resolution)
   {    
     using namespace SCAMP;
+    using namespace std::chrono_literals;
+    using namespace std;
     
     profile p;
     bool terminate = false;
     
     int window_size = anomalies_config.WindowLength / y_resolution;
     int partition_size = anomalies_config.BeltPartitionLength / y_resolution;
-    std::vector<double> belt_thickness_estimates;
+    std::size_t max_belt_size = std::get<1>(config_origin_detection.belt_length) / y_resolution;
+    std::vector<double> belt_thickness_estimates, y_position = {0.0};
+    enum class State {noMotif,findMotif,foundMotif};
 
-    SCAMPArgs args;
-    args.window = window_size;
-    args.max_tile_size = 1 << 17;
-    args.has_b = false;
-    args.distributed_start_row = -1;
-    args.distributed_start_col = -1;
-    args.distance_threshold = 0.0;
-    args.computing_columns = true;
-    args.computing_rows = true;
-    args.profile_a.type = SCAMP::PROFILE_TYPE_1NN_INDEX;
-    args.profile_b.type = SCAMP::PROFILE_TYPE_1NN_INDEX;
-    args.precision_type = SCAMP::PRECISION_DOUBLE;
-    args.profile_type = SCAMP::PROFILE_TYPE_1NN_INDEX;
-    args.keep_rows_separate = false;
-    args.is_aligned = false;
-    
-    args.timeseries_b = std::vector<double>();
-    args.silent_mode = true;
-    args.max_matches_per_column = 5;
-    args.matrix_height = 50;
-    args.matrix_width = 50;
+    State state = State::findMotif;
+
+    auto find_dischord_motif  = find_dischord_motif_coro(window_size,partition_size);
 
     long cnt = 0;
-    while (true)
+
+    auto [motif_creation,motif] = fetch_last_motif();
+
+    if(motif.empty()) state = State::noMotif;
+
+    size_t index = 0;
+    double distance = 0;
+    bool found = false;
+    auto y_pos = 0.0;
+    
+    while (!terminate)
     {
-      std::tie(p,terminate) = co_yield {0.0};
+      
+      std::tie(p,terminate) = co_yield {found,index,y_pos};
       if(terminate) break;
-
-      if(cnt++ < 0) continue;
-
+      
+      found = false;
+      y_position.push_back(p.y);
       auto belt_thickness_estimate = interquartile_mean(p.z);
       belt_thickness_estimates.push_back(belt_thickness_estimate);
-      
-      if(cnt++ < 30000)
-      {
-        continue;
+
+      for(auto processing = true; processing;) {
+        processing = false;
+        switch(state) {
+          case State::noMotif : {
+            auto [done,ret] = find_dischord_motif.resume(belt_thickness_estimate);
+
+            if(done) {
+            
+              std::tie(index,distance,motif) = ret;
+              store_motif_state({date::utc_clock::now(),motif});
+              state = State::foundMotif;
+              processing = true;
+            }
+
+            break;
+          }
+
+          case State::findMotif: {
+            
+            if(belt_thickness_estimates.size() > max_belt_size){
+              tie(index,distance) = scamp_single(belt_thickness_estimates,motif);
+              y_pos = y_position[index];
+              spdlog::get("cads")->info("index:{} dis:{} size:{}", index,distance,belt_thickness_estimates.size());
+              state = State::foundMotif;
+              processing = true;
+            }
+            break;
+          }
+
+          case State::foundMotif: {
+            std::shift_left(belt_thickness_estimates.begin(),belt_thickness_estimates.end(),index + window_size);
+            belt_thickness_estimates.resize(belt_thickness_estimates.size() - (index + window_size));
+            std::shift_left(y_position.begin(),y_position.end(),index + window_size);
+            y_position.resize(y_position.size() - (index + window_size));
+            state = State::findMotif;
+            found = true;
+            break;
+          }
+
+          default:
+            break;
+        }
       }
-      
-      args.timeseries_a = belt_thickness_estimates;
-      do_SCAMP(&args, std::vector<int>(), 16);
-      auto [mp,mi] = ProfileToVector(args.profile_a, false, window_size);
-      auto ii = std::max_element(mp.begin(),mp.end());
-      auto d = std::distance(mp.begin(),ii);
-      auto iii = mi[d];
-      auto s = 0;
 
     }
   }
@@ -534,11 +661,10 @@ coro<double,profile,1> anomaly_detection_coro(double x_resolution, double y_reso
     auto start = std::chrono::high_resolution_clock::now();
     int64_t cnt = 0;
     auto buffer_size_warning = buffer_warning_increment;
+    double last_splice_position = 0;
 
 
-    auto origin_detection = anomaly_detection_coro(x_resolution,y_resolution,width_n);
-
-    long origin_sequence_cnt = 0;
+    auto origin_detection = anomaly_detection_coro(y_resolution);
 
     for (auto loop = true;loop;++cnt)
     {
@@ -552,16 +678,17 @@ coro<double,profile,1> anomaly_detection_coro(double x_resolution, double y_reso
           auto [coro_end,result] = origin_detection.resume(p);
           
           if(!coro_end) {
-
-            if(true) {
-
-            
-          }else {
+            auto [valid,index,pos] = result;
+            if(valid) {
+              spdlog::get("cads")->info("distance:{}", p.y - pos);
+              last_splice_position = pos;
+            }
+          }else 
+          {
             loop = false;
-            spdlog::get("cads")->error("Origin decetor stopped");
+            spdlog::get("cads")->error("Origin detector stopped");
           }
-          break;
-        }
+        break;
         }
         case msgid::gocator_properties: {
           auto p = get<GocatorProperties>(get<1>(m));

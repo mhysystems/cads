@@ -198,6 +198,7 @@ namespace cads {
 
         if (lua_isnumber(L.get(), -1)) { 
           config.WindowLength = lua_tonumber(L.get(), -1); 
+          lua_pop(L.get(),1);
         }
 
         lua_pushstring(L.get(), "BeltPartitionLength"); 
@@ -205,6 +206,7 @@ namespace cads {
 
         if (lua_isnumber(L.get(), -1)) { 
           config.BeltPartitionLength = lua_tonumber(L.get(), -1); 
+          lua_pop(L.get(),1);
         }
     }
 

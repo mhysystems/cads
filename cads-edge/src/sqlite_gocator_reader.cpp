@@ -51,6 +51,8 @@ namespace cads
 
   void SqliteGocatorReader::OnData()
   {
+    using namespace std::chrono_literals;
+
     auto data_src = global_config["data_source"].get<std::string>();
     auto [params, err2] = fetch_profile_parameters(data_src);
 
@@ -58,14 +60,14 @@ namespace cads
 
     m_yResolution = params.y_res;
     m_encoder_resolution = params.encoder_res;
-    auto pulley_period_us = 1000000 / m_config.fps;
+    auto pulley_period = 1000000us / (int)m_config.fps;
     uint64_t cnt = 0;
+    auto current_time = std::chrono::high_resolution_clock::now();
 
     do
     {
       auto fetch_profile = fetch_belt_coro(0,std::get<1>(m_config.range), std::get<0>(m_config.range), 256, data_src);
-      auto loop_time = std::chrono::high_resolution_clock::now();
-      std::chrono::duration<double, std::micro> slept_for(0);
+
       while (!m_stopped)
       {
 
@@ -87,19 +89,10 @@ namespace cads
         auto last = std::find_if(p.z.rbegin(), p.z.rend(), [](z_element z)
                                  { return !std::isnan(z); });
 
-        m_gocatorFifo.enqueue({msgid::scan, profile{std::chrono::high_resolution_clock::now(),p.y, p.x_off, z_type(first, last.base())}});
-        
-        auto now = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double, std::micro> dt = now - loop_time;
+        m_gocatorFifo.enqueue({msgid::scan, profile{current_time,p.y, p.x_off, z_type(first, last.base())}});
 
-        loop_time = now;
+        current_time += pulley_period;
         cnt++;
-        auto sleep_for = uint64_t(2*pulley_period_us - (dt + slept_for).count() - m_config.delay);
-        
-        auto start = std::chrono::system_clock::now();
-        std::this_thread::sleep_for(std::chrono::microseconds(sleep_for));
-        auto end = std::chrono::system_clock::now();  
-        slept_for = end - start;           
                      
         if (m_gocatorFifo.size_approx() > buffer_warning_increment)
         {

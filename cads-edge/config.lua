@@ -9,6 +9,6 @@ belt = {
 }
 
 anomaly = {
-  WindowLength = 2 * 1000, -- In mm
-  BeltPartitionLength = 1000 * 1000 -- In mm
+  WindowLength = 3 * 1000, -- In mm
+  BeltPartitionLength = 500 * 1000 -- In mm
 }

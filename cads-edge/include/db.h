@@ -40,6 +40,9 @@ namespace cads
   std::tuple<int,bool> fetch_belt_id(std::string name = "");
   void store_belt_id(int id, std::string name = "");
 
+  std::tuple<date::utc_clock::time_point,std::vector<double>> fetch_last_motif(std::string name = "");
+  bool store_motif_state(std::tuple<date::utc_clock::time_point,std::vector<double>> row, std::string db_name = "");
+
   // scans table
   namespace state {
     using scan = std::tuple<date::utc_clock::time_point,std::string,int64_t,int64_t>;
@@ -60,6 +63,7 @@ namespace cads
   long zs_count(std::string db_name);
   coro<int, z_type, 1> store_scan_coro(std::string db_name);
   std::tuple<std::tuple<double,double,double,double>,int> fetch_scan_gocator(std::string db_name);
+  
 
 
   // transients
