@@ -67,6 +67,7 @@ namespace
     auto scamp_dischord(std::vector<double> timeseries_a, size_t window_size) {
       auto args = scamp_impl(timeseries_a,window_size,{});
       auto [mp,mi] = ProfileToVector(args.profile_a, false, window_size);
+      cads::write_vector(mp,"mpd.txt");
       auto dischord = std::max_element(mp.begin(),mp.end());
       auto d = std::distance(mp.begin(),dischord);
       std::vector<double> motif(args.timeseries_a.begin()+d,args.timeseries_a.begin() + d + window_size);
@@ -78,6 +79,7 @@ namespace
 
       auto args = scamp_impl(timeseries_a,timeseries_b.size(),timeseries_b);
       auto [mp,mi] = ProfileToVector(args.profile_a, false, timeseries_b.size());
+      cads::write_vector(mp,"mp.txt");
       auto min = cads::minmin_element(mp);
 
       return make_tuple(make_tuple(min[0],mp[min[0]]),make_tuple(min[1],mp[min[1]])); 

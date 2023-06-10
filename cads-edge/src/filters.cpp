@@ -86,15 +86,15 @@ namespace cads
 
   void pulley_level_compensate(z_type &z, z_element z_off, z_element z_max)
   {
-    const auto z_max_compendated = z_max + z_off;
+    const float threshold = z_max * 0.2;
 
     for (auto &e : z)
     {
       e += z_off;
-      if (e < 15.0f )
+      if (e < threshold )
         e = 0;
-      if (e > z_max_compendated)
-        e = z_max_compendated;
+      if (e > z_max)
+        e = z_max;
     }
   }
 
