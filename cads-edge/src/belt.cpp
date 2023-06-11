@@ -212,8 +212,8 @@ namespace cads
 
     auto pulley_circumfrence = global_conveyor_parameters.PulleyCircumference;
     auto avg_speed = global_conveyor_parameters.MaxSpeed;
-    auto T0 = pulley_circumfrence / avg_speed; // in ms
-    auto T1 = 10 * T0;  // in ms
+    auto T0 = 1000 * pulley_circumfrence / avg_speed; // in milliseconds
+    auto T1 = 6 * T0;  // in milliseconds
     auto barrel_origin_time = std::chrono::high_resolution_clock::now();
     
     double period = 1.0;
@@ -221,7 +221,7 @@ namespace cads
     auto adjust = std::bind(pulley_speed_adjustment, _1, T0, T1);
     auto amplitude_extraction = mk_amplitude_extraction();
 
-    double speed = init;
+    double speed = init / 1000; // m/s
     double amplitude = 0;
     double frequency = 0;
 
