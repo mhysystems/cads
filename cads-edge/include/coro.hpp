@@ -129,6 +129,10 @@ namespace cads
       return {coro_hnd.done(), coro_hnd.promise().from_coro};
     }
 
+    bool enqueue(TC a) {
+      return std::get<0>(resume(a));
+    }
+
     void terminate()
     {
       coro_hnd.promise().terminate_coro = true;

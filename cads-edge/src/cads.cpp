@@ -47,6 +47,8 @@
 #include <upload.h>
 #include <utils.hpp>
 
+#include <io.hpp>
+
 using namespace std;
 using namespace moodycamel;
 using namespace std::chrono;
@@ -113,7 +115,8 @@ namespace
     Stopped
   };
 
-  Process_Status process_impl(BlockingReaderWriterQueue<msg> &next)
+
+  Process_Status process_impl(IO<msg> auto &next)
   {
 
     //std::jthread uploading_conveyorbelt_parameters(upload_conveyorbelt_parameters);
@@ -131,6 +134,7 @@ namespace
     gocator->Start();
 
     cads::msg m;
+
     gocatorFifo.wait_dequeue(m);
     auto m_id = get<0>(m);
 
