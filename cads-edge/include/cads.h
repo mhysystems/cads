@@ -12,5 +12,4 @@ namespace cads
   void generate_signal();
   void stop_gocator();
   void dump_gocator_log();
-
 }

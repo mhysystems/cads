@@ -89,7 +89,7 @@ namespace
     }
   }
 
-  std::tuple<unique_ptr<GocatorReaderBase>, bool> mk_gocator(BlockingReaderWriterQueue<msg> &gocatorFifo, bool trim = true, bool use_encoder = false)
+  unique_ptr<GocatorReaderBase> mk_gocator(BlockingReaderWriterQueue<msg> &gocatorFifo, bool trim = true, bool use_encoder = false)
   {
     auto data_src = global_config["data_source"].get<std::string>();
 
@@ -98,13 +98,13 @@ namespace
       bool connect_via_ip = global_config.contains("gocator_ip");
       spdlog::get("cads")->debug("Using gocator as data source");
       auto gocator = connect_via_ip ? make_unique<GocatorReader>(gocatorFifo, use_encoder, trim, global_config.at("gocator_ip"s).get<std::string>()) : make_unique<GocatorReader>(gocatorFifo, use_encoder, trim);
-      return {std::move(gocator), true};
+      return gocator;
     }
     else
     {
       spdlog::get("cads")->debug("Using sqlite as data source");
       auto sqlite = make_unique<SqliteGocatorReader>(gocatorFifo);
-      return {std::move(sqlite), false};
+      return sqlite;
     }
   }
 
@@ -130,7 +130,7 @@ namespace
     const auto clip_height = global_config["clip_height"].get<z_element>();
     const auto use_encoder = global_config["use_encoder"].get<bool>();
 
-    auto [gocator, is_gocator] = mk_gocator(gocatorFifo, use_encoder);
+    auto gocator = mk_gocator(gocatorFifo, use_encoder);
     gocator->Start();
 
     cads::msg m;
@@ -237,29 +237,16 @@ namespace
       if (p.z.size() * x_resolution < x_width * 0.75)
       {
         spdlog::get("cads")->error("Gocator sending profiles with widths less than 0.75 of expected width");
-        if (is_gocator)
-        {
-          status = Process_Status::Error;
-          break;
-        }
-        else
-        {
-          continue;
-        }
+        status = Process_Status::Error;
+        break;
+
       }
 
       if (p.z.size() < (size_t)width_n)
       {
         spdlog::get("cads")->error("Gocator sending profiles with sample number {} less than {}", p.z.size(), width_n);
-        if (is_gocator)
-        {
-          status = Process_Status::Error;
-          break;
-        }
-        else
-        {
-          continue;
-        }
+        status = Process_Status::Error;
+        break;
       }
 
       double nan_cnt = std::count_if(p.z.begin(), p.z.end(), [](z_element z)
@@ -270,15 +257,8 @@ namespace
       if ((nan_cnt / p.z.size()) > nan_percentage)
       {
         spdlog::get("cads")->error("Percentage of nan({}) in profile > {}%", nan_cnt, nan_percentage * 100);
-        if (is_gocator)
-        {
-          status = Process_Status::Error;
-          break;
-        }
-        else
-        {
-          continue;
-        }
+        status = Process_Status::Error;
+        break;
       }
 
       auto iy = p.y;
@@ -346,12 +326,9 @@ namespace
       if (speed == 0)
       {
         spdlog::get("cads")->error("Belt proabaly stopped.");
+        status = Process_Status::Stopped;
+        break;
 
-        if (is_gocator)
-        {
-          status = Process_Status::Stopped;
-          break;
-        }
       }
 
       measurements.send("pulleyspeed", 0, speed);
@@ -414,6 +391,201 @@ namespace
 
     return status;
   }
+
+
+
+  Process_Status process_impl2(IO<msg> auto &gocatorFifo, IO<msg> auto &next, double x_resolution, double z_resolution, double encoder_framerate)
+  {
+
+    const auto x_width = global_belt_parameters.Width;
+    const auto nan_percentage = global_config["nan_%"].get<double>();
+    const auto width_n = global_config["width_n"].get<int>();
+    const auto clip_height = global_config["clip_height"].get<z_element>();
+
+    cads::msg m;
+
+    auto iirfilter_left = mk_iirfilterSoS();
+    auto iirfilter_right = mk_iirfilterSoS();
+    auto iirfilter_left_edge = mk_iirfilterSoS();
+
+    auto delay = mk_delay(global_config["iirfilter"]["delay"]);
+
+    int64_t cnt = 0;
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    auto dc_filter = mk_dc_filter();
+    auto pulley_speed = mk_pulley_stats();
+
+    long drop_profiles = global_config["iirfilter"]["skip"]; // Allow for iir fillter too stablize
+    Process_Status status = Process_Status::Finished;
+
+    auto pulley_estimator = mk_pulleyfitter(z_resolution, -15.0);
+    auto belt_estimator = mk_pulleyfitter(z_resolution, 0.0);
+
+    auto filter_window_len = global_config["sobel_filter"].get<size_t>();
+
+    auto time0 = std::chrono::high_resolution_clock::now();
+
+    auto pulley_rev = mk_pulley_revolution(encoder_framerate);
+
+    do
+    {
+
+      gocatorFifo.wait_dequeue(m);
+      auto m_id = get<0>(m);
+
+      if (m_id != cads::msgid::scan)
+      {
+        break;
+      }
+
+      ++cnt;
+
+      auto p = get<profile>(get<1>(m));
+
+      if (p.z.size() * x_resolution < x_width * 0.75)
+      {
+        spdlog::get("cads")->error("Gocator sending profiles with widths less than 0.75 of expected width");
+        status = Process_Status::Error;
+        break;
+      }
+
+      if (p.z.size() < (size_t)width_n)
+      {
+        spdlog::get("cads")->error("Gocator sending profiles with sample number {} less than {}", p.z.size(), width_n);
+        status = Process_Status::Error;
+        break;
+
+      }
+
+      double nan_cnt = std::count_if(p.z.begin(), p.z.end(), [](z_element z)
+                                     { return std::isnan(z); });
+
+      measurements.send("nancount", 0, nan_cnt);
+
+      if ((nan_cnt / p.z.size()) > nan_percentage)
+      {
+        spdlog::get("cads")->error("Percentage of nan({}) in profile > {}%", nan_cnt, nan_percentage * 100);
+        status = Process_Status::Error;
+        break;
+      }
+
+      auto iy = p.y;
+      auto ix = p.x_off;
+      auto iz = p.z;
+
+      auto [pulley_level, pulley_right, ll, lr, cerror] = pulley_levels_clustered(iz, pulley_estimator);
+
+      if (cerror != ClusterError::None)
+      {
+        // spdlog::get("cads")->debug("Clustering error : {}", ClusterErrorToString(cerror));
+        // store_errored_profile(p.z,ClusterErrorToString(cerror));
+      }
+
+      iz.insert(iz.begin(), filter_window_len, (float)pulley_level);
+      iz.insert(iz.end(), filter_window_len, (float)pulley_right);
+      ll += filter_window_len;
+      lr += filter_window_len;
+
+      std::fill(iz.begin(), iz.begin() + ll, pulley_level);
+      std::fill(iz.begin() + lr, iz.end(), pulley_right);
+
+      nan_interpolation_mean(iz);
+
+      auto pulley_level_filtered = (z_element)iirfilter_left(pulley_level);
+      auto pulley_right_filtered = (z_element)iirfilter_right(pulley_right);
+      auto left_edge_filtered = (z_element)iirfilter_left_edge(ll);
+
+      measurements.send("pulleylevel", 0, pulley_level_filtered);
+      measurements.send("beltedgeposition", 0, ix + left_edge_filtered * x_resolution);
+
+      auto pulley_level_unbias = dc_filter(pulley_level_filtered);
+
+      auto [delayed, dd] = delay({{p.time,iy,ix,iz}, (int)left_edge_filtered, (int)ll, (int)lr, p.z});
+
+      if (!delayed)
+        continue;
+
+      if (drop_profiles > 0)
+      {
+        --drop_profiles;
+        continue;
+      }
+
+      auto [delayed_profile, left_edge_index_avg, left_edge_index, right_edge_index, raw_z] = dd;
+      auto y = delayed_profile.y;
+      auto x = delayed_profile.x_off;
+      auto z = delayed_profile.z;
+
+      auto gradient = (pulley_right_filtered - pulley_level_filtered) / (double)z.size();
+      regression_compensate(z, 0, z.size(), gradient);
+
+      PulleyRevolution ps;
+      if (revolution_sensor_config.source == RevolutionSensor::Source::raw)
+      {
+        ps = pulley_rev(pulley_level);
+      }
+      else
+      {
+        ps = pulley_rev(pulley_level_unbias);
+      }
+
+      auto [speed, frequency, amplitude] = pulley_speed(ps, pulley_level_unbias, delayed_profile.time);
+
+      if (speed == 0)
+      {
+        spdlog::get("cads")->error("Belt proabaly stopped.");
+        status = Process_Status::Stopped;
+        break;
+      }
+
+      measurements.send("pulleyspeed", 0, speed);
+      measurements.send("pulleyoscillation", 0, amplitude);
+
+      if (cnt % (1000 * 60) == 0)
+      {
+        auto belt_level = belt_estimator(z_type(z.begin() + left_edge_index, z.begin() + right_edge_index));
+        spdlog::get("cads")->info("Pulley Level: {} | Belt Level: {} | Height: {}", pulley_level_filtered, belt_level, belt_level - pulley_level_filtered);
+      }
+
+      pulley_level_compensate(z, -pulley_level_filtered, clip_height);
+      interpolation_nearest(z.begin() + left_edge_index_avg, z.begin() + right_edge_index, [](float a)
+                            { return a == 0; });
+
+      // if(left_edge_index_avg < left_edge_index) {
+      //   std::fill(z.begin()+left_edge_index_avg,z.begin() + left_edge_index, interquartile_mean(zrange(z.begin()+left_edge_index,z.begin()+left_edge_index+20)));
+      // }
+
+      auto left_edge_index_aligned = left_edge_index_avg;
+      auto right_edge_index_aligned = right_edge_index;
+
+      if (z.size() < size_t(left_edge_index_aligned + width_n))
+      {
+        // spdlog::get("cads")->debug("Belt width({})[la - {}, l- {}, r - {}] less than required. Filled with zeros",z.size(),left_edge_index_aligned,left_edge_index,right_edge_index);
+        // store_errored_profile(raw_z);
+        const auto cnt = left_edge_index_aligned + width_n - z.size();
+        z.insert(z.end(), cnt, interquartile_mean(zrange(z.begin() + right_edge_index_aligned - 20, z.begin() + right_edge_index_aligned - 1)));
+      }
+
+      auto f = z | views::take(left_edge_index_aligned + width_n) | views::drop(left_edge_index_aligned);
+
+      next.enqueue({msgid::scan, cads::profile{delayed_profile.time,y, x + left_edge_index_aligned * x_resolution, {f.begin(), f.end()}}});
+
+    } while (std::get<0>(m) != msgid::finished);
+
+    next.enqueue({msgid::finished, 0});
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
+    auto rate = duration != 0 ? (double)cnt / duration : 0;
+    spdlog::get("cads")->info("CADS - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, rate);
+
+    return status;
+  }
+
+
 
 }
 
@@ -492,7 +664,7 @@ namespace cads
     BlockingReaderWriterQueue<msg> gocatorFifo;
     std::jthread remote_control(remote_control_thread, std::ref(nats_queue), std::ref(terminate_subscribe));
 
-    auto [gocator, is_gocator] = mk_gocator(gocatorFifo, false);
+    auto gocator  = mk_gocator(gocatorFifo, false);
 
     gocator->Start();
 
@@ -605,7 +777,7 @@ namespace cads
 
     BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
 
-    auto [gocator, is_gocator] = mk_gocator(gocatorFifo);
+    auto gocator = mk_gocator(gocatorFifo);
     gocator->Start();
 
     auto iirfilter = mk_iirfilterSoS();
@@ -671,7 +843,7 @@ namespace cads
 
     BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
 
-    auto [gocator, is_gocator] = mk_gocator(gocatorFifo);
+    auto gocator = mk_gocator(gocatorFifo);
     gocator->Start();
 
     cads::msg m;
