@@ -33,7 +33,7 @@ public:
 	void Stop();
   SqliteGocatorReader(moodycamel::BlockingReaderWriterQueue<msg>&, SqliteGocatorConfig);
   SqliteGocatorReader(moodycamel::BlockingReaderWriterQueue<msg>&);
-	virtual ~SqliteGocatorReader() = default;
+	virtual ~SqliteGocatorReader();
 };
 
 

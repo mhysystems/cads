@@ -5,6 +5,7 @@
 #include <readerwriterqueue.h>
 #include <gocator_reader_base.h>
 #include <msg.h>
+#include <io.hpp>
 
 namespace cads
 {
@@ -17,4 +18,5 @@ namespace cads
   void stop_gocator();
   void dump_gocator_log();
   std::unique_ptr<GocatorReaderBase> mk_gocator(moodycamel::BlockingReaderWriterQueue<msg> &gocatorFifo, bool trim = true, bool use_encoder = false);
+  void process_lua(moodycamel::BlockingReaderWriterQueue<msg> &gocatorFifo);
 }

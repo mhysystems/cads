@@ -9,6 +9,7 @@
 #include <cads.h>
 #include <init.h>
 #include <db.h>
+#include <lua_script.h>
 
 
 namespace po = boost::program_options;
@@ -76,6 +77,9 @@ int main(int argn, char **argv)
 
   init_logs(60);
   create_default_dbs();
+  main_script(vm["config"].as<std::string>());
+
+  return 0;
 
   if(vm.count("level") > 0) {
     std::string l = vm["level"].as<std::string>();

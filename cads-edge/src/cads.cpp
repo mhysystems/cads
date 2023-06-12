@@ -46,7 +46,7 @@
 #include <upload.h>
 #include <utils.hpp>
 
-#include <io.hpp>
+
 
 using namespace std;
 using namespace moodycamel;
@@ -88,25 +88,6 @@ namespace
     }
   }
 
-  unique_ptr<GocatorReaderBase> mk_gocator(BlockingReaderWriterQueue<msg> &gocatorFifo, bool trim, bool use_encoder)
-  {
-    auto data_src = global_config["data_source"].get<std::string>();
-
-    if (data_src == "gocator"s)
-    {
-      bool connect_via_ip = global_config.contains("gocator_ip");
-      spdlog::get("cads")->debug("Using gocator as data source");
-      auto gocator = connect_via_ip ? make_unique<GocatorReader>(gocatorFifo, use_encoder, trim, global_config.at("gocator_ip"s).get<std::string>()) : make_unique<GocatorReader>(gocatorFifo, use_encoder, trim);
-      return gocator;
-    }
-    else
-    {
-      spdlog::get("cads")->debug("Using sqlite as data source");
-      auto sqlite = make_unique<SqliteGocatorReader>(gocatorFifo);
-      return sqlite;
-    }
-  }
-
   enum class Process_Status
   {
     Error,
@@ -129,7 +110,7 @@ namespace
     const auto clip_height = global_config["clip_height"].get<z_element>();
     const auto use_encoder = global_config["use_encoder"].get<bool>();
 
-    auto gocator = mk_gocator(gocatorFifo, use_encoder);
+    auto gocator = cads::mk_gocator(gocatorFifo, use_encoder);
     gocator->Start();
 
     cads::msg m;
@@ -584,12 +565,55 @@ namespace
     return status;
   }
 
+  void process_lua(IO<msg> auto &gocatorFifo) {
+    msg m;
+    do
+    {
+
+      gocatorFifo.wait_dequeue(m);
+      auto m_id = get<0>(m);
+
+      if(m_id == cads::msgid::gocator_properties) continue;
+
+      if (m_id != cads::msgid::scan)
+      {
+        break;
+      }
+
+
+      auto p = get<profile>(get<1>(m));
+      auto a = p;
+
+    } while (std::get<0>(m) != msgid::finished);
+  }
+
 
 
 }
 
 namespace cads
 {
+  void process_lua(moodycamel::BlockingReaderWriterQueue<msg> &gocatorFifo) {
+    ::process_lua(gocatorFifo);
+  }
+  unique_ptr<GocatorReaderBase> mk_gocator(BlockingReaderWriterQueue<msg> &gocatorFifo, bool trim, bool use_encoder)
+  {
+    auto data_src = global_config["data_source"].get<std::string>();
+
+    if (data_src == "gocator"s)
+    {
+      bool connect_via_ip = global_config.contains("gocator_ip");
+      spdlog::get("cads")->debug("Using gocator as data source");
+      auto gocator = connect_via_ip ? make_unique<GocatorReader>(gocatorFifo, use_encoder, trim, global_config.at("gocator_ip"s).get<std::string>()) : make_unique<GocatorReader>(gocatorFifo, use_encoder, trim);
+      return gocator;
+    }
+    else
+    {
+      spdlog::get("cads")->debug("Using sqlite as data source");
+      auto sqlite = make_unique<SqliteGocatorReader>(gocatorFifo);
+      return sqlite;
+    }
+  }
 
   void upload_profile_only(std::string params, std::string db_name)
   {
@@ -842,7 +866,7 @@ namespace cads
 
     BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
 
-    auto gocator = mk_gocator(gocatorFifo);
+    auto gocator = cads::mk_gocator(gocatorFifo);
     gocator->Start();
 
     cads::msg m;

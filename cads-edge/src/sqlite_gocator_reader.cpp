@@ -49,6 +49,10 @@ namespace cads
   {
   }
 
+  SqliteGocatorReader::~SqliteGocatorReader() {
+    Stop();
+  }
+
   void SqliteGocatorReader::OnData()
   {
     using namespace std::chrono_literals;

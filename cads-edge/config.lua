@@ -12,3 +12,11 @@ anomaly = {
   WindowLength = 3 * 1000, -- In mm
   BeltPartitionLength = 500 * 1000 -- In mm
 }
+
+fifo = BlockingReaderWriterQueue()
+gocator = mk_gocator(fifo,true,false)
+thread = process_profile(fifo)
+
+gocator:Start()
+
+luamain({thread})
