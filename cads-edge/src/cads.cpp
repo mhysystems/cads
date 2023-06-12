@@ -5,7 +5,7 @@
 #include <coms.h>
 #include <constants.h>
 #include <fiducial.h>
-#include <readerwriterqueue.h>
+
 #include <gocator_reader.h>
 #include <sqlite_gocator_reader.h>
 
@@ -16,7 +16,6 @@
 #include <tuple>
 #include <algorithm>
 #include <thread>
-#include <memory>
 #include <ranges>
 #include <chrono>
 #include <sstream>
@@ -89,7 +88,7 @@ namespace
     }
   }
 
-  unique_ptr<GocatorReaderBase> mk_gocator(BlockingReaderWriterQueue<msg> &gocatorFifo, bool trim = true, bool use_encoder = false)
+  unique_ptr<GocatorReaderBase> mk_gocator(BlockingReaderWriterQueue<msg> &gocatorFifo, bool trim, bool use_encoder)
   {
     auto data_src = global_config["data_source"].get<std::string>();
 
