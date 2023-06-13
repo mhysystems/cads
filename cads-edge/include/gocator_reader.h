@@ -45,8 +45,8 @@ public:
 	void Start();
 	void Stop();
   void Log();
-	GocatorReader(moodycamel::BlockingReaderWriterQueue<cads::msg>&, std::string ip_add = "");
-  GocatorReader(moodycamel::BlockingReaderWriterQueue<cads::msg>&, bool, bool trim = true, std::string ip_add = "");
+	GocatorReader(Io&, std::string ip_add = "");
+  GocatorReader(Io&, bool, bool trim = true, std::string ip_add = "");
 	virtual ~GocatorReader();
 };
 

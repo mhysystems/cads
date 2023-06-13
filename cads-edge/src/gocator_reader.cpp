@@ -106,7 +106,7 @@ namespace cads
 
   }
 
-  GocatorReader::GocatorReader(moodycamel::BlockingReaderWriterQueue<msg> &gocatorFifo, std::string ip_add) : GocatorReaderBase(gocatorFifo)
+  GocatorReader::GocatorReader(Io &gocatorFifo, std::string ip_add) : GocatorReaderBase(gocatorFifo)
   {
     m_assembly = CreateGoSdk();
     m_system = CreateGoSystem();
@@ -195,7 +195,7 @@ namespace cads
     m_frame_rate = GoSetup_FrameRate(setup);
   }
 
-  GocatorReader::GocatorReader(moodycamel::BlockingReaderWriterQueue<msg> &gocatorFifo, bool use_encoder, bool trim, std::string ip_add) : GocatorReader(gocatorFifo, ip_add)
+  GocatorReader::GocatorReader(Io &gocatorFifo, bool use_encoder, bool trim, std::string ip_add) : GocatorReader(gocatorFifo, ip_add)
   {
     m_trim = trim;
     m_use_encoder = use_encoder;

@@ -106,7 +106,7 @@ namespace cads
     // To keep track of what is used
     coro() = delete;
     coro(const coro&) = delete;
-    coro(coro&& c) = delete;
+    coro(coro&& c) = default;
     coro& operator=(const coro&) = delete;
     
     
@@ -131,6 +131,16 @@ namespace cads
 
     bool enqueue(TC a) {
       return std::get<0>(resume(a));
+    }
+
+    void wait_dequeue(FC& fc) {
+      TC tc;
+      bool i;
+      std::tie(i,fc) = resume(tc);
+    }
+
+    size_t size_approx() {
+      return 1;
     }
 
     void terminate()

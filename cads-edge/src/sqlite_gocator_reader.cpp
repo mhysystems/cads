@@ -41,11 +41,11 @@ namespace cads
     }
   }
 
-  SqliteGocatorReader::SqliteGocatorReader(moodycamel::BlockingReaderWriterQueue<msg> &gocatorFifo, SqliteGocatorConfig config) : GocatorReaderBase(gocatorFifo), m_config(config)
+  SqliteGocatorReader::SqliteGocatorReader(Io &gocatorFifo, SqliteGocatorConfig config) : GocatorReaderBase(gocatorFifo), m_config(config)
   {
   }
 
-  SqliteGocatorReader::SqliteGocatorReader(moodycamel::BlockingReaderWriterQueue<msg> &gocatorFifo) : GocatorReaderBase(gocatorFifo), m_config(sqlite_gocator_config)
+  SqliteGocatorReader::SqliteGocatorReader(Io &gocatorFifo) : GocatorReaderBase(gocatorFifo), m_config(sqlite_gocator_config)
   {
   }
 

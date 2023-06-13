@@ -11,7 +11,7 @@
 #include <msg.h>
 #include <profile.h>
 #include <constants.h>
-
+#include <io.hpp>
 
 namespace cads
 {
@@ -26,7 +26,7 @@ class GocatorReaderBase
 	GocatorReaderBase& operator=(GocatorReaderBase&&) = delete;
 
 protected:
-	moodycamel::BlockingReaderWriterQueue<msg>& m_gocatorFifo;
+	Io& m_gocatorFifo;
   std::atomic<double> m_yResolution = 1.0;
   std::atomic<double> m_encoder_resolution = 1.0;
   std::atomic<double> m_frame_rate = 1.0;
@@ -42,7 +42,7 @@ public:
 	virtual void Start() = 0;
 	virtual void Stop() = 0;
 
-	GocatorReaderBase(moodycamel::BlockingReaderWriterQueue<msg>&);
+	GocatorReaderBase(Io&);
   virtual ~GocatorReaderBase() = default;
 };
 

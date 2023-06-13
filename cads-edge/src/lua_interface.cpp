@@ -43,7 +43,7 @@ namespace
 
   int BlockingReaderWriterQueue(lua_State *L)
   {
-      auto p = new (lua_newuserdata(L, sizeof(moodycamel::BlockingReaderWriterQueue<cads::msg>))) moodycamel::BlockingReaderWriterQueue<cads::msg>();
+      auto p = new (lua_newuserdata(L, sizeof(cads::Adapt<moodycamel::BlockingReaderWriterQueue<cads::msg>>))) cads::Adapt<moodycamel::BlockingReaderWriterQueue<cads::msg>>(moodycamel::BlockingReaderWriterQueue<cads::msg>());
 
       lua_createtable(L, 0, 1); 
       lua_pushcfunction(L, BlockingReaderWriterQueue_gc);
@@ -53,10 +53,10 @@ namespace
     return 1;
   }
 
-  int mk_thread(lua_State *L, std::function<void(moodycamel::BlockingReaderWriterQueue<cads::msg>&)> fn)
+  int mk_thread(lua_State *L, std::function<void(cads::Io&)> fn)
   {
-    auto q = static_cast<moodycamel::BlockingReaderWriterQueue<cads::msg>*>(lua_touserdata(L,-1));
-    new (lua_newuserdata(L,sizeof(std::thread))) std::thread(fn,ref(*q));
+    auto q = static_cast<cads::Io*>(lua_touserdata(L,-1));
+    new (lua_newuserdata(L,sizeof(std::thread))) std::thread(fn,std::ref(*q));
     lua_createtable(L, 0, 1); 
     lua_pushcfunction(L, thread_gc);
     lua_setfield(L, -2, "__gc");
@@ -102,7 +102,7 @@ namespace
 
   int mk_gocator(lua_State *L)
   {
-    auto q = static_cast<moodycamel::BlockingReaderWriterQueue<cads::msg> *>(lua_touserdata(L, 1));
+    auto q = static_cast<cads::Io*>(lua_touserdata(L, 1));
     auto trim = lua_toboolean(L,2);
     auto use_encoder = lua_toboolean(L,3);
 

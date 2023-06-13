@@ -101,7 +101,7 @@ namespace
 
     //std::jthread uploading_conveyorbelt_parameters(upload_conveyorbelt_parameters);
 
-    BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
+    Adapt<BlockingReaderWriterQueue<msg>> gocatorFifo{BlockingReaderWriterQueue<msg>(4096 * 1024)};
     BlockingReaderWriterQueue<msg> winFifo(4096 * 1024);
 
     const auto x_width = global_belt_parameters.Width;
@@ -565,7 +565,15 @@ namespace
     return status;
   }
 
-  void process_lua(IO<msg> auto &gocatorFifo) {
+
+
+
+
+}
+
+namespace cads
+{
+  void process_lua(Io& gocatorFifo) {
     msg m;
     do
     {
@@ -587,16 +595,7 @@ namespace
     } while (std::get<0>(m) != msgid::finished);
   }
 
-
-
-}
-
-namespace cads
-{
-  void process_lua(moodycamel::BlockingReaderWriterQueue<msg> &gocatorFifo) {
-    ::process_lua(gocatorFifo);
-  }
-  unique_ptr<GocatorReaderBase> mk_gocator(BlockingReaderWriterQueue<msg> &gocatorFifo, bool trim, bool use_encoder)
+  unique_ptr<GocatorReaderBase> mk_gocator(Io &gocatorFifo, bool trim, bool use_encoder)
   {
     auto data_src = global_config["data_source"].get<std::string>();
 
@@ -682,9 +681,10 @@ namespace cads
 
   void store_profile_only()
   {
+
     auto terminate_subscribe = false;
     moodycamel::BlockingConcurrentQueue<int> nats_queue;
-    BlockingReaderWriterQueue<msg> gocatorFifo;
+    Adapt<BlockingReaderWriterQueue<msg>> gocatorFifo{BlockingReaderWriterQueue<msg>(4096 * 1024)};
     std::jthread remote_control(remote_control_thread, std::ref(nats_queue), std::ref(terminate_subscribe));
 
     auto gocator  = mk_gocator(gocatorFifo, false);
@@ -795,10 +795,10 @@ namespace cads
     scan_upload_fifo.enqueue({msgid::finished, 0});
   }
 
-  void generate_signal2()
+  void generate_signal()
   {
 
-    BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
+    Adapt<BlockingReaderWriterQueue<msg>> gocatorFifo{BlockingReaderWriterQueue<msg>(4096 * 1024)};
 
     auto gocator = mk_gocator(gocatorFifo);
     gocator->Start();
@@ -861,91 +861,17 @@ namespace cads
     spdlog::get("cads")->info("Gocator Stopped");
   }
 
-  void generate_signal()
-  {
-
-    BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
-
-    auto gocator = cads::mk_gocator(gocatorFifo);
-    gocator->Start();
-
-    cads::msg m;
-
-    gocatorFifo.wait_dequeue(m);
-    auto m_id = get<0>(m);
-
-    if (m_id == cads::msgid::finished)
-    {
-      return;
-    }
-
-    if (m_id != cads::msgid::gocator_properties)
-    {
-      std::throw_with_nested(std::runtime_error("preprocessing:First message must be gocator_properties"));
-    }
-
-    auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution, encoder_framerate] = get<GocatorProperties>(get<1>(m));
-    std::ofstream filt("filt.txt");
-
-    long cnt = 0;
-    std::vector<float> p0(3000,-380.0f);
-    std::vector<decltype(mk_online_mean(-380.0))> mean0(3000);
-
-    for(auto &e : mean0) {
-      e = mk_online_mean(-380.0);
-    }
-
-    do
-    {
-
-      gocatorFifo.wait_dequeue(m);
-      auto m_id = get<0>(m);
-      cnt++;
-
-      if (m_id == cads::msgid::scan)
-      {
-
-        auto p = get<profile>(get<1>(m));
-        auto z = p.z;
-
-        auto sum = 0.0;
-        auto k = 300;
-        for(auto i = z.begin() + 300; i < z.end()-300; ++i, ++k) {
-
-          auto v = *i;
-          if(std::isnan(v)) v = -380.0;
-
-          double mm = mean0[k](v);
-
-          auto v2 = mm;
-          sum += (v - v2)*(v - v2);
-          p0[k] = v;
-        }
-
-        auto jjj = std::sqrt(sum);
-        //auto jj = mean(jjj);
-        auto d = jjj;// - jj;
-        filt << d << "," << d << '\n';
-        filt.flush();
-        
-      }
-
-    } while (std::get<0>(m) != msgid::finished);
-
-    gocator->Stop();
-  }
-
+  
   void stop_gocator()
   {
-
-    BlockingReaderWriterQueue<msg> f;
-    GocatorReader gocator(f);
+    Adapt<BlockingReaderWriterQueue<msg>> gocatorFifo{BlockingReaderWriterQueue<msg>(4096 * 1024)};
+    GocatorReader gocator(gocatorFifo);
     gocator.Stop();
   }
 
   void dump_gocator_log()
   {
-    BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
+    Adapt<BlockingReaderWriterQueue<msg>> gocatorFifo{BlockingReaderWriterQueue<msg>(4096 * 1024)};
     GocatorReader gocator(gocatorFifo);
     gocator.Log();
   }

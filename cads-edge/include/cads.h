@@ -2,7 +2,7 @@
 
 #include <string>
 #include <memory>
-#include <readerwriterqueue.h>
+
 #include <gocator_reader_base.h>
 #include <msg.h>
 #include <io.hpp>
@@ -17,6 +17,6 @@ namespace cads
   void generate_signal();
   void stop_gocator();
   void dump_gocator_log();
-  std::unique_ptr<GocatorReaderBase> mk_gocator(moodycamel::BlockingReaderWriterQueue<msg> &gocatorFifo, bool trim = true, bool use_encoder = false);
-  void process_lua(moodycamel::BlockingReaderWriterQueue<msg> &gocatorFifo);
+  std::unique_ptr<GocatorReaderBase> mk_gocator(Io &gocatorFifo, bool trim = true, bool use_encoder = false);
+  void process_lua(Io&);
 }

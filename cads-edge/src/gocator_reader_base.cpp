@@ -13,7 +13,7 @@ namespace cads
     terminate = true;
   }
 
-  GocatorReaderBase::GocatorReaderBase(moodycamel::BlockingReaderWriterQueue<msg> &gocatorFifo) : m_gocatorFifo(gocatorFifo) 
+  GocatorReaderBase::GocatorReaderBase(Io &gocatorFifo) : m_gocatorFifo(gocatorFifo) 
   {
     struct sigaction sigIntHandler;
 
