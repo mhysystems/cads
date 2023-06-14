@@ -18,5 +18,5 @@ namespace cads
   void stop_gocator();
   void dump_gocator_log();
   std::unique_ptr<GocatorReaderBase> mk_gocator(Io &gocatorFifo, bool trim = true, bool use_encoder = false);
-  void process_lua(Io&);
+  void process_lua(Io&,Io&);
 }

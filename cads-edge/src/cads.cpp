@@ -569,7 +569,7 @@ namespace
 
 namespace cads
 {
-  void process_lua(Io& gocatorFifo) {
+  void process_lua(Io& gocatorFifo, Io& next) {
     msg m;
     do
     {
@@ -586,7 +586,7 @@ namespace cads
 
 
       auto p = get<profile>(get<1>(m));
-      auto a = p;
+      next.enqueue(m);
 
     } while (std::get<0>(m) != msgid::finished);
   }

@@ -13,9 +13,12 @@ anomaly = {
   BeltPartitionLength = 500 * 1000 -- In mm
 }
 
-fifo = BlockingReaderWriterQueue()
-gocator = mk_gocator(fifo,true,false)
-thread = process_profile(fifo)
+gocator_cads = BlockingReaderWriterQueue()
+term = BlockingReaderWriterQueue()
+cad_est = encoder_distance_estimation(term,6.0);
+gocator = mk_gocator(gocator_cads,true,false)
+
+thread = process_profile(gocator_cads,cad_est)
 
 gocator:Start()
 

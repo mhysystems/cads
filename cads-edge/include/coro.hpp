@@ -91,14 +91,16 @@ namespace cads
     };
 
     handle_type coro_hnd;
+    bool valid_handle = false;
 
 
     friend void swap(coro& first, coro& second)
     {
       std::swap(first.coro_hnd, second.coro_hnd);
+      std::swap(first.valid_handle, second.valid_handle);
     }
     
-    coro(handle_type h) : coro_hnd(h){}
+    coro(handle_type h) : coro_hnd(h), valid_handle(true){}
     coro& operator=(coro&& rhs) noexcept
     {
       swap(*this,rhs);
@@ -108,17 +110,23 @@ namespace cads
     
     // To keep track of what is used
     coro() = delete;
-    coro(const coro&) = delete;
-    coro(coro&& c) = default;
+    coro(const coro&) = delete;    
     coro& operator=(const coro&) = delete;
+    
+    coro(coro&& c) {
+      swap(*this,c);
+    };
+
     
     
     ~coro() { 
-
-      if (!coro_hnd.done()) {
-        terminate();
+      
+      if(valid_handle && coro_hnd) {
+        if (!coro_hnd.done()) {
+          terminate();
+        }
+        coro_hnd.destroy(); 
       }
-      coro_hnd.destroy(); 
 
     }
 
