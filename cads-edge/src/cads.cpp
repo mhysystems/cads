@@ -102,7 +102,7 @@ namespace
     //std::jthread uploading_conveyorbelt_parameters(upload_conveyorbelt_parameters);
 
     Adapt<BlockingReaderWriterQueue<msg>> gocatorFifo{BlockingReaderWriterQueue<msg>(4096 * 1024)};
-    BlockingReaderWriterQueue<msg> winFifo(4096 * 1024);
+    Adapt<BlockingReaderWriterQueue<msg>> winFifo(BlockingReaderWriterQueue<msg>(4096 * 1024));
 
     const auto x_width = global_belt_parameters.Width;
     const auto nan_percentage = global_config["nan_%"].get<double>();
@@ -138,8 +138,9 @@ namespace
     auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution, encoder_framerate] = get<GocatorProperties>(get<1>(m));
     store_profile_parameters({y_resolution, x_resolution, z_resolution, 33.0, encoder_resolution, clip_height});
 
-    BlockingReaderWriterQueue<msg> db_fifo;
-    BlockingReaderWriterQueue<msg> dynamic_processing_fifo;
+    Adapt<BlockingReaderWriterQueue<msg>> db_fifo{BlockingReaderWriterQueue<msg>()};
+    Adapt<BlockingReaderWriterQueue<msg>> dynamic_processing_fifo{BlockingReaderWriterQueue<msg>()};
+
 
     std::jthread save_send(save_send_thread, std::ref(db_fifo), std::ref(next));
 
@@ -173,14 +174,9 @@ namespace
     long drop_profiles = global_config["iirfilter"]["skip"]; // Allow for iir fillter too stablize
     Process_Status status = Process_Status::Finished;
 
-    auto csp = [&](const profile &p)
-    {
-      winFifo.enqueue({msgid::scan, p});
-    };
-
     // auto fn = encoder_distance_id(csp);
     auto stride = global_conveyor_parameters.MaxSpeed / encoder_framerate;
-    auto fn = encoder_distance_estimation(csp, stride);
+    auto fn = encoder_distance_estimation(winFifo, stride);
 
     auto pulley_estimator = mk_pulleyfitter(z_resolution, -15.0);
     auto belt_estimator = mk_pulleyfitter(z_resolution, 0.0);
@@ -348,7 +344,7 @@ namespace
       else
       {
         winFifo.enqueue({msgid::scan, cads::profile{delayed_profile.time,y, x + left_edge_index_aligned * x_resolution, {f.begin(), f.end()}}});
-        //fn.resume({ps, cads::profile{delayed_profile.time,y, pulley_level_filtered, {f.begin(), f.end()}}});
+        fn.resume({msgid::pulley_revolution_scan,PulleyRevolutionScan{std::get<0>(ps),std::get<1>(ps), cads::profile{delayed_profile.time,y, pulley_level_filtered, {f.begin(), f.end()}}}});
       }
 
     } while (std::get<0>(m) != msgid::finished);
@@ -766,8 +762,7 @@ namespace cads
 
   void process()
   {
-
-    BlockingReaderWriterQueue<msg> scan_upload_fifo(4096 * 1024);
+    Adapt<BlockingReaderWriterQueue<msg>> scan_upload_fifo{BlockingReaderWriterQueue<msg>(4096 * 1024)};
     std::jthread save_send(upload_scan_thread, std::ref(scan_upload_fifo));
 
     for (int sleep_wait = 5;;)

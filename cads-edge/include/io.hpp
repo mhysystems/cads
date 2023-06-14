@@ -2,6 +2,7 @@
 
 #include <concepts>
 #include <utility>
+#include <chrono>
 
 #include <msg.h> 
 
@@ -10,6 +11,7 @@ namespace cads
   template<class T, class... Args> concept IO = requires(T io, Args&&... args){
     {io.enqueue(std::forward<Args>(args)...)} -> std::same_as<bool>;
     {io.wait_dequeue(std::forward<Args&>(args)...)} -> std::same_as<void>;
+    //{io.wait_dequeue_timed(std::forward<Args&>(args)...)} -> std::same_as<bool>;
     {io.size_approx()} -> std::same_as<size_t>;
   };
 
@@ -18,6 +20,7 @@ namespace cads
     virtual ~Io() = default;
     virtual bool enqueue(msg) = 0;
     virtual void wait_dequeue(msg&) = 0;
+     virtual bool wait_dequeue_timed(msg& x, std::chrono::seconds s) = 0;
     virtual size_t size_approx() = 0;
     
     private:
@@ -37,8 +40,12 @@ namespace cads
       return m.wait_dequeue(x);
     }
 
-     virtual size_t size_approx() {
+    virtual size_t size_approx() {
       return m.size_approx();
+    }
+
+    virtual bool wait_dequeue_timed(msg& x, std::chrono::seconds s) {
+      return m.wait_dequeue_timed(x,s);
     }
 
     private:

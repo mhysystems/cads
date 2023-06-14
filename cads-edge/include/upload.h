@@ -1,7 +1,8 @@
 #pragma once
-#include <readerwriterqueue.h>
+
+#include <io.hpp>
 
 namespace cads
 {
-  void upload_scan_thread(moodycamel::BlockingReaderWriterQueue<msg> &fifo);
+  void upload_scan_thread(cads::Io &fifo);
 }

@@ -146,7 +146,7 @@ namespace cads
     spdlog::get("cads")->info("lua_processing_coro finished");
   }
 
-  void dynamic_processing_thread(moodycamel::BlockingReaderWriterQueue<msg> &profile_fifo, moodycamel::BlockingReaderWriterQueue<msg> &next_fifo, int width)
+  void dynamic_processing_thread(cads::Io &profile_fifo, cads::Io &next_fifo, int width)
   {
 
     auto realtime_processing = lua_processing_coro(width);

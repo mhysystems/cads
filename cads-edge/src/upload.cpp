@@ -12,6 +12,7 @@
 #include <constants.h>
 #include <coms.h>
 #include <msg.h>
+#include <upload.h>
 
 namespace 
 {
@@ -37,7 +38,7 @@ namespace
 namespace cads
 {
 
-void upload_scan_thread(moodycamel::BlockingReaderWriterQueue<msg> &fifo) 
+void upload_scan_thread(cads::Io &fifo) 
 {
   std::future<std::invoke_result_t<decltype(resume_scan), state::scan>> fut;
   std::list<decltype(fut)> running_uploads;

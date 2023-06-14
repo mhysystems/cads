@@ -98,11 +98,10 @@ namespace cads
     };
   }
 
-  coro<int, std::tuple<PulleyRevolution, profile>> encoder_distance_estimation(std::function<void(profile)> next, double stride)
+  coro<cads::msg, cads::msg> encoder_distance_estimation(Io &next, double stride)
   {
     namespace sml = boost::sml;
 
-    auto args_in = std::tuple<PulleyRevolution, profile>{};
     std::deque<profile> fifo;
 
     struct root_event
@@ -122,10 +121,10 @@ namespace cads
       double stride;
       std::deque<profile> fifo;
       decltype(next) csp;
-    } global;
+      global_t(decltype(next) i) : csp(i) {}
+    } global(next);
 
     global.stride = stride;
-    global.csp = next;
 
     class transitions
     {
@@ -143,7 +142,7 @@ namespace cads
           {
             auto e = global.fifo[std::size_t(i)];
             e.y = global.distance + std::size_t(i) * global.stride;
-            global.csp(e);
+            global.csp.enqueue({msgid::scan,e});
           }
 
           global.distance += o.root_distance;
@@ -165,25 +164,39 @@ namespace cads
     };
 
     sml::sm<transitions> sm{global};
+    msg args_in;
 
     for (auto terminate = false; !terminate;)
     {
-      std::tie(args_in, terminate) = co_yield 0;
-      auto [pulley_revolution, p] = args_in;
-
+      std::tie(args_in, terminate) = co_yield {msgid::nothing,0};
+      
       if (terminate)
         continue;
 
-      auto [root, root_distance] = pulley_revolution;
+      auto id = std::get<0>(args_in);
 
-      if (root)
-      {
-        sm.process_event(root_event{root_distance, p});
+      switch(id) {
+        case msgid::pulley_revolution_scan: {
+          auto [root, root_distance,p] = std::get<PulleyRevolutionScan>(std::get<1>(args_in));
+          if (root)
+          {
+            sm.process_event(root_event{root_distance, p});
+          }
+          else
+          {
+            sm.process_event(profile_event{p});
+          }
+          break;
+        }
+        case msgid::finished: {
+          next.enqueue(args_in);
+          terminate = true;
+          break;
+        }
+        default:
+          next.enqueue(args_in);
       }
-      else
-      {
-        sm.process_event(profile_event{p});
-      }
+      
     }
   }
 

@@ -333,7 +333,7 @@ namespace cads
     }
   }
 
-  void window_processing_thread(double x_resolution, double y_resolution, int width_n, BlockingReaderWriterQueue<msg> &profile_fifo, BlockingReaderWriterQueue<msg> &next_fifo)
+  void window_processing_thread(double x_resolution, double y_resolution, int width_n, cads::Io &profile_fifo, cads::Io &next_fifo)
   {
 
     cads::msg m;
@@ -458,7 +458,7 @@ namespace cads
   }
 
 
-  void bypass_fiducial_detection_thread(BlockingReaderWriterQueue<msg> &profile_fifo, BlockingReaderWriterQueue<msg> &next_fifo)
+  void bypass_fiducial_detection_thread(Io &profile_fifo, Io &next_fifo)
   {
 
     cads::msg m;
@@ -655,7 +655,7 @@ coro<std::tuple<bool,size_t,double>,profile,1> anomaly_detection_coro(double y_r
     }
   }
 
-  void splice_detection_thread(double x_resolution, double y_resolution, int width_n, BlockingReaderWriterQueue<msg> &profile_fifo,BlockingReaderWriterQueue<msg> &next_fifo)
+  void splice_detection_thread(double x_resolution, double y_resolution, int width_n, cads::Io &profile_fifo,cads::Io &next_fifo)
   {
 
     cads::msg m;

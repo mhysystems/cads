@@ -4,6 +4,9 @@
 #include <tuple>
 #include <exception>
 #include <type_traits>
+#include <chrono>
+
+#include <msg.h>
 
 namespace cads
 {
@@ -137,6 +140,11 @@ namespace cads
       TC tc;
       bool i;
       std::tie(i,fc) = resume(tc);
+    }
+
+    bool wait_dequeue_timed(msg& x, std::chrono::seconds s) {
+      wait_dequeue(x);
+      return true;
     }
 
     size_t size_approx() {

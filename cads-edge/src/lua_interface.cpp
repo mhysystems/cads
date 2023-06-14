@@ -8,13 +8,15 @@
 #include <origin_detection_thread.h>
 #include <save_send_thread.h>
 #include <cads.h>
+#include <belt.h>
+#include <io.hpp>
 
 namespace
 {
-  int BlockingReaderWriterQueue_gc(lua_State *L)
+  int Io_gc(lua_State *L)
   {
-    auto q = static_cast<moodycamel::BlockingReaderWriterQueue<cads::msg> *>(lua_touserdata(L, 1));
-    q->~BlockingReaderWriterQueue<cads::msg>();
+    auto q = static_cast<cads::Io *>(lua_touserdata(L, 1));
+    q->~Io();
     return 0;
   }
 
@@ -43,10 +45,10 @@ namespace
 
   int BlockingReaderWriterQueue(lua_State *L)
   {
-      auto p = new (lua_newuserdata(L, sizeof(cads::Adapt<moodycamel::BlockingReaderWriterQueue<cads::msg>>))) cads::Adapt<moodycamel::BlockingReaderWriterQueue<cads::msg>>(moodycamel::BlockingReaderWriterQueue<cads::msg>());
+      auto p = new (lua_newuserdata(L, sizeof(cads::Adapt<moodycamel::BlockingReaderWriterQueue<cads::msg>>))) cads::Adapt<moodycamel::BlockingReaderWriterQueue<cads::msg>> (moodycamel::BlockingReaderWriterQueue<cads::msg>());
 
       lua_createtable(L, 0, 1); 
-      lua_pushcfunction(L, BlockingReaderWriterQueue_gc);
+      lua_pushcfunction(L, Io_gc);
       lua_setfield(L, -2, "__gc");
       lua_setmetatable(L, -2);
 
@@ -64,11 +66,11 @@ namespace
     return 1;
   }
 
-  int mk_thread2(lua_State *L, std::function<void(moodycamel::BlockingReaderWriterQueue<cads::msg>&,moodycamel::BlockingReaderWriterQueue<cads::msg>&)> fn)
+  int mk_thread2(lua_State *L, std::function<void(cads::Io&,cads::Io&)> fn)
   {
-    auto q1 = static_cast<moodycamel::BlockingReaderWriterQueue<cads::msg>*>(lua_touserdata(L,-1));
-    auto q0 = static_cast<moodycamel::BlockingReaderWriterQueue<cads::msg>*>(lua_touserdata(L,-2));
-    new (lua_newuserdata(L,sizeof(std::thread))) std::thread(fn,ref(*q0),ref(*q1));
+    auto q1 = static_cast<cads::Io*>(lua_touserdata(L,-1));
+    auto q0 = static_cast<cads::Io*>(lua_touserdata(L,-2));
+    new (lua_newuserdata(L,sizeof(std::thread))) std::thread(fn,std::ref(*q0),std::ref(*q1));
     lua_createtable(L, 0, 1); 
     lua_pushcfunction(L, thread_gc);
     lua_setfield(L, -2, "__gc");
@@ -137,6 +139,19 @@ namespace
     return mk_thread(L,cads::process_lua);
   }
 
+  int encoder_distance_estimation(lua_State *L) {
+    auto next = static_cast<cads::Io*>(lua_touserdata(L,1));
+    double stride = lua_tonumber(L,2);
+
+    new (lua_newuserdata(L, sizeof(decltype(encoder_distance_estimation(std::ref(*next),stride))))) decltype(encoder_distance_estimation(std::ref(*next),stride))(cads::encoder_distance_estimation(std::ref(*next),stride));
+    lua_createtable(L, 0, 1); 
+    lua_pushcfunction(L, Io_gc);
+    lua_setfield(L, -2, "__gc");
+    lua_setmetatable(L, -2);
+    return 1;
+
+  }
+
 }
 
 using Lua = std::unique_ptr<lua_State, decltype(&lua_close)>;
@@ -166,6 +181,11 @@ namespace cads
 
       lua_pushcfunction(L, ::process_profile);
       lua_setglobal(L,"process_profile");
+      
+      lua_pushcfunction(L, ::encoder_distance_estimation);
+      lua_setglobal(L,"encoder_distance_estimation");
+      
+      
       return UL;
     }
 

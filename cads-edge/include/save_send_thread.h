@@ -1,9 +1,8 @@
 #pragma once
 
-#include <readerwriterqueue.h>
-#include <msg.h>
+#include <io.hpp>
 
 namespace cads
 {
-  void save_send_thread(moodycamel::BlockingReaderWriterQueue<msg> &profile_fifo, moodycamel::BlockingReaderWriterQueue<msg> &next);
+  void save_send_thread(cads::Io &profile_fifo, cads::Io& next);
 }

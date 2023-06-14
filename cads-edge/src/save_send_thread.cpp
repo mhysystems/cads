@@ -37,7 +37,7 @@ namespace {
 
 namespace cads
 {
-  void save_send_thread(BlockingReaderWriterQueue<msg> &profile_fifo, BlockingReaderWriterQueue<msg> &next)
+  void save_send_thread(cads::Io &profile_fifo, cads::Io &next)
   {
     namespace sml = boost::sml;
 
@@ -52,9 +52,9 @@ namespace cads
       coro<int, z_type, 1> store_scan;
       GocatorProperties gocator_properties;
       date::utc_clock::time_point scan_begin;
-      BlockingReaderWriterQueue<msg> & cps;
+      cads::Io & cps;
 
-      global_t(BlockingReaderWriterQueue<msg> &m, date::utc_clock::time_point sb, std::string s) : store_scan(store_scan_coro(s)), scan_begin(sb), cps(m){};
+      global_t(cads::Io &m, date::utc_clock::time_point sb, std::string s) : store_scan(store_scan_coro(s)), scan_begin(sb), cps(m){};
 
     } global(next,scan_begin,scan_filename_init);
 
