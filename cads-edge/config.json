@@ -22,7 +22,6 @@
   },
 
   "z_height" : 27.0,
-  "width_n" : 1890,
   "clip_height" : 36.0,
   "left_edge_nan" : 3,
   "right_edge_nan" : 3,
@@ -95,6 +94,7 @@
     "CordDiameter" : 9.1,
     "TopCover" : 14.0,
     "Width" : 1600,
+    "width_n" : 1890,
     "Length" : 12545200,
     "Splices" : 1
   },

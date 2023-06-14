@@ -60,6 +60,10 @@ namespace cads
     auto data_src = global_config["data_source"].get<std::string>();
     auto [params, err2] = fetch_profile_parameters(data_src);
 
+    if(params.encoder_res != 0.0) {
+      params.y_res = (1000*global_conveyor_parameters.MaxSpeed) / params.encoder_res;
+    }
+
     m_gocatorFifo.enqueue({msgid::gocator_properties, GocatorProperties{params.y_res, params.x_res, params.z_res, params.z_off, params.encoder_res, m_config.fps}});
 
     m_yResolution = params.y_res;

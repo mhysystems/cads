@@ -193,6 +193,10 @@ namespace cads
     m_encoder_resolution = (double)GoTransform_EncoderResolution(GoSensor_Transform(m_sensor));
     m_yResolution = GoSetup_EncoderSpacing(setup);
     m_frame_rate = GoSetup_FrameRate(setup);
+
+    if(!m_use_encoder) {
+      m_yResolution = (1000*global_conveyor_parameters.MaxSpeed) / m_frame_rate;
+    }
   }
 
   GocatorReader::GocatorReader(Io &gocatorFifo, bool use_encoder, bool trim, std::string ip_add) : GocatorReader(gocatorFifo, ip_add)

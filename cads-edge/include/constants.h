@@ -54,6 +54,7 @@ namespace cads {
     double TopCover; 
     double Length;
     double Width;
+    double WidthN;
     int64_t Splices;
     int64_t Conveyor;
 

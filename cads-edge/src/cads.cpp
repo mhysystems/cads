@@ -152,9 +152,8 @@ namespace
     }
     else
     {
-      auto y_res = encoder_framerate != 0.0 ? (1000*global_conveyor_parameters.MaxSpeed) / encoder_framerate : y_resolution;
-      //origin_dectection = std::jthread(window_processing_thread, x_resolution, y_res, width_n, std::ref(winFifo), std::ref(dynamic_processing_fifo));
-      origin_dectection = std::jthread(splice_detection_thread, x_resolution, y_res, width_n, std::ref(winFifo),std::ref(dynamic_processing_fifo));
+      origin_dectection = std::jthread(window_processing_thread, std::ref(winFifo), std::ref(dynamic_processing_fifo));
+      origin_dectection = std::jthread(splice_detection_thread, std::ref(winFifo),std::ref(dynamic_processing_fifo));
       dynamic_processing = std::jthread(dynamic_processing_thread, std::ref(dynamic_processing_fifo), std::ref(db_fifo), width_n);
     }
 

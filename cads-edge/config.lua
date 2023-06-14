@@ -5,6 +5,7 @@ belt = {
   TopCover = 14.0,
   Width = 1600,
   Length = 12545200,
+  WidthN = 1890,
   Splices = 1
 }
 
@@ -13,13 +14,17 @@ anomaly = {
   BeltPartitionLength = 500 * 1000 -- In mm
 }
 
-gocator_cads = BlockingReaderWriterQueue()
-term = BlockingReaderWriterQueue()
-cad_est = encoder_distance_estimation(term,6.0);
-gocator = mk_gocator(gocator_cads,true,false)
+function main()
 
-thread = process_profile(gocator_cads,cad_est)
+  gocator_cads = BlockingReaderWriterQueue()
+  term = BlockingReaderWriterQueue()
+  cad_est = encoder_distance_estimation(term,6.0);
+  gocator = mk_gocator(gocator_cads,true,false)
 
-gocator:Start()
+  thread = process_profile(gocator_cads,cad_est)
 
-luamain({thread})
+  gocator:Start()
+
+  luamain({thread})
+  
+end

@@ -333,7 +333,7 @@ namespace cads
     }
   }
 
-  void window_processing_thread(double x_resolution, double y_resolution, int width_n, cads::Io &profile_fifo, cads::Io &next_fifo)
+  void window_processing_thread(cads::Io &profile_fifo, cads::Io &next_fifo)
   {
 
     cads::msg m;
@@ -341,6 +341,28 @@ namespace cads
     auto start = std::chrono::high_resolution_clock::now();
     int64_t cnt = 0;
     auto buffer_size_warning = buffer_warning_increment;
+    double x_resolution = 1.0, y_resolution = 1.0;
+    int width_n = (int)global_belt_parameters.WidthN;
+
+    profile_fifo.wait_dequeue(m);
+    auto m_id = get<0>(m);
+
+    if (m_id == cads::msgid::finished)
+    {
+      return;
+    }
+
+    if (m_id != cads::msgid::gocator_properties)
+    {
+      std::throw_with_nested(std::runtime_error("preprocessing:First message must be gocator_properties"));
+    }
+    else
+    {
+      auto p = get<GocatorProperties>(get<1>(m));
+      y_resolution = get<0>(p);
+      x_resolution = get<1>(p);
+    }
+
 
 
     auto origin_detection = origin_detection_coro(x_resolution,y_resolution,width_n);
@@ -655,7 +677,7 @@ coro<std::tuple<bool,size_t,double>,profile,1> anomaly_detection_coro(double y_r
     }
   }
 
-  void splice_detection_thread(double x_resolution, double y_resolution, int width_n, cads::Io &profile_fifo,cads::Io &next_fifo)
+  void splice_detection_thread(cads::Io &profile_fifo,cads::Io &next_fifo)
   {
 
     cads::msg m;
@@ -664,7 +686,26 @@ coro<std::tuple<bool,size_t,double>,profile,1> anomaly_detection_coro(double y_r
     int64_t cnt = 0;
     auto buffer_size_warning = buffer_warning_increment;
     double last_splice_position = 0;
+    int width_n = (int)global_belt_parameters.WidthN;
+    double y_resolution = 1.0;
 
+    profile_fifo.wait_dequeue(m);
+    auto m_id = get<0>(m);
+
+    if (m_id == cads::msgid::finished)
+    {
+      return;
+    }
+
+    if (m_id != cads::msgid::gocator_properties)
+    {
+      std::throw_with_nested(std::runtime_error("preprocessing:First message must be gocator_properties"));
+    }
+    else
+    {
+      auto p = get<GocatorProperties>(get<1>(m));
+      y_resolution = get<0>(p);
+    }
 
     auto origin_detection = anomaly_detection_coro(y_resolution);
 

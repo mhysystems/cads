@@ -210,6 +210,13 @@ namespace cads
         return -1;
       }
 
+      lua_getglobal(L.get(),"main");
+      lua_status = lua_pcall(L.get(), 0, 0, 0);
+
+      if(lua_status != LUA_OK) {
+        return -1;
+      }
+
       return 0;
     }
 }

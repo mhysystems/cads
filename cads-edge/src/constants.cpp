@@ -61,10 +61,11 @@ namespace {
     auto TopCover = config["belt"]["TopCover"].get<double>();
     auto Length = config["belt"]["Length"].get<double>();
     auto Width = config["belt"]["Width"].get<double>();
+    auto WidthN = config["belt"]["WidthN"].get<double>();
     auto Splices = config["belt"]["Splices"].get<int64_t>();
     int64_t Conveyor = 0;
 
-    return cads::Belt{Id,Installed,PulleyCover,CordDiameter,TopCover,Length,Width,Splices,Conveyor};
+    return cads::Belt{Id,Installed,PulleyCover,CordDiameter,TopCover,Length,Width,WidthN,Splices,Conveyor};
 
   }
 
@@ -190,7 +191,7 @@ namespace cads {
 
     AnomalyDetection config;
 
-    auto anomaly = lua_getglobal(L.get(),"anomaly");
+    lua_status = lua_getglobal(L.get(),"anomaly");
 
     if (lua_istable(L.get(), -1)) { 
         lua_pushstring(L.get(), "WindowLength"); 
@@ -211,6 +212,49 @@ namespace cads {
     }
 
     anomalies_config = config;
+
+    Belt belt;
+    belt.Conveyor = 0;
+    belt.Id = 0;
+
+    lua_status = lua_getglobal(L.get(),"belt");
+
+    if(lua_istable(L.get(),-1)) {
+      lua_getfield(L.get(), -1, "Installed");
+      std::istringstream in(lua_tostring(L.get(), -1));
+      lua_pop(L.get(), 1);
+      in >> date::parse("%FT%TZ", belt.Installed);
+    
+      lua_getfield(L.get(), -1, "PulleyCover");
+      belt.PulleyCover = lua_tonumber(L.get(), -1);
+      lua_pop(L.get(), 1);
+
+      lua_getfield(L.get(), -1, "CordDiameter");
+      belt.CordDiameter = lua_tonumber(L.get(), -1);
+      lua_pop(L.get(), 1);
+
+      lua_getfield(L.get(), -1, "TopCover");
+      belt.TopCover = lua_tonumber(L.get(), -1);
+      lua_pop(L.get(), 1);
+
+      lua_getfield(L.get(), -1, "Width");
+      belt.Width =lua_tonumber(L.get(), -1);
+      lua_pop(L.get(), 1);
+
+      lua_getfield(L.get(), -1, "Length");
+      belt.Length =lua_tonumber(L.get(), -1);
+      lua_pop(L.get(), 1);
+
+      lua_getfield(L.get(), -1, "WidthN");
+      belt.WidthN = lua_tonumber(L.get(), -1);
+      lua_pop(L.get(), 1);
+
+      lua_getfield(L.get(), -1, "Splices");
+      belt.Splices =lua_tonumber(L.get(), -1);
+      lua_pop(L.get(), 1);
+    }
+
+    global_belt_parameters = belt;
 
     return 0;
   }
