@@ -28,7 +28,6 @@ int main(int argn, char **argv)
 		("config,c", po::value<std::string>(), "Config JSON file.")
     ("savedb,d", po::bool_switch(), "Only save one approx belt")
     ("stop,s", po::bool_switch(), "Stop Gocator")
-    ("upload,u", po::value<std::string>()->implicit_value(""), "Upload Profile Only")
     ("signal,e", po::bool_switch(), "Generate signal for input into python filter parameter creation")
     ("go-log,g", po::bool_switch(), "Dump Gocator Log")
     ("level,l", po::value<std::string>(), "Logging Level")
@@ -77,7 +76,7 @@ int main(int argn, char **argv)
 
   init_logs(60);
   create_default_dbs();
-  main_script(vm["config"].as<std::string>());
+
 
   return 0;
 
@@ -93,17 +92,14 @@ int main(int argn, char **argv)
 
   }
   
-  if(vm.count("upload")) {
-    auto dbname = vm.count("db-name") ? vm["db-name"].as<std::string>() : "";
-    upload_profile_only(vm["upload"].as<std::string>(),dbname);
-  }else if(vm["savedb"].as<bool>()) {
+  if(vm["savedb"].as<bool>()) {
     store_profile_only();
   }else if(vm["signal"].as<bool>()) {
     generate_signal();
   }else if(vm["go-log"].as<bool>()) {
     dump_gocator_log();
   }else{
-	  process();
+	   main_script(vm["config"].as<std::string>());
   }
 
 	return 0;

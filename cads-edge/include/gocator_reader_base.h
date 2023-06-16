@@ -27,9 +27,6 @@ class GocatorReaderBase
 
 protected:
 	Io& m_gocatorFifo;
-  std::atomic<double> m_yResolution = 1.0;
-  std::atomic<double> m_encoder_resolution = 1.0;
-  std::atomic<double> m_frame_rate = 1.0;
   std::atomic<bool> m_stopped = true;
   std::atomic<bool> m_first_frame = true;
   static std::atomic<bool> terminate;

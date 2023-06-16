@@ -45,15 +45,15 @@ namespace cads
 {
 
  std::function<PulleyRevolution(double)> 
-  mk_pulley_revolution(double fps)
+  mk_pulley_revolution()
   {
     auto n = revolution_sensor_config.trigger_num;
     auto bidirectional = revolution_sensor_config.bidirectional;
     auto bias = revolution_sensor_config.bias;
     auto pully_circumfrence = global_conveyor_parameters.PulleyCircumference; // In mm
     auto trigger_distance = pully_circumfrence / n;
-    auto period = global_conveyor_parameters.PulleyCircumference / global_conveyor_parameters.MaxSpeed;
-    long cnt_est_threshold = period * fps * 0.9;
+    auto period = global_conveyor_parameters.PulleyCircumference / global_conveyor_parameters.TypicalSpeed;
+    long cnt_est_threshold = period * constants_gocator.Fps * 0.9;
 
     double schmitt1 = 1.0, schmitt0 = -1.0;
     auto schmitt_trigger = mk_schmitt_trigger(bias);
@@ -188,6 +188,7 @@ namespace cads
           }
           break;
         }
+        case msgid::stopped:
         case msgid::finished: {
           next.enqueue(args_in);
           terminate = true;
@@ -224,7 +225,7 @@ namespace cads
     using namespace std::placeholders;
 
     auto pulley_circumfrence = global_conveyor_parameters.PulleyCircumference;
-    auto avg_speed = global_conveyor_parameters.MaxSpeed;
+    auto avg_speed = global_conveyor_parameters.TypicalSpeed;
     auto T0 = 1000 * pulley_circumfrence / avg_speed; // in milliseconds
     auto T1 = 6 * T0;  // in milliseconds
     auto barrel_origin_time = std::chrono::high_resolution_clock::now();

@@ -106,7 +106,7 @@ namespace cads
 
   }
 
-  GocatorReader::GocatorReader(Io &gocatorFifo, std::string ip_add) : GocatorReaderBase(gocatorFifo)
+  GocatorReader::GocatorReader(Io &gocatorFifo) : GocatorReaderBase(gocatorFifo)
   {
     m_assembly = CreateGoSdk();
     m_system = CreateGoSystem();
@@ -121,27 +121,7 @@ namespace cads
       spdlog::get("cads")->info("Number of Camera's found: {}", sensor_count);
     }
 
-    if (!ip_add.empty())
-    {
-      kIpAddress gocator_ip;
-      auto status = kIpAddress_Parse(&gocator_ip, ip_add.c_str());
-
-      if (kIsError(status))
-      {
-        throw runtime_error{"Illformed Ip Address: "s + to_string(status)};
-      }else
-
-      status = GoSystem_FindSensorByIpAddress(m_system, &gocator_ip, &m_sensor);
-
-      if (kIsError(status))
-      {
-        throw runtime_error{"Cannot connect to gocator via IP: "s + to_string(status)};
-      }
-    }
-    else
-    {
-      m_sensor = GoSystem_SensorAt(m_system, 0);
-    }
+    m_sensor = GoSystem_SensorAt(m_system, 0);
 
     auto status = GoSensor_Connect(m_sensor);
     
@@ -165,24 +145,21 @@ namespace cads
       throw runtime_error{"GoSensor_EnableData: "s + to_string(status)};
     }
 
-#if 0
-                   
-  if (kIsError(status = GoSystem_SetHealthHandler(m_system, OnSystem, this)))
-	{
-			throw runtime_error{"GoSensor_SetDataHandler: "s + to_string(status)};
-	}
-
-  if (kIsError(status = GoSensor_EnableHealth(m_sensor, kTRUE)))
-	{
-			throw runtime_error{"GoSensor_EnableHealth: "s + to_string(status)};
-	}
-#endif
-
     auto setup = GoSensor_Setup(m_sensor);
-
+    
     if (kNULL == setup)
     {
       throw runtime_error{"GoSensor_Setup: Invalid setup handle"};
+    }
+
+    if(kIsError(status = GoSetup_SetTriggerSource(setup,GO_TRIGGER_TIME)))
+    {
+      throw runtime_error{"GoSetup_SetTriggerSource: Failed"};
+    }
+
+    if(kIsError(status = GoSetup_SetFrameRate(setup,constants_gocator.Fps)))
+    {
+      throw runtime_error{"GoSetup_SetFrameRate: Failed"};
     }
 
     if (kIsError(status = GoSetup_EnableUniformSpacing(setup, kTRUE)))
@@ -190,19 +167,6 @@ namespace cads
       throw runtime_error{"GoSetup_EnableUniformSpacing: "s + to_string(status)};
     }
 
-    m_encoder_resolution = (double)GoTransform_EncoderResolution(GoSensor_Transform(m_sensor));
-    m_yResolution = GoSetup_EncoderSpacing(setup);
-    m_frame_rate = GoSetup_FrameRate(setup);
-
-    if(!m_use_encoder) {
-      m_yResolution = (1000*global_conveyor_parameters.MaxSpeed) / m_frame_rate;
-    }
-  }
-
-  GocatorReader::GocatorReader(Io &gocatorFifo, bool use_encoder, bool trim, std::string ip_add) : GocatorReader(gocatorFifo, ip_add)
-  {
-    m_trim = trim;
-    m_use_encoder = use_encoder;
   }
 
   kStatus kCall GocatorReader::OnData(kPointer context, GoSensor sensor, GoDataSet dataset)
@@ -274,12 +238,9 @@ namespace cads
     return kOK;
   }
 
-  kStatus GocatorReader::OnData(GoSensor sensor, GoDataSet dataset)
+  kStatus GocatorReader::OnData([[maybe_unused]]GoSensor sensor, GoDataSet dataset)
   {
-    (void)sensor;
-
     double frame = 0.0;
-    k64s encoder = 0;
     double y = 0.0;
     k16s *profile = 0;
     kSize profileWidth = 0;
@@ -287,6 +248,7 @@ namespace cads
     double zResolution = 0.0;
     double xOffset = 0.0;
     double zOffset = 0.0;
+    double yResolution = global_conveyor_parameters.TypicalSpeed / constants_gocator.Fps;
 
     for (kSize i = 0; i < GoDataSet_Count(dataset); ++i)
     {
@@ -324,29 +286,17 @@ namespace cads
     if (m_first_frame)
     {
       m_first_frame = false;
-
-      if(m_use_encoder) {
-        m_yOffset = encoder;
-      }else {
-        m_yOffset = frame;
-      }
-      m_gocatorFifo.enqueue({msgid::gocator_properties, GocatorProperties{m_yResolution, xResolution, zResolution, zOffset, m_encoder_resolution, m_frame_rate}});
+      m_gocatorFifo.enqueue({msgid::gocator_properties, GocatorProperties{xResolution, zResolution, zOffset}});
     }
 
-    if (m_use_encoder)
-    {
-      y = std::abs((encoder - m_yOffset) * m_encoder_resolution);
-    }
-    else
-    {
-      y = (frame - m_yOffset) * m_yResolution;
-    }
+    y = (frame - 1) * yResolution;
+
 
     // Trim invalid values
     auto profile_end = profile + profileWidth;
     auto profile_begin = profile;
 
-    if(m_trim) {    
+    if(true/*Todo move out of this function*/) {    
       for (; profile_end > profile && *(profile_end-1) == k16S_NULL; --profile_end)
       {
       }

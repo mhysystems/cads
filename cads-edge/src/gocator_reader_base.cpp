@@ -13,7 +13,7 @@ namespace cads
     terminate = true;
   }
 
-  GocatorReaderBase::GocatorReaderBase(Io &gocatorFifo) : m_gocatorFifo(gocatorFifo) 
+  GocatorReaderBase::GocatorReaderBase(Io& fifo) : m_gocatorFifo(fifo)
   {
     struct sigaction sigIntHandler;
 

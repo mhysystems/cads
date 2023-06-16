@@ -14,6 +14,7 @@
 #include <readerwriterqueue.h>
 #include <constants.h>
 #include <utils.hpp>
+#include <msg.h>
 
 using namespace moodycamel;
 using namespace std::string_literals;
@@ -544,32 +545,29 @@ namespace cads
     sqlite3_step(stmt.get());
   }
 
-  std::tuple<profile_params, int> fetch_profile_parameters(std::string name)
+  std::tuple<GocatorProperties, int> fetch_profile_parameters(std::string name)
   {
 
-    auto query = R"(SELECT * FROM PARAMETERS WHERE ROWID = 1)"s;
+    auto query = R"(SELECT x_res,z_res,z_off FROM PARAMETERS WHERE ROWID = 1)"s;
     auto db_config_name = name.empty() ? global_config["profile_db_name"].get<std::string>() : name;
     auto [stmt,db] = prepare_query(db_config_name, query);
     auto err = SQLITE_OK;
 
     tie(err, stmt) = db_step(move(stmt));
 
-    std::tuple<profile_params, int> rtn;
+    std::tuple<GocatorProperties, int> rtn;
     if (err == SQLITE_ROW)
     {
 
       rtn = {
           {sqlite3_column_double(stmt.get(), 0),
            sqlite3_column_double(stmt.get(), 1),
-           sqlite3_column_double(stmt.get(), 2),
-           sqlite3_column_double(stmt.get(), 3),
-           sqlite3_column_double(stmt.get(), 4),
-           sqlite3_column_double(stmt.get(), 5)},
+           sqlite3_column_double(stmt.get(), 2)},
           0};
     }
     else
     {
-      rtn = {{1.0, 1.0, 1.0, 0.0, 1.0, 1.0}, -1};
+      rtn = {{1.0, 1.0, 1.0}, -1};
     }
 
     return rtn;

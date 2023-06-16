@@ -1,11 +1,25 @@
+gocator = {
+  Fps = 984.0
+}
+
+conveyor = {
+  Org  = "bhp",
+  Site = "jimblebar",
+  Name = "cv001",
+  Timezone = "Australia/Perth",
+  PulleyCircumference = 4178.32,
+  TypicalSpeed = 6.09
+}
+
 belt = {
   Installed = "2023-01-14T00:00:00Z",
   PulleyCover = 7.0,
   CordDiameter = 9.1,
   TopCover = 14.0,
   Width = 1600,
-  Length = 12545200,
   WidthN = 1890,
+  Length = 12545200,
+  LengthN = conveyor.TypicalSpeed / gocator.fps, 
   Splices = 1
 }
 
@@ -16,15 +30,27 @@ anomaly = {
 
 function main()
 
-  gocator_cads = BlockingReaderWriterQueue()
-  term = BlockingReaderWriterQueue()
-  cad_est = encoder_distance_estimation(term,6.0);
-  gocator = mk_gocator(gocator_cads,true,false)
+  local gocator_cads = BlockingReaderWriterQueue()
+  local term = BlockingReaderWriterQueue()
+  local cad_est = encoder_distance_estimation(term,6.0);
+  local gocator = mk_gocator(gocator_cads)
 
-  thread = process_profile(gocator_cads,cad_est)
+  local thread = process_profile(gocator_cads,cad_est)
 
   gocator:Start()
 
-  luamain({thread})
+  repeat
+    local is_value,msg_id = wait_for(term)
+
+    if is_value then
+      print(msd_id)
+      if msg_id == 7 then break end
+    end
+
+  until true
+
+  gocator:Stop()
+
+  join_threads({thread})
   
 end

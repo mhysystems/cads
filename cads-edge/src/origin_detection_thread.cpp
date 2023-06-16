@@ -341,7 +341,7 @@ namespace cads
     auto start = std::chrono::high_resolution_clock::now();
     int64_t cnt = 0;
     auto buffer_size_warning = buffer_warning_increment;
-    double x_resolution = 1.0, y_resolution = 1.0;
+    double x_resolution = 1.0, y_resolution = global_conveyor_parameters.TypicalSpeed;
     int width_n = (int)global_belt_parameters.WidthN;
 
     profile_fifo.wait_dequeue(m);
@@ -359,8 +359,7 @@ namespace cads
     else
     {
       auto p = get<GocatorProperties>(get<1>(m));
-      y_resolution = get<0>(p);
-      x_resolution = get<1>(p);
+      x_resolution = p.xResolution;
     }
 
 
@@ -608,8 +607,6 @@ coro<std::tuple<bool,size_t,double>,profile,1> anomaly_detection_coro(double y_r
 
     auto find_dischord_motif  = find_dischord_motif_coro(window_size,partition_size);
 
-    long cnt = 0;
-
     auto [motif_creation,motif] = fetch_last_motif();
 
     if(motif.empty()) state = State::noMotif;
@@ -686,26 +683,7 @@ coro<std::tuple<bool,size_t,double>,profile,1> anomaly_detection_coro(double y_r
     int64_t cnt = 0;
     auto buffer_size_warning = buffer_warning_increment;
     double last_splice_position = 0;
-    int width_n = (int)global_belt_parameters.WidthN;
-    double y_resolution = 1.0;
-
-    profile_fifo.wait_dequeue(m);
-    auto m_id = get<0>(m);
-
-    if (m_id == cads::msgid::finished)
-    {
-      return;
-    }
-
-    if (m_id != cads::msgid::gocator_properties)
-    {
-      std::throw_with_nested(std::runtime_error("preprocessing:First message must be gocator_properties"));
-    }
-    else
-    {
-      auto p = get<GocatorProperties>(get<1>(m));
-      y_resolution = get<0>(p);
-    }
+    double y_resolution = global_conveyor_parameters.TypicalSpeed / constants_gocator.Fps;
 
     auto origin_detection = anomaly_detection_coro(y_resolution);
 
@@ -732,12 +710,6 @@ coro<std::tuple<bool,size_t,double>,profile,1> anomaly_detection_coro(double y_r
             spdlog::get("cads")->error("Origin detector stopped");
           }
         break;
-        }
-        case msgid::gocator_properties: {
-          auto p = get<GocatorProperties>(get<1>(m));
-          y_resolution = get<0>(p);
-          next_fifo.enqueue(m);
-          break;
         }
         case msgid::finished:
 

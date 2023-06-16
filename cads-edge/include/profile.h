@@ -32,16 +32,6 @@ namespace cads
 
   const cads::profile null_profile{ std::chrono::time_point<std::chrono::system_clock>::min(),std::numeric_limits<cads::y_type>::max(), std::numeric_limits<double>::max(), {}};
 
-  struct profile_params
-  {
-    double y_res;
-    double x_res;
-    double z_res;
-    double z_off;
-    double encoder_res;
-    double z_max;
-  };
-
   struct meta
   {
     std::string site = "";

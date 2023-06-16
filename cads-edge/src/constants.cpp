@@ -171,6 +171,7 @@ namespace cads {
   OriginDetection config_origin_detection;
   Measure measurements;
   AnomalyDetection anomalies_config;
+  GocatorConstants constants_gocator;
 
   int lua_transition(std::string f) {
     
@@ -255,6 +256,18 @@ namespace cads {
     }
 
     global_belt_parameters = belt;
+
+    GocatorConstants gocator;
+
+    lua_status = lua_getglobal(L.get(),"gocator");
+
+    if(lua_istable(L.get(),-1)) {
+      lua_getfield(L.get(), -1, "Fps");
+      gocator.Fps = lua_tonumber(L.get(), -1);
+      lua_pop(L.get(), 1);
+    }
+
+    constants_gocator = gocator;
 
     return 0;
   }

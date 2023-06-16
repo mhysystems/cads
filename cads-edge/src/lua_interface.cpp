@@ -10,6 +10,8 @@
 #include <cads.h>
 #include <belt.h>
 #include <io.hpp>
+#include <dynamic_processing.h>
+#include <upload.h>
 
 namespace
 {
@@ -27,7 +29,14 @@ namespace
     return 0;
   }
 
-  int luamain(lua_State *L)
+  int sleep_ms(lua_State *L) 
+  {
+    auto ms = lua_tointeger(L,1);
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+    return 0;
+  }
+
+  int join_threads(lua_State *L)
   {
     int array_length = lua_rawlen(L, 1);
 
@@ -53,6 +62,19 @@ namespace
       lua_setmetatable(L, -2);
 
     return 1;
+  }
+
+  int wait_for(lua_State *L) {
+    auto io = static_cast<cads::Io*>(lua_touserdata(L,1));
+    auto s = lua_tointeger(L,2);
+
+    cads::msg m;
+    auto have_value = io->wait_dequeue_timed(m, std::chrono::seconds(s));
+    lua_pushboolean(L,have_value);
+    lua_pushinteger(L,std::get<0>(m));
+
+    return 2;
+
   }
 
   int mk_thread(lua_State *L, std::function<void(cads::Io&)> fn)
@@ -106,11 +128,9 @@ namespace
   int mk_gocator(lua_State *L)
   {
     auto q = static_cast<cads::Io*>(lua_touserdata(L, 1));
-    auto trim = lua_toboolean(L,2);
-    auto use_encoder = lua_toboolean(L,3);
 
-    auto p = new (lua_newuserdata(L, sizeof(decltype(cads::mk_gocator(*q,trim,use_encoder))))) decltype(cads::mk_gocator(*q,trim,use_encoder));
-    *p = cads::mk_gocator(*q,trim,use_encoder);
+    auto p = new (lua_newuserdata(L, sizeof(decltype(cads::mk_gocator(*q))))) decltype(cads::mk_gocator(*q));
+    *p = cads::mk_gocator(*q);
     
     
     lua_createtable(L, 0, 1); 
@@ -132,8 +152,29 @@ namespace
     return mk_thread2(L,cads::bypass_fiducial_detection_thread);
   }
 
-  int save_send(lua_State *L) {
-    return mk_thread2(L,cads::save_send_thread); // Need to pass in z_offset, z_resolutions
+  int window_processing_thread(lua_State *L) 
+  {
+    return mk_thread2(L,cads::window_processing_thread);
+  }
+
+  int splice_detection_thread(lua_State *L) 
+  {
+    return mk_thread2(L,cads::splice_detection_thread);
+  }
+
+  int dynamic_processing_thread(lua_State *L) 
+  {
+    return mk_thread2(L,cads::dynamic_processing_thread);
+  }
+
+  int upload_scan_thread(lua_State *L) 
+  {
+    return mk_thread(L,cads::upload_scan_thread);
+  }
+
+
+  int save_send_thread(lua_State *L) {
+    return mk_thread2(L,cads::save_send_thread);
   }
 
   int process_profile(lua_State *L) {
@@ -165,17 +206,30 @@ namespace cads
     {
       auto L = UL.get();
 
-      lua_pushcfunction(L, BlockingReaderWriterQueue);
+      lua_pushcfunction(L, ::BlockingReaderWriterQueue);
 	    lua_setglobal(L,"BlockingReaderWriterQueue");
 
-      lua_pushcfunction(L, bypass_fiducial_detection);
+      lua_pushcfunction(L, ::bypass_fiducial_detection);
 	    lua_setglobal(L,"bypass_fiducial_detection");
 
-      lua_pushcfunction(L, save_send);
-	    lua_setglobal(L,"save_send");
+      lua_pushcfunction(L, ::save_send_thread);
+	    lua_setglobal(L,"save_send_thread");
+
+      lua_pushcfunction(L, ::window_processing_thread);
+	    lua_setglobal(L,"window_processing_thread");
+
+      lua_pushcfunction(L, ::splice_detection_thread);
+	    lua_setglobal(L,"splice_detection_thread");
       
-      lua_pushcfunction(L, luamain);
-      lua_setglobal(L,"luamain");
+      lua_pushcfunction(L, ::dynamic_processing_thread);
+	    lua_setglobal(L,"dynamic_processing_thread");
+      
+      lua_pushcfunction(L, ::upload_scan_thread);
+	    lua_setglobal(L,"upload_scan_thread");
+    
+
+      lua_pushcfunction(L, ::join_threads);
+      lua_setglobal(L,"join_threads");
 
       lua_pushcfunction(L, ::mk_gocator);
       lua_setglobal(L,"mk_gocator");
@@ -185,6 +239,9 @@ namespace cads
       
       lua_pushcfunction(L, ::encoder_distance_estimation);
       lua_setglobal(L,"encoder_distance_estimation");
+
+      lua_pushcfunction(L, ::sleep_ms);
+      lua_setglobal(L,"sleep_ms");
       
       
       return UL;

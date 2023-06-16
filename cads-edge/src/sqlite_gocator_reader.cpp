@@ -41,13 +41,7 @@ namespace cads
     }
   }
 
-  SqliteGocatorReader::SqliteGocatorReader(Io &gocatorFifo, SqliteGocatorConfig config) : GocatorReaderBase(gocatorFifo), m_config(config)
-  {
-  }
-
-  SqliteGocatorReader::SqliteGocatorReader(Io &gocatorFifo) : GocatorReaderBase(gocatorFifo), m_config(sqlite_gocator_config)
-  {
-  }
+  SqliteGocatorReader::SqliteGocatorReader(Io &gocatorFifo) : GocatorReaderBase(gocatorFifo) {}
 
   SqliteGocatorReader::~SqliteGocatorReader() {
     Stop();
@@ -60,21 +54,15 @@ namespace cads
     auto data_src = global_config["data_source"].get<std::string>();
     auto [params, err2] = fetch_profile_parameters(data_src);
 
-    if(params.encoder_res != 0.0) {
-      params.y_res = (1000*global_conveyor_parameters.MaxSpeed) / params.encoder_res;
-    }
+    m_gocatorFifo.enqueue({msgid::gocator_properties, params});
 
-    m_gocatorFifo.enqueue({msgid::gocator_properties, GocatorProperties{params.y_res, params.x_res, params.z_res, params.z_off, params.encoder_res, m_config.fps}});
-
-    m_yResolution = params.y_res;
-    m_encoder_resolution = params.encoder_res;
-    auto pulley_period = 1000000us / (int)m_config.fps;
+    auto pulley_period = 1000000us / (int)sqlite_gocator_config.fps;
     uint64_t cnt = 0;
     auto current_time = std::chrono::high_resolution_clock::now();
 
     do
     {
-      auto fetch_profile = fetch_belt_coro(0,std::get<1>(m_config.range), std::get<0>(m_config.range), 256, data_src);
+      auto fetch_profile = fetch_belt_coro(0,std::get<1>(sqlite_gocator_config.range), std::get<0>(sqlite_gocator_config.range), 256, data_src);
 
       while (!m_stopped)
       {
@@ -82,12 +70,12 @@ namespace cads
         auto [co_terminate, cv] = fetch_profile.resume(0);
         auto [idx, p] = cv;
 
-        if (co_terminate && !m_config.forever)
+        if (co_terminate && !sqlite_gocator_config.forever)
         {
           m_gocatorFifo.enqueue({msgid::finished, 0});
           m_stopped = true;
           break;
-        }else if(co_terminate && m_config.forever) {
+        }else if(co_terminate && sqlite_gocator_config.forever) {
           break;
         }
 
@@ -114,7 +102,7 @@ namespace cads
           m_stopped = true;
         }
       }
-    } while (m_config.forever && !terminate);
+    } while (sqlite_gocator_config.forever && !terminate);
   }
 
 }

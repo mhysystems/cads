@@ -30,9 +30,7 @@ protected:
 	void* m_system;
 	void* m_assembly;
 	void* m_sensor;
-  bool m_use_encoder = true;
   bool m_trim = true;
-  std::atomic<k64s> m_yOffset = 0;
   std::atomic<size_t> m_buffer_size_warning = 4096;
   
 	static kStatus OnData(kPointer context, GoSensor sensor, GoDataSet dataset);
@@ -45,8 +43,7 @@ public:
 	void Start();
 	void Stop();
   void Log();
-	GocatorReader(Io&, std::string ip_add = "");
-  GocatorReader(Io&, bool, bool trim = true, std::string ip_add = "");
+	GocatorReader(Io&);
 	virtual ~GocatorReader();
 };
 

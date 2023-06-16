@@ -40,7 +40,7 @@ namespace cads {
     std::string Name;
     std::string Timezone;
     double PulleyCircumference;
-    double MaxSpeed;
+    double TypicalSpeed;
     int64_t Belt;
 
     operator std::string() const;
@@ -119,6 +119,10 @@ namespace cads {
     double BeltPartitionLength;
   };
 
+  struct GocatorConstants {
+    double Fps;
+  };
+
   extern profile_parameters global_profile_parameters;
   extern Conveyor global_conveyor_parameters;
   extern Belt global_belt_parameters;
@@ -132,6 +136,7 @@ namespace cads {
   extern OriginDetection config_origin_detection;
   extern Measure measurements;
   extern AnomalyDetection anomalies_config;
+  extern GocatorConstants constants_gocator;
   
   void init_config(std::string f);
   void drop_config();

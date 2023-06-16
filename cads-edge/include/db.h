@@ -13,6 +13,8 @@
 
 #include <profile.h>
 #include <coro.hpp>
+#include <msg.h>
+
 
 namespace cads
 {
@@ -24,8 +26,8 @@ namespace cads
   coro<int, std::tuple<int, int, profile>, 1> store_profile_coro(std::string name = "");
   coro<std::tuple<int, profile>> fetch_belt_coro(int revid, long last_idx, long first_idx = 0, int size = 256, std::string name = "");
   long count_with_width_n(std::string name, int revid, int width_n);
-  int store_profile_parameters(profile_params p, std::string name = "");
-  std::tuple<profile_params, int> fetch_profile_parameters(std::string name);
+  int store_profile_parameters(GocatorProperties p, std::string name = "");
+  std::tuple<GocatorProperties, int> fetch_profile_parameters(std::string name);
   std::tuple<double,double,double,double,int> fetch_belt_dimensions(int revid, int idx, std::string name);
 
 

@@ -146,15 +146,17 @@ namespace cads
     spdlog::get("cads")->info("lua_processing_coro finished");
   }
 
-  void dynamic_processing_thread(cads::Io &profile_fifo, cads::Io &next_fifo, int width)
+  void dynamic_processing_thread(cads::Io &profile_fifo, cads::Io &next_fifo)
   {
 
-    auto realtime_processing = lua_processing_coro(width);
     int64_t cnt = 0;
     profile p;
     cads::msg m;
     auto buffer_size_warning = buffer_warning_increment;
+    int widthn = (int)global_belt_parameters.WidthN;
 
+    auto realtime_processing = lua_processing_coro(widthn);
+    
     auto start = std::chrono::high_resolution_clock::now();
 
     for (auto loop = true;loop;)

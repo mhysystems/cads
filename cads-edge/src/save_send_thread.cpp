@@ -23,18 +23,6 @@
 using namespace moodycamel;
 using namespace std::chrono;
 
-namespace {
-
-  std::tuple<double,double,double,double> get_gocator_subset(cads::GocatorProperties g) 
-  {
-    //struct{double yResolution; double xResolution; double zResolution; double zOffset; double m_encoder_resolution; double m_frame_rate;};
-    return {std::get<2>(g),std::get<3>(g),global_config["width_n"].get<double>(),std::get<5>(g)};
-    //return {g.zResolution,g.zOffset,global_config["width_n"].get<double>(),g.m_frame_rate};
-  }
-
-}
-
-
 namespace cads
 {
   void save_send_thread(cads::Io &profile_fifo, cads::Io &next)

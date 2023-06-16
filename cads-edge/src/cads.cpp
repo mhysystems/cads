@@ -88,14 +88,7 @@ namespace
     }
   }
 
-  enum class Process_Status
-  {
-    Error,
-    Finished,
-    Stopped
-  };
-
-
+#if 0
   Process_Status process_impl(IO<msg> auto &next)
   {
 
@@ -154,7 +147,7 @@ namespace
     {
       origin_dectection = std::jthread(window_processing_thread, std::ref(winFifo), std::ref(dynamic_processing_fifo));
       origin_dectection = std::jthread(splice_detection_thread, std::ref(winFifo),std::ref(dynamic_processing_fifo));
-      dynamic_processing = std::jthread(dynamic_processing_thread, std::ref(dynamic_processing_fifo), std::ref(db_fifo), width_n);
+      dynamic_processing = std::jthread(dynamic_processing_thread, std::ref(dynamic_processing_fifo), std::ref(db_fifo));
     }
 
     auto iirfilter_left = mk_iirfilterSoS();
@@ -366,18 +359,35 @@ namespace
 
     return status;
   }
+#endif
 
 
-
-  Process_Status process_impl2(IO<msg> auto &gocatorFifo, IO<msg> auto &next, double x_resolution, double z_resolution, double encoder_framerate)
+  void process_impl(Io& gocatorFifo, Io& next)
   {
 
     const auto x_width = global_belt_parameters.Width;
     const auto nan_percentage = global_config["nan_%"].get<double>();
     const auto width_n = global_config["width_n"].get<int>();
     const auto clip_height = global_config["clip_height"].get<z_element>();
+    double x_resolution = 1.0;
+    double z_resolution = 1.0;
 
     cads::msg m;
+
+
+    gocatorFifo.wait_dequeue(m);
+    auto m_id = get<0>(m);
+
+    if (m_id != cads::msgid::gocator_properties)
+    {
+      std::throw_with_nested(std::runtime_error("preprocessing:First message must be gocator_properties"));
+    }
+    else
+    {
+      auto p = get<GocatorProperties>(get<1>(m));
+      x_resolution = p.xResolution;
+      z_resolution = p.zResolution;
+    }
 
     auto iirfilter_left = mk_iirfilterSoS();
     auto iirfilter_right = mk_iirfilterSoS();
@@ -393,7 +403,6 @@ namespace
     auto pulley_speed = mk_pulley_stats();
 
     long drop_profiles = global_config["iirfilter"]["skip"]; // Allow for iir fillter too stablize
-    Process_Status status = Process_Status::Finished;
 
     auto pulley_estimator = mk_pulleyfitter(z_resolution, -15.0);
     auto belt_estimator = mk_pulleyfitter(z_resolution, 0.0);
@@ -402,7 +411,7 @@ namespace
 
     auto time0 = std::chrono::high_resolution_clock::now();
 
-    auto pulley_rev = mk_pulley_revolution(encoder_framerate);
+    auto pulley_rev = mk_pulley_revolution();
 
     do
     {
@@ -412,6 +421,7 @@ namespace
 
       if (m_id != cads::msgid::scan)
       {
+        next.enqueue(m);
         break;
       }
 
@@ -422,14 +432,14 @@ namespace
       if (p.z.size() * x_resolution < x_width * 0.75)
       {
         spdlog::get("cads")->error("Gocator sending profiles with widths less than 0.75 of expected width");
-        status = Process_Status::Error;
+        next.enqueue({msgid::finished,0});
         break;
       }
 
       if (p.z.size() < (size_t)width_n)
       {
         spdlog::get("cads")->error("Gocator sending profiles with sample number {} less than {}", p.z.size(), width_n);
-        status = Process_Status::Error;
+        next.enqueue({msgid::finished,0});
         break;
 
       }
@@ -442,7 +452,7 @@ namespace
       if ((nan_cnt / p.z.size()) > nan_percentage)
       {
         spdlog::get("cads")->error("Percentage of nan({}) in profile > {}%", nan_cnt, nan_percentage * 100);
-        status = Process_Status::Error;
+        next.enqueue({msgid::finished,0});
         break;
       }
 
@@ -511,7 +521,7 @@ namespace
       if (speed == 0)
       {
         spdlog::get("cads")->error("Belt proabaly stopped.");
-        status = Process_Status::Stopped;
+        next.enqueue({msgid::stopped,0});
         break;
       }
 
@@ -549,7 +559,6 @@ namespace
 
     } while (std::get<0>(m) != msgid::finished);
 
-    next.enqueue({msgid::finished, 0});
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
@@ -557,7 +566,6 @@ namespace
     auto rate = duration != 0 ? (double)cnt / duration : 0;
     spdlog::get("cads")->info("CADS - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, rate);
 
-    return status;
   }
 
 
@@ -590,15 +598,14 @@ namespace cads
     } while (std::get<0>(m) != msgid::finished);
   }
 
-  unique_ptr<GocatorReaderBase> mk_gocator(Io &gocatorFifo, bool trim, bool use_encoder)
+  unique_ptr<GocatorReaderBase> mk_gocator(Io &gocatorFifo)
   {
     auto data_src = global_config["data_source"].get<std::string>();
 
     if (data_src == "gocator"s)
     {
-      bool connect_via_ip = global_config.contains("gocator_ip");
       spdlog::get("cads")->debug("Using gocator as data source");
-      auto gocator = connect_via_ip ? make_unique<GocatorReader>(gocatorFifo, use_encoder, trim, global_config.at("gocator_ip"s).get<std::string>()) : make_unique<GocatorReader>(gocatorFifo, use_encoder, trim);
+      auto gocator = make_unique<GocatorReader>(gocatorFifo);
       return gocator;
     }
     else
@@ -606,71 +613,6 @@ namespace cads
       spdlog::get("cads")->debug("Using sqlite as data source");
       auto sqlite = make_unique<SqliteGocatorReader>(gocatorFifo);
       return sqlite;
-    }
-  }
-
-  void upload_profile_only(std::string params, std::string db_name)
-  {
-    auto db = db_name.empty() ? global_config["profile_db_name"].get<std::string>() : db_name;
-
-    if (params == "")
-    {
-      spdlog::get("cads")->error("--upload argument need to be supplied in the form of [revid,first_idx,last_idx]");
-    }
-    else
-    {
-
-      auto args = nlohmann::json::parse(params);
-      auto [rev_id, first_idx, last_idx] = args.get<std::tuple<int, int, int>>();
-      auto fetch_belt = fetch_belt_coro(0, last_idx, first_idx, 256, db);
-      auto [belt_id, belt_id_err] = fetch_belt_id();
-
-      if (belt_id_err && belt_id == 0)
-      {
-        spdlog::get("cads")->info("Belt is not registered with server");
-        return;
-      }
-
-      meta m;
-
-      auto [params, err] = fetch_profile_parameters(db);
-      auto [Ymin, Ymax, YmaxN, WidthN, err2] = fetch_belt_dimensions(rev_id, last_idx, db);
-      auto now = chrono::floor<chrono::seconds>(date::utc_clock::now()); // Default sends to much decimal precision for asp.net core
-      auto ts = date::format("%FT%TZ", now);
-
-      m.chrono = ts;
-      m.conveyor = global_conveyor_parameters.Name;
-      m.site = global_conveyor_parameters.Site;
-      m.WidthN = WidthN;
-      m.x_res = params.x_res;
-      m.y_res = params.y_res;
-      m.Ymax = Ymax;
-      m.YmaxN = YmaxN;
-      m.z_off = params.z_off;
-      m.z_res = params.z_res;
-      m.Belt = belt_id;
-
-      auto post_profile = post_profiles_coro(m);
-
-      while (true)
-      {
-        auto [co_terminate, cv] = fetch_belt.resume(0);
-        auto [idx, p] = cv;
-
-        if (co_terminate)
-        {
-          break;
-        }
-
-        if (p.z.size() < size_t(WidthN))
-        {
-          const auto cnt = WidthN - p.z.size();
-          p.z.insert(p.z.end(), cnt, 0);
-        }
-
-        auto f = p.z | views::take(int(WidthN));
-        post_profile.resume(cads::profile{p.time,p.y, p.x_off, {f.begin(), f.end()}});
-      }
     }
   }
 
@@ -682,7 +624,7 @@ namespace cads
     Adapt<BlockingReaderWriterQueue<msg>> gocatorFifo{BlockingReaderWriterQueue<msg>(4096 * 1024)};
     std::jthread remote_control(remote_control_thread, std::ref(nats_queue), std::ref(terminate_subscribe));
 
-    auto gocator  = mk_gocator(gocatorFifo, false);
+    auto gocator  = mk_gocator(gocatorFifo);
 
     gocator->Start();
 
@@ -700,9 +642,6 @@ namespace cads
       auto ts = date::format("%FT%TZ", now);
       spdlog::get("cads")->info("Let's go! - {}", ts);
     }
-
-    auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution, gocator_framerate] = get<GocatorProperties>(get<1>(m));
-    store_profile_parameters({y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution, global_config["clip_height"].get<double>()});
 
     auto store_profile = store_profile_coro();
 
@@ -759,35 +698,6 @@ namespace cads
     spdlog::get("cads")->info("Cads raw data dumping finished");
   }
 
-  void process()
-  {
-    Adapt<BlockingReaderWriterQueue<msg>> scan_upload_fifo{BlockingReaderWriterQueue<msg>(4096 * 1024)};
-    std::jthread save_send(upload_scan_thread, std::ref(scan_upload_fifo));
-
-    for (int sleep_wait = 5;;)
-    {
-
-      auto status = process_impl(scan_upload_fifo);
-
-      if (status == Process_Status::Error)
-      {
-        spdlog::get("cads")->info("Sleeping for {} minutes", sleep_wait);
-        std::this_thread::sleep_for(std::chrono::seconds(sleep_wait * 60));
-
-      }
-      else if (status == Process_Status::Stopped)
-      {
-        spdlog::get("cads")->info("Sleeping for {} seconds", 30);
-        std::this_thread::sleep_for(std::chrono::seconds(30));
-      }
-      else
-      {
-        break;
-      }
-    }
-
-    scan_upload_fifo.enqueue({msgid::finished, 0});
-  }
 
   void generate_signal()
   {
@@ -815,13 +725,13 @@ namespace cads
       std::throw_with_nested(std::runtime_error("preprocessing:First message must be gocator_properties"));
     }
 
-    auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution, encoder_framerate] = get<GocatorProperties>(get<1>(m));
+    auto gocator_props = get<GocatorProperties>(get<1>(m));
 
     auto differentiation = mk_dc_filter();
 
     std::ofstream filt("filt.txt");
 
-    auto pulley_estimator = mk_pulleyfitter(z_resolution, -212.0);
+    auto pulley_estimator = mk_pulleyfitter(gocator_props.zResolution, -212.0);
 
     do
     {
