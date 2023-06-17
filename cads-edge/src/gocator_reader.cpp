@@ -154,12 +154,12 @@ namespace cads
 
     if(kIsError(status = GoSetup_SetTriggerSource(setup,GO_TRIGGER_TIME)))
     {
-      throw runtime_error{"GoSetup_SetTriggerSource: Failed"};
+      throw runtime_error{"GoSetup_SetTriggerSource: "s + to_string(status)};
     }
 
     if(kIsError(status = GoSetup_SetFrameRate(setup,constants_gocator.Fps)))
     {
-      throw runtime_error{"GoSetup_SetFrameRate: Failed"};
+      throw runtime_error{"GoSetup_SetFrameRate: "s + to_string(status)};
     }
 
     if (kIsError(status = GoSetup_EnableUniformSpacing(setup, kTRUE)))
@@ -167,6 +167,20 @@ namespace cads
       throw runtime_error{"GoSetup_EnableUniformSpacing: "s + to_string(status)};
     }
 
+    if (kIsError(status = GoSetup_SetAlignmentType(setup, GO_ALIGNMENT_TYPE_STATIONARY)))
+    {
+      throw runtime_error{"GoSetup_SetAlignmentType: "s + to_string(status)};
+    }
+
+    if (kIsError(status = GoSetup_SetAlignmentStationaryTarget(setup, GO_ALIGNMENT_TARGET_NONE)))
+    {
+      throw runtime_error{"GoSetup_SetAlignmentStationaryTarget: "s + to_string(status)};
+    }
+
+    if (kIsError(status = GoSystem_StartAlignment(m_sensor)))
+    {
+      throw runtime_error{"GoSetup_SetAlignmentStationaryTarget: "s + to_string(status)};
+    }
   }
 
   kStatus kCall GocatorReader::OnData(kPointer context, GoSensor sensor, GoDataSet dataset)
@@ -279,8 +293,19 @@ namespace cads
         }
       }
       break;
+      case GO_DATA_MESSAGE_TYPE_ALIGNMENT:
+      {
+        if (GoAlignMsg_Status(message) == kOK)
+        {
+          m_aligned = true;
+        }else{
+          terminate = true;
+        }
+      }
       }
     }
+
+    if(!m_aligned) return kOK;
 
     if (m_first_frame)
     {

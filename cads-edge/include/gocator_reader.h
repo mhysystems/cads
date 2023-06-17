@@ -32,6 +32,7 @@ protected:
 	void* m_sensor;
   bool m_trim = true;
   std::atomic<size_t> m_buffer_size_warning = 4096;
+  std::atomic<bool> m_aligned = false;
   
 	static kStatus OnData(kPointer context, GoSensor sensor, GoDataSet dataset);
   static kStatus OnSystem(kPointer context, GoSystem system, GoDataSet data);
