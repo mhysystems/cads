@@ -14,7 +14,7 @@
 #include <readerwriterqueue.h>
 #include <constants.h>
 #include <utils.hpp>
-#include <msg.h>
+
 
 using namespace moodycamel;
 using namespace std::string_literals;
@@ -368,7 +368,7 @@ namespace cads
         R"(DROP TABLE IF EXISTS PROFILE;)"s,
         R"(DROP TABLE IF EXISTS PARAMETERS;)"s,
         R"(CREATE TABLE IF NOT EXISTS PROFILE (revid INTEGER NOT NULL, idx INTEGER NOT NULL,y REAL NOT NULL, x_off REAL NOT NULL, z BLOB NOT NULL, PRIMARY KEY (revid,idx));)"s,
-        R"(CREATE TABLE IF NOT EXISTS PARAMETERS (y_res REAL NOT NULL, x_res REAL NOT NULL, z_res REAL NOT NULL, z_off REAL NOT NULL, encoder_res REAL NOT NULL, z_max REAL NOT NULL))"s
+        R"(CREATE TABLE IF NOT EXISTS PARAMETERS (x_res REAL NOT NULL, z_res REAL NOT NULL, z_off REAL NOT NULL))"s
         };
     
     if(global_config["startup_delete_db"].get<bool>()) {
@@ -461,18 +461,16 @@ namespace cads
     create_transient_db();
   }
 
-  int store_profile_parameters(profile_params params, std::string name)
+  int store_profile_parameters(GocatorProperties params, std::string name)
   {
-    auto query = R"(INSERT OR REPLACE INTO PARAMETERS (rowid,y_res,x_res,z_res,z_off,encoder_res,z_max) VALUES (1,?,?,?,?,?,?))"s;
+    auto query = R"(INSERT OR REPLACE INTO PARAMETERS (rowid,x_res,z_res,z_off) VALUES (1,?,?,?))"s;
     auto db_config_name = name.empty() ? global_config["profile_db_name"].get<std::string>() : name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
 
-    auto err = sqlite3_bind_double(stmt.get(), 1, params.y_res);
-    err = sqlite3_bind_double(stmt.get(), 2, params.x_res);
-    err = sqlite3_bind_double(stmt.get(), 3, params.z_res);
-    err = sqlite3_bind_double(stmt.get(), 4, params.z_off);
-    err = sqlite3_bind_double(stmt.get(), 5, params.encoder_res);
-    err = sqlite3_bind_double(stmt.get(), 6, params.z_max);
+    auto err = sqlite3_bind_double(stmt.get(), 1, params.xResolution);
+    err = sqlite3_bind_double(stmt.get(), 2, params.zResolution);
+    err = sqlite3_bind_double(stmt.get(), 3, params.zOffset);
+
 
     tie(err, stmt) = db_step(move(stmt));
 
@@ -545,7 +543,7 @@ namespace cads
     sqlite3_step(stmt.get());
   }
 
-  std::tuple<GocatorProperties, int> fetch_profile_parameters(std::string name)
+  std::tuple<cads::GocatorProperties, int> fetch_profile_parameters(std::string name)
   {
 
     auto query = R"(SELECT x_res,z_res,z_off FROM PARAMETERS WHERE ROWID = 1)"s;

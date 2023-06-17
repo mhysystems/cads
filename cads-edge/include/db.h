@@ -27,7 +27,7 @@ namespace cads
   coro<std::tuple<int, profile>> fetch_belt_coro(int revid, long last_idx, long first_idx = 0, int size = 256, std::string name = "");
   long count_with_width_n(std::string name, int revid, int width_n);
   int store_profile_parameters(GocatorProperties p, std::string name = "");
-  std::tuple<GocatorProperties, int> fetch_profile_parameters(std::string name);
+  std::tuple<cads::GocatorProperties, int> fetch_profile_parameters(std::string name = "");
   std::tuple<double,double,double,double,int> fetch_belt_dimensions(int revid, int idx, std::string name);
 
 

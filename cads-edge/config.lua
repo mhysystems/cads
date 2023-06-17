@@ -19,7 +19,7 @@ belt = {
   Width = 1600,
   WidthN = 1890,
   Length = 12545200,
-  LengthN = conveyor.TypicalSpeed / gocator.fps, 
+  LengthN = conveyor.TypicalSpeed / gocator.Fps, 
   Splices = 1
 }
 
@@ -32,10 +32,8 @@ function main()
 
   local gocator_cads = BlockingReaderWriterQueue()
   local term = BlockingReaderWriterQueue()
-  local cad_est = encoder_distance_estimation(term,6.0);
   local gocator = mk_gocator(gocator_cads)
-
-  local thread = process_profile(gocator_cads,cad_est)
+  local thread = process_identity(gocator_cads,term)
 
   gocator:Start()
 
@@ -43,12 +41,13 @@ function main()
     local is_value,msg_id = wait_for(term)
 
     if is_value then
-      print(msd_id)
-      if msg_id == 7 then break end
+      print(msg_id)
+      if msg_id == 1 then break end
     end
 
-  until true
+  until false
 
+  print("stopping")
   gocator:Stop()
 
   join_threads({thread})

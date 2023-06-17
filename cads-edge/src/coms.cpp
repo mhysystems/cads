@@ -383,34 +383,7 @@ namespace cads
     }
   }
 
-  void http_post_profile_properties(int revid, int last_idx, std::string chrono, double belt_length, double y_step)
-  {
-    nlohmann::json params_json;
-    auto db_name = global_config["profile_db_name"].get<std::string>();
-    auto [params, err] = fetch_profile_parameters(db_name);
-    auto [Ymin, Ymax, YmaxN, WidthN, err2] = fetch_belt_dimensions(revid, last_idx, db_name);
-    auto [belt_id, err3] = fetch_belt_id();
-
-    params_json["site"] = global_conveyor_parameters.Site;
-    params_json["conveyor"] = global_conveyor_parameters.Name;
-    params_json["chrono"] = chrono;
-    params_json["y_res"] = y_step;
-    params_json["x_res"] = params.x_res;
-    params_json["z_res"] = params.z_res;
-    params_json["z_off"] = params.z_off;
-    params_json["z_max"] = params.z_max;
-    params_json["Ymax"] = belt_length;
-    params_json["YmaxN"] = YmaxN;
-    params_json["WidthN"] = WidthN;
-    params_json["Belt"] = belt_id;
-
-    if (err == 0 && err2 == 0)
-    {
-      http_post_profile_properties_json(params_json.dump());
-    }
-  }
-
-  void http_post_profile_properties2(std::string chrono, double YmaxN, double y_step)
+  void http_post_profile_properties2(std::string chrono, double YmaxN, double y_step, double z_max)
   {
     nlohmann::json params_json;
     auto db_name = global_config["profile_db_name"].get<std::string>();
@@ -421,10 +394,10 @@ namespace cads
     params_json["conveyor"] = global_conveyor_parameters.Name;
     params_json["chrono"] = chrono;
     params_json["y_res"] = y_step;
-    params_json["x_res"] = params.x_res;
-    params_json["z_res"] = params.z_res;
-    params_json["z_off"] = params.z_off;
-    params_json["z_max"] = params.z_max;
+    params_json["x_res"] = params.xResolution;
+    params_json["z_res"] = params.zResolution;
+    params_json["z_off"] = params.zOffset;
+    params_json["z_max"] = z_max;
     params_json["Ymax"] = global_belt_parameters.Length;
     params_json["YmaxN"] = YmaxN;
     params_json["WidthN"] = global_config["width_n"].get<double>();
@@ -560,7 +533,7 @@ namespace cads
     bool failure = false;
     if (final_idx == YmaxN)
     {
-      http_post_profile_properties2(ts, YmaxN, y_step);
+      http_post_profile_properties2(ts, YmaxN, y_step,belt_z_max);
     }
     else
     {
@@ -574,72 +547,6 @@ namespace cads
     spdlog::get("cads")->info("ZMAX: {}, SIZE: {}, DUR:{}, RATE(Kb/s):{} ", belt_z_max, size, duration, size / (1000 * duration));
     spdlog::get("cads")->info("Leaving {}", __func__);
     return failure;
-  }
-
-  cads::coro<int, cads::profile, 1> post_profiles_coro(cads::meta meta)
-  {
-    using namespace flatbuffers;
-
-    auto [endpoint_url, enable] = global_webapi.add_belt;
-
-    FlatBufferBuilder builder(4096 * 128);
-    std::vector<flatbuffers::Offset<CadsFlatbuffers::profile>> profiles_flat;
-
-    cpr::Url endpoint{mk_post_profile_url(endpoint_url, meta.chrono)};
-
-    int64_t size = 0;
-    int64_t frame_idx = -1;
-    double belt_z_max = 0;
-    double belt_z_min = 0;
-
-    while (true)
-    {
-      auto [p, co_terminate] = co_yield 0;
-      if (!co_terminate)
-      {
-        namespace sr = std::ranges;
-
-        auto max_iter = max_element(p.z.begin(), p.z.end());
-
-        if (max_iter != p.z.end())
-        {
-          belt_z_max = max(belt_z_max, (double)*max_iter);
-        }
-
-        auto min_iter = min_element(p.z.begin(), p.z.end());
-
-        if (min_iter != p.z.end())
-        {
-          belt_z_min = min(belt_z_min, (double)*min_iter);
-        }
-
-        auto tmp_z = p.z | sr::views::transform([=](float e) -> int16_t
-                                                { return std::isnan(e) ? std::numeric_limits<int16_t>::lowest() : int16_t(((double)e - meta.z_off) / meta.z_res); });
-        std::vector<int16_t> short_z{tmp_z.begin(), tmp_z.end()};
-
-        profiles_flat.push_back(CadsFlatbuffers::CreateprofileDirect(builder, p.y, p.x_off, &short_z));
-
-        if (profiles_flat.size() == 256)
-        {
-          size += send_flatbuffer_array(builder, meta.z_res, meta.z_off, frame_idx / 256, profiles_flat, endpoint, enable);
-        }
-      }
-      else
-      {
-        break;
-      }
-    }
-
-    if (profiles_flat.size() > 0)
-    {
-      size += send_flatbuffer_array(builder, meta.z_res, meta.z_off, frame_idx / 256, profiles_flat, endpoint, enable);
-    }
-
-    meta.z_max = belt_z_max;
-    meta.z_min = belt_z_min;
-    http_post_profile_properties(meta);
-
-    co_return 0;
   }
 
 #if 0

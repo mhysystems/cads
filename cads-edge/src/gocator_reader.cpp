@@ -262,7 +262,6 @@ namespace cads
         {
           GoStamp *goStamp = GoStampMsg_At(message, j);
           frame = (double)goStamp->frameIndex;
-          encoder = goStamp->encoder;
         }
       }
       break;

@@ -72,7 +72,6 @@ namespace cads
 
         if (co_terminate && !sqlite_gocator_config.forever)
         {
-          m_gocatorFifo.enqueue({msgid::finished, 0});
           m_stopped = true;
           break;
         }else if(co_terminate && sqlite_gocator_config.forever) {
@@ -98,11 +97,12 @@ namespace cads
 
         if (terminate)
         {
-          m_gocatorFifo.enqueue({msgid::finished, 0});
           m_stopped = true;
         }
       }
     } while (sqlite_gocator_config.forever && !terminate);
+    
+    m_gocatorFifo.enqueue({msgid::finished, 0});
   }
 
 }

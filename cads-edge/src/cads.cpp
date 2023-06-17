@@ -362,7 +362,37 @@ namespace
 #endif
 
 
-  void process_impl(Io& gocatorFifo, Io& next)
+  
+
+
+
+}
+
+namespace cads
+{
+  void process_identity(Io& gocatorFifo, Io& next) {
+    msg m;
+    do
+    {
+
+      gocatorFifo.wait_dequeue(m);
+      auto m_id = get<0>(m);
+
+      if(m_id == cads::msgid::gocator_properties) continue;
+
+      if (m_id != cads::msgid::scan)
+      {
+        break;
+      }
+
+
+      auto p = get<profile>(get<1>(m));
+      next.enqueue(m);
+
+    } while (std::get<0>(m) != msgid::finished);
+  }
+
+  void process_profile(Io& gocatorFifo, Io& next)
   {
 
     const auto x_width = global_belt_parameters.Width;
@@ -568,35 +598,6 @@ namespace
 
   }
 
-
-
-
-
-}
-
-namespace cads
-{
-  void process_lua(Io& gocatorFifo, Io& next) {
-    msg m;
-    do
-    {
-
-      gocatorFifo.wait_dequeue(m);
-      auto m_id = get<0>(m);
-
-      if(m_id == cads::msgid::gocator_properties) continue;
-
-      if (m_id != cads::msgid::scan)
-      {
-        break;
-      }
-
-
-      auto p = get<profile>(get<1>(m));
-      next.enqueue(m);
-
-    } while (std::get<0>(m) != msgid::finished);
-  }
 
   unique_ptr<GocatorReaderBase> mk_gocator(Io &gocatorFifo)
   {

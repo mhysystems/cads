@@ -12,6 +12,7 @@
 #include <io.hpp>
 #include <dynamic_processing.h>
 #include <upload.h>
+#include <spdlog/spdlog.h>
 
 namespace
 {
@@ -71,7 +72,8 @@ namespace
     cads::msg m;
     auto have_value = io->wait_dequeue_timed(m, std::chrono::seconds(s));
     lua_pushboolean(L,have_value);
-    lua_pushinteger(L,std::get<0>(m));
+    auto mid = std::get<0>(m);
+    lua_pushinteger(L,mid);
 
     return 2;
 
@@ -178,7 +180,11 @@ namespace
   }
 
   int process_profile(lua_State *L) {
-    return mk_thread2(L,cads::process_lua);
+    return mk_thread2(L,cads::process_profile);
+  }
+
+  int process_identity(lua_State *L) {
+    return mk_thread2(L,cads::process_identity);
   }
 
   int encoder_distance_estimation(lua_State *L) {
@@ -227,6 +233,8 @@ namespace cads
       lua_pushcfunction(L, ::upload_scan_thread);
 	    lua_setglobal(L,"upload_scan_thread");
     
+      lua_pushcfunction(L, ::wait_for);
+      lua_setglobal(L,"wait_for");
 
       lua_pushcfunction(L, ::join_threads);
       lua_setglobal(L,"join_threads");
@@ -237,6 +245,9 @@ namespace cads
       lua_pushcfunction(L, ::process_profile);
       lua_setglobal(L,"process_profile");
       
+      lua_pushcfunction(L, ::process_identity);
+      lua_setglobal(L,"process_identity");
+
       lua_pushcfunction(L, ::encoder_distance_estimation);
       lua_setglobal(L,"encoder_distance_estimation");
 
@@ -264,6 +275,7 @@ namespace cads
       auto lua_status = luaL_dofile(L.get(),luafile.string().c_str());
       
       if(lua_status != LUA_OK) {
+        spdlog::get("cads")->error("{}: luaL_dofile: {}",__func__,lua_tostring(L.get(),-1));
         return -1;
       }
 
@@ -271,6 +283,7 @@ namespace cads
       lua_status = lua_pcall(L.get(), 0, 0, 0);
 
       if(lua_status != LUA_OK) {
+        spdlog::get("cads")->error("{}: luaL_pcall: {}",__func__,lua_tostring(L.get(),-1));
         return -1;
       }
 

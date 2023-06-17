@@ -77,9 +77,6 @@ int main(int argn, char **argv)
   init_logs(60);
   create_default_dbs();
 
-
-  return 0;
-
   if(vm.count("level") > 0) {
     std::string l = vm["level"].as<std::string>();
     std::transform(l.begin(), l.end(), l.begin(),[](unsigned char c){ return std::tolower(c); });

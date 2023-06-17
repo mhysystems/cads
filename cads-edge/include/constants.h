@@ -15,6 +15,11 @@ constexpr size_t buffer_warning_increment = 4096;
 
 namespace cads {
 
+  using ScanParameters = struct {
+    double Length;
+    double Width;
+  };
+
   using DateTime = std::chrono::time_point<date::local_t,std::chrono::seconds>;
 
   struct SqliteGocatorConfig {

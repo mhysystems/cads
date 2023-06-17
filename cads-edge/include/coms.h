@@ -27,6 +27,5 @@ namespace cads
   std::tuple<int,bool> remote_addconveyor(Conveyor params); 
   std::tuple<int,bool> remote_addbelt(Belt params); 
 
-  cads::coro<int, cads::profile, 1> post_profiles_coro(cads::meta meta);
   cads::coro<int, std::tuple<std::string, std::string, std::string>, 1>  realtime_metrics_coro();
 }
