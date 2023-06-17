@@ -397,7 +397,7 @@ namespace cads
 
     const auto x_width = global_belt_parameters.Width;
     const auto nan_percentage = global_config["nan_%"].get<double>();
-    const auto width_n = global_config["width_n"].get<int>();
+    const auto width_n = global_belt_parameters.WidthN;
     const auto clip_height = global_config["clip_height"].get<z_element>();
     double x_resolution = 1.0;
     double z_resolution = 1.0;
@@ -418,6 +418,8 @@ namespace cads
       x_resolution = p.xResolution;
       z_resolution = p.zResolution;
     }
+
+    next.enqueue(m);
 
     auto iirfilter_left = mk_iirfilterSoS();
     auto iirfilter_right = mk_iirfilterSoS();

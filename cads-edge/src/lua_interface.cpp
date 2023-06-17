@@ -94,7 +94,7 @@ namespace
   {
     auto in = static_cast<cads::Io*>(lua_touserdata(L,1));
     auto out = static_cast<cads::Io*>(lua_touserdata(L,2));
-    out->enqueue(cads::msg());
+
     new (lua_newuserdata(L,sizeof(std::thread))) std::thread(fn,std::ref(*in),std::ref(*out));
     lua_createtable(L, 0, 1); 
     lua_pushcfunction(L, thread_gc);
@@ -171,7 +171,7 @@ namespace
 
   int upload_scan_thread(lua_State *L) 
   {
-    return mk_thread(L,cads::upload_scan_thread);
+    return mk_thread2(L,cads::upload_scan_thread);
   }
 
 
@@ -188,6 +188,7 @@ namespace
   }
 
   int encoder_distance_estimation(lua_State *L) {
+    auto no = lua_gettop(L);
     auto next = static_cast<cads::Io*>(lua_touserdata(L,1));
     double stride = lua_tonumber(L,2);
     auto p = new (lua_newuserdata(L, sizeof(cads::Adapt<decltype(cads::encoder_distance_estimation(std::ref(*next),stride))>))) cads::Adapt<decltype(cads::encoder_distance_estimation(std::ref(*next),stride))>(cads::encoder_distance_estimation(std::ref(*next),stride));

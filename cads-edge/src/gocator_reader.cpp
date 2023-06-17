@@ -77,8 +77,8 @@ namespace cads
 
   void GocatorReader::Stop()
   {
-    
     auto status = GoSensor_Stop(m_sensor);
+    m_gocatorFifo.enqueue({msgid::finished, 0});
 
     if (kIsError(status))
     {
@@ -190,7 +190,7 @@ namespace cads
     if(!me->terminate) {
       me->OnData(sensor, dataset);
     }else {
-      me->m_gocatorFifo.enqueue({msgid::finished, 0});
+      me->Stop();
     }
     
     GoDestroy(dataset);

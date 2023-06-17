@@ -4,5 +4,5 @@
 
 namespace cads
 {
-  void upload_scan_thread(cads::Io &fifo);
+  void upload_scan_thread(cads::Io&, cads::Io&);
 }

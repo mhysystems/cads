@@ -38,7 +38,7 @@ namespace
 namespace cads
 {
 
-void upload_scan_thread(cads::Io &fifo) 
+void upload_scan_thread(cads::Io &fifo, cads::Io &next) 
 {
   std::future<std::invoke_result_t<decltype(resume_scan), state::scan>> fut;
   std::list<decltype(fut)> running_uploads;
@@ -67,13 +67,16 @@ void upload_scan_thread(cads::Io &fifo)
     if(have_value) {
       spdlog::get("cads")->info("Recieved a scan");
     }    
-
-    switch (get<0>(m))
+    
+    auto mid = get<0>(m);
+    switch (mid)
     {
       case msgid::finished:
         loop = false;
+        next.enqueue(m);
         break;
       default:
+        next.enqueue(m);
         break;
     }
 

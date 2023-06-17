@@ -361,7 +361,7 @@ namespace cads
       auto p = get<GocatorProperties>(get<1>(m));
       x_resolution = p.xResolution;
     }
-
+    next_fifo.enqueue(m);
 
 
     auto origin_detection = origin_detection_coro(x_resolution,y_resolution,width_n);
