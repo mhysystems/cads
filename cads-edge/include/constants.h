@@ -86,6 +86,10 @@ namespace cads {
     float LeftDampOff;
   };
 
+  struct Device {
+    long Serial;
+  };
+
   struct Dbscan {
     double InCluster;
     size_t MinPoints;
@@ -128,6 +132,8 @@ namespace cads {
     double Fps;
   };
 
+
+  extern Device constants_device;
   extern profile_parameters global_profile_parameters;
   extern Conveyor global_conveyor_parameters;
   extern Belt global_belt_parameters;

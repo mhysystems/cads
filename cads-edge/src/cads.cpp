@@ -24,6 +24,7 @@
 
 #include <spdlog/spdlog.h>
 #include <core/SCAMP.h>
+#include <lua_script.h>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wuseless-cast"
@@ -619,9 +620,44 @@ namespace cads
     }
   }
 
+  void cads_local_main() {}
+
+  void cads_remote_main() {
+
+    auto remote_control = remote_control_coro();
+    auto [co_err,rmsg] = remote_control.resume(false);
+    
+    while(true) {
+   
+      if(co_err) {
+        spdlog::get("cads")->error("TODO");
+        stop_gocator();
+        return;
+      }
+
+      if(rmsg.index() == 0) break;
+
+      std::tie(co_err,rmsg) = remote_control.resume(false);
+    }
+
+    auto start_msg = std::get<Start>(rmsg);
+    auto [L,err] = run_lua_code(start_msg.lua_code);
+
+
+    
+    auto lua_type = lua_getglobal(L.get(),"mainco");
+    if(lua_type != LUA_TTHREAD) {
+      spdlog::get("cads")->error("TODO");
+      stop_gocator();
+      return;
+    }
+
+  }
+
+
   void store_profile_only()
   {
-
+#if 0
     auto terminate_subscribe = false;
     moodycamel::BlockingConcurrentQueue<int> nats_queue;
     Adapt<BlockingReaderWriterQueue<msg>> gocatorFifo{BlockingReaderWriterQueue<msg>(4096 * 1024)};
@@ -699,6 +735,7 @@ namespace cads
 
     gocator->Stop();
     spdlog::get("cads")->info("Cads raw data dumping finished");
+  #endif
   }
 
 

@@ -19,6 +19,7 @@
 #include <nlohmann/json.hpp>
 #include <z_data_generated.h>
 #include <plot_data_generated.h>
+#include <cads_msg_generated.h>
 #include <nats.h>
 #include <coms.h>
 #include <brotli/encode.h>
@@ -82,37 +83,56 @@ namespace
 namespace cads
 {
 
-  void remote_control_thread(moodycamel::BlockingConcurrentQueue<int> &nats_queue, bool &terminate)
+  void remote_control_thread(bool &terminate, moodycamel::BlockingConcurrentQueue<remote_msg> &queue)
   {
 
+    using NC = std::unique_ptr<natsConnection, decltype(&natsConnection_Destroy)>;
+    using NO = std::unique_ptr<natsOptions, decltype(&natsOptions_Destroy)>;
+    using NS = std::unique_ptr<natsSubscription,decltype(&natsSubscription_Destroy)>;
+ 
     auto endpoint_url = communications_config.NatsUrl;
 
-    natsConnection *conn = nullptr;
-    natsOptions *opts = nullptr;
-    natsSubscription *sub = nullptr;
+    auto nats_subject = fmt::format("{}",constants_device.Serial);
+
 
     for (; !terminate;)
     {
-      auto status = natsOptions_Create(&opts);
-      if (status != NATS_OK)
-        goto drop_msg;
+      natsOptions *opts_raw = nullptr;
+      auto status = natsOptions_Create(&opts_raw);
+      if (status != NATS_OK){ 
+        spdlog::get("cads")->error("{}:natsOptions_Create->{}", __func__, (int)status);
+        continue;
+      }
 
-      natsOptions_SetAllowReconnect(opts, true);
-      natsOptions_SetURL(opts, endpoint_url.c_str());
+      NO opts{opts_raw,natsOptions_Destroy};
 
-      status = natsConnection_Connect(&conn, opts);
-      if (status != NATS_OK)
-        goto cleanup_opts;
+      if((status = natsOptions_SetAllowReconnect(opts.get(), false)) != NATS_OK){ 
+        spdlog::get("cads")->error("{}:natsOptions_SetAllowReconnect->{}", __func__, (int)status);
+        continue;
+      }
 
-      status = natsConnection_SubscribeSync(&sub, conn, "originReset");
-      if (status != NATS_OK)
-        goto cleanup_opts;
+      natsOptions_SetURL(opts.get(), endpoint_url.c_str());
+
+      natsConnection *conn_raw = nullptr;
+      status = natsConnection_Connect(&conn_raw, opts.get());
+      if (status != NATS_OK) continue;
+
+      NC conn{conn_raw,natsConnection_Destroy};
+
+      natsSubscription *sub_raw = nullptr;
+      status = natsConnection_SubscribeSync(&sub_raw, conn.get(), nats_subject.c_str());
+      if (status != NATS_OK){ 
+        spdlog::get("cads")->error("{}:natsConnection_SubscribeSync->{}", __func__, (int)status);
+        continue;
+      }
+
+      NS sub{sub_raw,natsSubscription_Destroy};
 
       for (auto loop = true; loop && !terminate;)
       {
 
         natsMsg *msg = nullptr;
-        auto s = natsSubscription_NextMsg(&msg, sub, 500);
+        auto s = natsSubscription_NextMsg(&msg, sub.get(), 500);
 
         if (s == NATS_TIMEOUT)
         {
@@ -123,19 +143,103 @@ namespace cads
         }
         else if (s == NATS_OK)
         {
-          std::string sub(natsMsg_GetSubject(msg));
-          std::string msg_string(natsMsg_GetData(msg), natsMsg_GetDataLength(msg));
-          natsMsg_Destroy(msg);
-          nats_queue.enqueue(0);
-        }
+          auto cads_msg = CadsFlatbuffers::GetMsg(natsMsg_GetData(msg));
+          auto msg_contents = cads_msg->contents_type();
+
+          switch(msg_contents) {
+            case CadsFlatbuffers::MsgContents_Start : {
+              auto str = flatbuffers::GetString(cads_msg->contents_as_Start()->lua_code());
+              queue.enqueue({Start{str}});
+            }
+            break;
+            default:
+            break;
+          }
+         }
+        
+        natsMsg_Destroy(msg);
       }
     }
+  }
 
-    natsConnection_Destroy(conn);
-  cleanup_opts:
-    natsOptions_Destroy(opts);
-  drop_msg:
-    nats_Close();
+  coro<remote_msg,bool> remote_control_coro()
+  {
+
+    using NC = std::unique_ptr<natsConnection, decltype(&natsConnection_Destroy)>;
+    using NO = std::unique_ptr<natsOptions, decltype(&natsOptions_Destroy)>;
+    using NS = std::unique_ptr<natsSubscription,decltype(&natsSubscription_Destroy)>;
+ 
+    auto endpoint_url = communications_config.NatsUrl;
+
+    auto nats_subject = fmt::format("{}",constants_device.Serial);
+
+
+    for (bool terminate = false; !terminate;)
+    {
+      natsOptions *opts_raw = nullptr;
+      auto status = natsOptions_Create(&opts_raw);
+      if (status != NATS_OK){ 
+        spdlog::get("cads")->error("{}:natsOptions_Create->{}", __func__, (int)status);
+        continue;
+      }
+
+      NO opts{opts_raw,natsOptions_Destroy};
+
+      if((status = natsOptions_SetAllowReconnect(opts.get(), false)) != NATS_OK){ 
+        spdlog::get("cads")->error("{}:natsOptions_SetAllowReconnect->{}", __func__, (int)status);
+        continue;
+      }
+
+      natsOptions_SetURL(opts.get(), endpoint_url.c_str());
+
+      natsConnection *conn_raw = nullptr;
+      status = natsConnection_Connect(&conn_raw, opts.get());
+      if (status != NATS_OK) continue;
+
+      NC conn{conn_raw,natsConnection_Destroy};
+
+      natsSubscription *sub_raw = nullptr;
+      status = natsConnection_SubscribeSync(&sub_raw, conn.get(), nats_subject.c_str());
+      if (status != NATS_OK){ 
+        spdlog::get("cads")->error("{}:natsConnection_SubscribeSync->{}", __func__, (int)status);
+        continue;
+      }
+
+      NS sub{sub_raw,natsSubscription_Destroy};
+
+      for (auto loop = true; loop && !terminate;)
+      {
+
+        natsMsg *msg = nullptr;
+        auto s = natsSubscription_NextMsg(&msg, sub.get(), 500);
+
+        if (s == NATS_TIMEOUT)
+        {
+          std::tie(terminate,terminate) = co_yield {Timeout{}};
+        }
+        else if (s == NATS_CONNECTION_CLOSED)
+        {
+          loop = false;
+        }
+        else if (s == NATS_OK)
+        {
+          auto cads_msg = CadsFlatbuffers::GetMsg(natsMsg_GetData(msg));
+          auto msg_contents = cads_msg->contents_type();
+
+          switch(msg_contents) {
+            case CadsFlatbuffers::MsgContents_Start : {
+              auto str = flatbuffers::GetString(cads_msg->contents_as_Start()->lua_code());
+              std::tie(terminate,terminate) = co_yield {Start{str}};
+            }
+            break;
+            default:
+            break;
+          }
+         }
+        
+        natsMsg_Destroy(msg);
+      }
+    }
   }
 
   cads::coro<int, std::tuple<std::string, std::string, std::string>, 1> realtime_metrics_coro()
@@ -153,24 +257,25 @@ namespace cads
       natsOptions *opts_raw = nullptr;
       auto status = natsOptions_Create(&opts_raw);
       if (status != NATS_OK){ 
-        spdlog::get("cads")->error("{}:natsOptions_Create->{}", __func__, status);
+        spdlog::get("cads")->error("{}:natsOptions_Create->{}", __func__, (int)status);
         continue;
       }
 
       NO opts{opts_raw,natsOptions_Destroy};
 
       if((status = natsOptions_SetSendAsap(opts.get(), true)) != NATS_OK) {
-        spdlog::get("cads")->error("{}:natsOptions_SetSendAsap->{}", __func__, status);
+        spdlog::get("cads")->error("{}:natsOptions_SetSendAsap->{}", __func__, (int)status);
         continue;
       }
       if((status = natsOptions_SetAllowReconnect(opts.get(), false)) != NATS_OK){ 
-        spdlog::get("cads")->error("{}:natsOptions_SetAllowReconnect->{}", __func__, status);
+        spdlog::get("cads")->error("{}:natsOptions_SetAllowReconnect->{}", __func__, (int)status);
         continue;
       }
       if((status = natsOptions_SetURL(opts.get(), endpoint_url.c_str())) != NATS_OK) { 
-        spdlog::get("cads")->error("{}:natsOptions_SetURL->{}", __func__, status);
+        spdlog::get("cads")->error("{}:natsOptions_SetURL->{}", __func__, (int)status);
         continue;
       }
+      
       natsConnection *conn_raw = nullptr;
       status = natsConnection_Connect(&conn_raw, opts.get());
       if (status != NATS_OK) continue;
@@ -192,7 +297,7 @@ namespace cads
  
         if ((status = natsMsg_Create(&nats_msg_raw, sub.c_str(), nullptr, data.c_str(), data.size())) != NATS_OK)
         {
-          spdlog::get("cads")->error("{}:natsMsg_Create->{}", __func__, status);
+          spdlog::get("cads")->error("{}:natsMsg_Create->{}", __func__, (int)status);
           continue;
         }
 
@@ -200,19 +305,17 @@ namespace cads
 
         if ((status = natsMsgHeader_Add(nats_msg.get(), "category", head.c_str())) != NATS_OK)
         {
-          spdlog::get("cads")->error("{}:natsMsgHeader_Add->{}", __func__, status);
+          spdlog::get("cads")->error("{}:natsMsgHeader_Add->{}", __func__, (int)status);
           continue;
         }
 
         if ((status = natsConnection_PublishMsg(conn.get(), nats_msg.get())) != NATS_OK)
         {
-          spdlog::get("cads")->error("{}:natsConnection_PublishString->{}", __func__, status);
+          spdlog::get("cads")->error("{}:natsConnection_PublishString->{}", __func__, (int)status);
           loop = false;
         }
       }
     }
-
-    nats_Close();
   }
 
   std::string ReplaceString(std::string subject, const std::string &search,

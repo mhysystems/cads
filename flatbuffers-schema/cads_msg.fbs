@@ -1,0 +1,20 @@
+namespace CadsFlatbuffers;
+
+table Start
+{
+  lua_code : string;
+}
+
+table Stop
+{
+
+}
+
+union MsgContents {Start, Stop}
+
+table Msg
+{
+  contents : MsgContents;
+}
+
+root_type Msg;

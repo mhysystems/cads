@@ -49,6 +49,11 @@ function main()
   gocator:Start()
 
   repeat
+    print("GO!!!!")
+    local val = coroutine.yield(55)
+    print("I am back", val)
+    coroutine.yield(66)
+    print("I am back2", val)
     local is_value,msg_id = wait_for(upload_luamain)
 
     if is_value then
@@ -63,3 +68,5 @@ function main()
   join_threads({thread_process_profile,window_processing,dynamic_processing,upload_scan})
   
 end
+
+mainco = coroutine.create(main)

@@ -153,10 +153,18 @@ namespace {
 
     return cads::OriginDetection{belt_length,cross_correlation_threshold,dump_match};
   }
+
+  auto mk_device(nlohmann::json config) {
+    
+    auto serial = config["Device"]["Serial"].get<long>();
+
+    return cads::Device{serial};
+  }
 }
 
 namespace cads {  
 
+  Device constants_device;
   profile_parameters global_profile_parameters;
   Conveyor global_conveyor_parameters;
   Belt global_belt_parameters;
@@ -276,6 +284,7 @@ namespace cads {
     auto json = slurpfile(f);
     lua_transition(f);
 		auto config = nlohmann::json::parse(json);
+    constants_device = mk_device(config);
     global_profile_parameters = mk_profile_parameters(config);
     global_conveyor_parameters = mk_conveyor_parameters(config);
     global_belt_parameters = mk_belt_parameters(config);

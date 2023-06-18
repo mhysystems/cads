@@ -11,6 +11,8 @@ namespace cads
 {
 
   void store_profile_only();
+  void cads_remote_main();
+  void cads_local_main();
   bool direct_process();
   void generate_signal();
   void stop_gocator();

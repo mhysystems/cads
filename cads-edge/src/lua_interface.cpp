@@ -1,7 +1,6 @@
 #include <thread>
 #include <filesystem>
 
-#include <lua.hpp>
 #include <readerwriterqueue.h>
 
 #include <msg.h>
@@ -13,6 +12,8 @@
 #include <dynamic_processing.h>
 #include <upload.h>
 #include <spdlog/spdlog.h>
+
+#include <lua_script.h>
 
 namespace
 {
@@ -203,7 +204,6 @@ namespace
 
 }
 
-using Lua = std::unique_ptr<lua_State, decltype(&lua_close)>;
 namespace cads
 {
   namespace lua
@@ -261,6 +261,22 @@ namespace cads
 
   }
 
+
+  std::tuple<Lua,bool> run_lua_code(std::string lua_code) {
+
+    auto L = Lua{luaL_newstate(),lua_close};
+    luaL_openlibs( L.get() );
+
+    L = lua::init(std::move(L));
+    auto lua_status = luaL_dostring(L.get(),lua_code.c_str());
+
+    if(lua_status != LUA_OK) {
+      return {std::move(L),true};
+    }
+
+    return {std::move(L),false};
+  }
+
   int main_script(std::string f) {
 
       namespace fs = std::filesystem;
@@ -280,6 +296,32 @@ namespace cads
         return -1;
       }
 
+      
+      lua_getglobal(L.get(),"mainco");
+      auto L1 = lua_tothread(L.get(), -1); 
+      int top = lua_gettop(L1);
+      int top2 = lua_gettop(L.get());
+      int nargs = 0;
+      auto ss = lua_resume(L1,L.get(),0,&nargs);
+      if(ss != LUA_YIELD) {
+        spdlog::get("cads")->error("{}: luaL_pcall: {}",__func__,lua_tostring(L.get(),-1));
+      } 
+
+      auto nn = lua_tointeger(L1,-1);
+      lua_pop(L1,1);
+      lua_pushnumber(L1,3);
+      ss = lua_resume(L1,L.get(),1,&nargs);
+      if(ss != LUA_YIELD) {
+        spdlog::get("cads")->error("{}: luaL_pcall: {}",__func__,lua_tostring(L.get(),-1));
+      } 
+      
+
+      top = lua_gettop(L1);
+      top2 = lua_gettop(L.get());
+
+
+        
+      
       lua_getglobal(L.get(),"main");
       lua_status = lua_pcall(L.get(), 0, 0, 0);
 

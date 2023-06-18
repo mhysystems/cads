@@ -158,7 +158,7 @@ namespace cads {
 
   Measure::~Measure() {
     terminate = true;
-    thread.join();
+    if(thread.joinable()) thread.join();
   }
   
   void Measure::send(std::string measure, int quality, double value) {
