@@ -472,8 +472,8 @@ namespace cads
 
     auto YmaxN = zs_count(db_name);
 
-    auto z_resolution = std::get<0>(params);
-    auto z_offset = std::get<1>(params);
+    auto z_resolution = params.zResolution;
+    auto z_offset = params.zOffset;
     auto y_step = global_belt_parameters.Length / (YmaxN);
 
     auto start = std::chrono::high_resolution_clock::now();

@@ -67,7 +67,7 @@ namespace cads
 
           auto scan_end = date::utc_clock::now();
           auto scan_filename = fmt::format("scan-{}.sqlite",global.scan_begin.time_since_epoch().count());
-          //store_scan_gocator(get_gocator_subset(global.gocator_properties),scan_filename);
+          store_scan_gocator(global.gocator_properties,scan_filename);
           store_scan_properties({global.scan_begin,scan_end},scan_filename);
           
           store_scan_state(scan_filename);          

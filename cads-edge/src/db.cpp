@@ -961,47 +961,45 @@ namespace cads
 
   // scan db
 
-  bool store_scan_gocator(std::tuple<double,double,double,double> gocator, std::string db_name) 
+  bool store_scan_gocator(cads::GocatorProperties gocator, std::string db_name) 
   {
     
-    auto err = db_exec(db_name, R"(CREATE TABLE IF NOT EXISTS GOCATOR(ZRes REAL NOT NULL, ZOff REAL NOT NULL, ZCard REAL NOT NULL, Framerate REAL NOT NULL))"s);
+    auto err = db_exec(db_name, R"(CREATE TABLE IF NOT EXISTS GOCATOR(XRes REAL NOT NULL, ZRes REAL NOT NULL, ZOff REAL NOT NULL))"s);
     
-    auto query = R"(INSERT INTO GOCATOR (ZRes, ZOff, ZCard, Framerate) VALUES (?,?,?,?))"s;
+    auto query = R"(INSERT INTO GOCATOR (XRes, ZRes, ZOff) VALUES (?,?,?))"s;
 
     auto [stmt,db] = prepare_query(db_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
 
-    err = sqlite3_bind_double(stmt.get(), 1, std::get<1-1>(gocator));
-    err = sqlite3_bind_double(stmt.get(), 2, std::get<2-1>(gocator));
-    err = sqlite3_bind_double(stmt.get(), 3, std::get<3-1>(gocator));
-    err = sqlite3_bind_double(stmt.get(), 4, std::get<4-1>(gocator));
+    err = sqlite3_bind_double(stmt.get(), 1, gocator.xResolution);
+    err = sqlite3_bind_double(stmt.get(), 2, gocator.zResolution);
+    err = sqlite3_bind_double(stmt.get(), 3, gocator.zOffset);
 
     tie(err, stmt) = db_step(move(stmt));
 
     return err == SQLITE_OK || err == SQLITE_DONE;
   }
 
-  std::tuple<std::tuple<double,double,double,double>,int> fetch_scan_gocator(std::string db_name) 
+  std::tuple<cads::GocatorProperties,int> fetch_scan_gocator(std::string db_name) 
   {
-    auto query = R"(SELECT ZRes, ZOff, ZCard, Framerate FROM GOCATOR)"s;
+    auto query = R"(SELECT XRes, ZRes, ZOff FROM GOCATOR)"s;
     auto [stmt,db] = prepare_query(db_name, query);
     auto err = SQLITE_OK;
 
     tie(err, stmt) = db_step(move(stmt));
 
-    std::tuple<std::tuple<double,double,double,double>,int> rtn;
+    std::tuple<cads::GocatorProperties,int> rtn;
     if (err == SQLITE_ROW)
     {
 
       rtn = {
           {sqlite3_column_double(stmt.get(), 0),
            sqlite3_column_double(stmt.get(), 1),
-           sqlite3_column_double(stmt.get(), 2),
-           sqlite3_column_double(stmt.get(), 3)},
+           sqlite3_column_double(stmt.get(), 2)},
           0};
     }
     else
     {
-      rtn = {{1.0, 1.0, 1.0, 0.0}, -1};
+      rtn = {{1.0, 1.0, 1.0}, -1};
     }
 
     return rtn;

@@ -60,11 +60,11 @@ namespace cads
 
 
   // scan db
-  bool store_scan_gocator(std::tuple<double,double,double,double> gocator, std::string db_name);
+  bool store_scan_gocator(cads::GocatorProperties gocator, std::string db_name);
   bool store_scan_properties(std::tuple<date::utc_clock::time_point,date::utc_clock::time_point> props, std::string db_name);
   long zs_count(std::string db_name);
   coro<int, z_type, 1> store_scan_coro(std::string db_name);
-  std::tuple<std::tuple<double,double,double,double>,int> fetch_scan_gocator(std::string db_name);
+  std::tuple<cads::GocatorProperties,int> fetch_scan_gocator(std::string db_name);
   
 
 
