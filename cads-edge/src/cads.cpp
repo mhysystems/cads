@@ -623,33 +623,86 @@ namespace cads
   void cads_local_main() {}
 
   void cads_remote_main() {
-
-    auto remote_control = remote_control_coro();
-    auto [co_err,rmsg] = remote_control.resume(false);
     
-    while(true) {
-   
-      if(co_err) {
-        spdlog::get("cads")->error("TODO");
+    while(true)
+    {
+      try {
         stop_gocator();
-        return;
+        auto remote_control = remote_control_coro();
+        auto [co_err,rmsg] = remote_control.resume(false);
+            
+        bool restart = false;
+        // Wait for start message
+        while(true) {
+      
+          if(co_err) {
+            spdlog::get("cads")->error("TODO");
+            stop_gocator();
+            restart = true;
+            break;
+          }
+
+          if(rmsg.index() == 0) break;
+
+          std::tie(co_err,rmsg) = remote_control.resume(false);
+        }
+
+        if(restart) continue;
+
+        auto start_msg = std::get<Start>(rmsg);
+        auto [L,err] = run_lua_code(start_msg.lua_code);
+
+        auto lua_type = lua_getglobal(L.get(),"mainco");
+        
+        if(lua_type != LUA_TTHREAD) {
+          spdlog::get("cads")->error("TODO");
+          continue;
+        }
+
+        
+        auto mainco = lua_tothread(L.get(), -1); 
+
+        while(true)
+        {
+          lua_pushboolean(mainco,false);
+          auto nargs = 0;
+          auto mainco_status = lua_resume(mainco,L.get(),1,&nargs);
+
+          if(mainco_status == LUA_YIELD) 
+          {
+          
+          }
+          else if(mainco_status == LUA_OK) // finished 
+          {
+            break;
+          } 
+          else
+          {
+            spdlog::get("cads")->error("TODO");
+            break;
+          }
+
+          auto [co_err,rmsg] = remote_control.resume(false);
+
+          if(co_err) {
+            spdlog::get("cads")->error("TODO");
+            break;
+          }
+
+          if(rmsg.index() != 2) break;
+
+        }
+        auto mainco_status = lua_status(mainco);
+        
+        if( mainco_status == LUA_OK || mainco_status == LUA_YIELD ) {
+          auto nargs = 0;
+          lua_pushboolean(mainco,true);
+          lua_resume(mainco,L.get(),1,&nargs);
+        }
+
+      }catch(std::exception ex) {
+        spdlog::get("cads")->error("TODO");
       }
-
-      if(rmsg.index() == 0) break;
-
-      std::tie(co_err,rmsg) = remote_control.resume(false);
-    }
-
-    auto start_msg = std::get<Start>(rmsg);
-    auto [L,err] = run_lua_code(start_msg.lua_code);
-
-
-    
-    auto lua_type = lua_getglobal(L.get(),"mainco");
-    if(lua_type != LUA_TTHREAD) {
-      spdlog::get("cads")->error("TODO");
-      stop_gocator();
-      return;
     }
 
   }

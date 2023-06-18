@@ -48,12 +48,8 @@ function main()
 
   gocator:Start()
 
+  unloop = false
   repeat
-    print("GO!!!!")
-    local val = coroutine.yield(55)
-    print("I am back", val)
-    coroutine.yield(66)
-    print("I am back2", val)
     local is_value,msg_id = wait_for(upload_luamain)
 
     if is_value then
@@ -61,7 +57,8 @@ function main()
       if msg_id == 1 then break end
     end
 
-  until false
+    unloop = coroutine.yield(0)
+  until unloop
 
   gocator:Stop()
 
