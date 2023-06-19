@@ -6,5 +6,31 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>caas_gui</RootNamespace>
   </PropertyGroup>
+  <ItemGroup Condition="'$(OS)' != 'Windows_NT'">
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="6.0.9" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="3.11.0" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="7.0.4" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="7.0.2">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="NATS.Client" Version="1.0.1" />
+    <PackageReference Include="System.Reactive" Version="5.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <FlatbufferSchemasCsharp Include="$(MSBuildProjectDirectory)\..\flatbuffers-schema\cads_msg.fbs" />
+  </ItemGroup>
+
+  <Target Name="Flatbuffers" BeforeTargets="BeforeBuild" Outputs="$(MSBuildProjectDirectory)\CadsFlatbuffers\*.cs" Inputs="@(FlatbufferSchemasCsharp)">
+
+    <Exec Command="$(MSBuildProjectDirectory)\..\bin\flatc --csharp @(FlatbufferSchemasCsharp)" Outputs="CadsFlatbuffers\*.cs">
+      <Output ItemName="FlatbufferGeneratedCsharp" TaskParameter="Outputs" />
+    </Exec>
+
+  </Target>
+
+  <ItemGroup>
+    <ProjectReference Include="..\flatbuffers-csharp-lib\Google.FlatBuffers.csproj" />
+  </ItemGroup>
 
 </Project>

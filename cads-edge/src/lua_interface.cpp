@@ -27,6 +27,7 @@ namespace
   int thread_gc(lua_State *L)
   {
     auto t = static_cast<std::thread *>(lua_touserdata(L, 1));
+    if(t->joinable()) t->join();
     t->~thread();
     return 0;
   }

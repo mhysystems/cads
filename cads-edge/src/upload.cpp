@@ -66,7 +66,9 @@ void upload_scan_thread(cads::Io &fifo, cads::Io &next)
 
     if(have_value) {
       spdlog::get("cads")->info("Recieved a scan");
-    }    
+    }else {
+      continue;
+    }  
     
     auto mid = get<0>(m);
     switch (mid)
@@ -123,6 +125,7 @@ void upload_scan_thread(cads::Io &fifo, cads::Io &next)
   
   }while(loop);
 
+  spdlog::get("cads")->info("Stoppping Upload Thread");
 }
 
 }

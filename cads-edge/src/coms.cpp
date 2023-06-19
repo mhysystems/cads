@@ -232,6 +232,9 @@ namespace cads
               std::tie(terminate,terminate) = co_yield {Start{str}};
             }
             break;
+            case CadsFlatbuffers::MsgContents_Stop : {
+              std::tie(terminate,terminate) = co_yield {Stop{}};
+            }
             default:
             break;
           }

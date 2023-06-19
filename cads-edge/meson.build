@@ -50,8 +50,9 @@ scamp_dep = subproject('scamp').get_variable('scamp_dep')
 
 flatc_exe = subproject('flatbuffers').get_variable('flatc')
 copy = find_program('cp')
+fs = import('fs')
 run_command(copy,flatc_exe.full_path(),join_paths(meson.source_root(),'..','bin','flatc'))
-run_command(copy,join_paths(flatc_exe.full_path(),'libflatbuffers.so'),join_paths(meson.source_root(),'..','bin','libflatbuffers.so'))
+run_command(copy,join_paths(fs.parent(flatc_exe.full_path()),'libflatbuffers.so'),join_paths(meson.source_root(),'..','bin','libflatbuffers.so'))
 
 subdir('GO_SDK/Platform/kApi')
 subdir('GO_SDK/Gocator/GoSdk')
@@ -68,7 +69,7 @@ subdir('flatbuffers')
 subdir('src')
 #subdir('test')
 
-fs = import('fs')
+
 fs.copyfile('json.lua')
 
 cads = executable(

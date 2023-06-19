@@ -862,8 +862,8 @@ namespace cads
   void stop_gocator()
   {
     Adapt<BlockingReaderWriterQueue<msg>> gocatorFifo{BlockingReaderWriterQueue<msg>(4096 * 1024)};
-    GocatorReader gocator(gocatorFifo);
-    gocator.Stop();
+    auto gocator = mk_gocator(gocatorFifo);
+    gocator->Stop();
   }
 
   void dump_gocator_log()

@@ -120,6 +120,7 @@ namespace cads
       {
       case msgid::finished:
         loop = false;
+        global.cps.enqueue(m);
         break;
       case msgid::scan:
         sm.process_event(scan_t{get<profile>(get<1>(m))});
@@ -134,9 +135,11 @@ namespace cads
         sm.process_event(complete_belt_t{get<double>(get<1>(m))});
         break;
       case msgid::gocator_properties:
+        global.cps.enqueue(m);
         sm.process_event(GocatorProperties{get<GocatorProperties>(get<1>(m))});
         break;
       default:
+          global.cps.enqueue(m);
         break;
       }
     }
