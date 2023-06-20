@@ -10,7 +10,6 @@ builder.Services.Configure<AppSettings>(builder.Configuration.GetSection("webgui
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
-builder.Services.AddSingleton<WeatherForecastService>();
 builder.Services.AddSingleton<MsgPublishService>();
 builder.Services.AddHostedService<NatsConsumerHostedService>();
 builder.Services.AddDbContextFactory<PostgresDBContext>();

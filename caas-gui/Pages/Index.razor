@@ -1,9 +1,20 @@
-﻿@page "/"
+﻿@page "/remote/{device}"
 
-<PageTitle>Index</PageTitle>
+@using caas_gui.Data
+@inject MsgPublishService MsgService
 
-<h1>Hello, world!</h1>
+<PageTitle>Caas Remote</PageTitle>
 
-Welcome to your new app.
+<button class="btn btn-primary" @onclick="IncrementCount">Start</button>
 
-<SurveyPrompt Title="How is Blazor working for you?" />
+@code {
+    [Parameter]
+    public string device { get; set; } = string.Empty;
+    private int currentCount = 0;
+
+    private void IncrementCount()
+    {
+      MsgService.PublishStart(device);  
+      currentCount++;
+    }
+}
