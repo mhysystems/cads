@@ -67,6 +67,20 @@ echo N > /sys/kernel/debug/gpu.0/timeouts_enabled
 
 matrix profile with length of 31323 and window = 333 on nano takes about 1sec.
 
+#Jetson Nano upgrade issue
+https://forums.developer.nvidia.com/t/solution-dpkg-error-processing-package-nvidia-l4t-bootloader-configure/208627
+sudo mv /var/lib/dpkg/info/ /var/lib/dpkg/backup/
+sudo mkdir /var/lib/dpkg/info/
+sudo apt-get update
+sudo apt-get -f install
+sudo mv /var/lib/dpkg/info/* /var/lib/dpkg/backup/
+sudo rm -rf /var/lib/dpkg/info
+sudo mv /var/lib/dpkg/backup/ /var/lib/dpkg/info/
+
+#Upgrading python
+Use pyenv
+https://github.com/pyenv/pyenv
+
 
 
 

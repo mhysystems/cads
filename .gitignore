@@ -5,6 +5,8 @@
 profiles/**
 **/.ionide/**
 cads-edge/subprojects/**/
+!cads-edge/subprojects/packagefile/**
+!cads-edge/subprojects/*.wrap
 cads-edge/**/*.log
 cads-edge/release/**/*
 cads-edge/debug/**/*
