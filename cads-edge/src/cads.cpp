@@ -398,7 +398,7 @@ namespace cads
 
     const auto x_width = global_belt_parameters.Width;
     const auto nan_percentage = global_config["nan_%"].get<double>();
-    const auto width_n = global_belt_parameters.WidthN;
+    const auto width_n = (int)global_belt_parameters.WidthN; // gcc-11 on ubuntu cannot compile doubles in ranges expression
     const auto clip_height = global_config["clip_height"].get<z_element>();
     double x_resolution = 1.0;
     double z_resolution = 1.0;
