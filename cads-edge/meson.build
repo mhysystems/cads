@@ -16,8 +16,11 @@ add_project_arguments(
 #  '-Wduplicated-cond',
 #  '-Wduplicated-branches',
   language : 'cpp')
-#add_project_arguments('-w',language : 'cpp')
 
+cxx = meson.get_compiler('cpp')
+add_project_arguments(cxx.get_supported_arguments('-march=native'), language: 'cpp')
+add_project_arguments(cxx.get_supported_arguments('-mno-outline-atomics'), language: 'cpp')
+add_project_arguments(cxx.get_supported_arguments('-fconcepts-diagnostics-depth=4'), language: 'cpp')
 
 thread = dependency('threads')
 boost = dependency('boost', modules : ['program_options'])
@@ -80,5 +83,5 @@ cads = executable(
   link_with : [GoSdkLib,kApiLib],
   #link_args : ['-fsanitize=address'], # GCC Address Sanitzer
   #cpp_args : ['-std=c++20','-fcoroutines', '-fsanitize=address'] # GCC Address Sanitzer
-  cpp_args : ['-march=native','-fcoroutines','-fconcepts-diagnostics-depth=4'] 
+  cpp_args : ['-fcoroutines'] 
 )

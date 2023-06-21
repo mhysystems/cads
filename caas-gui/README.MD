@@ -1,6 +1,7 @@
-As privilged user:
+As user postgres:
 sh> createuser --interactive
 sh> createdb caas
+sh> psql -d caas
 psql> create schema caas authorization caas;
 psql> alter user caas with password 'caas';
 
