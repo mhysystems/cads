@@ -442,8 +442,6 @@ namespace cads
 
     auto filter_window_len = global_config["sobel_filter"].get<size_t>();
 
-    auto time0 = std::chrono::high_resolution_clock::now();
-
     auto pulley_rev = mk_pulley_revolution();
 
     do
@@ -751,7 +749,7 @@ namespace cads
           lua_resume(mainco,L.get(),1,&nargs);
         }
 
-      }catch(std::exception ex) {
+      }catch(std::exception& ex) {
         spdlog::get("cads")->error("TODO");
       }
     }

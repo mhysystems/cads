@@ -65,12 +65,14 @@ namespace cads
 
   void GocatorReader::Start()
   {
-    auto status = GoSensor_Start(m_sensor);
+    auto status = GoSystem_Start(m_system);
 
     if (kIsError(status))
     {
       throw runtime_error{"GoSensor_Start: "s + to_string(status)};
-    }else{
+    }
+    else
+    {
       spdlog::get("cads")->info("GoSensor Starting");
     }
   }
@@ -83,27 +85,29 @@ namespace cads
     if (kIsError(status))
     {
       spdlog::get("cads")->error("GoSensor_Stop(m_sensor) -> {}", status);
-    } else {
+    }
+    else
+    {
       spdlog::get("cads")->info("GoSensor Stopped");
     }
   }
 
-  void GocatorReader::Log() {
-    
+  void GocatorReader::Log()
+  {
+
     kObj(GoSensor, m_sensor);
     kAlloc tempAlloc = kObject_Alloc(m_sensor);
-    kByte* fileData = kNULL;
+    kByte *fileData = kNULL;
     kSize fileSize = 0;
 
     GoSensor_IsReadable(m_sensor);
 
     GoControl_ReadFile(obj->control, GO_SENSOR_LIVE_LOG_NAME, &fileData, &fileSize, tempAlloc);
 
-        // Uncomment to save transform to file (useful for debugging transform problems)
+    // Uncomment to save transform to file (useful for debugging transform problems)
     kFile_Save("GoSensor.log", fileData, fileSize);
 
     kAlloc_Free(tempAlloc, fileData);
-
   }
 
   GocatorReader::GocatorReader(Io &gocatorFifo) : GocatorReaderBase(gocatorFifo)
@@ -124,20 +128,15 @@ namespace cads
     m_sensor = GoSystem_SensorAt(m_system, 0);
 
     auto status = GoSensor_Connect(m_sensor);
-    
+
     if (kIsError(status))
     {
       throw runtime_error{"GoSensor_Connect: "s + to_string(status)};
     }
-    
+
     if (kIsError(status = GoSystem_Stop(m_system)))
     {
       throw runtime_error{"GoSensor_Stop: "s + to_string(status)};
-    }
-
-    if (kIsError(status = GoSystem_SetDataHandler(m_system, OnData, this)))
-    {
-      throw runtime_error{"GoSensor_SetDataHandler: "s + to_string(status)};
     }
 
     if (kIsError(status = GoSystem_EnableData(m_system, kTRUE)))
@@ -146,18 +145,18 @@ namespace cads
     }
 
     auto setup = GoSensor_Setup(m_sensor);
-    
+
     if (kNULL == setup)
     {
       throw runtime_error{"GoSensor_Setup: Invalid setup handle"};
     }
 
-    if(kIsError(status = GoSetup_SetTriggerSource(setup,GO_TRIGGER_TIME)))
+    if (kIsError(status = GoSetup_SetTriggerSource(setup, GO_TRIGGER_TIME)))
     {
       throw runtime_error{"GoSetup_SetTriggerSource: "s + to_string(status)};
     }
 
-    if(kIsError(status = GoSetup_SetFrameRate(setup,constants_gocator.Fps)))
+    if (kIsError(status = GoSetup_SetFrameRate(setup, constants_gocator.Fps)))
     {
       throw runtime_error{"GoSetup_SetFrameRate: "s + to_string(status)};
     }
@@ -181,18 +180,52 @@ namespace cads
     {
       throw runtime_error{"GoSetup_SetAlignmentStationaryTarget: "s + to_string(status)};
     }
+
+    const auto timeout_us = 30000000;
+    GoDataSet dataset = nullptr;
+    if ((status = GoSystem_ReceiveData(m_system, &dataset, timeout_us)) == kOK)
+    {
+      for (kSize i = 0; i < GoDataSet_Count(dataset); ++i)
+      {
+        GoDataMsg message = GoDataSet_At(dataset, i);
+        if (GoDataMsg_Type(message) == GO_DATA_MESSAGE_TYPE_ALIGNMENT)
+        {
+          if (GoAlignMsg_Status(message) == kOK)
+          {
+            spdlog::get("cads")->debug("{{func = {}, msg = {}}}", __func__, "Gocator is aligned");
+          }
+          else
+          {
+            spdlog::get("cads")->debug("{{func = {}, msg = {}}}", __func__, "Gocator is NOT aligned");
+          }
+        }
+      }
+      GoDestroy(dataset);
+    }
+    else
+    {
+      throw runtime_error{"GoSystem_StartAlignment: "s + to_string(status)};
+    }
+
+    if (kIsError(status = GoSystem_SetDataHandler(m_system, OnData, this)))
+    {
+      throw runtime_error{"GoSensor_SetDataHandler: "s + to_string(status)};
+    }
   }
 
   kStatus kCall GocatorReader::OnData(kPointer context, GoSensor sensor, GoDataSet dataset)
   {
     auto me = static_cast<GocatorReader *>(context);
-    
-    if(!me->terminate) {
+
+    if (!me->terminate)
+    {
       me->OnData(sensor, dataset);
-    }else {
+    }
+    else
+    {
       me->Stop();
     }
-    
+
     GoDestroy(dataset);
     if (me->m_gocatorFifo.size_approx() > me->m_buffer_size_warning)
     {
@@ -213,26 +246,29 @@ namespace cads
     Stop();
     kStatus status = kOK;
 
-    status = GoSensor_EnableData(m_sensor,kFALSE);
-    if(kIsError(status)) {
-      spdlog::get("cads")->error("GoSensor_EnableData:{}",status);
+    status = GoSensor_EnableData(m_sensor, kFALSE);
+    if (kIsError(status))
+    {
+      spdlog::get("cads")->error("GoSensor_EnableData:{}", status);
     }
     status = GoSensor_Disconnect(m_sensor);
-    if(kIsError(status)) {    
-      spdlog::get("cads")->error("GoSensor_Disconnect:{}",status);
+    if (kIsError(status))
+    {
+      spdlog::get("cads")->error("GoSensor_Disconnect:{}", status);
     }
-    
+
     status = GoDestroy(m_system);
-    if(kIsError(status)) {    
-      spdlog::get("cads")->error("GoDestroy system:{}",status);
+    if (kIsError(status))
+    {
+      spdlog::get("cads")->error("GoDestroy system:{}", status);
     }
-    
+
     status = GoDestroy(m_assembly);
-    if(kIsError(status)) {
-      spdlog::get("cads")->error("GoDestroy assembly:{}",status);
+    if (kIsError(status))
+    {
+      spdlog::get("cads")->error("GoDestroy assembly:{}", status);
     }
   }
-
 
   kStatus GocatorReader::OnSystem([[maybe_unused]] GoSystem system, GoDataSet dataset)
   {
@@ -252,7 +288,7 @@ namespace cads
     return kOK;
   }
 
-  kStatus GocatorReader::OnData([[maybe_unused]]GoSensor sensor, GoDataSet dataset)
+  kStatus GocatorReader::OnData([[maybe_unused]] GoSensor sensor, GoDataSet dataset)
   {
     double frame = 0.0;
     double y = 0.0;
@@ -293,21 +329,8 @@ namespace cads
         }
       }
       break;
-      case GO_DATA_MESSAGE_TYPE_ALIGNMENT:
-      {
-        if (GoAlignMsg_Status(message) == kOK)
-        {
-          spdlog::get("cads")->debug("{{func = {}, msg = {}}}",__func__,"Gocator is aligned");
-          m_aligned = true;
-        }else{
-          spdlog::get("cads")->debug("{{func = {}, msg = {}}}",__func__,"Gocator is NOT aligned");
-          terminate = true;
-        }
-      }
       }
     }
-
-    if(!m_aligned) return kOK;
 
     if (m_first_frame)
     {
@@ -317,13 +340,13 @@ namespace cads
 
     y = (frame - 1) * yResolution;
 
-
     // Trim invalid values
     auto profile_end = profile + profileWidth;
     auto profile_begin = profile;
 
-    if(true/*Todo move out of this function*/) {    
-      for (; profile_end > profile && *(profile_end-1) == k16S_NULL; --profile_end)
+    if (true /*Todo move out of this function*/)
+    {
+      for (; profile_end > profile && *(profile_end - 1) == k16S_NULL; --profile_end)
       {
       }
 
@@ -334,8 +357,7 @@ namespace cads
 
     auto samples_width = (double)distance(profile, profile_begin);
     auto z = GocatorReaderBase::k16sToFloat(profile_begin, profile_end, zResolution, zOffset);
-    m_gocatorFifo.enqueue({msgid::scan, cads::profile{std::chrono::high_resolution_clock::now(),y, xOffset + samples_width * xResolution, std::move(z)}});
-
+    m_gocatorFifo.enqueue({msgid::scan, cads::profile{std::chrono::high_resolution_clock::now(), y, xOffset + samples_width * xResolution, std::move(z)}});
 
     return kOK;
   }
