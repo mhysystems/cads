@@ -130,17 +130,17 @@ namespace cads
       throw runtime_error{"GoSensor_Connect: "s + to_string(status)};
     }
     
-    if (kIsError(status = GoSensor_Stop(m_sensor)))
+    if (kIsError(status = GoSystem_Stop(m_system)))
     {
       throw runtime_error{"GoSensor_Stop: "s + to_string(status)};
     }
 
-    if (kIsError(status = GoSensor_SetDataHandler(m_sensor, OnData, this)))
+    if (kIsError(status = GoSystem_SetDataHandler(m_system, OnData, this)))
     {
       throw runtime_error{"GoSensor_SetDataHandler: "s + to_string(status)};
     }
 
-    if (kIsError(status = GoSensor_EnableData(m_sensor, kTRUE)))
+    if (kIsError(status = GoSystem_EnableData(m_system, kTRUE)))
     {
       throw runtime_error{"GoSensor_EnableData: "s + to_string(status)};
     }
