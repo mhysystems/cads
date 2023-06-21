@@ -620,7 +620,54 @@ namespace cads
     }
   }
 
-  void cads_local_main() {}
+  void cads_local_main(std::string f) 
+  {
+    
+    auto [L,err] = run_lua_code(f);
+
+    if(err) {
+      return;
+    }
+
+    auto lua_type = lua_getglobal(L.get(),"mainco");
+    
+    if(lua_type != LUA_TTHREAD) {
+      spdlog::get("cads")->error("TODO");
+      return;
+    }
+    
+    auto mainco = lua_tothread(L.get(), -1); 
+
+    while(true)
+    {
+      lua_pushboolean(mainco,false);
+      auto nargs = 0;
+      auto mainco_status = lua_resume(mainco,L.get(),1,&nargs);
+
+      if(mainco_status == LUA_YIELD) 
+      {
+      
+      }
+      else if(mainco_status == LUA_OK) // finished 
+      {
+        break;
+      } 
+      else
+      {
+        spdlog::get("cads")->error("TODO");
+        break;
+      }
+
+    }
+
+    auto mainco_status = lua_status(mainco);
+    
+    if( mainco_status == LUA_OK || mainco_status == LUA_YIELD ) {
+      auto nargs = 0;
+      lua_pushboolean(mainco,true);
+      lua_resume(mainco,L.get(),1,&nargs);
+    }
+  }
 
   void cads_remote_main() {
     
@@ -651,6 +698,10 @@ namespace cads
 
         auto start_msg = std::get<Start>(rmsg);
         auto [L,err] = run_lua_code(start_msg.lua_code);
+
+        if(err) {
+          continue;
+        }
 
         auto lua_type = lua_getglobal(L.get(),"mainco");
         

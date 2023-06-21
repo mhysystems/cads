@@ -94,7 +94,7 @@ int main(int argn, char **argv)
   }else if(vm["remote-config"].as<bool>()) {
     cads_remote_main();
   }else{
-	  cads_local_main();
+	  cads_local_main(vm["config"].as<std::string>());
   }
 
   drop_logs();

@@ -278,59 +278,25 @@ namespace cads
     return {std::move(L),false};
   }
 
-  int main_script(std::string f) {
+  std::tuple<Lua,bool> run_lua_config(std::string f) 
+  {
+    namespace fs = std::filesystem;
 
-      namespace fs = std::filesystem;
+    fs::path luafile{f};
+    luafile.replace_extension("lua");
 
-      fs::path luafile{f};
-      luafile.replace_extension("lua");
+    auto L = Lua{luaL_newstate(),lua_close};
+    luaL_openlibs( L.get() );
+    
+    L = lua::init(std::move(L));
 
-      auto L = Lua{luaL_newstate(),lua_close};
-      luaL_openlibs( L.get() );
-      
-      L = lua::init(std::move(L));
-
-      auto lua_status = luaL_dofile(L.get(),luafile.string().c_str());
-      
-      if(lua_status != LUA_OK) {
-        spdlog::get("cads")->error("{}: luaL_dofile: {}",__func__,lua_tostring(L.get(),-1));
-        return -1;
-      }
-
-      
-      lua_getglobal(L.get(),"mainco");
-      auto L1 = lua_tothread(L.get(), -1); 
-      int top = lua_gettop(L1);
-      int top2 = lua_gettop(L.get());
-      int nargs = 0;
-      auto ss = lua_resume(L1,L.get(),0,&nargs);
-      if(ss != LUA_YIELD) {
-        spdlog::get("cads")->error("{}: luaL_pcall: {}",__func__,lua_tostring(L.get(),-1));
-      } 
-
-      auto nn = lua_tointeger(L1,-1);
-      lua_pop(L1,1);
-      lua_pushnumber(L1,3);
-      ss = lua_resume(L1,L.get(),1,&nargs);
-      if(ss != LUA_YIELD) {
-        spdlog::get("cads")->error("{}: luaL_pcall: {}",__func__,lua_tostring(L.get(),-1));
-      } 
-      
-
-      top = lua_gettop(L1);
-      top2 = lua_gettop(L.get());
-
-
-        
-      
-      lua_getglobal(L.get(),"main");
-      lua_status = lua_pcall(L.get(), 0, 0, 0);
-
-      if(lua_status != LUA_OK) {
-        spdlog::get("cads")->error("{}: luaL_pcall: {}",__func__,lua_tostring(L.get(),-1));
-        return -1;
-      }
-
-      return 0;
+    auto lua_status = luaL_dofile(L.get(),luafile.string().c_str());
+    
+    if(lua_status != LUA_OK) {
+      return {std::move(L),true};
     }
+
+    return {std::move(L),false};
+  }
+
 }
