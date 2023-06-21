@@ -177,7 +177,7 @@ namespace cads
       throw runtime_error{"GoSetup_SetAlignmentStationaryTarget: "s + to_string(status)};
     }
 
-    if (kIsError(status = GoSystem_StartAlignment(m_sensor)))
+    if (kIsError(status = GoSystem_StartAlignment(m_system)))
     {
       throw runtime_error{"GoSetup_SetAlignmentStationaryTarget: "s + to_string(status)};
     }
@@ -243,7 +243,7 @@ namespace cads
       {
         auto healthIndicator = GoHealthMsg_At(message, k);
         if (healthIndicator->id == GO_HEALTH_ENCODER_VALUE)
-          spdlog::get("gocator")->info("Indicator[{}]: Id:{} Instance:{} Value:{}", k, healthIndicator->id, healthIndicator->instance, healthIndicator->value);
+          spdlog::get("cads")->info("Indicator[{}]: Id:{} Instance:{} Value:{}", k, healthIndicator->id, healthIndicator->instance, healthIndicator->value);
       }
     }
 
@@ -297,8 +297,10 @@ namespace cads
       {
         if (GoAlignMsg_Status(message) == kOK)
         {
+          spdlog::get("cads")->debug("{{func = {}, msg = {}}}",__func__,"Gocator is aligned");
           m_aligned = true;
         }else{
+          spdlog::get("cads")->debug("{{func = {}, msg = {}}}",__func__,"Gocator is NOT aligned");
           terminate = true;
         }
       }
