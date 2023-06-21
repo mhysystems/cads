@@ -293,6 +293,7 @@ namespace cads
     auto lua_status = luaL_dofile(L.get(),luafile.string().c_str());
     
     if(lua_status != LUA_OK) {
+       spdlog::get("cads")->error("{}: luaL_dofile: {}",__func__,lua_tostring(L.get(),-1));
       return {std::move(L),true};
     }
 

@@ -623,7 +623,7 @@ namespace cads
   void cads_local_main(std::string f) 
   {
     
-    auto [L,err] = run_lua_code(f);
+    auto [L,err] = run_lua_config(f);
 
     if(err) {
       return;
