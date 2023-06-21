@@ -57,7 +57,7 @@ namespace
 
   int BlockingReaderWriterQueue(lua_State *L)
   {
-      auto p = new (lua_newuserdata(L, sizeof(cads::Adapt<moodycamel::BlockingReaderWriterQueue<cads::msg>>))) cads::Adapt<moodycamel::BlockingReaderWriterQueue<cads::msg>> (moodycamel::BlockingReaderWriterQueue<cads::msg>());
+      new (lua_newuserdata(L, sizeof(cads::Adapt<moodycamel::BlockingReaderWriterQueue<cads::msg>>))) cads::Adapt<moodycamel::BlockingReaderWriterQueue<cads::msg>> (moodycamel::BlockingReaderWriterQueue<cads::msg>());
 
       lua_createtable(L, 0, 1); 
       lua_pushcfunction(L, Io_gc);
@@ -190,10 +190,10 @@ namespace
   }
 
   int encoder_distance_estimation(lua_State *L) {
-    auto no = lua_gettop(L);
+
     auto next = static_cast<cads::Io*>(lua_touserdata(L,1));
     double stride = lua_tonumber(L,2);
-    auto p = new (lua_newuserdata(L, sizeof(cads::Adapt<decltype(cads::encoder_distance_estimation(std::ref(*next),stride))>))) cads::Adapt<decltype(cads::encoder_distance_estimation(std::ref(*next),stride))>(cads::encoder_distance_estimation(std::ref(*next),stride));
+    new (lua_newuserdata(L, sizeof(cads::Adapt<decltype(cads::encoder_distance_estimation(std::ref(*next),stride))>))) cads::Adapt<decltype(cads::encoder_distance_estimation(std::ref(*next),stride))>(cads::encoder_distance_estimation(std::ref(*next),stride));
 
     lua_createtable(L, 0, 1); 
     lua_pushcfunction(L, Io_gc);

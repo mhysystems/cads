@@ -636,7 +636,7 @@ namespace cads
     
     auto mainco = lua_tothread(L.get(), -1); 
 
-    while(true)
+    while(!terminate_signal)
     {
       lua_pushboolean(mainco,false);
       auto nargs = 0;

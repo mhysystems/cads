@@ -36,6 +36,7 @@ namespace cads
   {
     if (!m_stopped)
     {
+      m_gocatorFifo.enqueue({msgid::finished, 0});
       m_stopped = true;
       m_thread.join();
     }
@@ -95,12 +96,8 @@ namespace cads
           while(m_gocatorFifo.size_approx() > buffer_warning_increment / 4){}
         }
 
-        if (terminate)
-        {
-          m_stopped = true;
-        }
       }
-    } while (sqlite_gocator_config.forever && !terminate);
+    } while (sqlite_gocator_config.forever && !m_stopped);
     
     m_gocatorFifo.enqueue({msgid::finished, 0});
   }

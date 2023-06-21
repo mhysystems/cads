@@ -2,6 +2,7 @@
 #include <algorithm> 
 #include <sstream>
 #include <filesystem>
+#include <signal.h> 
 
 #include <date/tz.h>
 #include <lua.hpp>
@@ -160,6 +161,10 @@ namespace {
 
     return cads::Device{serial};
   }
+  
+  void sigint_handler([[maybe_unused]]int s) {
+    cads::terminate_signal = true;
+  }
 }
 
 namespace cads {  
@@ -180,6 +185,7 @@ namespace cads {
   Measure measurements;
   AnomalyDetection anomalies_config;
   GocatorConstants constants_gocator;
+  std::atomic<bool> terminate_signal = false;
 
   int lua_transition(std::string f) {
     
@@ -281,6 +287,15 @@ namespace cads {
   }
     
   void init_config(std::string f) {
+    struct sigaction sigIntHandler;
+
+    sigIntHandler.sa_handler = ::sigint_handler;
+    sigemptyset(&sigIntHandler.sa_mask);
+    sigIntHandler.sa_flags = 0;
+
+    sigaction(SIGINT, &sigIntHandler, NULL);
+    
+    
     auto json = slurpfile(f);
     lua_transition(f);
 		auto config = nlohmann::json::parse(json);

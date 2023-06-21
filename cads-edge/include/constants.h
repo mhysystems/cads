@@ -4,6 +4,7 @@
 #include <cmath>
 #include <limits>
 #include <string>
+#include <atomic>
 
 #include <date/date.h>
 #include <nlohmann/json.hpp>
@@ -148,6 +149,7 @@ namespace cads {
   extern Measure measurements;
   extern AnomalyDetection anomalies_config;
   extern GocatorConstants constants_gocator;
+  extern std::atomic<bool> terminate_signal;
   
   void init_config(std::string f);
   void drop_config();

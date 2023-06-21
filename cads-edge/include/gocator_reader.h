@@ -27,9 +27,8 @@ class GocatorReader : public GocatorReaderBase
 
 protected:
 	
-	void* m_system;
-	void* m_assembly;
-	void* m_sensor;
+	GoSystem m_system;
+	kAssembly m_assembly;
   bool m_trim = true;
   std::atomic<size_t> m_buffer_size_warning = 4096;
   

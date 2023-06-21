@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <signal.h> 
 
 #include <gocator_reader_base.h>
 
@@ -7,22 +6,8 @@
 
 namespace cads
 {
-  std::atomic<bool> GocatorReaderBase::terminate = false;
-
-  void GocatorReaderBase::sigint_handler([[maybe_unused]]int s) {
-    terminate = true;
-  }
-
   GocatorReaderBase::GocatorReaderBase(Io& fifo) : m_gocatorFifo(fifo)
   {
-    struct sigaction sigIntHandler;
-
-    sigIntHandler.sa_handler = sigint_handler;
-    sigemptyset(&sigIntHandler.sa_mask);
-    sigIntHandler.sa_flags = 0;
-
-    sigaction(SIGINT, &sigIntHandler, NULL);
-
   }
 
   z_type GocatorReaderBase::k16sToFloat(k16s *z_start, k16s *z_end, double z_resolution, double z_offset)
