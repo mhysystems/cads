@@ -79,7 +79,7 @@ namespace cads
 
   void GocatorReader::Stop()
   {
-    auto status = GoSystem_Start(m_system);
+    auto status = GoSystem_Stop(m_system);
     m_gocatorFifo.enqueue({msgid::finished, 0});
 
     if (kIsError(status))
@@ -125,26 +125,27 @@ namespace cads
       spdlog::get("cads")->info("Number of Camera's found: {}", sensor_count);
     }
 
-    m_sensor = GoSystem_SensorAt(m_system, 0);
 
-    auto status = GoSensor_Connect(m_sensor);
+
+    auto status = GoSystem_Connect(m_system);
 
     if (kIsError(status))
     {
-      throw runtime_error{"GoSensor_Connect: "s + to_string(status)};
+      throw runtime_error{"GoSystem_Connect: "s + to_string(status)};
     }
 
     if (kIsError(status = GoSystem_Stop(m_system)))
     {
-      throw runtime_error{"GoSensor_Stop: "s + to_string(status)};
+      throw runtime_error{"GoSystem_Stop: "s + to_string(status)};
     }
 
     if (kIsError(status = GoSystem_EnableData(m_system, kTRUE)))
     {
-      throw runtime_error{"GoSensor_EnableData: "s + to_string(status)};
+      throw runtime_error{"GoSystem_EnableData: "s + to_string(status)};
     }
 
-    auto setup = GoSensor_Setup(m_sensor);
+    auto sensor = GoSystem_SensorAt(m_system, 0);
+    auto setup = GoSensor_Setup(sensor);
 
     if (kNULL == setup)
     {
@@ -213,13 +214,13 @@ namespace cads
     }
   }
 
-  kStatus kCall GocatorReader::OnData(kPointer context, GoSensor sensor, GoDataSet dataset)
+  kStatus kCall GocatorReader::OnData(kPointer context, [[maybe_unused]] GoSystem system, GoDataSet dataset)
   {
     auto me = static_cast<GocatorReader *>(context);
 
     if (!me->terminate)
     {
-      me->OnData(sensor, dataset);
+      me->OnData(dataset);
     }
     else
     {
@@ -288,7 +289,7 @@ namespace cads
     return kOK;
   }
 
-  kStatus GocatorReader::OnData([[maybe_unused]] GoSensor sensor, GoDataSet dataset)
+  kStatus GocatorReader::OnData(GoDataSet dataset)
   {
     double frame = 0.0;
     double y = 0.0;
