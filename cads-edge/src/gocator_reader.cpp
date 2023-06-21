@@ -114,18 +114,6 @@ namespace cads
   {
     m_assembly = CreateGoSdk();
     m_system = CreateGoSystem();
-    auto sensor_count = GoSystem_SensorCount(m_system);
-
-    if (sensor_count < 1)
-    {
-      throw runtime_error{"GoSystem_SensorCount: No sensor found"};
-    }
-    else
-    {
-      spdlog::get("cads")->info("Number of Camera's found: {}", sensor_count);
-    }
-
-
 
     auto status = GoSystem_Connect(m_system);
 
@@ -142,6 +130,17 @@ namespace cads
     if (kIsError(status = GoSystem_EnableData(m_system, kTRUE)))
     {
       throw runtime_error{"GoSystem_EnableData: "s + to_string(status)};
+    }
+
+    auto sensor_count = GoSystem_SensorCount(m_system);
+
+    if (sensor_count < 1)
+    {
+      throw runtime_error{"GoSystem_SensorCount: No sensor found"};
+    }
+    else
+    {
+      spdlog::get("cads")->info("Number of Camera's found: {}", sensor_count);
     }
 
     auto sensor = GoSystem_SensorAt(m_system, 0);
