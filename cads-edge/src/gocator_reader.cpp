@@ -79,7 +79,7 @@ namespace cads
 
   void GocatorReader::Stop()
   {
-    auto status = GoSensor_Stop(m_sensor);
+    auto status = GoSystem_Start(m_system);
     m_gocatorFifo.enqueue({msgid::finished, 0});
 
     if (kIsError(status))
