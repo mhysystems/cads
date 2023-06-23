@@ -5,6 +5,7 @@
   {
     public string NatsUrl { get; set; } = "127.0.0.1";
     public string ConnectionString { get; set; } = String.Empty;
+    public string UrlKey { get; set; } = String.Empty;
 
   }
 

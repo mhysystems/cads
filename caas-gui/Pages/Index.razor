@@ -3,18 +3,25 @@
 @using caas_gui.Data
 @inject MsgPublishService MsgService
 
-<PageTitle>Caas Remote</PageTitle>
+@if(validSerial) {
+  <PageTitle>Caas Remote</PageTitle>
 
-<button class="btn btn-primary" @onclick="IncrementCount">Start</button>
+  <button class="btn btn-primary" @onclick="Clicked">Start</button>
+}
 
 @code {
     [Parameter]
     public string device { get; set; } = string.Empty;
-    private int currentCount = 0;
+    protected int serial = 0;
+    protected bool validSerial = false;
 
-    private void IncrementCount()
+    protected override void OnInitialized()
     {
-      MsgService.PublishStart(device);  
-      currentCount++;
+      (serial,validSerial) = MsgService.GetDevice(device);
+    }
+
+    private void Clicked()
+    {
+      MsgService.PublishStart(serial);  
     }
 }
