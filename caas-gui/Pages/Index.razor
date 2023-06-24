@@ -5,7 +5,14 @@
 
 @if(validSerial) {
   <PageTitle>Caas Remote</PageTitle>
-
+  <input asp-for="SelectedValue" list="datalistOptions" />
+  <datalist id="datalistOptions">
+    <option value="Edge"/>
+    <option value="Firefox"/>
+    <option value="Chrome"/>
+    <option value="Opera"/>
+    <option value="Safari"/>
+  </datalist>
   <button class="btn btn-primary" @onclick="Clicked">Start</button>
 }
 
