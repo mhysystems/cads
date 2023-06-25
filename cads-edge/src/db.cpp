@@ -116,6 +116,20 @@ namespace
     return err;
   }
 
+  std::tuple<sqlite3_stmt_t,sqlite3_t> prepare_query(sqlite3_t db, std::string query) {
+    sqlite3_stmt *stmt_raw = nullptr;
+    auto err = sqlite3_prepare_retry(db.get(), query.c_str(), (int)query.size(), &stmt_raw, NULL);
+
+    if (err != SQLITE_OK)
+    {
+      auto errmsg = sqlite3_errstr(err);
+      std::throw_with_nested(std::runtime_error(fmt::format("{} : sqlite3_prepare_retry {},{}",__func__,err, errmsg)));
+    }
+
+    sqlite3_stmt_t stmt(stmt_raw, &sqlite3_finalize);
+    return {move(stmt),move(db)};
+  }
+
   std::tuple<sqlite3_stmt_t,sqlite3_t> prepare_query(std::string db_config_name, std::string query, int flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX)
   {
 
@@ -1034,6 +1048,45 @@ namespace cads
     return err == SQLITE_OK || err == SQLITE_DONE;
   }
 
+  bool transfer(std::string from_db_name, std::string to_db_name, long first_index, long last_index)
+  {
+    auto err = db_exec(to_db_name, R"(CREATE TABLE IF NOT EXISTS ZS (Z BLOB NOT NULL))"s);
+    
+    if(err != SQLITE_OK) return false;
+    
+    auto from_query = R"(SELECT rowid,z FROM ZS WHERE rowid >= ? AND rowid < ?)";
+    auto to_query = R"(INSERT INTO ZS (z) VALUES (?))"s;
+    auto [from_stmt,from_db] = prepare_query(from_db_name, from_query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
+    auto [to_stmt,to_db] = prepare_query(to_db_name, to_query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
+
+    err = SQLITE_ERROR;
+    do{
+      err = sqlite3_bind_int(from_stmt.get(), 1, first_index);
+
+      if(err != SQLITE_OK) return false;
+      
+      err = sqlite3_bind_int(from_stmt.get(), 2, last_index);
+
+      if(err != SQLITE_OK) return false;
+      
+      tie(err, from_stmt) = db_step(move(from_stmt));
+
+      if (err == SQLITE_ROW)
+      {
+          z_element *z = (z_element *)sqlite3_column_blob(from_stmt.get(), 1); // Freed on next call to sqlite3_step
+          int len = sqlite3_column_bytes(from_stmt.get(), 1) / sizeof(*z);
+
+          auto bind_err = sqlite3_bind_blob(to_stmt.get(), 1, z, len, SQLITE_STATIC);
+          tie(bind_err, to_stmt) = db_step(move(to_stmt));
+          if (bind_err != SQLITE_OK) {
+            return false;
+          }
+      }
+    }while(err == SQLITE_ROW);
+
+    return err == SQLITE_DONE;
+    
+  }
 
   coro<int, z_type, 1> store_scan_coro(std::string db_name)
   {
