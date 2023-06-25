@@ -16,6 +16,10 @@
 
 namespace 
 {
+  
+  
+  
+  
   int resume_scan(cads::state::scan scan)
   {
     auto [scan_begin,path,uploaded,status] = scan;

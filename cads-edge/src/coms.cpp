@@ -69,7 +69,9 @@ namespace
   std::vector<uint8_t> compress(uint8_t *input, uint32_t size)
   {
 
-    std::vector<uint8_t> output(size);
+    if(size < 1) return {};
+
+    std::vector<uint8_t> output(size); // Assume output vector < size
 
     size_t input_size = size;
     size_t output_size = output.size();
@@ -77,6 +79,11 @@ namespace
     BrotliEncoderCompress(8, BROTLI_DEFAULT_WINDOW, BROTLI_DEFAULT_MODE, input_size, input, &output_size, output.data());
     output.resize(output_size);
     return output;
+  }
+
+  std::vector<uint8_t> compress(std::vector<uint8_t> input)
+  {
+    return ::compress(input.data(),input.size());
   }
 }
 
@@ -418,6 +425,58 @@ namespace cads
     return fmt::format("{}/{}-{}-{}/{}/{}", endpoint_url, site, conveyor, ts, y, len);
   }
 
+  
+  coro<long,std::tuple<std::vector<uint8_t>,long>,1> send_flatbuffer_coro(std::string url,bool upload_profile) {
+
+    
+    auto [data,terminate_first] = co_yield 0;
+
+    if(terminate_first) {
+      co_return 0;
+    }
+
+    auto [data_first,data_id] = data;
+
+    if(data_first.size() == 0) co_return 0;
+    
+    auto sending = data_id;
+    auto sent = 0L;
+
+    std::vector<uint8_t> bufv_first = compress(std::move(data_first));    
+
+    cpr::Url endpoint{url};
+    auto response = cpr::PostAsync(endpoint,cpr::Body{(char *)bufv_first.data(), bufv_first.size()}, cpr::Header{{"Content-Encoding", "br"}, {"Content-Type", "application/octet-stream"}});
+    
+    while(true) {
+      auto [data,terminate] = co_yield sent;
+
+      if(terminate) break;
+      
+      auto [buf,data_id] = data;
+
+      auto bufv = compress(buf); 
+
+      auto r = response.get();
+
+      if (!(cpr::ErrorCode::OK == r.error.code && cpr::status::HTTP_OK == r.status_code))
+      {
+        spdlog::get("upload")->error("Upload failed with http status code {}", r.status_code);
+        break;
+      }else{
+        sent = sending;
+      }
+
+      if(bufv.size()) {
+        sending = data_id;
+        response = cpr::PostAsync(endpoint,cpr::Body{(char *)bufv.data(), bufv.size()}, cpr::Header{{"Content-Encoding", "br"}, {"Content-Type", "application/octet-stream"}});
+      }
+    }
+
+    co_return sent;
+
+  }
+  
+  
   auto send_flatbuffer_array(
       flatbuffers::FlatBufferBuilder &builder,
       double z_res,
