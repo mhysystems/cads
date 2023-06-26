@@ -7,6 +7,7 @@ from pathlib import Path
 import math
 import shutil
 import numpy as np
+import padprofile
 
 def create_scan_db(db: str) :
     conn = sqlite3.connect(db)
@@ -62,15 +63,19 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Generate raw scan')
     parser.add_argument("--db", type=str, help="webapp db", default="rawprofile.db")
     parser.add_argument("--rows", type=int, help="rows", default=2000)
-    parser.add_argument("--cols", type=int, help="cols", default=1800)
+    parser.add_argument("--cols", type=int, help="cols", default=2000)
     parser.add_argument("--splice", type=int, help="splice length", default=20)
+    parser.add_argument("--pad", type=int, help="cols", default=100)
     
     args = parser.parse_args()
-
+    
+    row_off = 10000
+    rows = args.rows + row_off # iirfilter burn in
     splice_pos = math.floor(args.rows * 0.1)
 
     create_scan_db(args.db)
-    fill_scan_db(args.db,args.cols,args.rows)
+    fill_scan_db(args.db,args.cols-(2*args.pad),rows)
     insert_parameters(args.db)
-    insert_splice(args.db,-5,splice_pos,splice_pos+args.splice)
-    insert_splice(args.db,-5,args.rows - (splice_pos+args.splice),args.rows - splice_pos)
+    insert_splice(args.db,-5,row_off+splice_pos,row_off + splice_pos+args.splice)
+    insert_splice(args.db,-5,rows - (splice_pos+args.splice),rows - splice_pos)
+    padprofile.process_profile(args.db,args.cols,0)
