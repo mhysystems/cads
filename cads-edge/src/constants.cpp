@@ -112,9 +112,11 @@ namespace {
     auto source_s = config["revolution_sensor"]["source"].get<std::string>();
     cads::RevolutionSensor::Source source;
     if(source_s == "raw") {
-      source = cads::RevolutionSensor::Source::raw;
+      source = cads::RevolutionSensor::Source::height_raw;
+    }else if(source_s == "length") {
+      source = cads::RevolutionSensor::Source::length;
     }else {
-      source = cads::RevolutionSensor::Source::filtered;  
+      source = cads::RevolutionSensor::Source::height_filtered;  
     }
 
     auto trigger_num = config["revolution_sensor"]["trigger_num"].get<size_t>();

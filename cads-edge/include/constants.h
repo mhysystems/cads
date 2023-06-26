@@ -97,7 +97,7 @@ namespace cads {
   };
 
   struct RevolutionSensor{
-    enum class Source { raw, filtered};
+    enum class Source {height_raw, height_filtered, length};
     Source source;
     size_t trigger_num;
     double bias;

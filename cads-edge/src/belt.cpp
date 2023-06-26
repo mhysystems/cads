@@ -44,6 +44,28 @@ namespace
 namespace cads
 {
 
+std::function<PulleyRevolution(double)> 
+  mk_pseudo_revolution()
+  {
+    auto trigger_distance = global_conveyor_parameters.PulleyCircumference; // In mm
+    double next_revolution = trigger_distance;
+
+    return [=](double len) mutable -> PulleyRevolution
+    {
+      auto rtn = PulleyRevolution{false, trigger_distance};
+
+      if (len > next_revolution)
+      {
+        next_revolution = len + trigger_distance;
+        std::get<0>(rtn) = true;
+      }
+
+      return rtn;
+    };
+  }
+
+
+
  std::function<PulleyRevolution(double)> 
   mk_pulley_revolution()
   {

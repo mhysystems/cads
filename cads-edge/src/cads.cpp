@@ -442,7 +442,7 @@ namespace cads
 
     auto filter_window_len = global_config["sobel_filter"].get<size_t>();
 
-    auto pulley_rev = mk_pulley_revolution();
+    auto pulley_rev = revolution_sensor_config.source == RevolutionSensor::Source::length ? mk_pseudo_revolution() : mk_pulley_revolution();
 
     do
     {
@@ -538,9 +538,13 @@ namespace cads
       regression_compensate(z, 0, z.size(), gradient);
 
       PulleyRevolution ps;
-      if (revolution_sensor_config.source == RevolutionSensor::Source::raw)
+      if (revolution_sensor_config.source == RevolutionSensor::Source::height_raw)
       {
         ps = pulley_rev(pulley_level);
+      }
+      else if(revolution_sensor_config.source == RevolutionSensor::Source::length) 
+      {
+        ps = pulley_rev(y);
       }
       else
       {
