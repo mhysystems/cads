@@ -426,7 +426,7 @@ namespace cads
   }
 
   
-  coro<long,std::tuple<std::vector<uint8_t>,long>,1> send_flatbuffer_coro(std::string url,bool upload_profile) {
+  coro<long,std::tuple<std::vector<uint8_t>,long>,1> send_flatbuffer_coro(long sent, std::string url,bool upload_profile = true) {
 
     
     auto [data,terminate_first] = co_yield 0;
@@ -440,12 +440,11 @@ namespace cads
     if(data_first.size() == 0) co_return 0;
     
     auto sending = data_id;
-    auto sent = 0L;
 
     std::vector<uint8_t> bufv_first = compress(std::move(data_first));    
 
     cpr::Url endpoint{url};
-    auto response = cpr::PostAsync(endpoint,cpr::Body{(char *)bufv_first.data(), bufv_first.size()}, cpr::Header{{"Content-Encoding", "br"}, {"Content-Type", "application/octet-stream"}});
+    auto response = upload_profile ? cpr::PostAsync(endpoint,cpr::Body{(char *)bufv_first.data(), bufv_first.size()}, cpr::Header{{"Content-Encoding", "br"}, {"Content-Type", "application/octet-stream"}}) : cpr::AsyncResponse();
     
     while(true) {
       auto [data,terminate] = co_yield sent;
@@ -456,19 +455,28 @@ namespace cads
 
       auto bufv = compress(buf); 
 
-      auto r = response.get();
+      if(upload_profile) {
+        auto r = response.get();
 
-      if (!(cpr::ErrorCode::OK == r.error.code && cpr::status::HTTP_OK == r.status_code))
-      {
-        spdlog::get("upload")->error("Upload failed with http status code {}", r.status_code);
-        break;
-      }else{
+        if (!(cpr::ErrorCode::OK == r.error.code && cpr::status::HTTP_OK == r.status_code))
+        {
+          spdlog::get("upload")->error("Upload failed with http status code {}", r.status_code);
+          break;
+        }else{
+          sent = sending;
+        }
+  
+        if(bufv.size() > 0) {
+          sending = data_id;
+          response = cpr::PostAsync(endpoint,cpr::Body{(char *)bufv.data(), bufv.size()}, cpr::Header{{"Content-Encoding", "br"}, {"Content-Type", "application/octet-stream"}});
+        }else {
+          break;
+        }
+      }else {
         sent = sending;
-      }
-
-      if(bufv.size()) {
         sending = data_id;
-        response = cpr::PostAsync(endpoint,cpr::Body{(char *)bufv.data(), bufv.size()}, cpr::Header{{"Content-Encoding", "br"}, {"Content-Type", "application/octet-stream"}});
+
+        if(bufv.size() == 0) break;
       }
     }
 
@@ -635,6 +643,9 @@ namespace cads
     auto ts = to_str(scanned_at);
     cpr::Url endpoint{mk_post_profile_url(ts)};
 
+    auto send_flatbuffer = send_flatbuffer_coro(0L, mk_post_profile_url(ts));
+
+
     auto YmaxN = zs_count(db_name);
 
     auto z_resolution = params.zResolution;
@@ -676,8 +687,14 @@ namespace cads
 
         if (profiles_flat.size() == communications_config.UploadRows)
         {
-          size += send_flatbuffer_array(builder, z_resolution, z_offset, idx - communications_config.UploadRows, profiles_flat, endpoint, upload_profile);
-          store_scan_uploaded(idx + 1, db_name);
+          builder.Finish(CadsFlatbuffers::Createprofile_array(builder, z_resolution, z_offset, idx - communications_config.UploadRows, profiles_flat.size(), builder.CreateVector(profiles_flat)));
+
+          auto [terminate,sent_idx] = send_flatbuffer.resume({{builder.GetBufferPointer(),builder.GetBufferPointer()+builder.GetSize()},idx});
+          if(terminate) break;
+          store_scan_uploaded(sent_idx + 1, db_name);
+          
+          //size += send_flatbuffer_array(builder, z_resolution, z_offset, idx - communications_config.UploadRows, profiles_flat, endpoint, upload_profile);
+          //store_scan_uploaded(idx + 1, db_name);
         }
         // auto end = std::chrono::high_resolution_clock::now();
         // auto duration = (end - start) / 1.0s;
@@ -687,10 +704,20 @@ namespace cads
       {
         if (profiles_flat.size() > 0)
         {
-          size += send_flatbuffer_array(builder, z_resolution, z_offset, idx - profiles_flat.size(), profiles_flat, endpoint, upload_profile);
-          store_scan_uploaded(idx + 1, db_name);
+          builder.Finish(CadsFlatbuffers::Createprofile_array(builder, z_resolution, z_offset, idx - communications_config.UploadRows, profiles_flat.size(), builder.CreateVector(profiles_flat)));
+          auto [terminate,sent_idx] = send_flatbuffer.resume({{builder.GetBufferPointer(),builder.GetBufferPointer()+builder.GetSize()},idx});
+          if(terminate) break;
+          store_scan_uploaded(sent_idx + 1, db_name);
+
+          //size += send_flatbuffer_array(builder, z_resolution, z_offset, idx - profiles_flat.size(), profiles_flat, endpoint, upload_profile);
+          //store_scan_uploaded(idx + 1, db_name);
         }
-        final_idx = idx;
+          auto [terminate,sent_idx] = send_flatbuffer.resume({std::vector<uint8_t>(),idx});
+          if(!terminate) {
+            spdlog::get("cads")->info("{{func = {}, msg = 'Last resume not terminated'}}", __func__);
+          }
+          store_scan_uploaded(sent_idx + 1, db_name);
+        final_idx = sent_idx;
         break;
       }
     }

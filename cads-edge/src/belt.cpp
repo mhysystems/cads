@@ -98,7 +98,7 @@ namespace cads
     };
   }
 
-  coro<cads::msg, cads::msg> encoder_distance_estimation(Io &next, double stride)
+  coro<cads::msg, cads::msg> encoder_distance_estimation(cads::Io &next, double stride)
   {
     namespace sml = boost::sml;
 

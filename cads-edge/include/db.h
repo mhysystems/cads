@@ -60,6 +60,8 @@ namespace cads
 
 
   // scan db
+  bool create_scan_db(std::string db_name);
+  bool transfer_profiles(std::string from_db_name, std::string to_db_name, size_t first_index, size_t last_index = std::numeric_limits<size_t>::max());
   bool store_scan_gocator(cads::GocatorProperties gocator, std::string db_name);
   bool store_scan_properties(std::tuple<date::utc_clock::time_point,date::utc_clock::time_point> props, std::string db_name);
   long zs_count(std::string db_name);

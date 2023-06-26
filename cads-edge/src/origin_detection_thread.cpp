@@ -236,7 +236,6 @@ namespace cads
     cv::Mat matrix_correlation = belt.clone();
     long sequence_cnt = 0;
     auto valid = false;
-    long cnt = 0;
 
     auto start = std::chrono::high_resolution_clock::now();
 
@@ -264,11 +263,10 @@ namespace cads
         if (correlation < belt_crosscorr_threshold && (!(sequence_cnt > 0) || between(config_origin_detection.belt_length,y)))
         {
           ++sequence_cnt;
-          spdlog::get("cads")->info("Correlation : {} at y : {} with threshold: {} and count : {}", correlation, y, cv_threshhold, cnt);
+          spdlog::get("cads")->info("Correlation : {} at y : {} with threshold: {}", correlation, y, cv_threshhold);
           auto now = std::chrono::high_resolution_clock::now();
           auto period = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
           start = now;
-          cnt = 0;
 
           if(sequence_cnt > 1) {
             measurements.send("beltrotationperiod",0,period); 
@@ -367,6 +365,7 @@ namespace cads
     auto origin_detection = origin_detection_coro(x_resolution,y_resolution,width_n);
 
     long origin_sequence_cnt = 0;
+    size_t scan_cnt = 0;
 
     for (auto loop = true;loop;++cnt)
     {
@@ -392,9 +391,10 @@ namespace cads
 
                 if(origin_sequence_cnt > 0) {
                   measurements.send("beltlength",0,estimated_belt_length);
-                  next_fifo.enqueue({msgid::complete_belt, estimated_belt_length});
+                  next_fifo.enqueue({msgid::complete_belt, CompleteBelt{0,scan_cnt}});
                 }
                 
+                scan_cnt = 0;
                 origin_sequence_cnt++;
               }
               
@@ -403,7 +403,7 @@ namespace cads
               next_fifo.enqueue({msgid::end_sequence, origin_sequence_cnt});
               origin_sequence_cnt = 0;
             }
-            
+            scan_cnt++;
           }else {
             loop = false;
             spdlog::get("cads")->error("Origin decetor stopped");
@@ -683,9 +683,14 @@ coro<std::tuple<bool,size_t,double>,profile,1> anomaly_detection_coro(double y_r
     int64_t cnt = 0;
     auto buffer_size_warning = buffer_warning_increment;
     double last_splice_position = 0;
+    size_t last_splice_index = 0;
     double y_resolution = global_conveyor_parameters.TypicalSpeed / constants_gocator.Fps;
 
     auto origin_detection = anomaly_detection_coro(y_resolution);
+
+    long origin_sequence_cnt = 0L;
+
+    next_fifo.enqueue({msgid::begin_sequence, 0});
 
     for (auto loop = true;loop;++cnt)
     {
@@ -696,13 +701,26 @@ coro<std::tuple<bool,size_t,double>,profile,1> anomaly_detection_coro(double y_r
 
         case msgid::scan: {
           auto p = get<profile>(get<1>(m));
+          next_fifo.enqueue({msgid::scan, p});
+          
           auto [coro_end,result] = origin_detection.resume(p);
           
           if(!coro_end) {
             auto [valid,index,pos] = result;
             if(valid) {
+              
+              auto estimated_belt_length = pos - last_splice_position;
+              if(origin_sequence_cnt > 0) {
+                  spdlog::get("cads")->info("Estimated Belt Length(m): {}", estimated_belt_length / 1000);
+                  measurements.send("beltlength",0,estimated_belt_length);
+                  next_fifo.enqueue({msgid::complete_belt, CompleteBelt{last_splice_index,index}});
+              }
               spdlog::get("cads")->info("distance:{}", p.y - pos);
               last_splice_position = pos;
+              last_splice_index = index;
+            
+            
+              origin_sequence_cnt++;
             }
           }else 
           {

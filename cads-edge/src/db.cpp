@@ -1048,7 +1048,7 @@ namespace cads
     return err == SQLITE_OK || err == SQLITE_DONE;
   }
 
-  bool transfer(std::string from_db_name, std::string to_db_name, long first_index, long last_index)
+  bool transfer_profiles(std::string from_db_name, std::string to_db_name, size_t first_index, size_t last_index)
   {
     auto err = db_exec(to_db_name, R"(CREATE TABLE IF NOT EXISTS ZS (Z BLOB NOT NULL))"s);
     
@@ -1086,6 +1086,11 @@ namespace cads
 
     return err == SQLITE_DONE;
     
+  }
+
+  bool create_scan_db(std::string db_name) {
+    auto err = db_exec(db_name, R"(CREATE TABLE IF NOT EXISTS ZS (Z BLOB NOT NULL))"s);
+    return err == SQLITE_OK;
   }
 
   coro<int, z_type, 1> store_scan_coro(std::string db_name)

@@ -61,7 +61,7 @@ namespace cads
           global.store_last_y.resume(e.value.y);
         };
 
-        const auto complete_belt_action = [](global_t &global, const complete_belt_t &e)
+        const auto complete_belt_action = [](global_t &global, const CompleteBelt &e)
         {
           global.idx = 0;
 
@@ -71,11 +71,15 @@ namespace cads
           store_scan_properties({global.scan_begin,scan_end},scan_filename);
           
           store_scan_state(scan_filename);          
-          global.cps.enqueue({msgid::complete_belt, 0});
+
           
           auto new_scan_filename = fmt::format("scan-{}.sqlite",scan_end.time_since_epoch().count());
+          create_scan_db(new_scan_filename);
+          transfer_profiles(scan_filename,new_scan_filename,e.end_value);
           global.store_scan = store_scan_coro(new_scan_filename);
           global.scan_begin = scan_end;
+
+          global.cps.enqueue({msgid::complete_belt, 0});
 
         };
 
@@ -104,7 +108,7 @@ namespace cads
             *"init"_s + event<GocatorProperties> / init_gocator_properties_action = "invalid_data"_s,
             "invalid_data"_s + event<begin_sequence_t> / reset_globals_action = "valid_data"_s,
             "valid_data"_s + event<scan_t> / store_action = "valid_data"_s,
-            "valid_data"_s + event<complete_belt_t> / complete_belt_action = "valid_data"_s,
+            "valid_data"_s + event<CompleteBelt> / complete_belt_action = "valid_data"_s,
             "valid_data"_s + event<end_sequence_t> / reset_globals_action = "invalid_data"_s);
       }
     };
@@ -132,7 +136,7 @@ namespace cads
         sm.process_event(end_sequence_t{});
         break;
       case msgid::complete_belt:
-        sm.process_event(complete_belt_t{get<double>(get<1>(m))});
+        sm.process_event(CompleteBelt{get<CompleteBelt>(get<1>(m))});
         break;
       case msgid::gocator_properties:
         global.cps.enqueue(m);
