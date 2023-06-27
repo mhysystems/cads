@@ -56,6 +56,7 @@ namespace cads
       int64_t end_index;
       int64_t uploaded;
       int64_t status;
+      int64_t conveyor_id;
     };
     //enum scani {ScanBegin, Path, Uploaded, Status};
   }

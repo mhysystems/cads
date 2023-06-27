@@ -14,6 +14,16 @@
 
 namespace 
 {
+
+  void delete_scan(cads::state::scan scan) 
+  {
+    cads::delete_scan_state(scan);
+    std::filesystem::remove(scan.db_name);
+    std::filesystem::remove(scan.db_name + "-shm");
+    std::filesystem::remove(scan.db_name + "-wal");
+    std::filesystem::remove(scan.db_name + "-journal");
+    spdlog::get("cads")->info("Removed posted scan. {}", scan.db_name);
+  }
   
   int resume_scan(cads::state::scan scan)
   {
@@ -21,21 +31,19 @@ namespace
     auto err = cads::post_scan(scan);
     
     if(!err) {
-      cads::delete_scan_state(scan);
-      std::filesystem::remove(scan.db_name);
-      spdlog::get("cads")->info("Removed posted scan. {}", scan.db_name);
+      delete_scan(scan);
     }
 
     return 0;
   }
 
-   std::vector<std::deque<cads::state::scan>> partiton(std::deque<cads::state::scan> scans) {
+  std::vector<std::deque<cads::state::scan>> partiton(std::deque<cads::state::scan> scans) {
 
     if(scans.size() < 2) return {scans};
 
     auto first = scans.front();
     
-    auto it = std::partition(scans.begin(), scans.end(), [=](cads::state::scan e) {return e.status == first.status;});
+    auto it = std::partition(scans.begin(), scans.end(), [=](cads::state::scan e) {return e.conveyor_id == first.conveyor_id;});
 
     std::vector<std::deque<cads::state::scan>> rtn{{std::begin(scans),it}};
 
@@ -51,7 +59,7 @@ namespace
   cads::state::scan last_upload(std::deque<cads::state::scan> scans) {
     using namespace std;
 
-    auto i = min_element(begin(scans),end(scans),[](cads::state::scan a,cads::state::scan b){ return a.scanned_utc < b.scanned_utc;});
+    auto i = max_element(begin(scans),end(scans),[](cads::state::scan a,cads::state::scan b){ return a.scanned_utc < b.scanned_utc;});
 
     return *i;
   }
@@ -81,9 +89,11 @@ namespace
       std::deque<cads::state::scan> filtered_scans;
       
       for(auto scan : pscans) {
+        
+        if(scan.status == 0 && scan.db_name == last.db_name) continue;
+        
         if(scan.status == 0 && scan.db_name != last.db_name) {
-          std::filesystem::remove(scan.db_name);
-          cads::delete_scan_state(scan);
+          ::delete_scan(scan);
         }else {
           filtered_scans.push_back(scan);
         }
@@ -117,12 +127,20 @@ void upload_scan_thread(std::atomic<bool> &terminate)
       auto last = ::last_upload(pscans);
 
       for(auto scan : pscans) {
-        if(scan.scanned_utc >= last.scanned_utc && scan.status == 1) {
+        if(scan.status == 2) 
+        {
+          resume_scan(scan);
+        }else if(scan.scanned_utc >= last.scanned_utc && scan.status == 1) 
+        {
           scan.status = 2;
           scan.scanned_utc += constants_upload.Period;
+          last.scanned_utc = scan.scanned_utc;
           store_scan_state(scan);
           scan.scanned_utc -= constants_upload.Period;
           resume_scan(scan);
+        }else if(scan.scanned_utc < last.scanned_utc && scan.status == 1) 
+        {
+          delete_scan(scan);
         }
       }
     }

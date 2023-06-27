@@ -646,7 +646,7 @@ namespace cads
     auto send_flatbuffer = send_flatbuffer_coro(scan.uploaded, endpoint_url);
 
 
-    auto YmaxN = zs_count(scan.db_name);
+    auto YmaxN = scan.end_index - scan.begin_index;
 
     auto z_resolution = params.zResolution;
     auto z_offset = params.zOffset;

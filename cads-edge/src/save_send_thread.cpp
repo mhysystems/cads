@@ -83,7 +83,8 @@ namespace cads
             e.start_value,
             e.end_value,
             e.start_value,
-            1
+            1,
+            3
           };
 
           update_scan_state(scan);   
@@ -98,7 +99,8 @@ namespace cads
             0,
             0,
             0,
-            0
+            0,
+            3
           };
 
           store_scan_state(scan2);  
