@@ -133,6 +133,10 @@ namespace cads {
     double Fps;
   };
 
+  struct UploadConstants {
+    std::chrono::seconds Period;
+  };
+
 
   extern Device constants_device;
   extern profile_parameters global_profile_parameters;
@@ -149,6 +153,8 @@ namespace cads {
   extern Measure measurements;
   extern AnomalyDetection anomalies_config;
   extern GocatorConstants constants_gocator;
+  extern UploadConstants constants_upload;
+
   extern std::atomic<bool> terminate_signal;
   
   void init_config(std::string f);

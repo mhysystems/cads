@@ -47,21 +47,28 @@ namespace cads
 
   // scans table
   namespace state {
-    using scan = std::tuple<date::utc_clock::time_point,std::string,int64_t,int64_t>;
-    enum scani {ScanBegin, Path, Uploaded, Status};
+    //using scan = std::tuple<date::utc_clock::time_point,std::string,int64_t,int64_t>;
+    struct scan {
+      date::utc_clock::time_point scanned_utc;
+      std::string db_name;
+      std::string url;
+      int64_t begin_index;
+      int64_t end_index;
+      int64_t uploaded;
+      int64_t status;
+    };
+    //enum scani {ScanBegin, Path, Uploaded, Status};
   }
   std::deque<cads::state::scan> fetch_scan_state(std::string name ="");
-  bool store_scan_state(std::string scan_db, std::string db_name = "");
-  void store_scan_status(int64_t status, std::string scan_name, std::string name = "");
-  void store_scan_uploaded(int64_t idx, std::string scan_name, std::string name = "");
-  bool delete_scan_state(std::string Path, std::string db_name = "");
-  std::tuple<int64_t,bool> fetch_scan_uploaded(std::string scan_name, std::string name = "");
+  bool store_scan_state(cads::state::scan scan, std::string db_name = "");
+  bool delete_scan_state(cads::state::scan scan, std::string db_name = "");
+  bool update_scan_state(cads::state::scan scan, std::string db_name = "");
   coro<std::tuple<int, z_type>> fetch_scan_coro(long last_idx, long first_index, std::string db_name, int size = 256);
 
 
   // scan db
   bool create_scan_db(std::string db_name);
-  bool transfer_profiles(std::string from_db_name, std::string to_db_name, long first_index, long last_index = std::numeric_limits<long>::max());
+  bool transfer_profiles(std::string from_db_name, std::string to_db_name, int64_t first_index, int64_t last_index = std::numeric_limits<int64_t>::max());
   bool store_scan_gocator(cads::GocatorProperties gocator, std::string db_name);
   bool store_scan_properties(std::tuple<date::utc_clock::time_point,date::utc_clock::time_point> props, std::string db_name);
   long zs_count(std::string db_name);

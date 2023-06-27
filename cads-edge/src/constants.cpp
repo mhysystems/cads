@@ -163,6 +163,13 @@ namespace {
 
     return cads::Device{serial};
   }
+
+  auto mk_upload(nlohmann::json config) {
+    
+    auto period = config["upload"]["Period"].get<long>();
+
+    return cads::UploadConstants{std::chrono::seconds(period)};
+  }
   
   void sigint_handler([[maybe_unused]]int s) {
     cads::terminate_signal = true;
@@ -187,6 +194,8 @@ namespace cads {
   Measure measurements;
   AnomalyDetection anomalies_config;
   GocatorConstants constants_gocator;
+  UploadConstants constants_upload;
+
   std::atomic<bool> terminate_signal = false;
 
   int lua_transition(std::string f) {

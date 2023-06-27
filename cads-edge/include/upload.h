@@ -1,8 +1,7 @@
 #pragma once
-
-#include <io.hpp>
+#include <atomic>
 
 namespace cads
 {
-  void upload_scan_thread(cads::Io&, cads::Io&);
+  void upload_scan_thread(std::atomic<bool>&);
 }

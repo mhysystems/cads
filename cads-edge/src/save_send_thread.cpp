@@ -70,14 +70,39 @@ namespace cads
           store_scan_gocator(global.gocator_properties,scan_filename);
           store_scan_properties({global.scan_begin,scan_end},scan_filename);
           
-          store_scan_state(scan_filename);          
-
-          
           auto new_scan_filename = fmt::format("scan-{}.sqlite",scan_end.time_since_epoch().count());
           create_scan_db(new_scan_filename);
           transfer_profiles(scan_filename,new_scan_filename,e.end_value);
+
+          // needs to be after transfer_profiles because uploader can run and delete scan before 
+          // transfer complete
+          cads::state::scan scan = {
+            global.scan_begin,
+            scan_filename,
+            mk_post_profile_url(global.scan_begin),
+            e.start_value,
+            e.end_value,
+            e.start_value,
+            1
+          };
+
+          update_scan_state(scan);   
+
           global.store_scan = store_scan_coro(new_scan_filename);
           global.scan_begin = scan_end;
+
+          cads::state::scan scan2 = {
+            global.scan_begin,
+            new_scan_filename,
+            mk_post_profile_url(scan_end),
+            0,
+            0,
+            0,
+            0
+          };
+
+          store_scan_state(scan2);  
+
 
           global.cps.enqueue({msgid::complete_belt, 0});
 
@@ -95,6 +120,19 @@ namespace cads
           auto new_scan_filename = fmt::format("scan-{}.sqlite",scan_end.time_since_epoch().count());
           global.store_scan = store_scan_coro(new_scan_filename);
           global.scan_begin = scan_end;
+
+          cads::state::scan scan2 = {
+            global.scan_begin,
+            new_scan_filename,
+            mk_post_profile_url(scan_end),
+            0,
+            0,
+            0,
+            0
+          };
+
+          store_scan_state(scan2);  
+
 
         };
 

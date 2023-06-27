@@ -128,6 +128,4 @@ namespace cads
 
     return mini;
   }
-
-
 }

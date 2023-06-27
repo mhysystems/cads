@@ -624,7 +624,11 @@ namespace cads
 
   void cads_local_main(std::string f) 
   {
-    
+
+    std::atomic<bool> terminate = false;
+    //std::jthread save_send(upload_scan_thread, std::ref(terminate));
+    upload_scan_thread(std::ref(terminate));
+
     auto [L,err] = run_lua_config(f);
 
     if(err) {
@@ -656,7 +660,7 @@ namespace cads
       } 
       else
       {
-        spdlog::get("cads")->error("TODO");
+        spdlog::get("cads")->error("{}: lua_resume: {}",__func__,lua_tostring(mainco,-1));
         break;
       }
 
@@ -669,10 +673,15 @@ namespace cads
       lua_pushboolean(mainco,true);
       lua_resume(mainco,L.get(),1,&nargs);
     }
+
+    terminate = true; // stops upload thread
   }
 
   void cads_remote_main() {
     
+    std::atomic<bool> terminate = false;
+    std::jthread save_send(upload_scan_thread, std::ref(terminate));
+
     while(true)
     {
       try {
@@ -758,6 +767,7 @@ namespace cads
       }
     }
 
+    terminate = true; // stops upload thread
   }
 
 

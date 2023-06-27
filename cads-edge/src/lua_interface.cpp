@@ -166,12 +166,6 @@ namespace
     return mk_thread2(L,cads::dynamic_processing_thread);
   }
 
-  int upload_scan_thread(lua_State *L) 
-  {
-    return mk_thread2(L,cads::upload_scan_thread);
-  }
-
-
   int save_send_thread(lua_State *L) {
     return mk_thread2(L,cads::save_send_thread);
   }
@@ -227,9 +221,6 @@ namespace cads
       lua_pushcfunction(L, ::dynamic_processing_thread);
 	    lua_setglobal(L,"dynamic_processing_thread");
       
-      lua_pushcfunction(L, ::upload_scan_thread);
-	    lua_setglobal(L,"upload_scan_thread");
-    
       lua_pushcfunction(L, ::wait_for);
       lua_setglobal(L,"wait_for");
 
@@ -288,7 +279,7 @@ namespace cads
     auto lua_status = luaL_dofile(L.get(),luafile.string().c_str());
     
     if(lua_status != LUA_OK) {
-       spdlog::get("cads")->error("{}: luaL_dofile: {}",__func__,lua_tostring(L.get(),-1));
+      spdlog::get("cads")->error("{}: luaL_dofile: {}",__func__,lua_tostring(L.get(),-1));
       return {std::move(L),true};
     }
 

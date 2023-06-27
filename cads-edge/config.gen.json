@@ -19,6 +19,10 @@
     "fiducial_gap" : 40
   },
 
+  "upload" : {
+    "Period" : 0
+  },
+
   "OriginDetection" : {
     "BeltLength": [9500,9700],
     "cross_correlation_threshold" : 0.285,

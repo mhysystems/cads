@@ -34,8 +34,7 @@ function main()
   local ede_origin = BlockingReaderWriterQueue()
   local origin_anomaly = BlockingReaderWriterQueue()
   local anomaly_savedb = BlockingReaderWriterQueue()
-  local savedb_upload = BlockingReaderWriterQueue()
-  local upload_luamain = BlockingReaderWriterQueue()
+  local savedb_luamain = BlockingReaderWriterQueue()
   
   local hh = conveyor.TypicalSpeed / gocator.Fps
   local gocator = mk_gocator(gocator_cads) 
@@ -43,14 +42,13 @@ function main()
   local thread_process_profile = process_profile(gocator_cads,ede)
   local window_processing = splice_detection_thread(ede_origin,origin_anomaly)
   local dynamic_processing = dynamic_processing_thread(origin_anomaly,anomaly_savedb)
-  local thread_send_save = save_send_thread(anomaly_savedb,savedb_upload)
-  local upload_scan = upload_scan_thread(savedb_upload,upload_luamain)
+  local thread_send_save = save_send_thread(anomaly_savedb,savedb_luamain)
 
   gocator:Start()
 
   unloop = false
   repeat
-    local is_value,msg_id = wait_for(upload_luamain)
+    local is_value,msg_id = wait_for(savedb_luamain)
 
     if is_value then
       print(msg_id)
