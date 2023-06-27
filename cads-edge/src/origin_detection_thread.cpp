@@ -67,8 +67,14 @@ namespace
     auto scamp_dischord(std::vector<double> timeseries_a, size_t window_size) {
       auto args = scamp_impl(timeseries_a,window_size,{});
       auto [mp,mi] = ProfileToVector(args.profile_a, false, window_size);
+
+      for(auto &e : mp) {
+        e = std::isnan(e) ? 0.0 : e;
+      }
+      
       cads::write_vector(mp,"mpd.txt");
       auto dischord = std::max_element(mp.begin(),mp.end());
+
       auto d = std::distance(mp.begin(),dischord);
       std::vector<double> motif(args.timeseries_a.begin()+d,args.timeseries_a.begin() + d + window_size);
       return std::make_tuple(d,*dischord,motif);
@@ -479,86 +485,7 @@ namespace cads
   }
 
 
-  void bypass_fiducial_detection_thread(Io &profile_fifo, Io &next_fifo)
-  {
-
-    cads::msg m;
-    auto start = std::chrono::high_resolution_clock::now();
-    int64_t cnt = 0;
-    auto buffer_size_warning = buffer_warning_increment;
-
-    auto origin_detection = maxlength_coro();
-
-    long origin_sequence_cnt = 0;
-
-    for (auto loop = true;loop;++cnt)
-    {
-      
-      profile_fifo.wait_dequeue(m);
-
-      switch(std::get<0>(m)) {
-
-        case msgid::scan: {
-          auto p = get<profile>(get<1>(m));
-          auto [coro_end,result] = origin_detection.resume(p);
-          
-          if(!coro_end) {
-            auto [op,estimated_belt_length,valid] = result;
-
-            if(valid) {
-
-              if(op.y == 0) {
-                
-                if(origin_sequence_cnt == 0) {
-                  next_fifo.enqueue({msgid::begin_sequence, origin_sequence_cnt});
-                }
-
-                if(origin_sequence_cnt > 0) {
-                  spdlog::get("cads")->info("Estimated Belt Length(m): {}", estimated_belt_length / 1000);
-                  measurements.send("beltlength",0,estimated_belt_length);
-                  next_fifo.enqueue({msgid::complete_belt, estimated_belt_length});
-                }
-                
-                origin_sequence_cnt++;
-              }
-              
-              next_fifo.enqueue({msgid::scan, op});
-            }else{
-              next_fifo.enqueue({msgid::end_sequence, origin_sequence_cnt});
-              origin_sequence_cnt = 0;
-            }
-            
-          }else {
-            loop = false;
-            spdlog::get("cads")->error("Origin dectored stopped");
-          }
-          break;
-        }
-        case msgid::finished:
-          next_fifo.enqueue(m);
-          loop = false;
-          break;
-        default:
-          next_fifo.enqueue(m);
-      }
-
-      if (profile_fifo.size_approx() > buffer_size_warning)
-      {
-        spdlog::get("cads")->warn("Cads Origin Detection showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
-        buffer_size_warning += buffer_warning_increment;
-      }
-    }
-
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    auto rate = duration != 0 ? (double)cnt / duration : 0;
-    spdlog::get("cads")->info("ORIGIN DETECTION - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, rate);
-
-    next_fifo.enqueue({msgid::finished, 0});
-    spdlog::get("cads")->info("window_processing_thread");
-  }
-
-
+  
 coro<std::tuple<size_t,double,std::vector<double>>,double,1> find_dischord_motif_coro(size_t window_size, size_t partition_size)
 {
     using namespace std::chrono_literals;  
@@ -648,7 +575,6 @@ coro<std::tuple<bool,size_t,double>,profile,1> anomaly_detection_coro(double y_r
             
             if(belt_thickness_estimates.size() > max_belt_size){
               tie(index,distance) = scamp_single(belt_thickness_estimates,motif);
-              y_pos = y_position[index];
               spdlog::get("cads")->info("index:{} dis:{} size:{}", index,distance,belt_thickness_estimates.size());
               state = State::foundMotif;
               processing = true;
@@ -657,10 +583,16 @@ coro<std::tuple<bool,size_t,double>,profile,1> anomaly_detection_coro(double y_r
           }
 
           case State::foundMotif: {
-            std::shift_left(belt_thickness_estimates.begin(),belt_thickness_estimates.end(),index + window_size);
-            belt_thickness_estimates.resize(belt_thickness_estimates.size() - (index + window_size));
-            std::shift_left(y_position.begin(),y_position.end(),index + window_size);
-            y_position.resize(y_position.size() - (index + window_size));
+            y_pos = y_position[index];
+            auto shift_distance = index + window_size;
+            
+            if(shift_distance > belt_thickness_estimates.size()){
+              shift_distance = belt_thickness_estimates.size();
+            } 
+            std::shift_left(belt_thickness_estimates.begin(),belt_thickness_estimates.end(),shift_distance);
+            belt_thickness_estimates.resize(belt_thickness_estimates.size() - shift_distance);
+            std::shift_left(y_position.begin(),y_position.end(),shift_distance);
+            y_position.resize(y_position.size() - shift_distance);
             state = State::findMotif;
             found = true;
             break;
@@ -684,13 +616,11 @@ coro<std::tuple<bool,size_t,double>,profile,1> anomaly_detection_coro(double y_r
     auto buffer_size_warning = buffer_warning_increment;
     double last_splice_position = 0;
     size_t last_splice_index = 0;
-    double y_resolution = global_conveyor_parameters.TypicalSpeed / constants_gocator.Fps;
+    double y_resolution = 1000 * global_conveyor_parameters.TypicalSpeed / constants_gocator.Fps;
 
     auto origin_detection = anomaly_detection_coro(y_resolution);
 
     long origin_sequence_cnt = 0L;
-
-    next_fifo.enqueue({msgid::begin_sequence, 0});
 
     for (auto loop = true;loop;++cnt)
     {
@@ -733,6 +663,10 @@ coro<std::tuple<bool,size_t,double>,profile,1> anomaly_detection_coro(double y_r
 
           loop = false;
           next_fifo.enqueue(m);
+          break;
+        case msgid::gocator_properties :
+          next_fifo.enqueue(m);
+          next_fifo.enqueue({msgid::begin_sequence, 0});
           break;
         default:
           next_fifo.enqueue(m);

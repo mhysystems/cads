@@ -7,8 +7,8 @@
   
   "sqlite_gocator" : {
     "range" : [0,99999999999],
-    "fps" : 984,
-    "forever" : false,
+    "fps" : 1000,
+    "forever" : true,
     "delay" : 98
   },
 
@@ -20,7 +20,7 @@
   },
 
   "OriginDetection" : {
-    "BeltLength": [12555200,12575200],
+    "BeltLength": [9500,9700],
     "cross_correlation_threshold" : 0.285,
     "dump_match" : true
   },
@@ -89,7 +89,7 @@
     "Name" : "cv001",
     "Timezone" : "Australia/Perth",
     "PulleyCircumference" : 1000.0,
-    "MaxSpeed" : 1.0
+    "MaxSpeed" : 6.0
   },
 
   "belt" : {

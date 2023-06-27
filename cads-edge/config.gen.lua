@@ -1,5 +1,5 @@
 gocator = {
-  Fps = 984.0
+  Fps = 1000.0
 }
 
 conveyor = {
@@ -8,7 +8,7 @@ conveyor = {
   Name = "cv001",
   Timezone = "Australia/Perth",
   PulleyCircumference = 1000.0,
-  TypicalSpeed = 1.0
+  TypicalSpeed = 6.0
 }
 
 belt = {
@@ -40,8 +40,8 @@ function main()
   local hh = conveyor.TypicalSpeed / gocator.Fps
   local gocator = mk_gocator(gocator_cads) 
   local ede = encoder_distance_estimation(ede_origin,hh)
-  local thread_process_profile = process_profile(gocator_cads,ede_origin)
-  local window_processing = window_processing_thread(ede_origin,origin_anomaly)
+  local thread_process_profile = process_profile(gocator_cads,ede)
+  local window_processing = splice_detection_thread(ede_origin,origin_anomaly)
   local dynamic_processing = dynamic_processing_thread(origin_anomaly,anomaly_savedb)
   local thread_send_save = save_send_thread(anomaly_savedb,savedb_upload)
   local upload_scan = upload_scan_thread(savedb_upload,upload_luamain)

@@ -1048,7 +1048,7 @@ namespace cads
     return err == SQLITE_OK || err == SQLITE_DONE;
   }
 
-  bool transfer_profiles(std::string from_db_name, std::string to_db_name, size_t first_index, size_t last_index)
+  bool transfer_profiles(std::string from_db_name, std::string to_db_name, long first_index, long last_index)
   {
     auto err = db_exec(to_db_name, R"(CREATE TABLE IF NOT EXISTS ZS (Z BLOB NOT NULL))"s);
     
@@ -1061,11 +1061,11 @@ namespace cads
 
     err = SQLITE_ERROR;
     do{
-      err = sqlite3_bind_int(from_stmt.get(), 1, first_index);
+      err = sqlite3_bind_int64(from_stmt.get(), 1, first_index);
 
       if(err != SQLITE_OK) return false;
       
-      err = sqlite3_bind_int(from_stmt.get(), 2, last_index);
+      err = sqlite3_bind_int64(from_stmt.get(), 2, last_index);
 
       if(err != SQLITE_OK) return false;
       
@@ -1078,7 +1078,7 @@ namespace cads
 
           auto bind_err = sqlite3_bind_blob(to_stmt.get(), 1, z, len, SQLITE_STATIC);
           tie(bind_err, to_stmt) = db_step(move(to_stmt));
-          if (bind_err != SQLITE_OK) {
+          if (bind_err != SQLITE_DONE) {
             return false;
           }
       }

@@ -151,19 +151,14 @@ namespace
     return 1;
   }
   
-  int bypass_fiducial_detection(lua_State *L)
+  int splice_detection_thread(lua_State *L)
   {
-    return mk_thread2(L,cads::bypass_fiducial_detection_thread);
+    return mk_thread2(L,cads::splice_detection_thread);
   }
 
   int window_processing_thread(lua_State *L) 
   {
     return mk_thread2(L,cads::window_processing_thread);
-  }
-
-  int splice_detection_thread(lua_State *L) 
-  {
-    return mk_thread2(L,cads::splice_detection_thread);
   }
 
   int dynamic_processing_thread(lua_State *L) 
@@ -217,8 +212,8 @@ namespace cads
       lua_pushcfunction(L, ::BlockingReaderWriterQueue);
 	    lua_setglobal(L,"BlockingReaderWriterQueue");
 
-      lua_pushcfunction(L, ::bypass_fiducial_detection);
-	    lua_setglobal(L,"bypass_fiducial_detection");
+      lua_pushcfunction(L, ::splice_detection_thread);
+	    lua_setglobal(L,"splice_detection_thread");
 
       lua_pushcfunction(L, ::save_send_thread);
 	    lua_setglobal(L,"save_send_thread");
