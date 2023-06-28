@@ -55,7 +55,7 @@ namespace {
 namespace cads {
 
 
-  void measurement_thread(moodycamel::BlockingConcurrentQueue<Measure::MeasureMsg> &measure, bool &terminate)
+  void measurement_thread(moodycamel::BlockingConcurrentQueue<Measure::MeasureMsg> &measure, std::string lua_code, bool &terminate)
   {
     using Lua = std::unique_ptr<lua_State, decltype(&lua_close)>;
     auto realtime_metrics = realtime_metrics_coro();
@@ -152,8 +152,8 @@ namespace cads {
   }
 
 
-  void Measure::init() {
-    thread = std::jthread(measurement_thread,std::ref(fifo),std::ref(terminate));
+  void Measure::init(std::string lua_code) {
+    thread = std::jthread(measurement_thread,std::ref(fifo),lua_code, std::ref(terminate));
   }
 
   Measure::~Measure() {

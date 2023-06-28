@@ -72,7 +72,7 @@ namespace cads
           
           auto new_scan_filename = fmt::format("scan-{}.sqlite",scan_end.time_since_epoch().count());
           create_scan_db(new_scan_filename);
-          transfer_profiles(scan_filename,new_scan_filename,e.start_value + e.end_value);
+          transfer_profiles(scan_filename,new_scan_filename,e.start_value + e.end_value + 1);
 
           // needs to be after transfer_profiles because uploader can run and delete scan before 
           // transfer complete

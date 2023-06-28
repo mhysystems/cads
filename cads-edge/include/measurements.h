@@ -33,7 +33,7 @@ namespace cads
     public:
     Measure() = default;  
     ~Measure();
-    void init();
+    void init(std::string);
     void send(std::string, int quality, double);
     void send(std::string, int quality, std::string);
     void send(std::string, int quality, std::function<double()>);

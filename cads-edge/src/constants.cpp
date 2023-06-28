@@ -11,6 +11,7 @@
 #include <init.h>
 
 nlohmann::json global_config;
+using Lua = std::unique_ptr<lua_State, decltype(&lua_close)>;
 
 namespace {
 
@@ -51,6 +52,45 @@ namespace {
 
   }
 
+  auto mk_conveyor_lua(Lua L) {
+
+    cads::Conveyor obj;
+    auto lua_status = lua_getglobal(L.get(),"conveyor");
+
+    if(lua_istable(L.get(),-1)) {
+      lua_getfield(L.get(), -1, "Id");
+      obj.Id = lua_tonumber(L.get(), -1);
+      lua_pop(L.get(), 1);
+
+      lua_getfield(L.get(), -1, "Org");
+      obj.Org = lua_tostring(L.get(), -1);
+      lua_pop(L.get(), 1);
+
+      lua_getfield(L.get(), -1, "Site");
+      obj.Site = lua_tostring(L.get(), -1);
+      lua_pop(L.get(), 1);
+
+      lua_getfield(L.get(), -1, "Timezone");
+      obj.Timezone = lua_tostring(L.get(), -1);
+      lua_pop(L.get(), 1);
+
+      lua_getfield(L.get(), -1, "PulleyCircumference");
+      obj.PulleyCircumference =lua_tonumber(L.get(), -1);
+      lua_pop(L.get(), 1);
+
+      lua_getfield(L.get(), -1, "TypicalSpeed");
+      obj.TypicalSpeed = lua_tonumber(L.get(), -1);
+      lua_pop(L.get(), 1);
+
+      lua_getfield(L.get(), -1, "Belt");
+      obj.Belt = lua_tonumber(L.get(), -1);
+      lua_pop(L.get(), 1);
+    }
+
+    return std::make_tuple(obj,std::move(L));
+  }
+
+
   auto mk_belt_parameters(nlohmann::json config) {
 
     int64_t Id = 0;
@@ -67,6 +107,59 @@ namespace {
     int64_t Conveyor = 0;
 
     return cads::Belt{Id,Installed,PulleyCover,CordDiameter,TopCover,Length,Width,WidthN,Splices,Conveyor};
+
+  }
+
+  auto mk_belt_lua(Lua L) {
+
+    cads::Belt obj;
+    auto lua_status = lua_getglobal(L.get(),"belt");
+
+    if(lua_istable(L.get(),-1)) {
+
+      lua_getfield(L.get(), -1, "Id");
+      obj.Id = lua_tonumber(L.get(), -1);
+      lua_pop(L.get(), 1);
+
+      lua_getfield(L.get(), -1, "Installed");
+      std::istringstream in(lua_tostring(L.get(), -1));
+      lua_pop(L.get(), 1);
+      in >> date::parse("%FT%TZ", obj.Installed);
+    
+      lua_getfield(L.get(), -1, "PulleyCover");
+      obj.PulleyCover = lua_tonumber(L.get(), -1);
+      lua_pop(L.get(), 1);
+
+      lua_getfield(L.get(), -1, "CordDiameter");
+      obj.CordDiameter = lua_tonumber(L.get(), -1);
+      lua_pop(L.get(), 1);
+
+      lua_getfield(L.get(), -1, "TopCover");
+      obj.TopCover = lua_tonumber(L.get(), -1);
+      lua_pop(L.get(), 1);
+
+      lua_getfield(L.get(), -1, "Width");
+      obj.Width =lua_tonumber(L.get(), -1);
+      lua_pop(L.get(), 1);
+
+      lua_getfield(L.get(), -1, "Length");
+      obj.Length =lua_tonumber(L.get(), -1);
+      lua_pop(L.get(), 1);
+
+      lua_getfield(L.get(), -1, "WidthN");
+      obj.WidthN = lua_tonumber(L.get(), -1);
+      lua_pop(L.get(), 1);
+
+      lua_getfield(L.get(), -1, "Splices");
+      obj.Splices = lua_tonumber(L.get(), -1);
+      lua_pop(L.get(), 1);
+
+      lua_getfield(L.get(), -1, "Conveyor");
+      obj.Conveyor = lua_tonumber(L.get(), -1);
+      lua_pop(L.get(), 1);      
+    }
+
+    return std::make_tuple(obj,std::move(L));
 
   }
 
@@ -170,7 +263,40 @@ namespace {
 
     return cads::UploadConstants{std::chrono::seconds(period)};
   }
+
+  auto mk_anomaly_lua(Lua L) {
+    cads::AnomalyDetection obj;
+
+    auto lua_status = lua_getglobal(L.get(),"anomaly");
+
+    if (lua_istable(L.get(), -1)) { 
+        
+      lua_getfield(L.get(), -1, "WindowLength");
+      obj.WindowLength = lua_tonumber(L.get(), -1);
+      lua_pop(L.get(), 1);
+
+      lua_getfield(L.get(), -1, "BeltPartitionLength");
+      obj.BeltPartitionLength = lua_tonumber(L.get(), -1);
+      lua_pop(L.get(), 1);  
+    }
+
+    return std::make_tuple(obj,std::move(L));
+  }
   
+  auto mk_gocator_lua(Lua L) {
+    cads::GocatorConstants obj;
+
+     auto lua_status = lua_getglobal(L.get(),"gocator");
+
+    if(lua_istable(L.get(),-1)) {
+      lua_getfield(L.get(), -1, "Fps");
+      obj.Fps = lua_tonumber(L.get(), -1);
+      lua_pop(L.get(), 1);
+    }
+
+    return std::make_tuple(obj,std::move(L));
+  }
+
   void sigint_handler([[maybe_unused]]int s) {
     cads::terminate_signal = true;
   }
@@ -200,7 +326,7 @@ namespace cads {
 
   int lua_transition(std::string f) {
     
-    using Lua = std::unique_ptr<lua_State, decltype(&lua_close)>;
+   
     namespace fs = std::filesystem;
 
     fs::path luafile{f};
@@ -215,84 +341,10 @@ namespace cads {
       return -1;
     }
 
-    AnomalyDetection config;
-
-    lua_status = lua_getglobal(L.get(),"anomaly");
-
-    if (lua_istable(L.get(), -1)) { 
-        lua_pushstring(L.get(), "WindowLength"); 
-        lua_gettable(L.get(), -2); 
-
-        if (lua_isnumber(L.get(), -1)) { 
-          config.WindowLength = lua_tonumber(L.get(), -1); 
-          lua_pop(L.get(),1);
-        }
-
-        lua_pushstring(L.get(), "BeltPartitionLength"); 
-        lua_gettable(L.get(), -2); 
-
-        if (lua_isnumber(L.get(), -1)) { 
-          config.BeltPartitionLength = lua_tonumber(L.get(), -1); 
-          lua_pop(L.get(),1);
-        }
-    }
-
-    anomalies_config = config;
-
-    Belt belt;
-    belt.Conveyor = 0;
-    belt.Id = 0;
-
-    lua_status = lua_getglobal(L.get(),"belt");
-
-    if(lua_istable(L.get(),-1)) {
-      lua_getfield(L.get(), -1, "Installed");
-      std::istringstream in(lua_tostring(L.get(), -1));
-      lua_pop(L.get(), 1);
-      in >> date::parse("%FT%TZ", belt.Installed);
-    
-      lua_getfield(L.get(), -1, "PulleyCover");
-      belt.PulleyCover = lua_tonumber(L.get(), -1);
-      lua_pop(L.get(), 1);
-
-      lua_getfield(L.get(), -1, "CordDiameter");
-      belt.CordDiameter = lua_tonumber(L.get(), -1);
-      lua_pop(L.get(), 1);
-
-      lua_getfield(L.get(), -1, "TopCover");
-      belt.TopCover = lua_tonumber(L.get(), -1);
-      lua_pop(L.get(), 1);
-
-      lua_getfield(L.get(), -1, "Width");
-      belt.Width =lua_tonumber(L.get(), -1);
-      lua_pop(L.get(), 1);
-
-      lua_getfield(L.get(), -1, "Length");
-      belt.Length =lua_tonumber(L.get(), -1);
-      lua_pop(L.get(), 1);
-
-      lua_getfield(L.get(), -1, "WidthN");
-      belt.WidthN = lua_tonumber(L.get(), -1);
-      lua_pop(L.get(), 1);
-
-      lua_getfield(L.get(), -1, "Splices");
-      belt.Splices =lua_tonumber(L.get(), -1);
-      lua_pop(L.get(), 1);
-    }
-
-    global_belt_parameters = belt;
-
-    GocatorConstants gocator;
-
-    lua_status = lua_getglobal(L.get(),"gocator");
-
-    if(lua_istable(L.get(),-1)) {
-      lua_getfield(L.get(), -1, "Fps");
-      gocator.Fps = lua_tonumber(L.get(), -1);
-      lua_pop(L.get(), 1);
-    }
-
-    constants_gocator = gocator;
+    std::tie(global_belt_parameters,L) = ::mk_belt_lua(std::move(L));
+    std::tie(global_conveyor_parameters,L) = ::mk_conveyor_lua(std::move(L));
+    std::tie(anomalies_config,L) = ::mk_anomaly_lua(std::move(L));
+    std::tie(constants_gocator,L) = ::mk_gocator_lua(std::move(L));
 
     return 0;
   }
@@ -312,8 +364,8 @@ namespace cads {
 		auto config = nlohmann::json::parse(json);
     constants_device = mk_device(config);
     global_profile_parameters = mk_profile_parameters(config);
-    global_conveyor_parameters = mk_conveyor_parameters(config);
-    global_belt_parameters = mk_belt_parameters(config);
+    // done in lua global_conveyor_parameters = mk_conveyor_parameters(config);
+    // done in lua global_belt_parameters = mk_belt_parameters(config);
     global_scan_parameters = mk_scan_parameters(config);
     global_webapi = mk_webapi_urls(config);
     global_filters = mk_filters(config);
