@@ -631,7 +631,8 @@ namespace cads
     luafile.replace_extension("lua");
     
     std::atomic<bool> terminate = false;
-    std::jthread save_send(upload_scan_thread, std::ref(terminate));
+    //std::jthread save_send(upload_scan_thread, std::ref(terminate));
+    upload_scan_thread(std::ref(terminate));
 
     measurements = Measure(slurpfile(luafile.string()));
 

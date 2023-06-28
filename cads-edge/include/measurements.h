@@ -5,6 +5,7 @@
 #include <variant>
 #include <thread>
 #include <functional>
+#include <memory>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wuseless-cast"
@@ -20,18 +21,20 @@
 namespace cads
 { 
   
+  struct MeasureData;
 
   class Measure {
     
-    using MeasureMsg = std::tuple<std::string,int,date::utc_clock::time_point,std::variant<double,std::string,std::function<double()>,std::function<std::string()>, std::tuple<double,double>>>;
-
-    friend void measurement_thread(moodycamel::BlockingConcurrentQueue<Measure::MeasureMsg>&, std::string, bool&);
+    friend void measurement_thread(MeasureData*, std::string);
     friend void swap(Measure&, Measure&);
     
     Measure(const Measure &) = delete;
     Measure& operator= (const Measure&) = delete;
     
     public:
+
+    using MeasureMsg = std::tuple<std::string,int,date::utc_clock::time_point,std::variant<double,std::string,std::function<double()>,std::function<std::string()>, std::tuple<double,double>>>;
+
     Measure(std::string);
     Measure() = delete;  
     ~Measure();
@@ -45,10 +48,9 @@ namespace cads
 
     protected:
     
-    bool terminate = false;
-    moodycamel::BlockingConcurrentQueue<MeasureMsg> fifo;
+    MeasureData* data;
     std::jthread thread;
-     
+       
   };
 
 

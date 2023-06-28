@@ -430,7 +430,7 @@ namespace cads
   }
 
   
-  coro<long,std::tuple<std::vector<uint8_t>,long>,1> send_bytes_coro(long sent, std::string url,bool upload_profile = true) {
+  coro<long,std::tuple<std::vector<uint8_t>,long>,1> send_bytes_coro(long sent, std::string url,bool upload_profile) {
 
     
     auto [data,terminate_first] = co_yield 0;
@@ -640,7 +640,7 @@ namespace cads
 
     cpr::Url endpoint{mk_post_profile_url(scan.scanned_utc)};
 
-    auto send_bytes = send_bytes_coro(0L,endpoint_url);
+    auto send_bytes = send_bytes_coro(0L,endpoint_url,upload_profile);
 
 
     auto YmaxN = scan.cardinality;
@@ -660,7 +660,7 @@ namespace cads
       {
         namespace sr = std::ranges;
 
-        auto y = (idx - scan.begin_index - 1) * y_step; // Sqlite rowid starts a 1
+        auto y = (idx - scan.begin_index) * y_step; // Sqlite rowid starts a 1
 
         auto max_iter = max_element(zs.begin(), zs.end());
 

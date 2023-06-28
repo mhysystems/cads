@@ -56,32 +56,23 @@ namespace {
 
 namespace cads {
 
+  struct MeasureData { 
+    std::atomic<bool> terminate = false; moodycamel::BlockingConcurrentQueue<Measure::MeasureMsg> fifo;
+  };
+
   void swap(cads::Measure& first, cads::Measure& second)
   {
     std::swap(first.thread, second.thread);
-    std::swap(first.fifo, second.fifo);
-    std::swap(first.terminate, second.terminate);
+    std::exchange(first.data,second.data);
   }
 
-  void measurement_thread(moodycamel::BlockingConcurrentQueue<Measure::MeasureMsg> &measure, std::string lua_code, bool &terminate)
+  void measurement_thread(MeasureData* data, std::string lua_code)
   {
     if(lua_code.size() == 0) return;
     
     using Lua = std::unique_ptr<lua_State, decltype(&lua_close)>;
     auto realtime_metrics = realtime_metrics_coro();
     
-    auto consume_fifo_onerror = [&]() {
-      for (;!terminate;)
-      {  
-        Measure::MeasureMsg m;
-      
-        if (!measure.wait_dequeue_timed(m, std::chrono::milliseconds(1000)))
-        {
-          continue; // graceful thread terminate
-        }
-      }
-    };
-
     auto L = Lua{luaL_newstate(),lua_close};
     luaL_openlibs( L.get() );
 
@@ -89,7 +80,8 @@ namespace cads {
     
     if(lua_status != LUA_OK) {
       spdlog::get("cads")->error("{}:luaL_dofile {}",__func__,lua_status);
-      return consume_fifo_onerror();
+      data->terminate = true;
+      return;
     }
 
     lua_pushlightuserdata(L.get(), &realtime_metrics);
@@ -107,14 +99,15 @@ namespace cads {
 
     if(lua_status != LUA_OK) {
       spdlog::get("cads")->error("{}:lua_pcall {}",__func__,lua_status);
-      return consume_fifo_onerror();
+      data->terminate = true;
+      return;
     }
   
-    for (;!terminate;)
+    for (;!data->terminate;)
     {  
       Measure::MeasureMsg m;
       
-      if (!measure.wait_dequeue_timed(m, std::chrono::milliseconds(1000)))
+      if (!data->fifo.wait_dequeue_timed(m, std::chrono::milliseconds(1000)))
       {
         continue; // graceful thread terminate
       }
@@ -163,12 +156,13 @@ namespace cads {
 
 
 
-  Measure::Measure(std::string lua_code) : thread(std::jthread(measurement_thread,std::ref(fifo),lua_code, std::ref(terminate))){
+  Measure::Measure(std::string lua_code) : data(new MeasureData()), thread(std::jthread(measurement_thread,data,lua_code)) {
   }
 
   Measure::~Measure() {
-    terminate = true;
+    data->terminate = true;
     if(thread.joinable()) thread.join();
+    delete data;
   }
   
   
@@ -180,22 +174,32 @@ namespace cads {
 
 
   void Measure::send(std::string measure, int quality, double value) {
-    fifo.try_enqueue({measure,quality,date::utc_clock::now(),value});
+    if(!data->terminate) {
+      data->fifo.try_enqueue({measure,quality,date::utc_clock::now(),value});
+    }
   }
 
   void Measure::send(std::string measure, int quality, std::string value) {
-    fifo.try_enqueue({measure,quality,date::utc_clock::now(),value});
+    if(!data->terminate) {
+      data->fifo.try_enqueue({measure,quality,date::utc_clock::now(),value});
+    }
   }
   
   void Measure::send(std::string measure, int quality, std::function<double()> value) {
-    fifo.try_enqueue({measure,quality,date::utc_clock::now(),value});
+    if(!data->terminate) {
+      data->fifo.try_enqueue({measure,quality,date::utc_clock::now(),value});
+    }
   }
 
   void Measure::send(std::string measure, int quality, std::function<std::string()> value) {
-    fifo.try_enqueue({measure,quality,date::utc_clock::now(),value});
+    if(!data->terminate) {
+      data->fifo.try_enqueue({measure,quality,date::utc_clock::now(),value});
+    }
   }
 
   void Measure::send(std::string measure, int quality, std::tuple<double,double> value) {
-    fifo.try_enqueue({measure,quality,date::utc_clock::now(),value});
+    if(!data->terminate) {
+      data->fifo.try_enqueue({measure,quality,date::utc_clock::now(),value});
+    }
   }
 }
