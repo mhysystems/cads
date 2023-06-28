@@ -430,7 +430,7 @@ namespace cads
   }
 
   
-  coro<long,std::tuple<std::vector<uint8_t>,long>,1> send_flatbuffer_coro(long sent, std::string url,bool upload_profile = true) {
+  coro<long,std::tuple<std::vector<uint8_t>,long>,1> send_bytes_coro(long sent, std::string url,bool upload_profile = true) {
 
     
     auto [data,terminate_first] = co_yield 0;
@@ -610,9 +610,7 @@ namespace cads
   {
     using namespace flatbuffers;    
     
-    if(scan.uploaded >= scan.end_index) return false;
-    if(scan.begin_index >= scan.end_index) return false;
-    
+    if(scan.uploaded >= scan.cardinality) return false;
     
     auto db_name = scan.db_name;
     
@@ -627,12 +625,6 @@ namespace cads
     auto endpoint_url = scan.url;
     auto upload_profile = global_config["upload_profile"].get<bool>();
 
-    if (endpoint_url == "null")
-    {
-      spdlog::get("cads")->info("{} endpoint_url set to null. Scan not uploaded", __func__);
-      return true;
-    }
-
     auto [params, err] = fetch_scan_gocator(db_name);
 
     if (err < 0)
@@ -641,26 +633,23 @@ namespace cads
       return true;
     }
 
-    auto fetch_profile = fetch_scan_coro(scan.uploaded, scan.end_index, db_name);
+    auto fetch_profile = fetch_scan_coro(scan.begin_index + scan.uploaded, scan.begin_index + scan.cardinality, db_name);
 
     FlatBufferBuilder builder(4096 * 128);
     std::vector<flatbuffers::Offset<CadsFlatbuffers::profile>> profiles_flat;
 
     cpr::Url endpoint{mk_post_profile_url(scan.scanned_utc)};
 
-    auto send_flatbuffer = send_flatbuffer_coro(scan.uploaded, endpoint_url);
+    auto send_bytes = send_bytes_coro(0L,endpoint_url);
 
 
-    auto YmaxN = scan.end_index - scan.begin_index;
+    auto YmaxN = scan.cardinality;
 
     auto z_resolution = params.zResolution;
     auto z_offset = params.zOffset;
     auto y_step = global_belt_parameters.Length / (YmaxN);
 
-    auto start = std::chrono::high_resolution_clock::now();
-    int64_t size = 0;
     double belt_z_max = 0;
-    int final_idx = 0;
 
     while (true)
     {
@@ -690,10 +679,10 @@ namespace cads
         {
           builder.Finish(CadsFlatbuffers::Createprofile_array(builder, z_resolution, z_offset, idx - communications_config.UploadRows, profiles_flat.size(), builder.CreateVector(profiles_flat)));
 
-          auto [terminate,sent_idx] = send_flatbuffer.resume({{builder.GetBufferPointer(),builder.GetBufferPointer()+builder.GetSize()},idx});
+          auto [terminate,sent_rows] = send_bytes.resume({{builder.GetBufferPointer(),builder.GetBufferPointer()+builder.GetSize()},profiles_flat.size()});
           profiles_flat.clear();
           if(terminate) break;
-          scan.uploaded = sent_idx + 1;
+          scan.uploaded += sent_rows;
           update_scan_state(scan);
           
           //size += send_flatbuffer_array(builder, z_resolution, z_offset, idx - communications_config.UploadRows, profiles_flat, endpoint, upload_profile);
@@ -708,44 +697,33 @@ namespace cads
         if (profiles_flat.size() > 0)
         {
           builder.Finish(CadsFlatbuffers::Createprofile_array(builder, z_resolution, z_offset, idx - communications_config.UploadRows, profiles_flat.size(), builder.CreateVector(profiles_flat)));
-          auto [terminate,sent_idx] = send_flatbuffer.resume({{builder.GetBufferPointer(),builder.GetBufferPointer()+builder.GetSize()},idx});
+          auto [terminate,sent_rows] = send_bytes.resume({{builder.GetBufferPointer(),builder.GetBufferPointer()+builder.GetSize()},profiles_flat.size()});
           profiles_flat.clear();
           if(terminate) break;
-          scan.uploaded = sent_idx + 1;
+          scan.uploaded += sent_rows;
           update_scan_state(scan);
 
           //size += send_flatbuffer_array(builder, z_resolution, z_offset, idx - profiles_flat.size(), profiles_flat, endpoint, upload_profile);
           //store_scan_uploaded(idx + 1, db_name);
         }
         
-        auto [terminate,sent_idx] = send_flatbuffer.resume({std::vector<uint8_t>(),idx});
+        auto [terminate,sent_rows] = send_bytes.resume({std::vector<uint8_t>(),idx});
         if(!terminate) {
           spdlog::get("cads")->info("{{func = {}, msg = 'Last resume not terminated'}}", __func__);
         }
           
-        scan.uploaded = sent_idx + 1;
+        scan.uploaded += sent_rows;
         store_scan_state(scan);
-        final_idx = sent_idx;
         break;
       }
     }
 
-    bool failure = false;
-    if (final_idx == YmaxN)
+    bool failure = scan.uploaded != YmaxN;
+    if (!failure)
     {
       http_post_profile_properties2(to_str(chrono::floor<chrono::seconds>(scan.scanned_utc)), YmaxN, y_step,belt_z_max);
     }
-    else
-    {
-      failure = true;
-      spdlog::get("cads")->error("{}: Number of profiles sent {} not matching expected {}", __func__, final_idx, YmaxN);
-    }
 
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start).count() + 1; // Add one second to avoid divide by zero
-
-    spdlog::get("cads")->info("ZMAX: {}, SIZE: {}, DUR:{}, RATE(Kb/s):{} ", belt_z_max, size, duration, size / (1000 * duration));
-    spdlog::get("cads")->info("Leaving {}", __func__);
     return failure;
   }
 

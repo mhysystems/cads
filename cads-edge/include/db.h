@@ -53,7 +53,7 @@ namespace cads
       std::string db_name;
       std::string url;
       int64_t begin_index;
-      int64_t end_index;
+      int64_t cardinality;
       int64_t uploaded;
       int64_t status;
       int64_t conveyor_id;
@@ -64,7 +64,7 @@ namespace cads
   bool store_scan_state(cads::state::scan scan, std::string db_name = "");
   bool delete_scan_state(cads::state::scan scan, std::string db_name = "");
   bool update_scan_state(cads::state::scan scan, std::string db_name = "");
-  coro<std::tuple<int, z_type>> fetch_scan_coro(long last_idx, long first_index, std::string db_name, int size = 256);
+  coro<std::tuple<int, z_type>> fetch_scan_coro(long first_index, long last_idx, std::string db_name, int size = 256);
 
 
   // scan db

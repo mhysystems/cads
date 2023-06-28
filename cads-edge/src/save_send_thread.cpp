@@ -72,7 +72,7 @@ namespace cads
           
           auto new_scan_filename = fmt::format("scan-{}.sqlite",scan_end.time_since_epoch().count());
           create_scan_db(new_scan_filename);
-          transfer_profiles(scan_filename,new_scan_filename,e.start_value + e.end_value + 1);
+          transfer_profiles(scan_filename,new_scan_filename,e.start_value + e.length);
 
           // needs to be after transfer_profiles because uploader can run and delete scan before 
           // transfer complete
@@ -81,10 +81,10 @@ namespace cads
             scan_filename,
             mk_post_profile_url(global.scan_begin),
             e.start_value,
-            e.end_value,
-            e.start_value,
+            e.length,
+            0,
             1,
-            3
+            global_conveyor_parameters.Id
           };
 
           update_scan_state(scan);   
@@ -100,7 +100,7 @@ namespace cads
             0,
             0,
             0,
-            3
+            global_conveyor_parameters.Id
           };
 
           store_scan_state(scan2);  

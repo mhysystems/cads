@@ -25,20 +25,23 @@ namespace cads
     
     using MeasureMsg = std::tuple<std::string,int,date::utc_clock::time_point,std::variant<double,std::string,std::function<double()>,std::function<std::string()>, std::tuple<double,double>>>;
 
-    friend void measurement_thread(moodycamel::BlockingConcurrentQueue<Measure::MeasureMsg>&, bool&);
-
+    friend void measurement_thread(moodycamel::BlockingConcurrentQueue<Measure::MeasureMsg>&, std::string, bool&);
+    friend void swap(Measure&, Measure&);
+    
     Measure(const Measure &) = delete;
     Measure& operator= (const Measure&) = delete;
     
     public:
-    Measure() = default;  
+    Measure(std::string);
+    Measure() = delete;  
     ~Measure();
-    void init(std::string);
     void send(std::string, int quality, double);
     void send(std::string, int quality, std::string);
     void send(std::string, int quality, std::function<double()>);
     void send(std::string, int quality, std::function<std::string()>);
     void send(std::string, int quality, std::tuple<double,double>);
+
+    Measure& operator= (Measure&&) noexcept;
 
     protected:
     

@@ -5,6 +5,7 @@
 #include <coms.h>
 #include <constants.h>
 #include <fiducial.h>
+#include <init.h>
 
 #include <gocator_reader.h>
 #include <sqlite_gocator_reader.h>
@@ -624,10 +625,15 @@ namespace cads
 
   void cads_local_main(std::string f) 
   {
+    namespace fs = std::filesystem;
 
+    fs::path luafile{f};
+    luafile.replace_extension("lua");
+    
     std::atomic<bool> terminate = false;
-    //std::jthread save_send(upload_scan_thread, std::ref(terminate));
-    upload_scan_thread(std::ref(terminate));
+    std::jthread save_send(upload_scan_thread, std::ref(terminate));
+
+    measurements = Measure(slurpfile(luafile.string()));
 
     auto [L,err] = run_lua_config(f);
 
@@ -708,6 +714,7 @@ namespace cads
         if(restart) continue;
 
         auto start_msg = std::get<Start>(rmsg);
+        measurements = Measure(start_msg.lua_code);
         auto [L,err] = run_lua_code(start_msg.lua_code);
 
         if(err) {

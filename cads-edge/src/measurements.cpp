@@ -49,14 +49,24 @@ namespace {
     return 1;
   }
 
+
+
 }
 
 
 namespace cads {
 
+  void swap(cads::Measure& first, cads::Measure& second)
+  {
+    std::swap(first.thread, second.thread);
+    std::swap(first.fifo, second.fifo);
+    std::swap(first.terminate, second.terminate);
+  }
 
   void measurement_thread(moodycamel::BlockingConcurrentQueue<Measure::MeasureMsg> &measure, std::string lua_code, bool &terminate)
   {
+    if(lua_code.size() == 0) return;
+    
     using Lua = std::unique_ptr<lua_State, decltype(&lua_close)>;
     auto realtime_metrics = realtime_metrics_coro();
     
@@ -75,7 +85,7 @@ namespace cads {
     auto L = Lua{luaL_newstate(),lua_close};
     luaL_openlibs( L.get() );
 
-    int lua_status = luaL_dofile(L.get(),"../measurements.lua");
+    int lua_status = luaL_dostring(L.get(),lua_code.c_str());
     
     if(lua_status != LUA_OK) {
       spdlog::get("cads")->error("{}:luaL_dofile {}",__func__,lua_status);
@@ -152,8 +162,8 @@ namespace cads {
   }
 
 
-  void Measure::init(std::string lua_code) {
-    thread = std::jthread(measurement_thread,std::ref(fifo),lua_code, std::ref(terminate));
+
+  Measure::Measure(std::string lua_code) : thread(std::jthread(measurement_thread,std::ref(fifo),lua_code, std::ref(terminate))){
   }
 
   Measure::~Measure() {
@@ -161,6 +171,14 @@ namespace cads {
     if(thread.joinable()) thread.join();
   }
   
+  
+  Measure& Measure::operator=(Measure&& rhs) noexcept
+  {
+    cads::swap(*this,rhs);
+    return *this;
+  }
+
+
   void Measure::send(std::string measure, int quality, double value) {
     fifo.try_enqueue({measure,quality,date::utc_clock::now(),value});
   }

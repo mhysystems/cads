@@ -317,7 +317,7 @@ namespace cads {
   Communications communications_config;
   Fiducial fiducial_config;
   OriginDetection config_origin_detection;
-  Measure measurements;
+  Measure measurements("");
   AnomalyDetection anomalies_config;
   GocatorConstants constants_gocator;
   UploadConstants constants_upload;
@@ -377,7 +377,6 @@ namespace cads {
     config_origin_detection = mk_origin_detection(config);
     global_config = config;
 
-    measurements.init(); // Needs to be last
   }
 
   void drop_config() {

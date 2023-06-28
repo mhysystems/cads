@@ -13,7 +13,7 @@ namespace cads
   using scan_t = struct {cads::profile value;};
   using begin_sequence_t = struct {};
   using end_sequence_t = struct {};
-  struct CompleteBelt {size_t start_value; size_t end_value;};
+  struct CompleteBelt {size_t start_value; size_t length;};
   using msg = std::tuple<msgid,std::variant<cads::GocatorProperties,cads::profile,std::string,long,double,cads::PulleyRevolutionScan,cads::CompleteBelt>>;
 
   using Timeout = struct Timeout_s{};

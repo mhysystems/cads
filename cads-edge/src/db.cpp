@@ -369,7 +369,7 @@ namespace cads
       R"(PRAGMA journal_mode=WAL)"s,
       R"(CREATE TABLE IF NOT EXISTS STATE (DAILYUPLOAD TEXT NOT NULL, ConveyorId INTEGER NOT NULL, BeltId INTEGER NOT NULL))",
       R"(CREATE TABLE IF NOT EXISTS MOTIFS (date TEXT NOT NULL, motif BLOB NOT NULL))",
-      R"(CREATE TABLE IF NOT EXISTS SCANS (scanned_utc TEXT NOT NULL UNIQUE, db_name TEXT NOT NULL, url TEXT NOT NULL UNIQUE, begin_index INTEGER NOT NULL, end_index INTEGER NOT NULL, uploaded INTEGER NOT NULL, status INTEGER NOT NULL, conveyor_id INTEGER NOT NULL))",
+      R"(CREATE TABLE IF NOT EXISTS SCANS (scanned_utc TEXT NOT NULL UNIQUE, db_name TEXT NOT NULL, url TEXT NOT NULL UNIQUE, begin_index INTEGER NOT NULL, cardinality INTEGER NOT NULL, uploaded INTEGER NOT NULL, status INTEGER NOT NULL, conveyor_id INTEGER NOT NULL))",
       fmt::format(R"(INSERT INTO STATE(DAILYUPLOAD,ConveyorId,BeltId) SELECT '{}',{},{} WHERE NOT EXISTS (SELECT * FROM STATE))", ts,0,0),
       R"(VACUUM)"
     };
@@ -846,7 +846,7 @@ namespace cads
   std::deque<state::scan> fetch_scan_state(std::string name)
   {
 
-    auto query = R"(SELECT scanned_utc, db_name, url, begin_index, end_index, uploaded, status, conveyor_id FROM Scans)"s;
+    auto query = R"(SELECT scanned_utc, db_name, url, begin_index, cardinality, uploaded, status, conveyor_id FROM Scans)"s;
     auto db_config_name = name.empty() ? global_config["state_db_name"].get<std::string>() : name;
     auto [stmt,db] = prepare_query(db_config_name, query);
     
@@ -882,7 +882,7 @@ namespace cads
   bool update_scan_state(state::scan scan, std::string db_name)
   {
 
-    auto query = R"(update scans set (scanned_utc, db_name, url, begin_index, end_index, uploaded, status, conveyor_id) = (?,?,?,?,?,?,?,?) where db_name=?;)"s;
+    auto query = R"(update scans set (scanned_utc, db_name, url, begin_index, cardinality, uploaded, status, conveyor_id) = (?,?,?,?,?,?,?,?) where db_name=?;)"s;
     auto db_config_name = db_name.empty() ? global_config["state_db_name"].get<std::string>() : db_name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
     
@@ -892,7 +892,7 @@ namespace cads
     err = sqlite3_bind_text(stmt.get(), 2, scan.db_name.c_str(), scan.db_name.size(),nullptr);
     err = sqlite3_bind_text(stmt.get(), 3, scan.url.c_str(), scan.url.size(),nullptr);
     err = sqlite3_bind_int64(stmt.get(), 4, scan.begin_index);
-    err = sqlite3_bind_int64(stmt.get(), 5, scan.end_index);
+    err = sqlite3_bind_int64(stmt.get(), 5, scan.cardinality);
     err = sqlite3_bind_int64(stmt.get(), 6, scan.uploaded);
     err = sqlite3_bind_int64(stmt.get(), 7, scan.status); 
         err = sqlite3_bind_int64(stmt.get(), 8, scan.conveyor_id); 
@@ -906,7 +906,7 @@ namespace cads
 
   bool store_scan_state(state::scan scan, std::string db_name)
   {
-    auto query = R"(INSERT INTO SCANS (scanned_utc, db_name, url, begin_index, end_index, uploaded, status, conveyor_id) VALUES(?,?,?,?,?,?,?,?))"s;
+    auto query = R"(INSERT INTO SCANS (scanned_utc, db_name, url, begin_index, cardinality, uploaded, status, conveyor_id) VALUES(?,?,?,?,?,?,?,?))"s;
     auto db_config_name = db_name.empty() ? global_config["state_db_name"].get<std::string>() : db_name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
     
@@ -916,7 +916,7 @@ namespace cads
     err = sqlite3_bind_text(stmt.get(), 2, scan.db_name.c_str(), scan.db_name.size(),nullptr);
     err = sqlite3_bind_text(stmt.get(), 3, scan.url.c_str(), scan.url.size(),nullptr);
     err = sqlite3_bind_int64(stmt.get(), 4, scan.begin_index);
-    err = sqlite3_bind_int64(stmt.get(), 5, scan.end_index);
+    err = sqlite3_bind_int64(stmt.get(), 5, scan.cardinality);
     err = sqlite3_bind_int64(stmt.get(), 6, scan.uploaded);
     err = sqlite3_bind_int64(stmt.get(), 7, scan.status); 
     err = sqlite3_bind_int64(stmt.get(), 8, scan.conveyor_id); 
@@ -1027,7 +1027,7 @@ namespace cads
     auto [from_stmt,from_db] = prepare_query(from_db_name, from_query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
     auto [to_stmt,to_db] = prepare_query(to_db_name, to_query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
 
-    err = sqlite3_bind_int64(from_stmt.get(), 1, first_index);
+    err = sqlite3_bind_int64(from_stmt.get(), 1, first_index + 1); // +1 because rowid starts at 1. first_index likely starts at 0  
 
     if(err != SQLITE_OK) return false;
       
