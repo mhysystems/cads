@@ -369,7 +369,7 @@ namespace cads
       R"(PRAGMA journal_mode=WAL)"s,
       R"(CREATE TABLE IF NOT EXISTS STATE (DAILYUPLOAD TEXT NOT NULL, ConveyorId INTEGER NOT NULL, BeltId INTEGER NOT NULL))",
       R"(CREATE TABLE IF NOT EXISTS MOTIFS (date TEXT NOT NULL, motif BLOB NOT NULL))",
-      R"(CREATE TABLE IF NOT EXISTS SCANS (scanned_utc TEXT NOT NULL, db_name TEXT NOT NULL, url TEXT NOT NULL, begin_index INTEGER NOT NULL, end_index INTEGER NOT NULL, uploaded INTEGER NOT NULL, status INTEGER NOT NULL, conveyor_id INTEGER NOT NULL))",
+      R"(CREATE TABLE IF NOT EXISTS SCANS (scanned_utc TEXT NOT NULL UNIQUE, db_name TEXT NOT NULL, url TEXT NOT NULL UNIQUE, begin_index INTEGER NOT NULL, end_index INTEGER NOT NULL, uploaded INTEGER NOT NULL, status INTEGER NOT NULL, conveyor_id INTEGER NOT NULL))",
       fmt::format(R"(INSERT INTO STATE(DAILYUPLOAD,ConveyorId,BeltId) SELECT '{}',{},{} WHERE NOT EXISTS (SELECT * FROM STATE))", ts,0,0),
       R"(VACUUM)"
     };
@@ -881,7 +881,8 @@ namespace cads
 
   bool update_scan_state(state::scan scan, std::string db_name)
   {
-    auto query = R"(update scans set (scanned_utc, db_name, url, begin_index, end_index, uploaded, status, conveyor_id) = (?,?,?,?,?,?,?,?) where rowid = (select rowid from scans where db_name=?);)"s;
+
+    auto query = R"(update scans set (scanned_utc, db_name, url, begin_index, end_index, uploaded, status, conveyor_id) = (?,?,?,?,?,?,?,?) where db_name=?;)"s;
     auto db_config_name = db_name.empty() ? global_config["state_db_name"].get<std::string>() : db_name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
     

@@ -24,7 +24,7 @@
   },
 
   "OriginDetection" : {
-    "BeltLength": [9500,9700],
+    "BeltLength": [12020,12220],
     "cross_correlation_threshold" : 0.285,
     "dump_match" : true
   },
@@ -103,7 +103,7 @@
     "TopCover" : 14.0,
     "Width" : 1600,
     "WidthN" : 1790,
-    "Length" : 9600,
+    "Length" : 12120,
     "Splices" : 1
   },
 
@@ -123,7 +123,7 @@
     "UploadRows" : 1024
   },
 
-  "upload_profile" : true,
+  "upload_profile" : false,
   "base_url" : "http://localhost:5000/api",
   "lua_window_height" : 2,
   "lua_fn" : "function process(width,height)\n return 0\nend"

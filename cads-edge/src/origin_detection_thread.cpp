@@ -527,7 +527,7 @@ coro<std::tuple<bool,size_t,double>,profile,1> anomaly_detection_coro(double y_r
     int window_size = anomalies_config.WindowLength / y_resolution;
     int partition_size = anomalies_config.BeltPartitionLength / y_resolution;
     std::size_t max_belt_size = std::get<1>(config_origin_detection.belt_length) / y_resolution;
-    std::vector<double> belt_thickness_estimates, y_position = {0.0};
+    std::vector<double> belt_thickness_estimates, y_position;
     enum class State {noMotif,findMotif,foundMotif};
 
     State state = State::findMotif;
@@ -563,7 +563,7 @@ coro<std::tuple<bool,size_t,double>,profile,1> anomaly_detection_coro(double y_r
             if(done) {
             
               std::tie(index,distance,motif) = ret;
-              store_motif_state({date::utc_clock::now(),motif});
+              //store_motif_state({date::utc_clock::now(),motif});
               state = State::foundMotif;
               processing = true;
             }
@@ -584,15 +584,15 @@ coro<std::tuple<bool,size_t,double>,profile,1> anomaly_detection_coro(double y_r
 
           case State::foundMotif: {
             y_pos = y_position[index];
-            auto shift_distance = index + window_size;
+            index += window_size;
             
-            if(shift_distance > belt_thickness_estimates.size()){
-              shift_distance = belt_thickness_estimates.size();
+            if(index > belt_thickness_estimates.size()){
+              index = belt_thickness_estimates.size();
             } 
-            std::shift_left(belt_thickness_estimates.begin(),belt_thickness_estimates.end(),shift_distance);
-            belt_thickness_estimates.resize(belt_thickness_estimates.size() - shift_distance);
-            std::shift_left(y_position.begin(),y_position.end(),shift_distance);
-            y_position.resize(y_position.size() - shift_distance);
+            std::shift_left(belt_thickness_estimates.begin(),belt_thickness_estimates.end(),index);
+            belt_thickness_estimates.resize(belt_thickness_estimates.size() - index);
+            std::shift_left(y_position.begin(),y_position.end(),index);
+            y_position.resize(y_position.size() - index);
             state = State::findMotif;
             found = true;
             break;
@@ -644,10 +644,13 @@ coro<std::tuple<bool,size_t,double>,profile,1> anomaly_detection_coro(double y_r
                   spdlog::get("cads")->info("Estimated Belt Length(m): {}", estimated_belt_length / 1000);
                   measurements.send("beltlength",0,estimated_belt_length);
                   next_fifo.enqueue({msgid::complete_belt, CompleteBelt{last_splice_index,index}});
+                  last_splice_position = pos;
+                  last_splice_index = 0;
+              }else {
+                spdlog::get("cads")->info("distance:{}", p.y - pos);
+                last_splice_position = pos;
+                last_splice_index = index;
               }
-              spdlog::get("cads")->info("distance:{}", p.y - pos);
-              last_splice_position = pos;
-              last_splice_index = index;
             
             
               origin_sequence_cnt++;

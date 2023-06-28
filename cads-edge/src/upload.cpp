@@ -28,10 +28,14 @@ namespace
   int resume_scan(cads::state::scan scan)
   {
     spdlog::get("cads")->info("Posting a scan. {}", scan.db_name);
+    
+    if(scan.status != 2) return 0;
+    
     auto err = cads::post_scan(scan);
     
     if(!err) {
-      delete_scan(scan);
+      scan.status = 3;
+      cads::update_scan_state(scan);
     }
 
     return 0;
@@ -56,12 +60,28 @@ namespace
     return rtn;
   }
   
-  cads::state::scan last_upload(std::deque<cads::state::scan> scans) {
+  std::tuple<cads::state::scan,bool> latest_scan(std::deque<cads::state::scan> scans) {
     using namespace std;
 
-    auto i = max_element(begin(scans),end(scans),[](cads::state::scan a,cads::state::scan b){ return a.scanned_utc < b.scanned_utc;});
+    if(scans.size() == 0)  return {cads::state::scan{},false};
 
-    return *i;
+    cads::state::scan max;
+    max.scanned_utc = date::utc_clock::time_point::min();
+    max.status = 0;
+
+    for(auto scan : scans) {
+      
+      if(scan.status > 1) {
+        max = scan;
+        continue;
+      }
+      
+      if(scan.scanned_utc > max.scanned_utc) {
+        max = scan;
+      }
+    }
+
+    return {max,max.status != 0};
   }
 
     std::tuple<cads::state::scan,bool> last_filling(std::deque<cads::state::scan> scans) {
@@ -124,21 +144,34 @@ void upload_scan_thread(std::atomic<bool> &terminate)
     auto partitioned_scans = ::remove_all_incomplete(::partiton(scans));
 
     for(auto pscans : partitioned_scans) {
-      auto last = ::last_upload(pscans);
+      auto [latest,valid] = ::latest_scan(pscans);
+
+      if(!valid) {
+        break;
+      }
+
+      if(latest.status == 1) {
+        latest.status = 2;
+        if(!update_scan_state(latest)) {
+          break;
+        }
+      }
 
       for(auto scan : pscans) {
         if(scan.status == 2) 
         {
           resume_scan(scan);
-        }else if(scan.scanned_utc >= last.scanned_utc && scan.status == 1) 
+        }
+        else if(scan.status == 1 && scan.scanned_utc >= (latest.scanned_utc + constants_upload.Period) ) 
         {
           scan.status = 2;
-          scan.scanned_utc += constants_upload.Period;
-          last.scanned_utc = scan.scanned_utc;
-          store_scan_state(scan);
-          scan.scanned_utc -= constants_upload.Period;
-          resume_scan(scan);
-        }else if(scan.scanned_utc < last.scanned_utc && scan.status == 1) 
+          if(update_scan_state(scan))
+          {
+            latest = scan;
+            resume_scan(scan);
+          }
+        }
+        else if(scan.scanned_utc < (latest.scanned_utc + constants_upload.Period) && scan.status != 2 && scan.status != 0) 
         {
           delete_scan(scan);
         }

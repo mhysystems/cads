@@ -577,7 +577,7 @@ namespace cads
     params_json["z_max"] = z_max;
     params_json["Ymax"] = global_belt_parameters.Length;
     params_json["YmaxN"] = YmaxN;
-    params_json["WidthN"] = global_config["width_n"].get<double>();
+    params_json["WidthN"] = global_belt_parameters.WidthN;
     params_json["Belt"] = belt_id;
 
     if (err == 0 && err2 == 0)
@@ -609,6 +609,11 @@ namespace cads
   bool post_scan(state::scan scan)
   {
     using namespace flatbuffers;    
+    
+    if(scan.uploaded >= scan.end_index) return false;
+    if(scan.begin_index >= scan.end_index) return false;
+    
+    
     auto db_name = scan.db_name;
     
     spdlog::get("cads")->info("Entering {}", __func__);
@@ -689,7 +694,7 @@ namespace cads
           profiles_flat.clear();
           if(terminate) break;
           scan.uploaded = sent_idx + 1;
-          store_scan_state(scan);
+          update_scan_state(scan);
           
           //size += send_flatbuffer_array(builder, z_resolution, z_offset, idx - communications_config.UploadRows, profiles_flat, endpoint, upload_profile);
           //store_scan_uploaded(idx + 1, db_name);
@@ -707,7 +712,7 @@ namespace cads
           profiles_flat.clear();
           if(terminate) break;
           scan.uploaded = sent_idx + 1;
-          store_scan_state(scan);
+          update_scan_state(scan);
 
           //size += send_flatbuffer_array(builder, z_resolution, z_offset, idx - profiles_flat.size(), profiles_flat, endpoint, upload_profile);
           //store_scan_uploaded(idx + 1, db_name);

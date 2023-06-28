@@ -57,8 +57,9 @@ namespace cads
 
     m_gocatorFifo.enqueue({msgid::gocator_properties, params});
 
+    double y_resolution = 1000 * global_conveyor_parameters.TypicalSpeed / constants_gocator.Fps;
     auto pulley_period = 1000000us / (int)sqlite_gocator_config.fps;
-    uint64_t cnt = 0;
+    double cnt = 0;
     auto current_time = std::chrono::high_resolution_clock::now();
 
     do
@@ -85,7 +86,7 @@ namespace cads
         auto last = std::find_if(p.z.rbegin(), p.z.rend(), [](z_element z)
                                  { return !std::isnan(z); });
 
-        m_gocatorFifo.enqueue({msgid::scan, profile{current_time,p.y, p.x_off, z_type(first, last.base())}});
+        m_gocatorFifo.enqueue({msgid::scan, profile{current_time,cnt*y_resolution, p.x_off, z_type(first, last.base())}});
 
         current_time += pulley_period;
         cnt++;

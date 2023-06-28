@@ -18,7 +18,7 @@ belt = {
   TopCover = 14.0,
   Width = 1600,
   WidthN = 1750,
-  Length = 9600,
+  Length = 12120,
   LengthN = conveyor.TypicalSpeed / gocator.Fps, 
   Splices = 1
 }
