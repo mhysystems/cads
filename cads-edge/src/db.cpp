@@ -1071,6 +1071,8 @@ namespace cads
       auto [stmt,db] = prepare_query(db_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
       db_exec(db.get(), R"(PRAGMA synchronous=OFF)"s);
 
+      long zero_seq = 0;
+
       while (true)
       {
         auto [z, terminate] = co_yield err;
@@ -1078,6 +1080,13 @@ namespace cads
         if (terminate)
           break;
 
+        if(z.size() == 0 && zero_seq++ == 0) {
+          
+          spdlog::get("cads")->error(R"({{func = '{}', msg = '{}'}})", __func__,"no z samples. All sequential no z samples suppressed");
+          continue;
+        }
+
+        zero_seq = 0;
         auto n = z.size() * sizeof(z_element);
         if (n > std::numeric_limits<int>::max())
         {
@@ -1099,7 +1108,7 @@ namespace cads
         if (err != SQLITE_DONE)
         {
           terminate = true;
-          spdlog::get("cads")->error("{}: sqlite3_step() error code:{}", __func__, err);
+          spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = , msg = ''}})", __func__,"sqlite3_step",err);
         }
         
         err = sqlite3_reset(stmt.get());
