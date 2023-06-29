@@ -59,37 +59,7 @@ namespace
 {
   using namespace cads;
 
-  void upload_conveyorbelt_parameters()
-  {
-
-    auto [conveyor_id, err] = fetch_conveyor_id();
-
-    if (!err && conveyor_id == 0)
-    {
-      auto [new_id, err] = remote_addconveyor(global_conveyor_parameters);
-      if (!err)
-      {
-        store_conveyor_id(new_id);
-        conveyor_id = new_id;
-      }
-    }
-
-    auto [belt_id, errb] = fetch_belt_id();
-
-    if (!errb && belt_id == 0 && conveyor_id != 0)
-    {
-      auto belt = global_belt_parameters;
-      belt.Conveyor = conveyor_id;
-      auto [new_id, err] = remote_addbelt(belt);
-
-      if (!err)
-      {
-        store_belt_id(new_id);
-        belt_id = new_id;
-      }
-    }
-  }
-
+  
 #if 0
   Process_Status process_impl(IO<msg> auto &next)
   {

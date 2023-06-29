@@ -340,57 +340,6 @@ namespace cads
     return subject;
   }
 
-  std::tuple<int, bool> remote_addconveyor(Conveyor params)
-  {
-    auto [url, enable] = global_webapi.add_conveyor;
-
-    if (enable)
-    {
-      auto [text, err] = http_post_json(url, params);
-      auto json = nlohmann::json::parse(text, nullptr, false);
-
-      if (json.is_number_integer())
-      {
-        auto conveyor_id = json.get<int>();
-        return {conveyor_id, err};
-      }
-      else
-      {
-        return {0, true};
-      }
-    }
-    else
-    {
-      return {0, true};
-    }
-  }
-
-  std::tuple<int, bool> remote_addbelt(Belt params)
-  {
-    auto [url, enable] = global_webapi.add_belt;
-
-    if (enable)
-    {
-      std::string ps = params;
-      auto [text, err] = http_post_json(url, ps);
-      auto json = nlohmann::json::parse(text, nullptr, false);
-
-      if (json.is_number_integer())
-      {
-        auto conveyor_id = json.get<int>();
-        return {conveyor_id, err};
-      }
-      else
-      {
-        return {0, true};
-      }
-    }
-    else
-    {
-      return {0, true};
-    }
-  }
-
   std::string mk_post_profile_url(date::utc_clock::time_point time)
   {
     
@@ -414,19 +363,6 @@ namespace cads
     auto conveyor = global_conveyor_parameters.Name;
 
     return endpoint_url + '/' + site + '/' + conveyor + '/' + ts;
-  }
-
-  std::string mk_get_profile_url(double y, int len, std::string ts)
-  {
-    auto endpoint_url = global_config["base_url"].get<std::string>() + "/belt";
-
-    if (endpoint_url == "null")
-      return endpoint_url;
-
-    auto site = global_conveyor_parameters.Site;
-    auto conveyor = global_conveyor_parameters.Name;
-
-    return fmt::format("{}/{}-{}-{}/{}/{}", endpoint_url, site, conveyor, ts, y, len);
   }
 
   
