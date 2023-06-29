@@ -1065,8 +1065,6 @@ namespace cads
   {
     int err = SQLITE_ERROR;
     {
-      std::string func_name = __func__;
-
       err = db_exec(db_name, R"(CREATE TABLE IF NOT EXISTS ZS (Z BLOB NOT NULL))"s);
 
       auto query = R"(INSERT INTO ZS (z) VALUES (?))"s;
@@ -1092,7 +1090,7 @@ namespace cads
         if (err != SQLITE_OK)
         {
           terminate = true;
-          spdlog::get("cads")->error("{}: sqlite3_bind_blob() error code:{}", func_name, err);
+          spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = , msg = ''}})", __func__,"sqlite3_bind_blob",err);
         }
       
         // Run once, retrying not effective, too slow and causes buffers to fill
@@ -1101,7 +1099,7 @@ namespace cads
         if (err != SQLITE_DONE)
         {
           terminate = true;
-          spdlog::get("cads")->error("{}: sqlite3_step() error code:{}", func_name, err);
+          spdlog::get("cads")->error("{}: sqlite3_step() error code:{}", __func__, err);
         }
         
         err = sqlite3_reset(stmt.get());
@@ -1109,7 +1107,7 @@ namespace cads
         if (err != SQLITE_OK)
         {
           terminate = true;
-          spdlog::get("cads")->error("{}: sqlite3_reset() error code:{}", func_name, err);
+          spdlog::get("cads")->error("{}: sqlite3_reset() error code:{}", __func__, err);
         }
 
         if (terminate)

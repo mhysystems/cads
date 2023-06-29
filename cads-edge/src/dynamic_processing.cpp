@@ -159,14 +159,19 @@ namespace cads
     
     auto start = std::chrono::high_resolution_clock::now();
 
+    bool module_failure = false;
+
     for (auto loop = true;loop;)
     {
       ++cnt;
       profile_fifo.wait_dequeue(m);
 
-      switch(get<0>(m)) {
+      auto msg_id = module_failure ? msgid::nothing : get<0>(m); 
+
+      switch(msg_id) {
         case msgid::scan:
            p = get<profile>(get<1>(m));
+           next_fifo.enqueue(m);
         break;
         case msgid::finished:
           loop = false;
@@ -181,7 +186,8 @@ namespace cads
 
       if (err)
       {
-        spdlog::get("cads")->error("dynamic_processing_thread: realtime_processing");
+        module_failure = true;
+        spdlog::get("cads")->error(R"({{func = '{}' fn = '{}', rtn = {}, msg = '{}' }})",__func__,"realtime_processing",err,"Stopped processing. Passthrough only");
       }
 
       if (rslt > 0)
@@ -194,8 +200,6 @@ namespace cads
         spdlog::get("cads")->warn("Cads Dynamic Processing showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
         buffer_size_warning += buffer_warning_increment;
       }
-
-      next_fifo.enqueue(m);
     }
 
     auto end = std::chrono::high_resolution_clock::now();

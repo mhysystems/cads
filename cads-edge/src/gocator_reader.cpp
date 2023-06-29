@@ -199,11 +199,11 @@ namespace cads
         {
           if ((status = GoAlignMsg_Status(message)) == kOK)
           {
-            spdlog::get("cads")->debug("{{func = {}, msg = {}}}", __func__, "Gocator is aligned");
+            spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__, "Gocator is aligned");
           }
           else
           {
-            spdlog::get("cads")->debug("{{func = {}, msg = {}}}", __func__, "Gocator is NOT aligned");
+            spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__, "Gocator is NOT aligned");
             throw runtime_error{"GoSystem_StartAlignment: "s + to_string(status)};
           }
         }
