@@ -70,6 +70,10 @@ namespace {
       obj.Site = lua_tostring(L.get(), -1);
       lua_pop(L.get(), 1);
 
+      lua_getfield(L.get(), -1, "Name");
+      obj.Site = lua_tostring(L.get(), -1);
+      lua_pop(L.get(), 1);
+
       lua_getfield(L.get(), -1, "Timezone");
       obj.Timezone = lua_tostring(L.get(), -1);
       lua_pop(L.get(), 1);
