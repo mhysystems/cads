@@ -616,25 +616,25 @@ namespace cads
       err = sqlite3_bind_int(stmt.get(), 1, rev);
       if (err != SQLITE_OK)
       {
-         spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = , msg = '', line = {}}})", __func__,"sqlite3_bind_int",err,__LINE__);
+         spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = {}, msg = '', line = {}}})", __func__,"sqlite3_bind_int",err,__LINE__);
       }
 
       err = sqlite3_bind_int(stmt.get(), 2, idx);
       if (err != SQLITE_OK)
       {
-         spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = , msg = '', line = {}}})", __func__,"sqlite3_bind_int",err,__LINE__);
+         spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = {}, msg = '', line = {}}})", __func__,"sqlite3_bind_int",err,__LINE__);
       }
       
       err = sqlite3_bind_double(stmt.get(), 3, p.y);
       if (err != SQLITE_OK)
       {
-         spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = , msg = '', line = {}}})", __func__,"sqlite3_bind_double",err,__LINE__);
+         spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = {}, msg = '', line = {}}})", __func__,"sqlite3_bind_double",err,__LINE__);
       }
 
       err = sqlite3_bind_double(stmt.get(), 4, p.x_off);
       if (err != SQLITE_OK)
       {
-         spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = , msg = '', line = {}}})", __func__,"sqlite3_bind_double",err,__LINE__);
+         spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = {}, msg = '', line = {}}})", __func__,"sqlite3_bind_double",err,__LINE__);
       }
 
       auto n = p.z.size() * sizeof(z_element);
@@ -647,21 +647,21 @@ namespace cads
       
       if (err != SQLITE_OK)
       {
-         spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = , msg = ''}})", __func__,"sqlite3_bind_blob",err);
+         spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = {}, msg = ''}})", __func__,"sqlite3_bind_blob",err);
       }
 
       // Run once, retrying not effective, too slow and causes buffers to fill
       err = sqlite3_step(stmt.get());
 
       if(err != SQLITE_DONE) {
-        spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = , msg = ''}})", __func__,"sqlite3_step",err);
+        spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = {}, msg = ''}})", __func__,"sqlite3_step",err);
       }
 
       err = sqlite3_reset(stmt.get());
 
       if (err != SQLITE_OK)
       {
-         spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = , msg = ''}})", __func__,"sqlite3_reset",err);
+         spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = {}, msg = ''}})", __func__,"sqlite3_reset",err);
       }
     }
 
@@ -1130,7 +1130,7 @@ namespace cads
         if (err != SQLITE_OK)
         {
           terminate = true;
-          spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = , msg = ''}})", __func__,"sqlite3_bind_blob",err);
+          spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = {}, msg = ''}})", __func__,"sqlite3_bind_blob",err);
         }
       
         // Run once, retrying not effective, too slow and causes buffers to fill
