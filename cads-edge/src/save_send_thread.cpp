@@ -177,6 +177,7 @@ namespace cads
         break;
       case msgid::complete_belt:
         sm.process_event(CompleteBelt{get<CompleteBelt>(get<1>(m))});
+        global.cps.enqueue(m);
         break;
       case msgid::gocator_properties:
         global.cps.enqueue(m);

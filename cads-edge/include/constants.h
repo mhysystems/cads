@@ -83,8 +83,6 @@ namespace cads {
 
   struct Filters {
     double SchmittThreshold;
-    std::vector<float> LeftDamp;
-    float LeftDampOff;
   };
 
   struct Device {

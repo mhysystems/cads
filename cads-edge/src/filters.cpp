@@ -98,38 +98,6 @@ namespace cads
     }
   }
 
-  void constraint_clipping(z_type& z, z_element z_min, z_element z_max) {
-    for (auto &e : z)
-    {
-      if(!std::isnan(e)) {
-        if (e < z_min )
-          e = z_min;
-        if (e > z_max)
-          e = z_max;
-      }
-    } 
-  }
-
-  std::function<void(z_type &z)> mk_pulley_damp() {
-    auto d = global_filters.LeftDamp;
-    auto off = global_filters.LeftDampOff;
-
-    return [=](z_type &z) {
-      auto zi = z.begin();
-      auto di = d.begin();
-
-      while(zi < z.end() && di < d.end()) {
-        auto v = *zi + off;
-        v *= *di;
-        *zi = v - off;
-        
-        zi++;di++;
-      }
-
-    };
-  }
-
-
   std::function<double(double)> mk_iirfilterSoS()
   {
     auto coeff = global_config["iirfilter"]["sos"].get<std::vector<std::vector<double>>>();
