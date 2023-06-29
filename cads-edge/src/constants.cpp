@@ -71,7 +71,7 @@ namespace {
       lua_pop(L.get(), 1);
 
       lua_getfield(L.get(), -1, "Name");
-      obj.Site = lua_tostring(L.get(), -1);
+      obj.Name = lua_tostring(L.get(), -1);
       lua_pop(L.get(), 1);
 
       lua_getfield(L.get(), -1, "Timezone");
