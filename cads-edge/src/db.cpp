@@ -591,6 +591,8 @@ namespace cads
       sqlite3_free(errmsg);
     }
 
+    long zero_seq = 0;
+    
     while (true)
     {
       auto [data, terminate] = co_yield err;
@@ -599,6 +601,14 @@ namespace cads
         break;
 
       auto [rev, idx, p] = data;
+
+      if(p.z.size() == 0 && zero_seq++ == 0) {
+          
+          spdlog::get("cads")->error(R"({{func = '{}', msg = '{}'}})", __func__,"No z samples. All sequential no z samples suppressed");
+          continue;
+      }
+
+      zero_seq = 0;
 
       if (p.y == std::numeric_limits<decltype(p.y)>::max())
         break;
@@ -1082,7 +1092,7 @@ namespace cads
 
         if(z.size() == 0 && zero_seq++ == 0) {
           
-          spdlog::get("cads")->error(R"({{func = '{}', msg = '{}'}})", __func__,"no z samples. All sequential no z samples suppressed");
+          spdlog::get("cads")->error(R"({{func = '{}', msg = '{}'}})", __func__,"No z samples. All sequential no z samples suppressed");
           continue;
         }
 
