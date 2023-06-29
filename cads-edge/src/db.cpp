@@ -614,33 +614,54 @@ namespace cads
         break;
 
       err = sqlite3_bind_int(stmt.get(), 1, rev);
-      err = sqlite3_bind_int(stmt.get(), 2, idx);
+      if (err != SQLITE_OK)
+      {
+         spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = , msg = '', line = {}}})", __func__,"sqlite3_bind_int",err,__LINE__);
+      }
 
-      if constexpr (std::is_same_v<y_type, double>)
+      err = sqlite3_bind_int(stmt.get(), 2, idx);
+      if (err != SQLITE_OK)
       {
-        err = sqlite3_bind_double(stmt.get(), 3, p.y);
+         spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = , msg = '', line = {}}})", __func__,"sqlite3_bind_int",err,__LINE__);
       }
-      else
+      
+      err = sqlite3_bind_double(stmt.get(), 3, p.y);
+      if (err != SQLITE_OK)
       {
-        err = sqlite3_bind_int64(stmt.get(), 3, (int64_t)p.y);
+         spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = , msg = '', line = {}}})", __func__,"sqlite3_bind_double",err,__LINE__);
       }
+
       err = sqlite3_bind_double(stmt.get(), 4, p.x_off);
+      if (err != SQLITE_OK)
+      {
+         spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = , msg = '', line = {}}})", __func__,"sqlite3_bind_double",err,__LINE__);
+      }
 
       auto n = p.z.size() * sizeof(z_element);
       if (n > std::numeric_limits<int>::max())
       {
         std::throw_with_nested(std::runtime_error("z data size greater than sqlite limits"));
       }
+      
       err = sqlite3_bind_blob(stmt.get(), 5, p.z.data(), (int)n, SQLITE_STATIC);
-     
+      
+      if (err != SQLITE_OK)
+      {
+         spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = , msg = ''}})", __func__,"sqlite3_bind_blob",err);
+      }
+
       // Run once, retrying not effective, too slow and causes buffers to fill
       err = sqlite3_step(stmt.get());
 
-      sqlite3_reset(stmt.get());
+      if(err != SQLITE_DONE) {
+        spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = , msg = ''}})", __func__,"sqlite3_step",err);
+      }
 
-      if (err != SQLITE_DONE)
+      err = sqlite3_reset(stmt.get());
+
+      if (err != SQLITE_OK)
       {
-        spdlog::get("db")->error("SQLite Error Code:{}, revid:{}, idx:{}", err, rev, idx);
+         spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = , msg = ''}})", __func__,"sqlite3_reset",err);
       }
     }
 
