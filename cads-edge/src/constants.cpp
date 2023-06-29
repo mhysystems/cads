@@ -315,7 +315,7 @@ namespace cads {
   Communications communications_config;
   Fiducial fiducial_config;
   OriginDetection config_origin_detection;
-  Measure measurements("");
+  Measure measurements;
   AnomalyDetection anomalies_config;
   GocatorConstants constants_gocator;
   UploadConstants constants_upload;

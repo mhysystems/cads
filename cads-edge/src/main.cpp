@@ -57,7 +57,9 @@ int main(int argn, char **argv)
     return 0;
   }
 
-	if (vm.count("config") > 0)
+  init_logs(60); // Must be before init_config
+	
+  if (vm.count("config") > 0)
 	{
 		auto f = vm["config"].as<std::string>();
     init_config(f);
@@ -70,7 +72,7 @@ int main(int argn, char **argv)
 		return EXIT_FAILURE;
 	}
 
-  init_logs(60);
+
   create_default_dbs();
 
   if(vm.count("level") > 0) {

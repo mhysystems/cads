@@ -63,12 +63,22 @@ namespace cads {
   void swap(cads::Measure& first, cads::Measure& second)
   {
     std::swap(first.thread, second.thread);
-    std::exchange(first.data,second.data);
+    std::swap(first.data,second.data); // Not confident it is thread safe
   }
 
   void measurement_thread(MeasureData* data, std::string lua_code)
   {
-    if(lua_code.size() == 0) return;
+    if(lua_code.size() == 0) 
+    {
+      spdlog::get("cads")->debug(R"(func ='{}', msg = '{}'}})",__func__,"No lua code");
+      return;
+    }
+
+    if(data == nullptr) 
+    {
+      spdlog::get("cads")->debug(R"(func ='{}', msg = '{}'}})",__func__,"data == nullptr");
+      return;
+    }
     
     using Lua = std::unique_ptr<lua_State, decltype(&lua_close)>;
     auto realtime_metrics = realtime_metrics_coro();
@@ -102,7 +112,7 @@ namespace cads {
       data->terminate = true;
       return;
     }
-  
+    bool what = data->terminate;
     for (;!data->terminate;)
     {  
       Measure::MeasureMsg m;
@@ -150,19 +160,30 @@ namespace cads {
       if(lua_status != LUA_OK) {
         spdlog::get("cads")->error("{}:lua_pcall {}",__func__,lua_status);
       }
-
     }
+    
+    spdlog::get("cads")->debug(R"(func ='{}', msg = '{}'}})",__func__,"Exiting measure thread");
   }
 
 
 
-  Measure::Measure(std::string lua_code) : data(new MeasureData()), thread(std::jthread(measurement_thread,data,lua_code)) {
+  Measure::Measure(std::string lua_code) : data(new MeasureData()), thread(std::jthread(measurement_thread,data,lua_code))
+  {
+  }
+
+  void Measure::terminate() {
+    if(data != nullptr) data->terminate = true;
+    if(thread.joinable()) {
+      thread.join();
+    }
+    if(data != nullptr) {
+      delete data;
+      data = nullptr;
+    }    
   }
 
   Measure::~Measure() {
-    data->terminate = true;
-    if(thread.joinable()) thread.join();
-    delete data;
+    terminate();
   }
   
   
@@ -174,31 +195,31 @@ namespace cads {
 
 
   void Measure::send(std::string measure, int quality, double value) {
-    if(!data->terminate) {
+    if(data != nullptr && !data->terminate) {
       data->fifo.try_enqueue({measure,quality,date::utc_clock::now(),value});
     }
   }
 
   void Measure::send(std::string measure, int quality, std::string value) {
-    if(!data->terminate) {
+    if(data != nullptr && !data->terminate) {
       data->fifo.try_enqueue({measure,quality,date::utc_clock::now(),value});
     }
   }
   
   void Measure::send(std::string measure, int quality, std::function<double()> value) {
-    if(!data->terminate) {
+    if(data != nullptr && !data->terminate) {
       data->fifo.try_enqueue({measure,quality,date::utc_clock::now(),value});
     }
   }
 
   void Measure::send(std::string measure, int quality, std::function<std::string()> value) {
-    if(!data->terminate) {
+    if(data != nullptr && !data->terminate) {
       data->fifo.try_enqueue({measure,quality,date::utc_clock::now(),value});
     }
   }
 
   void Measure::send(std::string measure, int quality, std::tuple<double,double> value) {
-    if(!data->terminate) {
+    if(data != nullptr && !data->terminate) {
       data->fifo.try_enqueue({measure,quality,date::utc_clock::now(),value});
     }
   }

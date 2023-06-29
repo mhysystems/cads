@@ -34,10 +34,12 @@ namespace cads
     public:
 
     using MeasureMsg = std::tuple<std::string,int,date::utc_clock::time_point,std::variant<double,std::string,std::function<double()>,std::function<std::string()>, std::tuple<double,double>>>;
-
+    
     Measure(std::string);
-    Measure() = delete;  
+    Measure() = default;  
     ~Measure();
+
+    void terminate();
     void send(std::string, int quality, double);
     void send(std::string, int quality, std::string);
     void send(std::string, int quality, std::function<double()>);
@@ -48,7 +50,7 @@ namespace cads
 
     protected:
     
-    MeasureData* data;
+    MeasureData* data = nullptr;
     std::jthread thread;
        
   };

@@ -56,7 +56,9 @@ function main()
 
     if is_value then
       print(msg_id)
-      if msg_id == 1 then break end
+      if msg_id == 5 then break 
+      elseif msg_id == 2 then break
+      end
     end
 
     unloop = coroutine.yield(0)
