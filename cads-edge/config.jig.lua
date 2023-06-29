@@ -54,7 +54,9 @@ function main()
     local is_value,msg_id = wait_for(savedb_luamain)
 
     if is_value then
-      if msg_id == 5 then break end
+      if msg_id == 5 then break 
+      elseif msg_id == 2 then break
+      end
     end
 
     unloop = coroutine.yield(0)

@@ -135,7 +135,7 @@ void upload_scan_thread(std::atomic<bool> &terminate)
 
   do
   {
-   // std::this_thread::sleep_for(std::chrono::seconds(60));
+    std::this_thread::sleep_for(std::chrono::seconds(60));
       
     auto scans = fetch_scan_state();
 
