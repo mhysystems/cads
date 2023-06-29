@@ -15,7 +15,6 @@
 #pragma GCC diagnostic pop
 
 #include <save_send_thread.h>
-#include <constants.h>
 #include <coms.h>
 #include <db.h>
 #include <spdlog/spdlog.h>
@@ -25,7 +24,7 @@ using namespace std::chrono;
 
 namespace cads
 {
-  void save_send_thread(cads::Io &profile_fifo, cads::Io &next)
+  void save_send_thread(Conveyor conveyor, cads::Io &profile_fifo, cads::Io &next)
   {
     namespace sml = boost::sml;
 

@@ -17,6 +17,47 @@
 
 namespace
 {
+  auto mk_conveyor(lua_State *L, int index) {
+
+    cads::Conveyor obj;
+
+    if(lua_istable(L,index)) {
+      lua_getfield(L, index, "Id");
+      obj.Id = lua_tonumber(L, -1);
+      lua_pop(L, 1);
+
+      lua_getfield(L, index, "Org");
+      obj.Org = lua_tostring(L, -1);
+      lua_pop(L, 1);
+
+      lua_getfield(L, index, "Site");
+      obj.Site = lua_tostring(L, -1);
+      lua_pop(L, 1);
+
+      lua_getfield(L, index, "Name");
+      obj.Name = lua_tostring(L, -1);
+      lua_pop(L, 1);
+
+      lua_getfield(L, index, "Timezone");
+      obj.Timezone = lua_tostring(L, -1);
+      lua_pop(L, 1);
+
+      lua_getfield(L, index, "PulleyCircumference");
+      obj.PulleyCircumference =lua_tonumber(L, -1);
+      lua_pop(L, 1);
+
+      lua_getfield(L, index, "TypicalSpeed");
+      obj.TypicalSpeed = lua_tonumber(L, -1);
+      lua_pop(L, 1);
+
+      lua_getfield(L, index, "Belt");
+      obj.Belt = lua_tonumber(L, -1);
+      lua_pop(L, 1);
+    }
+
+    return obj;
+  }
+
   int Io_gc(lua_State *L)
   {
     auto q = static_cast<cads::Io *>(lua_touserdata(L, 1));
@@ -167,7 +208,11 @@ namespace
   }
 
   int save_send_thread(lua_State *L) {
-    return mk_thread2(L,cads::save_send_thread);
+    using namespace std::placeholders;
+
+    auto conveyor = mk_conveyor(L,1);
+    auto bound = std::bind(cads::save_send_thread,conveyor,_1,_2);
+    return mk_thread2(L,bound);
   }
 
   int process_profile(lua_State *L) {

@@ -46,7 +46,7 @@ function main()
   local thread_process_profile = process_profile(gocator_cads,ede)
   local window_processing = splice_detection_thread(ede_origin,origin_anomaly)
   local dynamic_processing = dynamic_processing_thread(origin_anomaly,anomaly_savedb)
-  local thread_send_save = save_send_thread(anomaly_savedb,savedb_luamain)
+  local thread_send_save = save_send_thread(conveyor,anomaly_savedb,savedb_luamain)
 
   gocator:Start()
 
