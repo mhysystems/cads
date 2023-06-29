@@ -689,7 +689,7 @@ namespace cads
     std::atomic<bool> terminate = false;
     std::jthread save_send(upload_scan_thread, std::ref(terminate));
 
-    while(true)
+    while(!terminate_signal)
     {
       try {
         stop_gocator();
@@ -698,7 +698,7 @@ namespace cads
             
         bool restart = false;
         // Wait for start message
-        while(true) {
+        while(!terminate_signal) {
       
           if(co_err) {
             spdlog::get("cads")->error("TODO");
@@ -712,7 +712,7 @@ namespace cads
           std::tie(co_err,rmsg) = remote_control.resume(false);
         }
 
-        if(restart) continue;
+        if(restart || terminate_signal) continue;
 
         auto start_msg = std::get<Start>(rmsg);
         measurements = Measure(start_msg.lua_code);

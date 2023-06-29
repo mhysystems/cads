@@ -23,7 +23,7 @@ namespace cads
 {
   void remote_control_thread( bool &, moodycamel::BlockingConcurrentQueue<remote_msg> &);
   cads::coro<cads::remote_msg,bool> remote_control_coro();
-  bool post_scan(state::scan db_name);
+  std::tuple<state::scan,bool> post_scan(state::scan scan);
   std::vector<profile> http_get_frame(double y, int len, date::utc_clock::time_point chrono);
   std::tuple<int,bool> remote_addconveyor(Conveyor params); 
   std::tuple<int,bool> remote_addbelt(Belt params); 

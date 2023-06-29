@@ -31,11 +31,11 @@ namespace
     
     if(scan.status != 2) return 0;
     
-    auto err = cads::post_scan(scan);
+    auto [updated_scan,err] = cads::post_scan(scan);
     
     if(!err) {
-      scan.status = 3;
-      cads::update_scan_state(scan);
+      updated_scan.status = 3;
+      cads::update_scan_state(updated_scan);
     }
 
     return 0;

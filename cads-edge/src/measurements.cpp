@@ -162,7 +162,7 @@ namespace cads {
       }
     }
     
-    spdlog::get("cads")->debug(R"(func ='{}', msg = '{}'}})",__func__,"Exiting measure thread");
+    spdlog::get("cads")->debug(R"({{func ='{}', msg = '{}'}})",__func__,"Exiting measure thread");
   }
 
 

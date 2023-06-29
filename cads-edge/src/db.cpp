@@ -928,7 +928,7 @@ namespace cads
     err = sqlite3_bind_int64(stmt.get(), 5, scan.cardinality);
     err = sqlite3_bind_int64(stmt.get(), 6, scan.uploaded);
     err = sqlite3_bind_int64(stmt.get(), 7, scan.status); 
-        err = sqlite3_bind_int64(stmt.get(), 8, scan.conveyor_id); 
+    err = sqlite3_bind_int64(stmt.get(), 8, scan.conveyor_id); 
     err = sqlite3_bind_text(stmt.get(), 9, scan.db_name.c_str(), scan.db_name.size(),nullptr);
 
     tie(err, stmt) = db_step(move(stmt));
@@ -1060,7 +1060,7 @@ namespace cads
     auto [from_stmt,from_db] = prepare_query(from_db_name, from_query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
     auto [to_stmt,to_db] = prepare_query(to_db_name, to_query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
 
-    err = sqlite3_bind_int64(from_stmt.get(), 1, first_index + 1); // +1 because rowid starts at 1. first_index likely starts at 0  
+    err = sqlite3_bind_int64(from_stmt.get(), 1, first_index); 
 
     if(err != SQLITE_OK) return false;
       
@@ -1077,7 +1077,7 @@ namespace cads
           z_element *z = (z_element *)sqlite3_column_blob(from_stmt.get(), 1); // Freed on next call to sqlite3_step
           int len = sqlite3_column_bytes(from_stmt.get(), 1) / sizeof(*z);
 
-          auto bind_err = sqlite3_bind_blob(to_stmt.get(), 1, z, len, SQLITE_STATIC);
+          auto bind_err = sqlite3_bind_blob(to_stmt.get(), 2, z, len, SQLITE_STATIC);
           tie(bind_err, to_stmt) = db_step(move(to_stmt));
           if (bind_err != SQLITE_DONE) {
             return false;
@@ -1128,7 +1128,7 @@ namespace cads
           terminate = true;
           std::throw_with_nested(std::runtime_error("z data size greater than sqlite limits"));
         }
-
+        
         err = sqlite3_bind_blob(stmt.get(), 1, z.data(), (int)n, SQLITE_STATIC);
         
         if (err != SQLITE_OK)
@@ -1145,7 +1145,7 @@ namespace cads
           terminate = true;
           spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = , msg = ''}})", __func__,"sqlite3_step",err);
         }
-        
+       
         err = sqlite3_reset(stmt.get());
 
         if (err != SQLITE_OK)

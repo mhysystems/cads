@@ -536,7 +536,7 @@ namespace cads
 
     if (endpoint_url == "null")
     {
-      spdlog::get("upload")->info("base_url set to null. Config not uploaded");
+      spdlog::get("cads")->info("base_url set to null. Config not uploaded");
       return;
     }
 
@@ -551,11 +551,12 @@ namespace cads
 
       if (cpr::ErrorCode::OK == r.error.code && cpr::status::HTTP_OK == r.status_code)
       {
+        spdlog::get("cads")->debug(R"({{func ='{}', msg = '{}'}})",__func__,"Scan Posted");
         break;
       }
       else
       {
-        spdlog::get("upload")->error("http_post_profile_properties_json failed with http status code {}, body: {}, endpoint: {}", r.status_code, json, endpoint.str());
+        spdlog::get("cads")->error("http_post_profile_properties_json failed with http status code {}, body: {}, endpoint: {}", r.status_code, json, endpoint.str());
       }
     }
   }
@@ -606,11 +607,11 @@ namespace cads
     http_post_profile_properties_json(params_json.dump());
   }
 
-  bool post_scan(state::scan scan)
+  std::tuple<state::scan,bool> post_scan(state::scan scan)
   {
     using namespace flatbuffers;    
     
-    if(scan.uploaded >= scan.cardinality) return false;
+    if(scan.uploaded >= scan.cardinality) return {scan,false};
     
     auto db_name = scan.db_name;
     
@@ -619,7 +620,7 @@ namespace cads
     if (!std::filesystem::exists(db_name))
     {
       spdlog::get("cads")->info("{}: {} doesn't exist. Scan not uploaded", __func__, db_name);
-      return true;
+      return {scan,true};
     }
 
     auto endpoint_url = scan.url;
@@ -630,10 +631,10 @@ namespace cads
     if (err < 0)
     {
       spdlog::get("cads")->info("{} fetch_scan_gocator failed - {}", __func__, db_name);
-      return true;
+      return {scan,true};
     }
 
-    auto fetch_profile = fetch_scan_coro(scan.begin_index + scan.uploaded, scan.begin_index + scan.cardinality, db_name);
+    auto fetch_profile = fetch_scan_coro(scan.begin_index + 1 + scan.uploaded, scan.begin_index + scan.cardinality + 1, db_name);
 
     FlatBufferBuilder builder(4096 * 128);
     std::vector<flatbuffers::Offset<CadsFlatbuffers::profile>> profiles_flat;
@@ -660,7 +661,7 @@ namespace cads
       {
         namespace sr = std::ranges;
 
-        auto y = (idx - scan.begin_index) * y_step; // Sqlite rowid starts a 1
+        auto y = (idx - scan.begin_index - 1) * y_step; // Sqlite rowid starts a 1
 
         auto max_iter = max_element(zs.begin(), zs.end());
 
@@ -713,7 +714,7 @@ namespace cads
         }
           
         scan.uploaded += sent_rows;
-        store_scan_state(scan);
+        update_scan_state(scan);
         break;
       }
     }
@@ -724,7 +725,7 @@ namespace cads
       http_post_profile_properties2(to_str(chrono::floor<chrono::seconds>(scan.scanned_utc)), YmaxN, y_step,belt_z_max);
     }
 
-    return failure;
+    return {scan,failure};
   }
 
 #if 0
