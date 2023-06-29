@@ -602,9 +602,11 @@ namespace cads
 
       auto [rev, idx, p] = data;
 
-      if(p.z.size() == 0 && zero_seq++ == 0) {
+      if(p.z.size() == 0) {
           
-          spdlog::get("cads")->error(R"({{func = '{}', msg = '{}'}})", __func__,"No z samples. All sequential no z samples suppressed");
+          if(zero_seq++ == 0) {
+            spdlog::get("cads")->error(R"({{func = '{}', msg = '{}'}})", __func__,"No z samples. All sequential no z samples suppressed");
+          }
           continue;
       }
 
@@ -1111,9 +1113,11 @@ namespace cads
         if (terminate)
           break;
 
-        if(z.size() == 0 && zero_seq++ == 0) {
+        if(z.size() == 0 ) {
           
-          spdlog::get("cads")->error(R"({{func = '{}', msg = '{}'}})", __func__,"No z samples. All sequential no z samples suppressed");
+          if(zero_seq++ == 0) {
+            spdlog::get("cads")->error(R"({{func = '{}', msg = '{}'}})", __func__,"No z samples. All sequential no z samples suppressed");
+          }
           continue;
         }
 
