@@ -166,9 +166,7 @@ namespace cads
       ++cnt;
       profile_fifo.wait_dequeue(m);
 
-      auto msg_id = module_failure ? msgid::nothing : get<0>(m); 
-
-      switch(msg_id) {
+      switch(get<0>(m)) {
         case msgid::scan:
            p = get<profile>(get<1>(m));
            next_fifo.enqueue(m);
@@ -180,6 +178,11 @@ namespace cads
         default: // Passthrough
           next_fifo.enqueue(m);
           continue;
+      }
+
+      // Stops filling up logs with errors
+      if(realtime_processing.is_done()) {
+        continue;
       }
 
       auto [err, rslt] = realtime_processing.resume(m);

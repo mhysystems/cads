@@ -159,6 +159,11 @@ namespace cads
       return 1;
     }
 
+    bool is_done()
+    {
+      return coro_hnd.done();
+    }
+
     void terminate()
     {
       coro_hnd.promise().terminate_coro = true;
