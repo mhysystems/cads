@@ -93,7 +93,7 @@ namespace cads
 
           cads::state::scan scan2 = {
             global.scan_begin,
-            scan_filename,
+            new_scan_filename,
             0,
             0,
             0,
@@ -116,14 +116,13 @@ namespace cads
           std::filesystem::remove(scan_filename);
           
           auto scan_end = date::utc_clock::now();
-          auto filename = fmt::format("scan-{}.sqlite",std::chrono::system_clock::now().time_since_epoch().count());
           auto new_scan_filename = fmt::format("scan-{}.sqlite",scan_end.time_since_epoch().count());
           global.store_scan = store_scan_coro(new_scan_filename);
           global.scan_begin = scan_end;
 
           cads::state::scan scan2 = {
             global.scan_begin,
-            scan_filename,
+            new_scan_filename,
             0,
             0,
             0,

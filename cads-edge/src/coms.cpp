@@ -584,6 +584,7 @@ namespace cads
 
     double belt_z_max = 0;
     double widthN = 0;
+    long cnt = 0;
 
     while (true)
     {
@@ -594,7 +595,8 @@ namespace cads
       {
         namespace sr = std::ranges;
 
-        auto y = (idx - scan.begin_index - 1) * y_step; // Sqlite rowid starts a 1
+        idx -= scan.begin_index; cnt++;
+        auto y = (idx - 1) * y_step; // Sqlite rowid starts a 1
 
         widthN = (double)zs.size();
         auto max_iter = max_element(zs.begin(), zs.end());
@@ -631,7 +633,7 @@ namespace cads
       {
         if (profiles_flat.size() > 0)
         {
-          builder.Finish(CadsFlatbuffers::Createprofile_array(builder, z_resolution, z_offset, idx - communications_config.UploadRows, profiles_flat.size(), builder.CreateVector(profiles_flat)));
+          builder.Finish(CadsFlatbuffers::Createprofile_array(builder, z_resolution, z_offset, idx - profiles_flat.size(), profiles_flat.size(), builder.CreateVector(profiles_flat)));
           auto [terminate,sent_rows] = send_bytes.resume({{builder.GetBufferPointer(),builder.GetBufferPointer()+builder.GetSize()},profiles_flat.size()});
           profiles_flat.clear();
           if(terminate) break;
@@ -642,7 +644,7 @@ namespace cads
           //store_scan_uploaded(idx + 1, db_name);
         }
         
-        auto [terminate,sent_rows] = send_bytes.resume({std::vector<uint8_t>(),idx});
+        auto [terminate,sent_rows] = send_bytes.resume({std::vector<uint8_t>(),0});
         if(!terminate) {
           spdlog::get("cads")->info("{{func = {}, msg = 'Last resume not terminated'}}", __func__);
         }

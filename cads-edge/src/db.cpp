@@ -372,14 +372,11 @@ namespace cads
       R"(CREATE TABLE IF NOT EXISTS SCANS (
         scanned_utc TEXT NOT NULL UNIQUE
         ,db_name TEXT NOT NULL UNIQUE
-        ,site TEXT NOT NULL
-        ,conveyor_name TEXT NOT NULL
         ,begin_index INTEGER NOT NULL
         ,cardinality INTEGER NOT NULL
         ,uploaded INTEGER NOT NULL
         ,status INTEGER NOT NULL
-        ,conveyor_id INTEGER NOT NULL
-        ,belt_id INTEGER NOT NULL))",
+        ,conveyor_id INTEGER NOT NULL))",
       fmt::format(R"(INSERT INTO STATE(DAILYUPLOAD,ConveyorId,BeltId) SELECT '{}',{},{} WHERE NOT EXISTS (SELECT * FROM STATE))", ts,0,0),
       R"(VACUUM)"
     };
@@ -895,7 +892,7 @@ namespace cads
       ,begin_index
       ,cardinality
       ,uploaded
-      ,status, 
+      ,status 
       ,conveyor_id 
       FROM Scans)"s;
     auto db_config_name = name.empty() ? global_config["state_db_name"].get<std::string>() : name;
@@ -919,7 +916,7 @@ namespace cads
           int64_t(sqlite3_column_int64(stmt.get(), 3)),
           int64_t(sqlite3_column_int64(stmt.get(), 4)),
           int64_t(sqlite3_column_int64(stmt.get(), 5)),
-          int64_t(sqlite3_column_int64(stmt.get(), 7))
+          int64_t(sqlite3_column_int64(stmt.get(), 6))
         };
 
         rtn.push_back(tmp); 
@@ -938,7 +935,7 @@ namespace cads
       ,begin_index
       ,cardinality
       ,uploaded
-      ,status, 
+      ,status
       ,conveyor_id 
       ) = (?,?,?,?,?,?,?) where db_name=?;)"s;
     auto db_config_name = db_name.empty() ? global_config["state_db_name"].get<std::string>() : db_name;
@@ -969,7 +966,7 @@ namespace cads
       ,begin_index
       ,cardinality
       ,uploaded
-      ,status, 
+      ,status
       ,conveyor_id
       ) VALUES(?,?,?,?,?,?,?))"s;
     auto db_config_name = db_name.empty() ? global_config["state_db_name"].get<std::string>() : db_name;
@@ -1086,7 +1083,7 @@ namespace cads
     err = sqlite3_bind_double(stmt.get(), 6, conveyor.PulleyCircumference);
     err = sqlite3_bind_double(stmt.get(), 7, conveyor.TypicalSpeed);
     err = sqlite3_bind_int64(stmt.get(), 8, conveyor.Belt);
-    err = sqlite3_bind_double(stmt.get(), 7, conveyor.Length);
+    err = sqlite3_bind_double(stmt.get(), 9, conveyor.Length);
 
     tie(err, stmt) = db_step(move(stmt));
 
@@ -1104,6 +1101,7 @@ namespace cads
       ,PulleyCircumference
       ,TypicalSpeed
       ,Belt
+      ,Length
      FROM Conveyor)"s;
 
     auto [stmt,db] = prepare_query(db_name, query);
@@ -1119,8 +1117,8 @@ namespace cads
           {int64_t(sqlite3_column_int64(stmt.get(), 0)),  
           std::string( (const char* )sqlite3_column_text(stmt.get(), 1), sqlite3_column_bytes(stmt.get(), 1)),
           std::string( (const char* )sqlite3_column_text(stmt.get(), 2), sqlite3_column_bytes(stmt.get(), 2)),
-          std::string( (const char* )sqlite3_column_text(stmt.get(), 2), sqlite3_column_bytes(stmt.get(), 3)),
-          std::string( (const char* )sqlite3_column_text(stmt.get(), 2), sqlite3_column_bytes(stmt.get(), 4)),
+          std::string( (const char* )sqlite3_column_text(stmt.get(), 3), sqlite3_column_bytes(stmt.get(), 3)),
+          std::string( (const char* )sqlite3_column_text(stmt.get(), 4), sqlite3_column_bytes(stmt.get(), 4)),
           double(sqlite3_column_double(stmt.get(), 5)),
           double(sqlite3_column_double(stmt.get(), 6)),
           int64_t(sqlite3_column_int64(stmt.get(), 7)),

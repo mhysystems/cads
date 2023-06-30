@@ -602,9 +602,9 @@ namespace cads
     
     std::atomic<bool> terminate = false;
     std::jthread save_send(upload_scan_thread, std::ref(terminate));
-  {
+    
     measurements = Measure(slurpfile(luafile.string()));
-  }
+  
     auto [L,err] = run_lua_config(f);
 
     if(err) {

@@ -139,8 +139,8 @@ namespace
 
   int mk_thread2(lua_State *L, std::function<void(cads::Io&,cads::Io&)> fn)
   {
-    auto in = static_cast<cads::Io*>(lua_touserdata(L,1));
-    auto out = static_cast<cads::Io*>(lua_touserdata(L,2));
+    auto in = static_cast<cads::Io*>(lua_touserdata(L,-2));
+    auto out = static_cast<cads::Io*>(lua_touserdata(L,-1));
 
     new (lua_newuserdata(L,sizeof(std::thread))) std::thread(fn,std::ref(*in),std::ref(*out));
     lua_createtable(L, 0, 1); 
