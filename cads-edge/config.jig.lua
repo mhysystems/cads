@@ -11,7 +11,8 @@ conveyor = {
   PulleyCircumference = 670.0,
   TypicalSpeed = 6.0,
   Belt = 3,
-  Length = 670
+  Length = 670,
+  WidthN = 1750
 }
 
 belt = {
