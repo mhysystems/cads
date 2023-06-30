@@ -369,7 +369,17 @@ namespace cads
       R"(PRAGMA journal_mode=WAL)"s,
       R"(CREATE TABLE IF NOT EXISTS STATE (DAILYUPLOAD TEXT NOT NULL, ConveyorId INTEGER NOT NULL, BeltId INTEGER NOT NULL))",
       R"(CREATE TABLE IF NOT EXISTS MOTIFS (date TEXT NOT NULL, motif BLOB NOT NULL))",
-      R"(CREATE TABLE IF NOT EXISTS SCANS (scanned_utc TEXT NOT NULL UNIQUE, db_name TEXT NOT NULL, url TEXT NOT NULL UNIQUE, begin_index INTEGER NOT NULL, cardinality INTEGER NOT NULL, uploaded INTEGER NOT NULL, status INTEGER NOT NULL, conveyor_id INTEGER NOT NULL))",
+      R"(CREATE TABLE IF NOT EXISTS SCANS (
+        scanned_utc TEXT NOT NULL UNIQUE
+        ,db_name TEXT NOT NULL UNIQUE
+        ,site TEXT NOT NULL
+        ,conveyor_name TEXT NOT NULL
+        ,begin_index INTEGER NOT NULL
+        ,cardinality INTEGER NOT NULL
+        ,uploaded INTEGER NOT NULL
+        ,status INTEGER NOT NULL
+        ,conveyor_id INTEGER NOT NULL
+        ,belt_id INTEGER NOT NULL))",
       fmt::format(R"(INSERT INTO STATE(DAILYUPLOAD,ConveyorId,BeltId) SELECT '{}',{},{} WHERE NOT EXISTS (SELECT * FROM STATE))", ts,0,0),
       R"(VACUUM)"
     };
@@ -879,7 +889,18 @@ namespace cads
   std::deque<state::scan> fetch_scan_state(std::string name)
   {
 
-    auto query = R"(SELECT scanned_utc, db_name, url, begin_index, cardinality, uploaded, status, conveyor_id FROM Scans)"s;
+    auto query = R"(SELECT 
+      scanned_utc
+      ,db_name
+      ,site
+      ,conveyor_name
+      ,begin_index
+      ,cardinality
+      ,uploaded
+      ,status, 
+      ,conveyor_id 
+      ,belt_id
+      FROM Scans)"s;
     auto db_config_name = name.empty() ? global_config["state_db_name"].get<std::string>() : name;
     auto [stmt,db] = prepare_query(db_config_name, query);
     
@@ -898,11 +919,13 @@ namespace cads
           to_clk(std::string( (const char* )sqlite3_column_text(stmt.get(), 0), sqlite3_column_bytes(stmt.get(), 0))),
           std::string( (const char* )sqlite3_column_text(stmt.get(), 1), sqlite3_column_bytes(stmt.get(), 1)),
           std::string( (const char* )sqlite3_column_text(stmt.get(), 2), sqlite3_column_bytes(stmt.get(), 2)),
-          int64_t(sqlite3_column_int64(stmt.get(), 3)),
+          std::string( (const char* )sqlite3_column_text(stmt.get(), 2), sqlite3_column_bytes(stmt.get(), 3)),
           int64_t(sqlite3_column_int64(stmt.get(), 4)),
           int64_t(sqlite3_column_int64(stmt.get(), 5)),
           int64_t(sqlite3_column_int64(stmt.get(), 6)),
-          int64_t(sqlite3_column_int64(stmt.get(), 7))
+          int64_t(sqlite3_column_int64(stmt.get(), 6)),
+          int64_t(sqlite3_column_int64(stmt.get(), 7)),
+          int64_t(sqlite3_column_int64(stmt.get(), 8))
         };
 
         rtn.push_back(tmp); 
@@ -915,7 +938,18 @@ namespace cads
   bool update_scan_state(state::scan scan, std::string db_name)
   {
 
-    auto query = R"(update scans set (scanned_utc, db_name, url, begin_index, cardinality, uploaded, status, conveyor_id) = (?,?,?,?,?,?,?,?) where db_name=?;)"s;
+    auto query = R"(update scans set (
+      scanned_utc
+      ,db_name
+      ,site
+      ,conveyor_name
+      ,begin_index
+      ,cardinality
+      ,uploaded
+      ,status, 
+      ,conveyor_id 
+      ,belt_id
+      ) = (?,?,?,?,?,?,?,?,?,?) where db_name=?;)"s;
     auto db_config_name = db_name.empty() ? global_config["state_db_name"].get<std::string>() : db_name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
     
@@ -923,13 +957,15 @@ namespace cads
 
     auto err = sqlite3_bind_text(stmt.get(), 1, scanned_utc.c_str(), scanned_utc.size(),nullptr);
     err = sqlite3_bind_text(stmt.get(), 2, scan.db_name.c_str(), scan.db_name.size(),nullptr);
-    err = sqlite3_bind_text(stmt.get(), 3, scan.url.c_str(), scan.url.size(),nullptr);
-    err = sqlite3_bind_int64(stmt.get(), 4, scan.begin_index);
-    err = sqlite3_bind_int64(stmt.get(), 5, scan.cardinality);
-    err = sqlite3_bind_int64(stmt.get(), 6, scan.uploaded);
-    err = sqlite3_bind_int64(stmt.get(), 7, scan.status); 
-    err = sqlite3_bind_int64(stmt.get(), 8, scan.conveyor_id); 
-    err = sqlite3_bind_text(stmt.get(), 9, scan.db_name.c_str(), scan.db_name.size(),nullptr);
+    err = sqlite3_bind_text(stmt.get(), 3, scan.site.c_str(), scan.site.size(),nullptr);
+    err = sqlite3_bind_text(stmt.get(), 4, scan.conveyor_name.c_str(), scan.conveyor_name.size(),nullptr);
+    err = sqlite3_bind_int64(stmt.get(), 5, scan.begin_index);
+    err = sqlite3_bind_int64(stmt.get(), 6, scan.cardinality);
+    err = sqlite3_bind_int64(stmt.get(), 7, scan.uploaded);
+    err = sqlite3_bind_int64(stmt.get(), 8, scan.status); 
+    err = sqlite3_bind_int64(stmt.get(), 9, scan.conveyor_id); 
+    err = sqlite3_bind_int64(stmt.get(), 10, scan.belt_id); 
+    err = sqlite3_bind_text(stmt.get(), 11, scan.db_name.c_str(), scan.db_name.size(),nullptr);
 
     tie(err, stmt) = db_step(move(stmt));
 
@@ -939,7 +975,17 @@ namespace cads
 
   bool store_scan_state(state::scan scan, std::string db_name)
   {
-    auto query = R"(INSERT INTO SCANS (scanned_utc, db_name, url, begin_index, cardinality, uploaded, status, conveyor_id) VALUES(?,?,?,?,?,?,?,?))"s;
+    auto query = R"(INSERT INTO SCANS (
+      scanned_utc
+      ,db_name
+      ,site
+      ,conveyor_name
+      ,begin_index
+      ,cardinality
+      ,uploaded
+      ,status, 
+      ,conveyor_id 
+      ,belt_id) VALUES(?,?,?,?,?,?,?,?,?,?))"s;
     auto db_config_name = db_name.empty() ? global_config["state_db_name"].get<std::string>() : db_name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
     
@@ -947,13 +993,15 @@ namespace cads
 
     auto err = sqlite3_bind_text(stmt.get(), 1, scanned_utc.c_str(), scanned_utc.size(),nullptr);
     err = sqlite3_bind_text(stmt.get(), 2, scan.db_name.c_str(), scan.db_name.size(),nullptr);
-    err = sqlite3_bind_text(stmt.get(), 3, scan.url.c_str(), scan.url.size(),nullptr);
-    err = sqlite3_bind_int64(stmt.get(), 4, scan.begin_index);
-    err = sqlite3_bind_int64(stmt.get(), 5, scan.cardinality);
-    err = sqlite3_bind_int64(stmt.get(), 6, scan.uploaded);
-    err = sqlite3_bind_int64(stmt.get(), 7, scan.status); 
-    err = sqlite3_bind_int64(stmt.get(), 8, scan.conveyor_id); 
-
+    err = sqlite3_bind_text(stmt.get(), 3, scan.site.c_str(), scan.site.size(),nullptr);
+    err = sqlite3_bind_text(stmt.get(), 4, scan.conveyor_name.c_str(), scan.conveyor_name.size(),nullptr);
+    err = sqlite3_bind_int64(stmt.get(), 5, scan.begin_index);
+    err = sqlite3_bind_int64(stmt.get(), 6, scan.cardinality);
+    err = sqlite3_bind_int64(stmt.get(), 7, scan.uploaded);
+    err = sqlite3_bind_int64(stmt.get(), 8, scan.status); 
+    err = sqlite3_bind_int64(stmt.get(), 9, scan.conveyor_id); 
+    err = sqlite3_bind_int64(stmt.get(), 10, scan.belt_id); 
+ 
     tie(err, stmt) = db_step(move(stmt));
 
     return err == SQLITE_OK || err == SQLITE_DONE;
@@ -1020,33 +1068,84 @@ namespace cads
     return rtn;
   }
 
-  bool store_scan_properties(std::tuple<date::utc_clock::time_point,date::utc_clock::time_point> props, std::string db_name) 
+  bool store_scan_conveyor(cads::Conveyor conveyor, std::string db_name) 
   {
+    auto err = db_exec(db_name, R"(CREATE TABLE IF NOT EXISTS Conveyor (
+      Id INTEGER PRIMARY KEY
+      ,Org TEXT NOT NULL 
+      ,Site TEXT NOT NULL 
+      ,Name TEXT NOT NULL 
+      ,Timezone TEXT NOT NULL 
+      ,PulleyCircumference REAL NOT NULL 
+      ,TypicalSpeed REAL NOT NULL 
+      ,Belt INTEGER NOT NULL))");
     
-    auto err = db_exec(db_name, R"(CREATE TABLE IF NOT EXISTS PROPERTIES (Width REAL NOT NULL, Length REAL NOT NULL, ScanBegin TEXT NOT NULL, ScanEnd TEXT NOT NULL, Org TEXT NOT NULL, ConveyorId INTEGER NOT NULL, BeltId INTEGER NOT NULL))");
-    
-    auto query = R"(INSERT INTO PROPERTIES (Width, Length, ScanBegin, ScanEnd, Org, ConveyorId, BeltId) VALUES (?,?,?,?,?,?,?))"s;
+    auto query = R"(INSERT INTO Conveyor (
+      Id
+      ,Org
+      ,Site
+      ,Name 
+      ,Timezone
+      ,PulleyCircumference
+      ,TypicalSpeed
+      ,Belt
+    ) VALUES (?,?,?,?,?,?,?,?))"s;
   
     auto [stmt,db] = prepare_query(db_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
 
-    auto ScanBegin = date::format("%FT%TZ",std::get<0>(props));
-    auto ScanEnd = date::format("%FT%TZ",std::get<1>(props));
-    auto [ConveyorId,errorc] = fetch_conveyor_id(); 
-    auto [BeltId, errorb] = fetch_belt_id();
- 
-
-    err = sqlite3_bind_double(stmt.get(), 1, global_belt_parameters.Width);
-    err = sqlite3_bind_double(stmt.get(), 2, global_belt_parameters.Length);
-    err = sqlite3_bind_text(stmt.get(), 3, ScanBegin.c_str(),ScanBegin.size(),nullptr);
-    err = sqlite3_bind_text(stmt.get(), 4, ScanEnd.c_str(),ScanEnd.size(),nullptr);
-    err = sqlite3_bind_text(stmt.get(), 5, global_conveyor_parameters.Org.c_str(), global_conveyor_parameters.Org.size(), nullptr);
-    err = sqlite3_bind_int64(stmt.get(), 6, ConveyorId);
-    err = sqlite3_bind_int64(stmt.get(), 7, BeltId);
-
+    err = sqlite3_bind_int64(stmt.get(), 1, conveyor.Id);
+    err = sqlite3_bind_text(stmt.get(), 2, conveyor.Org.c_str(),conveyor.Org.size(),nullptr);
+    err = sqlite3_bind_text(stmt.get(), 3, conveyor.Site.c_str(),conveyor.Site.size(),nullptr);
+    err = sqlite3_bind_text(stmt.get(), 4, conveyor.Name.c_str(), conveyor.Name.size(), nullptr);
+    err = sqlite3_bind_text(stmt.get(), 5, conveyor.Timezone.c_str(), conveyor.Timezone.size(), nullptr);
+    err = sqlite3_bind_double(stmt.get(), 6, conveyor.PulleyCircumference);
+    err = sqlite3_bind_double(stmt.get(), 7, conveyor.TypicalSpeed);
+    err = sqlite3_bind_int64(stmt.get(), 8, conveyor.Belt);
 
     tie(err, stmt) = db_step(move(stmt));
 
     return err == SQLITE_OK || err == SQLITE_DONE;
+  }
+
+  std::tuple<cads::Conveyor,int> fetch_scan_conveyor(std::string db_name) 
+  {
+    auto query = R"(SELECT
+      Id
+      ,Org
+      ,Site
+      ,Name 
+      ,Timezone
+      ,PulleyCircumference
+      ,TypicalSpeed
+      ,Belt
+     FROM Conveyor)"s;
+
+    auto [stmt,db] = prepare_query(db_name, query);
+    auto err = SQLITE_OK;
+
+    tie(err, stmt) = db_step(move(stmt));
+
+    std::tuple<cads::Conveyor,int> rtn;
+    if (err == SQLITE_ROW)
+    {
+
+      rtn = {
+          {int64_t(sqlite3_column_int64(stmt.get(), 0)),  
+          std::string( (const char* )sqlite3_column_text(stmt.get(), 1), sqlite3_column_bytes(stmt.get(), 1)),
+          std::string( (const char* )sqlite3_column_text(stmt.get(), 2), sqlite3_column_bytes(stmt.get(), 2)),
+          std::string( (const char* )sqlite3_column_text(stmt.get(), 2), sqlite3_column_bytes(stmt.get(), 3)),
+          std::string( (const char* )sqlite3_column_text(stmt.get(), 2), sqlite3_column_bytes(stmt.get(), 4)),
+          double(sqlite3_column_double(stmt.get(), 5)),
+          double(sqlite3_column_double(stmt.get(), 6)),
+          int64_t(sqlite3_column_int64(stmt.get(), 7))},
+          0};
+    }
+    else
+    {
+      rtn = {{}, -1};
+    }
+
+    return rtn;
   }
 
   bool transfer_profiles(std::string from_db_name, std::string to_db_name, int64_t first_index, int64_t last_index)

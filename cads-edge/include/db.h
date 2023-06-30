@@ -51,12 +51,14 @@ namespace cads
     struct scan {
       date::utc_clock::time_point scanned_utc;
       std::string db_name;
-      std::string url;
+      std::string site;
+      std::string conveyor_name;
       int64_t begin_index;
       int64_t cardinality;
       int64_t uploaded;
       int64_t status;
       int64_t conveyor_id;
+      int64_t belt_id;
     };
     //enum scani {ScanBegin, Path, Uploaded, Status};
   }
@@ -71,11 +73,11 @@ namespace cads
   bool create_scan_db(std::string db_name);
   bool transfer_profiles(std::string from_db_name, std::string to_db_name, int64_t first_index, int64_t last_index = std::numeric_limits<int64_t>::max());
   bool store_scan_gocator(cads::GocatorProperties gocator, std::string db_name);
-  bool store_scan_properties(std::tuple<date::utc_clock::time_point,date::utc_clock::time_point> props, std::string db_name);
+  bool store_scan_conveyor(cads::Conveyor conveyor, std::string db_name);
   long zs_count(std::string db_name);
   coro<int, z_type, 1> store_scan_coro(std::string db_name);
   std::tuple<cads::GocatorProperties,int> fetch_scan_gocator(std::string db_name);
-  
+  std::tuple<cads::Conveyor,int> fetch_scan_conveyor(std::string db_name);
 
 
   // transients

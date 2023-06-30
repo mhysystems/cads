@@ -340,7 +340,7 @@ namespace cads
     return subject;
   }
 
-  std::string mk_post_profile_url(date::utc_clock::time_point time)
+  std::string mk_post_profile_url(date::utc_clock::time_point time, std::string site, std::string conveyor)
   {
     
     // Default sends to much decimal precision for asp.net core
@@ -351,12 +351,10 @@ namespace cads
     if (endpoint_url == "null")
       return endpoint_url;
 
-    auto site = global_conveyor_parameters.Site;
-    auto conveyor = global_conveyor_parameters.Name;
-
     return endpoint_url + '/' + site + '/' + conveyor + '/' + ts;
   }
 
+#if 0
   std::string mk_post_profile_url(std::string endpoint_url, std::string ts)
   {
     auto site = global_conveyor_parameters.Site;
@@ -364,7 +362,7 @@ namespace cads
 
     return endpoint_url + '/' + site + '/' + conveyor + '/' + ts;
   }
-
+#endif
   
   coro<long,std::tuple<std::vector<uint8_t>,long>,1> send_bytes_coro(long sent, std::string url,bool upload_profile) {
 
@@ -559,7 +557,7 @@ namespace cads
       return {scan,true};
     }
 
-    auto endpoint_url = scan.url;
+    auto endpoint_url = mk_post_profile_url(scan.scanned_utc,scan.site,scan.conveyor_name);
     auto upload_profile = global_config["upload_profile"].get<bool>();
 
     auto [params, err] = fetch_scan_gocator(db_name);
@@ -575,10 +573,7 @@ namespace cads
     FlatBufferBuilder builder(4096 * 128);
     std::vector<flatbuffers::Offset<CadsFlatbuffers::profile>> profiles_flat;
 
-    cpr::Url endpoint{mk_post_profile_url(scan.scanned_utc)};
-
     auto send_bytes = send_bytes_coro(0L,endpoint_url,upload_profile);
-
 
     auto YmaxN = scan.cardinality;
 

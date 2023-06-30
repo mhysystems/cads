@@ -25,6 +25,5 @@ namespace cads
   cads::coro<cads::remote_msg,bool> remote_control_coro();
   std::tuple<state::scan,bool> post_scan(state::scan scan);
   std::vector<profile> http_get_frame(double y, int len, date::utc_clock::time_point chrono);
-  std::string mk_post_profile_url(date::utc_clock::time_point time);
   cads::coro<int, std::tuple<std::string, std::string, std::string>, 1>  realtime_metrics_coro();
 }

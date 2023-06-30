@@ -38,12 +38,13 @@ namespace cads
       coro<int, double,1> store_last_y = store_last_y_coro();
       coro<int, z_type, 1> store_scan;
       GocatorProperties gocator_properties;
+      Conveyor conveyor;
       date::utc_clock::time_point scan_begin;
       cads::Io & cps;
 
-      global_t(cads::Io &m, date::utc_clock::time_point sb, std::string s) : store_scan(store_scan_coro(s)), scan_begin(sb), cps(m){};
+      global_t(cads::Io &m, Conveyor c, date::utc_clock::time_point sb, std::string s) : store_scan(store_scan_coro(s)), conveyor(c),scan_begin(sb), cps(m){};
 
-    } global(next,scan_begin,scan_filename_init);
+    } global(next,conveyor,scan_begin,scan_filename_init);
 
 
     struct transitions
@@ -78,12 +79,14 @@ namespace cads
           cads::state::scan scan = {
             global.scan_begin,
             scan_filename,
-            mk_post_profile_url(global.scan_begin),
+            global.conveyor.Site,
+            global.conveyor.Name,
             e.start_value,
             e.length,
             0,
             1,
-            global_conveyor_parameters.Id
+            global.conveyor.Id,
+            global.conveyor.Belt
           };
 
           update_scan_state(scan);   
@@ -93,13 +96,15 @@ namespace cads
 
           cads::state::scan scan2 = {
             global.scan_begin,
-            new_scan_filename,
-            mk_post_profile_url(scan_end),
+            scan_filename,
+            global.conveyor.Site,
+            global.conveyor.Name,
             0,
             0,
             0,
-            0,
-            global_conveyor_parameters.Id
+            1,
+            global.conveyor.Id,
+            global.conveyor.Belt
           };
 
           store_scan_state(scan2);  
@@ -124,13 +129,15 @@ namespace cads
 
           cads::state::scan scan2 = {
             global.scan_begin,
-            new_scan_filename,
-            mk_post_profile_url(scan_end),
+            scan_filename,
+            global.conveyor.Site,
+            global.conveyor.Name,
             0,
             0,
             0,
-            0,
-            global_conveyor_parameters.Id
+            1,
+            global.conveyor.Id,
+            global.conveyor.Belt
           };
 
           store_scan_state(scan2);  
