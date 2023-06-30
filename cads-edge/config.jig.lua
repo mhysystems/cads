@@ -36,18 +36,18 @@ anomaly = {
 function main()
 
   local gocator_cads = BlockingReaderWriterQueue()
-  local ede_origin = BlockingReaderWriterQueue()
-  local origin_anomaly = BlockingReaderWriterQueue()
-  local anomaly_savedb = BlockingReaderWriterQueue()
+  --local ede_origin = BlockingReaderWriterQueue()
+  --local origin_anomaly = BlockingReaderWriterQueue()
+  --local anomaly_savedb = BlockingReaderWriterQueue()
   local savedb_luamain = BlockingReaderWriterQueue()
   
   local hh = conveyor.TypicalSpeed / gocator.Fps
   local gocator = mk_gocator(gocator_cads) 
-  local ede = encoder_distance_estimation(ede_origin,hh)
-  local thread_process_profile = process_profile(gocator_cads,ede)
-  local window_processing = splice_detection_thread(ede_origin,origin_anomaly)
-  local dynamic_processing = dynamic_processing_thread(origin_anomaly,anomaly_savedb)
-  local thread_send_save = save_send_thread(conveyor,anomaly_savedb,savedb_luamain)
+  --local ede = encoder_distance_estimation(ede_origin,hh)
+  --local thread_process_profile = process_profile(gocator_cads,ede)
+  --local window_processing = splice_detection_thread(ede_origin,origin_anomaly)
+  --local dynamic_processing = dynamic_processing_thread(origin_anomaly,anomaly_savedb)
+  local thread_send_save = save_send_thread(conveyor,gocator_cads,savedb_luamain)
 
   gocator:Start()
 
