@@ -112,7 +112,7 @@
     "UploadRows" : 1024
   },
 
-  "upload_profile" : false,
+  "upload_profile" : true,
   "base_url" : "http://localhost:5000/api",
   "lua_window_height" : 2,
   "lua_fn" : "function process(width,height)\n return 0\nend"
