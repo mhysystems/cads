@@ -14,6 +14,7 @@
 #include <profile.h>
 #include <coro.hpp>
 #include <msg.h>
+#include <constants.h>
 
 
 namespace cads
@@ -51,14 +52,11 @@ namespace cads
     struct scan {
       date::utc_clock::time_point scanned_utc;
       std::string db_name;
-      std::string site;
-      std::string conveyor_name;
       int64_t begin_index;
       int64_t cardinality;
       int64_t uploaded;
       int64_t status;
       int64_t conveyor_id;
-      int64_t belt_id;
     };
     //enum scani {ScanBegin, Path, Uploaded, Status};
   }

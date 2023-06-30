@@ -10,7 +10,8 @@ conveyor = {
   Timezone = "Australia/Perth",
   PulleyCircumference = 1000.0,
   TypicalSpeed = 6.0,
-  Belt = 1
+  Belt = 1,
+  Length = 12120
 }
 
 belt = {

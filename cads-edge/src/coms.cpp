@@ -495,30 +495,24 @@ namespace cads
     }
   }
 
-  void http_post_profile_properties2(std::string chrono, double YmaxN, double y_step, double z_max)
+  void http_post_profile_properties2(date::utc_clock::time_point chrono, double YmaxN, double y_step, double z_max, double WidthN, Conveyor conveyor, GocatorProperties gocator)
   {
     nlohmann::json params_json;
-    auto db_name = global_config["profile_db_name"].get<std::string>();
-    auto [params, err] = fetch_profile_parameters(db_name);
-    auto [belt_id, err2] = fetch_belt_id();
 
-    params_json["site"] = global_conveyor_parameters.Site;
-    params_json["conveyor"] = global_conveyor_parameters.Name;
-    params_json["chrono"] = chrono;
+    params_json["site"] = conveyor.Site;
+    params_json["conveyor"] = conveyor.Name;
+    params_json["chrono"] = to_str(chrono::floor<chrono::seconds>(chrono));
     params_json["y_res"] = y_step;
-    params_json["x_res"] = params.xResolution;
-    params_json["z_res"] = params.zResolution;
-    params_json["z_off"] = params.zOffset;
+    params_json["x_res"] = gocator.xResolution;
+    params_json["z_res"] = gocator.zResolution;
+    params_json["z_off"] = gocator.zOffset;
     params_json["z_max"] = z_max;
     params_json["Ymax"] = global_belt_parameters.Length;
     params_json["YmaxN"] = YmaxN;
-    params_json["WidthN"] = global_belt_parameters.WidthN;
-    params_json["Belt"] = belt_id;
+    params_json["WidthN"] = WidthN;
+    params_json["Belt"] = conveyor.Belt;
 
-    if (err == 0 && err2 == 0)
-    {
-      http_post_profile_properties_json(params_json.dump());
-    }
+    http_post_profile_properties_json(params_json.dump());
   }
 
   void http_post_profile_properties(cads::meta meta)
@@ -556,18 +550,25 @@ namespace cads
       spdlog::get("cads")->info("{}: {} doesn't exist. Scan not uploaded", __func__, db_name);
       return {scan,true};
     }
-
-    auto endpoint_url = mk_post_profile_url(scan.scanned_utc,scan.site,scan.conveyor_name);
-    auto upload_profile = global_config["upload_profile"].get<bool>();
-
-    auto [params, err] = fetch_scan_gocator(db_name);
-
-    if (err < 0)
+    
+    auto [gocator, gocator_err] = fetch_scan_gocator(db_name);
+    
+    if (gocator_err < 0)
     {
       spdlog::get("cads")->info("{} fetch_scan_gocator failed - {}", __func__, db_name);
       return {scan,true};
-    }
+    } 
+    
+    auto [conveyor, conveyor_err] = fetch_scan_conveyor(db_name);
+    
+    if (conveyor_err < 0)
+    {
+      spdlog::get("cads")->info("{} fetch_scan_conveyor failed - {}", __func__, db_name);
+      return {scan,true};
+    } 
 
+    auto endpoint_url = mk_post_profile_url(scan.scanned_utc,conveyor.Site,conveyor.Name);
+    auto upload_profile = global_config["upload_profile"].get<bool>();
     auto fetch_profile = fetch_scan_coro(scan.begin_index + 1 + scan.uploaded, scan.begin_index + scan.cardinality + 1, db_name);
 
     FlatBufferBuilder builder(4096 * 128);
@@ -577,11 +578,12 @@ namespace cads
 
     auto YmaxN = scan.cardinality;
 
-    auto z_resolution = params.zResolution;
-    auto z_offset = params.zOffset;
-    auto y_step = global_belt_parameters.Length / (YmaxN);
+    auto z_resolution = gocator.zResolution;
+    auto z_offset = gocator.zOffset;
+    auto y_step = conveyor.Length / (YmaxN);
 
     double belt_z_max = 0;
+    double widthN = 0;
 
     while (true)
     {
@@ -594,6 +596,7 @@ namespace cads
 
         auto y = (idx - scan.begin_index - 1) * y_step; // Sqlite rowid starts a 1
 
+        widthN = (double)zs.size();
         auto max_iter = max_element(zs.begin(), zs.end());
 
         if (max_iter != zs.end())
@@ -653,7 +656,7 @@ namespace cads
     bool failure = scan.uploaded != YmaxN;
     if (!failure)
     {
-      http_post_profile_properties2(to_str(chrono::floor<chrono::seconds>(scan.scanned_utc)), YmaxN, y_step,belt_z_max);
+      http_post_profile_properties2(scan.scanned_utc, YmaxN, y_step, belt_z_max, widthN, conveyor, gocator);
     }
 
     return {scan,failure};

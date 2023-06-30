@@ -48,7 +48,7 @@ namespace cads {
     double PulleyCircumference;
     double TypicalSpeed;
     int64_t Belt;
-
+    double Length;
     operator std::string() const;
   };
 

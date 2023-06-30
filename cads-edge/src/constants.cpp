@@ -89,6 +89,10 @@ namespace {
       lua_getfield(L.get(), -1, "Belt");
       obj.Belt = lua_tonumber(L.get(), -1);
       lua_pop(L.get(), 1);
+
+      lua_getfield(L.get(), -1, "Length");
+      obj.Length = lua_tonumber(L.get(), -1);
+      lua_pop(L.get(), 1);
     }
 
     return std::make_tuple(obj,std::move(L));
@@ -400,6 +404,7 @@ namespace cads {
     params_json["Timezone"] = Timezone;
     params_json["PulleyCircumference"] = PulleyCircumference;
     params_json["Belt"] = Belt;
+    params_json["Length"] = Belt;
 
     return params_json.dump();
   }

@@ -68,7 +68,7 @@ namespace cads
           auto scan_end = date::utc_clock::now();
           auto scan_filename = fmt::format("scan-{}.sqlite",global.scan_begin.time_since_epoch().count());
           store_scan_gocator(global.gocator_properties,scan_filename);
-          store_scan_properties({global.scan_begin,scan_end},scan_filename);
+          store_scan_conveyor(global.conveyor,scan_filename);
           
           auto new_scan_filename = fmt::format("scan-{}.sqlite",scan_end.time_since_epoch().count());
           create_scan_db(new_scan_filename);
@@ -79,14 +79,11 @@ namespace cads
           cads::state::scan scan = {
             global.scan_begin,
             scan_filename,
-            global.conveyor.Site,
-            global.conveyor.Name,
             e.start_value,
             e.length,
             0,
             1,
-            global.conveyor.Id,
-            global.conveyor.Belt
+            global.conveyor.Id
           };
 
           update_scan_state(scan);   
@@ -97,14 +94,11 @@ namespace cads
           cads::state::scan scan2 = {
             global.scan_begin,
             scan_filename,
-            global.conveyor.Site,
-            global.conveyor.Name,
             0,
             0,
             0,
-            1,
-            global.conveyor.Id,
-            global.conveyor.Belt
+            0,
+            global.conveyor.Id
           };
 
           store_scan_state(scan2);  
@@ -130,14 +124,11 @@ namespace cads
           cads::state::scan scan2 = {
             global.scan_begin,
             scan_filename,
-            global.conveyor.Site,
-            global.conveyor.Name,
             0,
             0,
             0,
-            1,
-            global.conveyor.Id,
-            global.conveyor.Belt
+            0,
+            global.conveyor.Id
           };
 
           store_scan_state(scan2);  

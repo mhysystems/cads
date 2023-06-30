@@ -53,6 +53,10 @@ namespace
       lua_getfield(L, index, "Belt");
       obj.Belt = lua_tonumber(L, -1);
       lua_pop(L, 1);
+
+      lua_getfield(L, index, "Length");
+      obj.Length = lua_tonumber(L, -1);
+      lua_pop(L, 1);
     }
 
     return obj;
