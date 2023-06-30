@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <numeric>
 #include <bit>
+#include <cassert>
 
 #include <profile.h>
 #include <constants.h>

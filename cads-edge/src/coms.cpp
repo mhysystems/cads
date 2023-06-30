@@ -23,6 +23,7 @@
 #include <nats.h>
 #include <coms.h>
 #include <brotli/encode.h>
+#include <interpolation.h>
 
 #pragma GCC diagnostic pop
 
@@ -33,38 +34,6 @@ using namespace std;
 
 namespace
 {
-
-  std::tuple<std::string, bool> http_post_json(std::string endpoint_url, std::string json, int retry = 16, int retry_wait = 8)
-  {
-
-    cpr::Response r;
-    const cpr::Url endpoint{endpoint_url};
-
-    while (retry-- > 0)
-    {
-      r = cpr::Post(endpoint,
-                    cpr::Body{json},
-                    cpr::Header{{"Content-Type", "application/json"}});
-
-      if (cpr::ErrorCode::OK == r.error.code && cpr::status::HTTP_OK == r.status_code)
-      {
-        return {r.text, false};
-      }
-      else
-      {
-        if (retry == 0)
-        {
-          spdlog::get("upload")->error("http_post_json failed with http status code {}, body: {}, endpoint: {}", r.status_code, json, endpoint.str());
-        }
-        else
-        {
-          std::this_thread::sleep_for(std::chrono::seconds(retry_wait));
-        }
-      }
-    }
-
-    return {"", true};
-  }
 
   std::vector<uint8_t> compress(uint8_t *input, uint32_t size)
   {
@@ -354,16 +323,6 @@ namespace cads
     return endpoint_url + '/' + site + '/' + conveyor + '/' + ts;
   }
 
-#if 0
-  std::string mk_post_profile_url(std::string endpoint_url, std::string ts)
-  {
-    auto site = global_conveyor_parameters.Site;
-    auto conveyor = global_conveyor_parameters.Name;
-
-    return endpoint_url + '/' + site + '/' + conveyor + '/' + ts;
-  }
-#endif
-  
   coro<long,std::tuple<std::vector<uint8_t>,long>,1> send_bytes_coro(long sent, std::string url,bool upload_profile) {
 
     
@@ -423,45 +382,6 @@ namespace cads
   }
   
   
-  auto send_flatbuffer_array(
-      flatbuffers::FlatBufferBuilder &builder,
-      double z_res,
-      double z_off,
-      int64_t idx,
-      std::vector<flatbuffers::Offset<CadsFlatbuffers::profile>> &profiles_flat,
-      const cpr::Url &endpoint,
-      bool upload_profile = true)
-  {
-
-    builder.Finish(CadsFlatbuffers::Createprofile_array(builder, z_res, z_off, idx, profiles_flat.size(), builder.CreateVector(profiles_flat)));
-
-    auto buf = builder.GetBufferPointer();
-    auto size = builder.GetSize();
-
-    std::vector<uint8_t> bufv = compress(buf, size);
-
-    while (upload_profile)
-    {
-      cpr::Response r = cpr::Post(endpoint,
-                                  cpr::Body{(char *)bufv.data(), bufv.size()},
-                                  cpr::Header{{"Content-Encoding", "br"}, {"Content-Type", "application/octet-stream"}});
-
-      if (cpr::ErrorCode::OK == r.error.code && cpr::status::HTTP_OK == r.status_code)
-      {
-        break;
-      }
-      else
-      {
-        spdlog::get("upload")->error("Upload failed with http status code {}", r.status_code);
-      }
-    }
-
-    builder.Clear();
-    profiles_flat.clear();
-
-    return size;
-  }
-
   void http_post_profile_properties_json(std::string json)
   {
 
@@ -495,7 +415,7 @@ namespace cads
     }
   }
 
-  void http_post_profile_properties2(date::utc_clock::time_point chrono, double YmaxN, double y_step, double z_max, double WidthN, Conveyor conveyor, GocatorProperties gocator)
+  void http_post_profile_properties2(date::utc_clock::time_point chrono, double YmaxN, double y_step, double z_max, Conveyor conveyor, GocatorProperties gocator)
   {
     nlohmann::json params_json;
 
@@ -509,28 +429,8 @@ namespace cads
     params_json["z_max"] = z_max;
     params_json["Ymax"] = global_belt_parameters.Length;
     params_json["YmaxN"] = YmaxN;
-    params_json["WidthN"] = WidthN;
+    params_json["WidthN"] = conveyor.WidthN;
     params_json["Belt"] = conveyor.Belt;
-
-    http_post_profile_properties_json(params_json.dump());
-  }
-
-  void http_post_profile_properties(cads::meta meta)
-  {
-    nlohmann::json params_json;
-
-    params_json["site"] = meta.site;
-    params_json["conveyor"] = meta.conveyor;
-    params_json["chrono"] = meta.chrono;
-    params_json["y_res"] = meta.y_res;
-    params_json["x_res"] = meta.x_res;
-    params_json["z_res"] = meta.z_res;
-    params_json["z_off"] = meta.z_off;
-    params_json["z_max"] = meta.z_max;
-    params_json["z_min"] = meta.z_min;
-    params_json["Ymax"] = meta.Ymax;
-    params_json["YmaxN"] = meta.YmaxN;
-    params_json["WidthN"] = meta.WidthN;
 
     http_post_profile_properties_json(params_json.dump());
   }
@@ -583,22 +483,20 @@ namespace cads
     auto y_step = conveyor.Length / (YmaxN);
 
     double belt_z_max = 0;
-    double widthN = 0;
     long cnt = 0;
 
     while (true)
     {
       auto [co_terminate, cv] = fetch_profile.resume(0);
-      auto [idx, zs] = cv;
+      auto [idx, zs_raw] = cv;
 
       if (!co_terminate)
       {
         namespace sr = std::ranges;
-
+        auto zs = interpolate_to_widthn(zs_raw,conveyor.WidthN);
         idx -= scan.begin_index; cnt++;
         auto y = (idx - 1) * y_step; // Sqlite rowid starts a 1
 
-        widthN = (double)zs.size();
         auto max_iter = max_element(zs.begin(), zs.end());
 
         if (max_iter != zs.end())
@@ -658,7 +556,7 @@ namespace cads
     bool failure = scan.uploaded != YmaxN;
     if (!failure)
     {
-      http_post_profile_properties2(scan.scanned_utc, YmaxN, y_step, belt_z_max, widthN, conveyor, gocator);
+      http_post_profile_properties2(scan.scanned_utc, YmaxN, y_step, belt_z_max, conveyor, gocator);
     }
 
     return {scan,failure};

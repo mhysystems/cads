@@ -49,6 +49,7 @@ namespace cads {
     double TypicalSpeed;
     int64_t Belt;
     double Length;
+    int64_t WidthN;
     operator std::string() const;
   };
 

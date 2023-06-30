@@ -32,23 +32,6 @@ namespace cads
 
   const cads::profile null_profile{ std::chrono::time_point<std::chrono::system_clock>::min(),std::numeric_limits<cads::y_type>::max(), std::numeric_limits<double>::max(), {}};
 
-  struct meta
-  {
-    std::string site = "";
-    std::string conveyor = "";
-    std::string chrono = "";
-    double x_res = 0;
-    double y_res = 0;
-    double z_res = 0;
-    double z_off = 0;
-    double z_max = 0;
-    double z_min = 0;
-    double Ymax = 0;
-    double YmaxN = 0;
-    double WidthN = 0;
-    long Belt = 0;
-  };
-
   struct transient
   {
     double y;

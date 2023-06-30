@@ -3,19 +3,19 @@ gocator = {
 }
 
 conveyor = {
-  Id = 1,
+  Id = 3,
   Org  = "mhy",
   Site = "gold",
   Name = "jig001",
   Timezone = "Australia/Brisbane",
   PulleyCircumference = 670.0,
   TypicalSpeed = 6.0,
-  Belt = 1,
+  Belt = 3,
   Length = 670
 }
 
 belt = {
-  Id = 1,
+  Id = 3,
   Installed = "2023-01-14T00:00:00Z",
   PulleyCover = 7.0,
   CordDiameter = 9.1,
@@ -24,7 +24,7 @@ belt = {
   Length = 670,
   LengthN = conveyor.TypicalSpeed / gocator.Fps, 
   Splices = 1,
-  Conveyor = 1
+  Conveyor = 3
 }
 
 anomaly = {

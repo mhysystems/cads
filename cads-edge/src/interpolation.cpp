@@ -8,6 +8,23 @@
 namespace cads
 {
 
+  decltype(cads::profile::z) interpolate_to_widthn(decltype(cads::profile::z) z, size_t n )
+  {
+    using namespace std;
+
+    auto step = (double)z.size() / (double)n;
+    decltype(z) interpolated_z(n);
+
+    assert(step > 0);
+
+    for(size_t i = 0; i < n; i++) {
+      interpolated_z[i] = z[(size_t)floor(i*step)];
+    }
+
+    return interpolated_z;
+
+  }
+
   void interpolation_nearest(z_type::iterator begin, z_type::iterator end, std::function<bool(z_element)> is)
   {
 

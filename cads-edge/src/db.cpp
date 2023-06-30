@@ -1059,7 +1059,9 @@ namespace cads
       ,PulleyCircumference REAL NOT NULL 
       ,TypicalSpeed REAL NOT NULL 
       ,Belt INTEGER NOT NULL
-      ,Length REAL NOT NULL ))");
+      ,Length REAL NOT NULL 
+      ,WidthN INTEGER NOT NULL
+      ))");
     
     auto query = R"(INSERT INTO Conveyor (
       Id
@@ -1071,7 +1073,8 @@ namespace cads
       ,TypicalSpeed
       ,Belt
       ,Length
-    ) VALUES (?,?,?,?,?,?,?,?,?))"s;
+      ,WidthN
+    ) VALUES (?,?,?,?,?,?,?,?,?,?))"s;
   
     auto [stmt,db] = prepare_query(db_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
 
@@ -1084,6 +1087,7 @@ namespace cads
     err = sqlite3_bind_double(stmt.get(), 7, conveyor.TypicalSpeed);
     err = sqlite3_bind_int64(stmt.get(), 8, conveyor.Belt);
     err = sqlite3_bind_double(stmt.get(), 9, conveyor.Length);
+    err = sqlite3_bind_int64(stmt.get(), 10, conveyor.WidthN);
 
     tie(err, stmt) = db_step(move(stmt));
 
@@ -1102,6 +1106,7 @@ namespace cads
       ,TypicalSpeed
       ,Belt
       ,Length
+      ,WidthN
      FROM Conveyor)"s;
 
     auto [stmt,db] = prepare_query(db_name, query);
@@ -1122,7 +1127,8 @@ namespace cads
           double(sqlite3_column_double(stmt.get(), 5)),
           double(sqlite3_column_double(stmt.get(), 6)),
           int64_t(sqlite3_column_int64(stmt.get(), 7)),
-          double(sqlite3_column_double(stmt.get(), 8))},
+          double(sqlite3_column_double(stmt.get(), 8)),
+          int64_t(sqlite3_column_int64(stmt.get(), 9))},
           0};
     }
     else
