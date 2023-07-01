@@ -441,7 +441,7 @@ namespace cads
                 origin_sequence_cnt++;
               }
               
-              next_fifo.enqueue({msgid::scan, op});
+              next_fifo.enqueue({msgid::scan, op}); scan_cnt++;
             }else{
               next_fifo.enqueue({msgid::end_sequence, origin_sequence_cnt});
               origin_sequence_cnt = 0;
