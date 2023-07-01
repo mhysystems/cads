@@ -446,7 +446,6 @@ namespace cads
               next_fifo.enqueue({msgid::end_sequence, origin_sequence_cnt});
               origin_sequence_cnt = 0;
             }
-            scan_cnt++;
           }else {
             loop = false;
             spdlog::get("cads")->error("Origin decetor stopped");
