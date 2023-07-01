@@ -381,6 +381,7 @@ namespace cads {
     communications_config = mk_communications(config);
     fiducial_config = mk_fiducial(config);
     config_origin_detection = mk_origin_detection(config);
+    constants_upload = mk_upload(config);
     global_config = config;
 
   }

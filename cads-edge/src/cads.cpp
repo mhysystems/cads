@@ -702,7 +702,7 @@ namespace cads
         
         auto mainco = lua_tothread(L.get(), -1); 
 
-        while(true)
+        while(!terminate_signal)
         {
           lua_pushboolean(mainco,false);
           auto nargs = 0;
@@ -718,7 +718,7 @@ namespace cads
           } 
           else
           {
-            spdlog::get("cads")->error("TODO");
+            spdlog::get("cads")->error("{}: lua_resume: {}",__func__,lua_tostring(mainco,-1));
             break;
           }
 
@@ -734,7 +734,7 @@ namespace cads
         }
         auto mainco_status = lua_status(mainco);
         
-        if( mainco_status == LUA_OK || mainco_status == LUA_YIELD ) {
+        if(mainco_status == LUA_YIELD ) {
           auto nargs = 0;
           lua_pushboolean(mainco,true);
           lua_resume(mainco,L.get(),1,&nargs);

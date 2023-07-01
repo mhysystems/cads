@@ -36,7 +36,6 @@ namespace cads
   {
     if (!m_stopped)
     {
-      m_gocatorFifo.enqueue({msgid::finished, 0});
       m_stopped = true;
       m_thread.join();
     }
@@ -86,7 +85,7 @@ namespace cads
         auto last = std::find_if(p.z.rbegin(), p.z.rend(), [](z_element z)
                                  { return !std::isnan(z); });
 
-        m_gocatorFifo.enqueue({msgid::scan, profile{current_time,cnt*y_resolution, p.x_off, z_type(first, last.base())}});
+        if(!m_stopped) m_gocatorFifo.enqueue({msgid::scan, profile{current_time,cnt*y_resolution, p.x_off, z_type(first, last.base())}});
 
         current_time += pulley_period;
         cnt++;

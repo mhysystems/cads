@@ -56,6 +56,7 @@ function main()
     local is_value,msg_id = wait_for(savedb_luamain)
 
     if is_value then
+      print(msg_id)
       if msg_id == 5 then break 
       elseif msg_id == 2 then break
       end
@@ -63,7 +64,7 @@ function main()
 
     unloop = coroutine.yield(0)
   until unloop
-
+  print("stopping")
   gocator:Stop()
 
   join_threads({thread_process_profile,window_processing,dynamic_processing,upload_scan})

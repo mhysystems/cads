@@ -71,12 +71,7 @@ namespace
 
     for(auto scan : scans) {
       
-      if(scan.status > 1) {
-        max = scan;
-        continue;
-      }
-      
-      if(scan.scanned_utc > max.scanned_utc) {
+      if(scan.scanned_utc > max.scanned_utc && scan.status >= max.status) {
         max = scan;
       }
     }
@@ -135,8 +130,9 @@ void upload_scan_thread(std::atomic<bool> &terminate)
 
   do
   {
-    std::this_thread::sleep_for(std::chrono::seconds(60));
+    std::this_thread::sleep_for(std::chrono::seconds(15));
       
+
     auto scans = fetch_scan_state();
 
     if(scans.size() == 0) continue;
@@ -155,6 +151,8 @@ void upload_scan_thread(std::atomic<bool> &terminate)
         if(!update_scan_state(latest)) {
           break;
         }
+
+        continue;
       }
 
       for(auto scan : pscans) {

@@ -19,6 +19,10 @@
     "fiducial_gap" : 40
   },
 
+  "upload" : {
+    "Period" : 120
+  },
+
   "OriginDetection" : {
     "BeltLength": [660,680],
     "cross_correlation_threshold" : 0.285,
@@ -83,7 +87,7 @@
   },
 
   "communications" : {
-    "NatsUrl" : "10.9.1.1",
+    "NatsUrl" : "127.0.0.1",
     "UploadRows" : 1024
   },
 
