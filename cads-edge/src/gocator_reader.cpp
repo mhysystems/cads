@@ -290,7 +290,7 @@ namespace cads
     double zResolution = 0.0;
     double xOffset = 0.0;
     double zOffset = 0.0;
-    double yResolution = global_conveyor_parameters.TypicalSpeed / constants_gocator.Fps;
+    double yResolution = 1000 * global_conveyor_parameters.TypicalSpeed / constants_gocator.Fps;
 
     for (kSize i = 0; i < GoDataSet_Count(dataset); ++i)
     {

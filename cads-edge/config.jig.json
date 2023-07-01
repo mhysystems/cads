@@ -1,5 +1,5 @@
 {
-  "data_source" : "../../profiles/rawprofile_jake2.db",
+  "data_source" : "gocator",
   
   "Device" : {
     "Serial" : 80819
