@@ -404,7 +404,7 @@ namespace cads {
     params_json["Timezone"] = Timezone;
     params_json["PulleyCircumference"] = PulleyCircumference;
     params_json["Belt"] = Belt;
-    params_json["Length"] = Belt;
+    params_json["Length"] = Length;
 
     return params_json.dump();
   }
