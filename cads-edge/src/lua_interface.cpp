@@ -223,6 +223,14 @@ namespace
     return mk_thread2(L,bound);
   }
 
+  int loop_beltlength_thread(lua_State *L) {
+    using namespace std::placeholders;
+
+    auto conveyor = mk_conveyor(L,1);
+    auto bound = std::bind(cads::loop_beltlength_thread,conveyor,_1,_2);
+    return mk_thread2(L,bound);
+  }
+
   int process_profile(lua_State *L) {
     return mk_thread2(L,cads::process_profile);
   }
@@ -267,6 +275,9 @@ namespace cads
 
       lua_pushcfunction(L, ::window_processing_thread);
 	    lua_setglobal(L,"window_processing_thread");
+
+      lua_pushcfunction(L, ::loop_beltlength_thread);
+	    lua_setglobal(L,"loop_beltlength_thread");
 
       lua_pushcfunction(L, ::splice_detection_thread);
 	    lua_setglobal(L,"splice_detection_thread");

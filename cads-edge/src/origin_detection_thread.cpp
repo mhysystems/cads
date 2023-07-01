@@ -191,6 +191,49 @@ namespace cads
       }
     }
   }
+  
+  coro<std::tuple<profile,double,bool>,profile,1> maxlength_coro(double y_max_length)
+  {
+
+    profile p;
+    bool terminate = false;
+
+    std::tie(p,terminate) = co_yield {p,0.0,false}; 
+
+    y_type y_offset = p.y;
+    while (true)
+    {
+      
+      if(terminate) break;
+
+      y_type y = p.y;
+
+      if (y >= y_max_length + y_offset)
+      {
+        y_offset = y;
+      }
+      p = {p.time,p.y - y_offset, p.x_off, p.z};
+
+      std::tie(p,terminate) = co_yield {p,y,true};  
+    }
+  }
+
+  coro<std::tuple<profile,bool>,profile,1> identity_coro()
+  {
+
+    profile p;
+    bool terminate = false;
+
+    std::tie(p,terminate) = co_yield {p,false};  
+
+    while (true)
+    {
+      
+      if(terminate) break;
+
+      std::tie(p,terminate) = co_yield {p,true};  
+    }
+  }
 
   coro<std::tuple<profile,double,bool>,profile,1> origin_detection_coro(double x_resolution, double y_resolution, int width_n)
   {    
@@ -337,6 +380,101 @@ namespace cads
     }
   }
 
+  void loop_beltlength_thread(Conveyor conveyor, cads::Io &profile_fifo, cads::Io &next_fifo)
+  {
+
+    cads::msg m;
+
+    auto start = std::chrono::high_resolution_clock::now();
+    int64_t cnt = 0;
+    auto buffer_size_warning = buffer_warning_increment;
+
+    profile_fifo.wait_dequeue(m);
+    auto m_id = get<0>(m);
+
+    if (m_id == cads::msgid::finished)
+    {
+      return;
+    }
+
+    if (m_id != cads::msgid::gocator_properties)
+    {
+      std::throw_with_nested(std::runtime_error("preprocessing:First message must be gocator_properties"));
+    }
+    
+    next_fifo.enqueue(m);
+
+
+    auto origin_detection = maxlength_coro(conveyor.Length);
+
+    long origin_sequence_cnt = 0;
+    size_t scan_cnt = 0;
+
+    for (auto loop = true;loop;++cnt)
+    {
+      
+      profile_fifo.wait_dequeue(m);
+
+      switch(std::get<0>(m)) {
+
+        case msgid::scan: {
+          auto p = get<profile>(get<1>(m));
+          auto [coro_end,result] = origin_detection.resume(p);
+          
+          if(!coro_end) {
+            auto [op,estimated_belt_length,valid] = result;
+
+            if(valid) {
+
+              if(op.y == 0) {
+                
+                if(origin_sequence_cnt == 0) {
+                  next_fifo.enqueue({msgid::begin_sequence, origin_sequence_cnt});
+                }
+
+                if(origin_sequence_cnt > 0) {
+                  measurements.send("beltlength",0,estimated_belt_length);
+                  next_fifo.enqueue({msgid::complete_belt, CompleteBelt{0,scan_cnt}});
+                }
+                
+                scan_cnt = 0;
+                origin_sequence_cnt++;
+              }
+              
+              next_fifo.enqueue({msgid::scan, op});
+            }else{
+              next_fifo.enqueue({msgid::end_sequence, origin_sequence_cnt});
+              origin_sequence_cnt = 0;
+            }
+            scan_cnt++;
+          }else {
+            loop = false;
+            spdlog::get("cads")->error("Origin decetor stopped");
+          }
+          break;
+        }
+        case msgid::finished:
+          next_fifo.enqueue(m);
+          loop = false;
+          break;
+        default:
+          next_fifo.enqueue(m);
+      }
+
+      if (profile_fifo.size_approx() > buffer_size_warning)
+      {
+        spdlog::get("cads")->warn("Cads Origin Detection showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
+        buffer_size_warning += buffer_warning_increment;
+      }
+    }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    auto rate = duration != 0 ? (double)cnt / duration : 0;
+    spdlog::get("cads")->info("ORIGIN DETECTION - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, rate);
+  }
+
+
   void window_processing_thread(cads::Io &profile_fifo, cads::Io &next_fifo)
   {
 
@@ -438,54 +576,7 @@ namespace cads
   }
 
 
-  coro<std::tuple<profile,double,bool>,profile,1> maxlength_coro()
-  {
-
-    profile p;
-    bool terminate = false;
-
-
-    auto y_max_length = global_belt_parameters.Length;
-
-    std::tie(p,terminate) = co_yield {p,0.0,false}; 
-
-    y_type y_offset = p.y;
-    while (true)
-    {
-      
-      if(terminate) break;
-
-      y_type y = p.y;
-
-      if (y >= y_max_length + y_offset)
-      {
-        y_offset = y;
-      }
-      p = {p.time,p.y - y_offset, p.x_off, p.z};
-
-      std::tie(p,terminate) = co_yield {p,y,true};  
-    }
-  }
-
-  coro<std::tuple<profile,bool>,profile,1> identity_coro()
-  {
-
-    profile p;
-    bool terminate = false;
-
-    std::tie(p,terminate) = co_yield {p,false};  
-
-    while (true)
-    {
-      
-      if(terminate) break;
-
-      std::tie(p,terminate) = co_yield {p,true};  
-    }
-  }
-
-
-  
+   
 coro<std::tuple<size_t,double,std::vector<double>>,double,1> find_dischord_motif_coro(size_t window_size, size_t partition_size)
 {
     using namespace std::chrono_literals;  

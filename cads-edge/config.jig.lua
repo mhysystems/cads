@@ -37,7 +37,7 @@ function main()
 
   local gocator_cads = BlockingReaderWriterQueue()
   --local ede_origin = BlockingReaderWriterQueue()
-  --local origin_anomaly = BlockingReaderWriterQueue()
+  local origin_anomaly = BlockingReaderWriterQueue()
   --local anomaly_savedb = BlockingReaderWriterQueue()
   local savedb_luamain = BlockingReaderWriterQueue()
   
@@ -45,9 +45,9 @@ function main()
   local gocator = mk_gocator(gocator_cads) 
   --local ede = encoder_distance_estimation(ede_origin,hh)
   --local thread_process_profile = process_profile(gocator_cads,ede)
-  --local window_processing = splice_detection_thread(ede_origin,origin_anomaly)
+  local belt_loop = loop_beltlength_thread(gocator_cads,origin_anomaly)
   --local dynamic_processing = dynamic_processing_thread(origin_anomaly,anomaly_savedb)
-  local thread_send_save = save_send_thread(conveyor,gocator_cads,savedb_luamain)
+  local thread_send_save = save_send_thread(conveyor,origin_anomaly,savedb_luamain)
 
   gocator:Start()
 
