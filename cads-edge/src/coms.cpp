@@ -195,6 +195,7 @@ namespace cads
         }
         else if (s == NATS_CONNECTION_CLOSED)
         {
+          spdlog::get("cads")->error(R"({{ func = '{}' msg = '{}'}})", __func__, "Nats Connection closed");
           loop = false;
         }
         else if (s == NATS_OK)
@@ -205,20 +206,22 @@ namespace cads
           switch(msg_contents) {
             case CadsFlatbuffers::MsgContents_Start : {
               auto str = flatbuffers::GetString(cads_msg->contents_as_Start()->lua_code());
+              natsMsg_Destroy(msg);
               std::tie(terminate,terminate) = co_yield {Start{str}};
             }
             break;
             case CadsFlatbuffers::MsgContents_Stop : {
+              natsMsg_Destroy(msg);
               std::tie(terminate,terminate) = co_yield {Stop{}};
             }
             default:
+            spdlog::get("cads")->error(R"({{ func = '{}' msg = 'Unkown id {}'}})", __func__, msg_contents);
             break;
           }
          }
-        
-        natsMsg_Destroy(msg);
       }
     }
+    spdlog::get("cads")->error(R"({{ func = '{}' msg = '{}'}})", __func__, "Exiting coroutine");
   }
 
   cads::coro<int, std::tuple<std::string, std::string, std::string>, 1> realtime_metrics_coro()
