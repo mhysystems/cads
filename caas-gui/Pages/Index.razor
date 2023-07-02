@@ -1,34 +1,44 @@
-﻿@page "/remote/{device}"
+﻿@page "/remote/{deviceCipherText}"
 
 @using caas_gui.Data
 @inject MsgPublishService MsgService
 
-@if(validSerial) {
+@if(device is not null) {
   <PageTitle>Caas Remote</PageTitle>
-  <input asp-for="SelectedValue" list="datalistOptions" />
+  <input list="datalistOptions" @onchange="@((ChangeEventArgs __e) => selectedConveyor = __e?.Value?.ToString())"/>
   <datalist id="datalistOptions">
-    <option value="Edge"/>
-    <option value="Firefox"/>
-    <option value="Chrome"/>
-    <option value="Opera"/>
-    <option value="Safari"/>
+      @foreach(var conveyor in conveyors) {
+        <option value="@conveyor.Name"/>
+      }
   </datalist>
   <button class="btn btn-primary" @onclick="Clicked">Start</button>
 }
 
 @code {
     [Parameter]
-    public string device { get; set; } = string.Empty;
-    protected int serial = 0;
-    protected bool validSerial = false;
+    public string deviceCipherText { get; set; } = string.Empty;
+    protected Device? device = null;
+
+    protected IEnumerable<Conveyor> conveyors = Enumerable.Empty<Conveyor>();
+
+    protected string? selectedConveyor {get; set;}
 
     protected override void OnInitialized()
     {
-      (serial,validSerial) = MsgService.GetDevice(device);
+      device = MsgService.GetDevice(deviceCipherText);
+      
+      if(device is not null) {
+        conveyors = MsgService.GetConveyers(device);
+      }
     }
 
     private void Clicked()
     {
-      MsgService.PublishStart(serial);  
+      if(device is not null && selectedConveyor is not null) {
+        var conveyor = conveyors.Where( e => e.Name == selectedConveyor);
+        if(conveyor.Any()) {
+          MsgService.PublishStart(device,conveyor.First());  
+        }
+      }
     }
 }

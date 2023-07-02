@@ -17,45 +17,50 @@ public class MsgPublishService
     _config = config.Value;
   }
 
-  static (int, bool) SerialToInt(string serialCipherText, string key)
+  static int? SerialToInt(string serialCipherText, string key)
   {
     var serial = Caas.KeyGen.Decrypt(serialCipherText,key);
     var valid = int.TryParse(serial, out int asInt);
-    return (asInt, valid);
+    return valid ? asInt : null;
   }
 
-  public (int,bool) GetDevice(string serialCipherText) {
-    var (id,valid) = SerialToInt(serialCipherText,_config.UrlKey);
+  public Device? GetDevice(string serialCipherText) {
+    var id = SerialToInt(serialCipherText,_config.UrlKey);
     
-    if(!valid) return (0,false);
+    if(!id.HasValue) return null;
 
     using var context = _dBContext.CreateDbContext();
     var row = context?.Devices?.Where(r => r.Serial == id);
 
-    if(row is null || !row.Any()) return (0,false);
+    if(row is null || !row.Any()) return null;
 
-    return (id,true);
+    return row?.First();
   }
 
-  public void PublishStart(int serial)
+  public IEnumerable<Conveyor> GetConveyers(Device device)
+  {
+    using var context = _dBContext.CreateDbContext();
+
+    var row = context?.Conveyors?.Where (r => r.Org == device.Org);
+
+    return row?.AsEnumerable() ?? Enumerable.Empty<Conveyor>();
+
+  }
+
+  public void PublishStart(Device device, Conveyor conveyor)
   {
     var opts = ConnectionFactory.GetDefaultOptions();
     opts.Url = _config.NatsUrl;
 
     using var c = new ConnectionFactory().CreateConnection(opts);
-    using var context = _dBContext.CreateDbContext();
-    var row = context?.Devices?.Where(r => r.Serial == serial)?.First();
 
-    if (row is not null)
-    {
-      var builder = new FlatBufferBuilder(4096);
+    var builder = new FlatBufferBuilder(4096);
 
-      var LuaCode = builder.CreateString(row.LuaCode);
-      var start = Start.CreateStart(builder, LuaCode);
-      var data = CadsFlatbuffers.Msg.CreateMsg(builder, MsgContents.Start, start.Value);
-      builder.Finish(data.Value);
+    var LuaCode = builder.CreateString(conveyor.LuaCode);
+    var start = Start.CreateStart(builder, LuaCode);
+    var data = CadsFlatbuffers.Msg.CreateMsg(builder, MsgContents.Start, start.Value);
+    builder.Finish(data.Value);
 
-      c.Publish(row.MsgSubject, builder.SizedByteArray());
-    }
+    c.Publish(device.MsgSubjectPublish, builder.SizedByteArray());
   }
 }

@@ -10,8 +10,6 @@ public class PostgresDBContext : DbContext
         : base(options)
     {
       _connectionString = config.Value.ConnectionString;
-      //Database.EnsureCreated();
-      //Database.Migrate();
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) {
@@ -20,8 +18,10 @@ public class PostgresDBContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder) {
 
       modelBuilder.Entity<Device>().HasKey(e => e.Serial);
+      modelBuilder.Entity<Conveyor>().HasKey(e => e.Id);
 
     }
 
     public DbSet<Device> Devices { get; set; }
+    public DbSet<Conveyor> Conveyors { get; set; }
 }
