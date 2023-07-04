@@ -43,7 +43,7 @@ public class MsgPublishService
 
     var row = context?.Conveyors?.Where (r => r.Org == device.Org);
 
-    return row?.AsEnumerable() ?? Enumerable.Empty<Conveyor>();
+    return row?.ToArray() ?? Enumerable.Empty<Conveyor>();
 
   }
 

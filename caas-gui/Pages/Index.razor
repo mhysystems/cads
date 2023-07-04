@@ -1,44 +1,88 @@
 ﻿@page "/remote/{deviceCipherText}"
 
+@using Microsoft.AspNetCore.SignalR.Client
 @using caas_gui.Data
-@inject MsgPublishService MsgService
 
-@if(device is not null) {
+@inject MsgPublishService MsgService
+@inject NavigationManager NavigationManager
+
+@implements IAsyncDisposable
+
+@if(device is not null && hubConnection is not null) {
   <PageTitle>Caas Remote</PageTitle>
   <input list="datalistOptions" @onchange="@((ChangeEventArgs __e) => selectedConveyor = __e?.Value?.ToString())"/>
   <datalist id="datalistOptions">
-      @foreach(var conveyor in conveyors) {
-        <option value="@conveyor.Name"/>
-      }
+    @foreach(var conveyor in conveyors) {
+      <option value="@conveyor.Name"/>
+    }
   </datalist>
-  <button class="btn btn-primary" @onclick="Clicked">Start</button>
+  <button class="btn btn-primary" @onclick="Clicked" disabled="@(!isConnected)">Start</button>
+}else if(device is not null) {
+  <PageTitle>Error</PageTitle>
+  <p>Unable to connect to Caas Device</p>
 }
 
-@code {
-    [Parameter]
-    public string deviceCipherText { get; set; } = string.Empty;
-    protected Device? device = null;
+@code 
+{
+  [Parameter]
+  public string deviceCipherText { get; set; } = string.Empty;
+  protected Device? device = null;
 
-    protected IEnumerable<Conveyor> conveyors = Enumerable.Empty<Conveyor>();
+  protected IEnumerable<Conveyor> conveyors = Enumerable.Empty<Conveyor>();
 
-    protected string? selectedConveyor {get; set;}
+  protected string? selectedConveyor {get; set;}
+  private HubConnection? hubConnection;
 
-    protected override void OnInitialized()
-    {
-      device = MsgService.GetDevice(deviceCipherText);
-      
-      if(device is not null) {
-        conveyors = MsgService.GetConveyers(device);
-      }
-    }
+  public bool isConnected => hubConnection?.State == HubConnectionState.Connected;
 
-    private void Clicked()
-    {
-      if(device is not null && selectedConveyor is not null) {
-        var conveyor = conveyors.Where( e => e.Name == selectedConveyor);
-        if(conveyor.Any()) {
-          MsgService.PublishStart(device,conveyor.First());  
+  protected override async Task OnInitializedAsync()
+  {
+    device = MsgService.GetDevice(deviceCipherText);
+    
+    if(device is not null) {
+      conveyors = MsgService.GetConveyers(device);
+
+      hubConnection = new HubConnectionBuilder()
+        .WithUrl(NavigationManager.ToAbsoluteUri("/msg"))
+        .Build();
+
+      hubConnection.On<string>("ReceiveMessage", (message) =>
+      {
+        switch(message) {
+          case "ClientDisconnect" :
+          hubConnection.InvokeAsync("LeaveGroup",device.Serial.ToString());
+          hubConnection = null;
+          break;
+          default:
+          break;
         }
+        InvokeAsync(StateHasChanged);
+      });
+
+      hubConnection.On<Device>("UpdateDevice", (d) =>
+      {
+        device = d;
+        InvokeAsync(StateHasChanged);
+      });
+
+      await hubConnection.StartAsync();
+      await hubConnection.InvokeAsync("JoinGroup",device.Serial.ToString());
+    }
+  }
+  private void Clicked()
+  {
+    if(device is not null && selectedConveyor is not null) {
+      var conveyor = conveyors.Where( e => e.Name == selectedConveyor);
+      if(conveyor.Any()) {
+        MsgService.PublishStart(device,conveyor.First());  
       }
     }
+  }
+  public async ValueTask DisposeAsync()
+  {
+    if (hubConnection is not null)
+    {
+      await hubConnection.DisposeAsync();
+    }
+  }
 }

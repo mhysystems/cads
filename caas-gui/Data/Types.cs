@@ -1,12 +1,17 @@
 
 namespace caas_gui.Data;
 
+
+[Flags] public enum DeviceState {
+   Disconnect = 0,
+   Connected = 1
+}
+
 public class AppSettings
 {
   public string NatsUrl { get; set; } = "127.0.0.1";
   public string ConnectionString { get; set; } = String.Empty;
   public string UrlKey { get; set; } = String.Empty;
-
 }
 
 public class Device
@@ -15,7 +20,9 @@ public class Device
   public string MsgSubjectPublish { get; set; } = string.Empty;
   public string MsgSubjectSubscribe { get; set; } = string.Empty;
   public string Org { get; set; } = string.Empty;
-  public long State { get; set; } = 0;
+  public DeviceState State { get; set; } = DeviceState.Disconnect;
+
+  public DateTime LastSeen { get; set; } = DateTime.MinValue;
 }
 
 public class Conveyor

@@ -7,6 +7,8 @@ public class MessagesHub : Hub
 {
     public async Task JoinGroup(string group)
     {
+      
+      await Clients.Group(group).SendAsync("ReceiveMessage","ClientDisconnect");
       await Groups.AddToGroupAsync(Context.ConnectionId,group);
     }
 
