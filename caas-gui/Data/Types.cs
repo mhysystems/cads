@@ -4,7 +4,8 @@ namespace caas_gui.Data;
 
 [Flags] public enum DeviceState {
    Disconnect = 0,
-   Connected = 1
+   Connected = 1,
+   Scanning = 2
 }
 
 public class AppSettings

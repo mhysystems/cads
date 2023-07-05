@@ -24,5 +24,14 @@ public class Db
     return rows.First();
   }
 
+    public static void UpdateDeviceStatus(IDbContextFactory<PostgresDBContext> dBContext, Device device) {
+
+      using var context = dBContext.CreateDbContext();
+
+      context?.Devices?.Where( r => r.Serial == device.Serial)?.ExecuteUpdate ( r => 
+        r.SetProperty(f => f.State, device.State)
+      );
+  }
+
 
 }

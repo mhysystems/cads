@@ -740,11 +740,13 @@ namespace cads
           lua_resume(mainco,L.get(),1,&nargs);
         }
 
+        measurements.send("scancomplete",0,0.0);
       }catch(std::exception& ex) {
         spdlog::get("cads")->error("TODO");
       }
     }
-
+  
+    measurements.send("scancomplete",0,0.0);
     terminate = true; // stops upload thread
     measurements.terminate();
   }

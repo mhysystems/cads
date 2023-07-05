@@ -384,6 +384,8 @@ namespace cads {
     constants_upload = mk_upload(config);
     global_config = config;
 
+    measurements.init();
+
   }
 
   void drop_config() {

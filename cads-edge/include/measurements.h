@@ -33,12 +33,13 @@ namespace cads
     
     public:
 
-    using MeasureMsg = std::tuple<std::string,int,date::utc_clock::time_point,std::variant<double,std::string,std::function<double()>,std::function<std::string()>, std::tuple<double,double>>>;
+    using MeasureMsg = std::tuple<std::string,int,date::utc_clock::time_point,std::variant<double,std::string,std::function<double()>,std::function<std::string()>,std::tuple<double,double>>>;
     
     Measure(std::string);
     Measure() = default;  
     ~Measure();
 
+    void init(); 
     void terminate();
     void send(std::string, int quality, double);
     void send(std::string, int quality, std::string);

@@ -78,10 +78,21 @@ public class NatsConsumerHostedService : BackgroundService
             if(id == "heartbeat") {
               using var context = _dBContext.CreateDbContext();
 
-              context?.Devices?.Where( r => r.Serial == device.Serial)?.ExecuteUpdate ( r =>
-                r.SetProperty( d => d.LastSeen,DateTime.Now)
+              context?.Devices?.Where( r => r.Serial == device.Serial)?.ExecuteUpdate ( r => 
+                r.SetProperty( f => f.LastSeen, DateTime.UtcNow).SetProperty(f => f.State, d => d.State | DeviceState.Connected)
               );
-            
+              
+              if(!device.State.HasFlag(DeviceState.Connected)) {
+                device.State |= DeviceState.Connected;
+                await _messageshubContext.Clients.Group(device.Serial.ToString()).SendAsync("UpdateDevice",device,stoppingToken);
+              }
+            }else if(id == "scancomplete") {
+              
+              if(device.State.HasFlag(DeviceState.Scanning)) {
+                device.State &= ~DeviceState.Scanning;
+                Db.UpdateDeviceStatus(_dBContext,device);
+                await _messageshubContext.Clients.Group(device.Serial.ToString()).SendAsync("UpdateDevice",device,stoppingToken);
+              }
             }
           }else {
             _logger.LogError("Nats message missing subject");
@@ -89,26 +100,26 @@ public class NatsConsumerHostedService : BackgroundService
 
         };
 
-        using var caas = c.SubscribeAsync("caas.*", msgHandler) ?? throw new NullReferenceException("Nats subscribe is null");
+        using var caas = c.SubscribeAsync("caas.*.*", msgHandler) ?? throw new NullReferenceException("Nats subscribe is null");
 
         while (!stoppingToken.IsCancellationRequested)
         {
           _logger.LogInformation("Connected to Nats and waiting for messages");
-          await Task.Delay(new TimeSpan(0,1,0), stoppingToken);
 
           using var context = _dBContext.CreateDbContext();
 
           if(context is not null) {
-            var now = DateTime.Now;
+            var utcnow = DateTime.UtcNow;
             foreach(var device in context.Devices) {
-              if(device.LastSeen.AddMinutes(1) < now && device.State == DeviceState.Connected) {
+              if(device.LastSeen.AddMinutes(1) < utcnow && device.State.HasFlag(DeviceState.Connected)) {
                 device.State = DeviceState.Disconnect;
                 await _messageshubContext.Clients.Group(device.Serial.ToString()).SendAsync("UpdateDevice",device,stoppingToken);
               }
             }
             context.SaveChanges();
           }
-          
+
+          await Task.Delay(new TimeSpan(0,1,0), stoppingToken);          
         }
 
         _logger.LogInformation("Leaving Nats background service");

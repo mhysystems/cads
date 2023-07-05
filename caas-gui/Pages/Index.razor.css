@@ -3,6 +3,10 @@ button {
   width : 100%;
 }
 
+button[disabled] {
+  filter: grayscale(1);
+}
+
 input {
   width : 100%;
 }

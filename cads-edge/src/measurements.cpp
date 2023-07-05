@@ -112,17 +112,34 @@ namespace cads {
       data->terminate = true;
       return;
     }
-    bool what = data->terminate;
+    
+    auto heartbeat_threshold = 0; // seconds
+    
     for (;!data->terminate;)
     {  
       Measure::MeasureMsg m;
       
       if (!data->fifo.wait_dequeue_timed(m, std::chrono::milliseconds(1000)))
       {
+        if(heartbeat_threshold-- == 0) {
+          heartbeat_threshold = 30;
+          auto subject = "caas." + std::to_string(constants_device.Serial) + ".heartbeat";
+          auto msg = std::make_tuple(subject,"","");
+          realtime_metrics.resume(msg);
+        }
+        
         continue; // graceful thread terminate
       }
       
       auto [sub,quality,time,value] = m;
+
+      if(sub == "scancomplete") {
+        lua_getglobal(L.get(),"sendHack");
+        lua_pushinteger(L.get(),constants_device.Serial);
+         lua_pcall(L.get(), 1, 0, 0);
+        continue;
+      }
+
       lua_getglobal(L.get(),"send");
       lua_pushstring(L.get(),sub.c_str());
       lua_pushnumber(L.get(),quality);
@@ -151,6 +168,7 @@ namespace cads {
           lua_pushnumber(L.get(), location); 
           param_number++;
           break;
+          
         }
         default: break;
       }
@@ -166,9 +184,33 @@ namespace cads {
   }
 
 
+  void init_thread(MeasureData* data, std::string lua_code) {
+    
+    auto realtime_metrics = realtime_metrics_coro();
+
+    for (auto heartbeat_threshold = 0;!data->terminate;)
+    {  
+      if(heartbeat_threshold-- == 0) {
+        heartbeat_threshold = 30;
+        auto subject = "caas." + std::to_string(constants_device.Serial) + ".heartbeat";
+        auto msg = std::make_tuple(subject,"","");
+        realtime_metrics.resume(msg);
+       }
+
+       std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+
+    spdlog::get("cads")->debug(R"({{func ='{}', msg = '{}'}})",__func__,"Exiting inital measure thread");
+  }
+
 
   Measure::Measure(std::string lua_code) : data(new MeasureData()), thread(std::jthread(measurement_thread,data,lua_code))
   {
+  }
+
+  void Measure::init() {
+    data = new MeasureData();
+    thread = std::jthread(init_thread,data,"");
   }
 
   void Measure::terminate() {
@@ -223,4 +265,5 @@ namespace cads {
       data->fifo.try_enqueue({measure,quality,date::utc_clock::now(),value});
     }
   }
+
 }

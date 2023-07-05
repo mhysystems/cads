@@ -14,6 +14,7 @@
 #include <spdlog/spdlog.h>
 
 #include <lua_script.h>
+#include <constants.h>
 
 namespace
 {
@@ -253,6 +254,11 @@ namespace
 
   }
 
+  int get_serial(lua_State *L) {
+    lua_pushinteger(L, cads::constants_device.Serial);
+    return 1;
+  }
+
 }
 
 namespace cads
@@ -305,6 +311,9 @@ namespace cads
 
       lua_pushcfunction(L, ::sleep_ms);
       lua_setglobal(L,"sleep_ms");
+
+      lua_pushcfunction(L, ::get_serial);
+      lua_setglobal(L,"get_serial");
       
       
       return UL;

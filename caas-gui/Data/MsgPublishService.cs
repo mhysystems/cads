@@ -62,5 +62,24 @@ public class MsgPublishService
     builder.Finish(data.Value);
 
     c.Publish(device.MsgSubjectPublish, builder.SizedByteArray());
+    Db.UpdateDeviceStatus(_dBContext,device);
+  }
+
+    public void PublishStop(Device device)
+  {
+    var opts = ConnectionFactory.GetDefaultOptions();
+    opts.Url = _config.NatsUrl;
+
+    using var c = new ConnectionFactory().CreateConnection(opts);
+
+    var builder = new FlatBufferBuilder(4096);
+
+    Stop.StartStop(builder);
+    var stop = Stop.EndStop(builder);
+    var data = CadsFlatbuffers.Msg.CreateMsg(builder, MsgContents.Stop, stop.Value);
+    builder.Finish(data.Value);
+
+    c.Publish(device.MsgSubjectPublish, builder.SizedByteArray());
+    Db.UpdateDeviceStatus(_dBContext,device);
   }
 }

@@ -147,7 +147,7 @@ namespace cads
  
     auto endpoint_url = communications_config.NatsUrl;
 
-    auto nats_subject = fmt::format("{}",constants_device.Serial);
+    auto nats_subject = fmt::format("{}Publish",constants_device.Serial);
 
 
     for (bool terminate = false; !terminate;)

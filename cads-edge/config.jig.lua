@@ -64,10 +64,11 @@ function main()
 
     unloop = coroutine.yield(0)
   until unloop
+
   print("stopping")
   gocator:Stop()
-
   join_threads({thread_process_profile,window_processing,dynamic_processing,upload_scan})
+  print("stopped")
   
 end
 
@@ -164,4 +165,8 @@ function send(name,quality,time,...)
 
   end
 
+end
+
+function sendHack(serial) 
+  out("caas." .. serial .. ".scancomplete","","")
 end

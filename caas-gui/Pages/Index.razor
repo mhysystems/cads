@@ -16,7 +16,7 @@
       <option value="@conveyor.Name"/>
     }
   </datalist>
-  <button class="btn btn-primary" @onclick="Clicked" disabled="@(!isConnected)">Start</button>
+  <button class="btn btn-primary" @onclick="Clicked" disabled="@(!isConnected)">@buttonStatus</button>
 }else if(device is not null) {
   <PageTitle>Error</PageTitle>
   <p>Unable to connect to Caas Device</p>
@@ -33,13 +33,16 @@
   protected string? selectedConveyor {get; set;}
   private HubConnection? hubConnection;
 
-  public bool isConnected => hubConnection?.State == HubConnectionState.Connected;
+  protected bool isConnected => hubConnection?.State == HubConnectionState.Connected && device is not null && device.State.HasFlag(DeviceState.Connected);
+
+  protected string buttonStatus = "Start";
 
   protected override async Task OnInitializedAsync()
   {
     device = MsgService.GetDevice(deviceCipherText);
     
     if(device is not null) {
+      buttonStatus = device.State.HasFlag(DeviceState.Scanning) ? "Stop" : "Start";
       conveyors = MsgService.GetConveyers(device);
 
       hubConnection = new HubConnectionBuilder()
@@ -62,6 +65,7 @@
       hubConnection.On<Device>("UpdateDevice", (d) =>
       {
         device = d;
+        buttonStatus = d.State.HasFlag(DeviceState.Scanning) ? "Stop" : "Start";
         InvokeAsync(StateHasChanged);
       });
 
@@ -70,12 +74,22 @@
     }
   }
   private void Clicked()
-  {
-    if(device is not null && selectedConveyor is not null) {
-      var conveyor = conveyors.Where( e => e.Name == selectedConveyor);
-      if(conveyor.Any()) {
-        MsgService.PublishStart(device,conveyor.First());  
-      }
+  { 
+    if(isConnected && selectedConveyor is not null && device is not null) {
+      
+        var conveyor = conveyors.Where( e => e.Name == selectedConveyor);
+        if(conveyor.Any()) {
+          if(buttonStatus == "Start") {
+            buttonStatus = "Stop";
+            device.State |= DeviceState.Scanning;
+            MsgService.PublishStart(device,conveyor.First());  
+            StateHasChanged();
+          }else if(buttonStatus == "Stop") {
+             buttonStatus = "Start";
+             device.State &= ~DeviceState.Scanning;
+             MsgService.PublishStop(device);    
+          }
+        }
     }
   }
   public async ValueTask DisposeAsync()
