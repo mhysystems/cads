@@ -1,5 +1,5 @@
 {
-  "data_source" : "../../profiles/rawprofile.db",
+  "data_source" : "gocator",
   
   "Device" : {
     "Serial" : 80819
@@ -87,7 +87,7 @@
   },
 
   "communications" : {
-    "NatsUrl" : "127.0.0.1",
+    "NatsUrl" : "10.9.1.1",
     "UploadRows" : 1024
   },
 
