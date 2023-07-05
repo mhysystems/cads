@@ -214,11 +214,12 @@ namespace cads
               auto rtn = Stop{};
               std::tie(terminate,terminate) = co_yield {rtn};
             }
+            break;
             default:
             spdlog::get("cads")->error(R"({{ func = '{}' msg = 'Unkown id {}'}})", __func__, msg_contents);
             break;
           }
-        }
+        }else{}
         
         natsMsg_Destroy(msg);
       }
@@ -420,7 +421,7 @@ namespace cads
     }
   }
 
-  void http_post_profile_properties2(date::utc_clock::time_point chrono, double YmaxN, double y_step, double z_max, Conveyor conveyor, GocatorProperties gocator)
+  void http_post_profile_properties2(date::utc_clock::time_point chrono, double YmaxN, double y_step, double z_min, double z_max, Conveyor conveyor, GocatorProperties gocator)
   {
     nlohmann::json params_json;
 
@@ -431,6 +432,7 @@ namespace cads
     params_json["x_res"] = gocator.xResolution;
     params_json["z_res"] = gocator.zResolution;
     params_json["z_off"] = gocator.zOffset;
+    params_json["z_min"] = z_min;
     params_json["z_max"] = z_max;
     params_json["Ymax"] = global_belt_parameters.Length;
     params_json["YmaxN"] = YmaxN;
@@ -487,7 +489,8 @@ namespace cads
     auto z_offset = gocator.zOffset;
     auto y_step = conveyor.Length / (YmaxN);
 
-    double belt_z_max = 0;
+    double belt_z_max = std::numeric_limits<double>::lowest();
+    double belt_z_min = std::numeric_limits<double>::max();
     long cnt = 0;
 
     while (true)
@@ -502,11 +505,16 @@ namespace cads
         idx -= scan.begin_index; cnt++;
         auto y = (idx - 1) * y_step; // Sqlite rowid starts a 1
 
-        auto max_iter = max_element(zs.begin(), zs.end());
+        auto [min_iter,max_iter] = minmax_element(zs.begin(), zs.end());
 
         if (max_iter != zs.end())
         {
           belt_z_max = max(belt_z_max, (double)*max_iter);
+        }
+
+        if (min_iter != zs.end())
+        {
+          belt_z_min = std::min(belt_z_min, (double)*min_iter);
         }
 
         auto tmp_z = zs | sr::views::transform([=](float e) -> int16_t
@@ -561,7 +569,7 @@ namespace cads
     bool failure = scan.uploaded != YmaxN;
     if (!failure)
     {
-      http_post_profile_properties2(scan.scanned_utc, YmaxN, y_step, belt_z_max, conveyor, gocator);
+      http_post_profile_properties2(scan.scanned_utc, YmaxN, y_step, belt_z_min, belt_z_max, conveyor, gocator);
     }
 
     return {scan,failure};
