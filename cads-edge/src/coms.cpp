@@ -216,7 +216,7 @@ namespace cads
             }
             break;
             default:
-            spdlog::get("cads")->error(R"({{ func = '{}' msg = 'Unkown id {}'}})", __func__, msg_contents);
+            spdlog::get("cads")->error(R"({{ func = '{}' msg = 'Unkown id {}'}})", __func__, (long)msg_contents);
             break;
           }
         }else{}
@@ -329,7 +329,7 @@ namespace cads
     return endpoint_url + '/' + site + '/' + conveyor + '/' + ts;
   }
 
-  coro<long,std::tuple<std::vector<uint8_t>,long>,1> send_bytes_coro(long sent, std::string url,bool upload_profile) {
+  coro<long,std::tuple<std::vector<uint8_t>,std::size_t>,1> send_bytes_coro(long sent, std::string url,bool upload_profile) {
 
     
     auto [data,terminate_first] = co_yield 0;
@@ -338,11 +338,11 @@ namespace cads
       co_return 0;
     }
 
-    auto [data_first,data_id] = data;
+    auto [data_first,data_tag] = data;
 
     if(data_first.size() == 0) co_return 0;
     
-    auto sending = data_id;
+    auto sending = data_tag;
 
     std::vector<uint8_t> bufv_first = compress(std::move(data_first));    
 
@@ -354,7 +354,7 @@ namespace cads
 
       if(terminate) break;
       
-      auto [buf,data_id] = data;
+      auto [buf,data_tag] = data;
 
       auto bufv = compress(buf); 
 
@@ -370,14 +370,14 @@ namespace cads
         }
   
         if(bufv.size() > 0) {
-          sending = data_id;
+          sending = data_tag;
           response = cpr::PostAsync(endpoint,cpr::Body{(char *)bufv.data(), bufv.size()}, cpr::Header{{"Content-Encoding", "br"}, {"Content-Type", "application/octet-stream"}});
         }else {
           break;
         }
       }else {
         sent = sending;
-        sending = data_id;
+        sending = data_tag;
 
         if(bufv.size() == 0) break;
       }
@@ -504,18 +504,10 @@ namespace cads
         auto zs = interpolate_to_widthn(zs_raw,conveyor.WidthN);
         idx -= scan.begin_index; cnt++;
         auto y = (idx - 1) * y_step; // Sqlite rowid starts a 1
+        auto [pmin,pmax] = sr::minmax(zs | sr::views::filter([](float e) { return !std::isnan(e);}));
 
-        auto [min_iter,max_iter] = minmax_element(zs.begin(), zs.end());
-
-        if (max_iter != zs.end())
-        {
-          belt_z_max = max(belt_z_max, (double)*max_iter);
-        }
-
-        if (min_iter != zs.end())
-        {
-          belt_z_min = std::min(belt_z_min, (double)*min_iter);
-        }
+        belt_z_max = std::max(belt_z_max, (double)pmax);
+        belt_z_min = std::min(belt_z_min, (double)pmin);
 
         auto tmp_z = zs | sr::views::transform([=](float e) -> int16_t
                                                { return std::isnan(e) ? std::numeric_limits<int16_t>::lowest() : int16_t(((double)e - z_offset) / z_resolution); });
@@ -533,12 +525,7 @@ namespace cads
           scan.uploaded += sent_rows;
           update_scan_state(scan);
           
-          //size += send_flatbuffer_array(builder, z_resolution, z_offset, idx - communications_config.UploadRows, profiles_flat, endpoint, upload_profile);
-          //store_scan_uploaded(idx + 1, db_name);
         }
-        // auto end = std::chrono::high_resolution_clock::now();
-        // auto duration = (end - start) / 1.0s;
-        // spdlog::get("cads")->info("Upload RATE(Kb/s):{} ", size / (1000 * duration));
       }
       else
       {
