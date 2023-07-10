@@ -22,7 +22,24 @@ namespace cads
     }
 
     return interpolated_z;
+  }
 
+  decltype(cads::profile::z) interpolation_nearest(decltype(cads::profile::z) z)
+  {
+    using namespace std;
+    namespace sr = std::ranges;
+    
+    auto z_range = z | sr::views::filter([](float e) { return !std::isnan(e); });
+    decltype(cads::profile::z) filtered_z{z_range.begin(),z_range.end()};
+    auto step = (double)z.size() / (double)filtered_z.size();
+    
+    assert(step > 0);
+    
+    for(size_t i = 0; i < z.size(); i++) {
+      z[i] = filtered_z[(size_t)floor(i*step)];  
+    }
+
+    return z;
   }
 
   void interpolation_nearest(z_type::iterator begin, z_type::iterator end, std::function<bool(z_element)> is)
