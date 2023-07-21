@@ -67,6 +67,48 @@ namespace
     return obj;
   }
 
+  std::optional<cads::AnomalyDetection> mk_anomaly(lua_State *L, int index) {
+
+    cads::AnomalyDetection obj;
+    int isnum = 0; //false
+
+    if(lua_istable(L,index)) {
+      if(lua_getfield(L, index, "WindowSize") == LUA_TNUMBER) {
+        obj.WindowSize = lua_tonumberx(L, -1, &isnum);
+        lua_pop(L, 1);
+        if(isnum == 0) goto ERR;
+      }
+
+      if(lua_getfield(L, index, "BeltPartitionSize") == LUA_TNUMBER) {
+        obj.BeltPartitionSize = lua_tonumberx(L, -1, &isnum);
+        lua_pop(L, 1);
+        if(isnum == 0) goto ERR;
+      }
+
+      if(lua_getfield(L, index, "BeltSize") == LUA_TNUMBER) {
+        obj.BeltSize = lua_tointegerx(L, -1, &isnum);
+        lua_pop(L, 1);
+        if(isnum == 0) goto ERR;
+      }
+
+      if(lua_getfield(L, index, "MinPosition") == LUA_TNUMBER) {
+        obj.MinPosition = lua_tointegerx(L, -1, &isnum);
+        lua_pop(L, 1);
+        if(isnum == 0) goto ERR;
+      }
+
+      if(lua_getfield(L, index, "MaxPosition") == LUA_TNUMBER) {
+        obj.MaxPosition = lua_tointegerx(L, -1, &isnum);
+        lua_pop(L, 1);
+        if(isnum == 0) goto ERR;
+      }
+      return obj;
+    }
+    
+    ERR:
+    return std::nullopt;
+  }
+
   int Io_gc(lua_State *L)
   {
     auto q = static_cast<cads::Io *>(lua_touserdata(L, 1));
@@ -201,9 +243,21 @@ namespace
     return 1;
   }
   
-  int splice_detection_thread(lua_State *L)
+  int anomaly_detection_thread(lua_State *L)
   {
-    return mk_thread2(L,cads::splice_detection_thread);
+    using namespace std::placeholders;
+    auto anomaly = mk_anomaly(L,1);
+    
+    if(anomaly) {
+      auto bound = std::bind(cads::splice_detection_thread,*anomaly,_1,_2);
+      mk_thread2(L,bound);
+      lua_pushboolean(L,0);
+    }else {
+      lua_pushnil(L);
+      lua_pushboolean(L,1);
+    }
+
+    return 2;
   }
 
   int window_processing_thread(lua_State *L) 
@@ -273,8 +327,8 @@ namespace cads
       lua_pushcfunction(L, ::BlockingReaderWriterQueue);
 	    lua_setglobal(L,"BlockingReaderWriterQueue");
 
-      lua_pushcfunction(L, ::splice_detection_thread);
-	    lua_setglobal(L,"splice_detection_thread");
+      lua_pushcfunction(L, ::anomaly_detection_thread);
+	    lua_setglobal(L,"anomaly_detection_thread");
 
       lua_pushcfunction(L, ::save_send_thread);
 	    lua_setglobal(L,"save_send_thread");
@@ -285,8 +339,6 @@ namespace cads
       lua_pushcfunction(L, ::loop_beltlength_thread);
 	    lua_setglobal(L,"loop_beltlength_thread");
 
-      lua_pushcfunction(L, ::splice_detection_thread);
-	    lua_setglobal(L,"splice_detection_thread");
       
       lua_pushcfunction(L, ::dynamic_processing_thread);
 	    lua_setglobal(L,"dynamic_processing_thread");

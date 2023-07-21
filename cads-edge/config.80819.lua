@@ -28,9 +28,15 @@ belt = {
   Conveyor = 3
 }
 
+
+y_res_mm = 1000 * conveyor.TypicalSpeed / gocator.Fps -- In mm
+
 anomaly = {
-  WindowLength = 138, -- In mm
-  BeltPartitionLength = 670 -- In mm
+  WindowSize = 138 / y_res_mm,
+  BeltPartitionSize = 1000 * 1000 / y_res_mm,
+  BeltSize = belt.Length / y_res_mm,
+  MinPosition = (belt.Length - 1000) / y_res_mm,
+  MaxPosition = (belt.Length + 1000) / y_res_mm,
 }
 
 function main()

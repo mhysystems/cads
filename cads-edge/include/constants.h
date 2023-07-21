@@ -124,8 +124,11 @@ namespace cads {
   };
 
   struct AnomalyDetection {
-    double WindowLength;
-    double BeltPartitionLength;
+    size_t WindowSize;
+    size_t BeltPartitionSize;
+    size_t BeltSize;
+    size_t MinPosition;
+    size_t MaxPosition;
   };
 
   struct GocatorConstants {
@@ -150,7 +153,6 @@ namespace cads {
   extern Fiducial fiducial_config;
   extern OriginDetection config_origin_detection;
   extern Measure measurements;
-  extern AnomalyDetection anomalies_config;
   extern GocatorConstants constants_gocator;
   extern UploadConstants constants_upload;
 

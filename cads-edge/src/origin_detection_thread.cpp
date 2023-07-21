@@ -1,6 +1,7 @@
 
 #include <future>
 #include <chrono>
+#include <cassert>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstringop-overflow="
@@ -69,10 +70,9 @@ namespace
       auto [mp,mi] = ProfileToVector(args.profile_a, false, window_size);
 
       for(auto &e : mp) {
-        e = std::isnan(e) ? 0.0 : e;
+        e = std::isnan(e) ? std::numeric_limits<double>::lowest() : e;
       }
       
-      cads::write_vector(mp,"mpd.txt");
       auto dischord = std::max_element(mp.begin(),mp.end());
 
       auto d = std::distance(mp.begin(),dischord);
@@ -80,22 +80,25 @@ namespace
       return std::make_tuple(d,*dischord,motif);
     }
 
-    auto scamp_range(std::vector<double> timeseries_a, std::vector<double> timeseries_b) {
+    auto scamp_match(std::vector<double> timeseries_a, std::vector<double> timeseries_b, size_t begin, size_t end) {
       using namespace std;
+
+      assert(begin <= end);
+      assert(timeseries_a.size() < timeseries_b.size());
+      assert(timeseries_a.size() <= end);
 
       auto args = scamp_impl(timeseries_a,timeseries_b.size(),timeseries_b);
       auto [mp,mi] = ProfileToVector(args.profile_a, false, timeseries_b.size());
-      cads::write_vector(mp,"mp.txt");
-      auto min = cads::minmin_element(mp);
-
-      return make_tuple(make_tuple(min[0],mp[min[0]]),make_tuple(min[1],mp[min[1]])); 
+      
+      for(auto &e : mp) {
+        e = std::isnan(e) ? std::numeric_limits<double>::max() : e;
+      }
+      
+      auto min = min_element(mp.begin()+begin,mp.end());
+      auto d = distance(mp.begin(),min);
+      return make_tuple(d,*min); 
 
     }
-
-    auto scamp_single(std::vector<double> timeseries_a,std::vector<double> timeseries_b) {
-      return std::get<0>(scamp_range(timeseries_a,timeseries_b));
-    }
-
 }
 
 
@@ -605,7 +608,7 @@ coro<std::tuple<size_t,double,std::vector<double>>,double,1> find_dischord_motif
 
 
 
-coro<std::tuple<bool,size_t,double>,profile,1> anomaly_detection_coro(double y_resolution)
+coro<std::tuple<bool,size_t,double>,profile,1> anomaly_detection_coro(AnomalyDetection anomaly)
   {    
     using namespace SCAMP;
     using namespace std::chrono_literals;
@@ -614,15 +617,12 @@ coro<std::tuple<bool,size_t,double>,profile,1> anomaly_detection_coro(double y_r
     profile p;
     bool terminate = false;
     
-    int window_size = anomalies_config.WindowLength / y_resolution;
-    int partition_size = anomalies_config.BeltPartitionLength / y_resolution;
-    std::size_t max_belt_size = std::get<1>(config_origin_detection.belt_length) / y_resolution;
     std::vector<double> belt_thickness_estimates, y_position;
     enum class State {noMotif,findMotif,foundMotif};
 
     State state = State::findMotif;
 
-    auto find_dischord_motif  = find_dischord_motif_coro(window_size,partition_size);
+    auto find_dischord_motif  = find_dischord_motif_coro(anomaly.WindowSize,anomaly.BeltPartitionSize);
 
     auto [motif_creation,motif] = fetch_last_motif();
 
@@ -663,8 +663,8 @@ coro<std::tuple<bool,size_t,double>,profile,1> anomaly_detection_coro(double y_r
 
           case State::findMotif: {
             
-            if(belt_thickness_estimates.size() > max_belt_size){
-              tie(index,distance) = scamp_single(belt_thickness_estimates,motif);
+            if(belt_thickness_estimates.size() > anomaly.BeltSize){
+              tie(index,distance) = scamp_match(belt_thickness_estimates,motif,anomaly.MinPosition,anomaly.MaxPosition);
               spdlog::get("cads")->info("index:{} dis:{} size:{}", index,distance,belt_thickness_estimates.size());
               state = State::foundMotif;
               processing = true;
@@ -674,7 +674,7 @@ coro<std::tuple<bool,size_t,double>,profile,1> anomaly_detection_coro(double y_r
 
           case State::foundMotif: {
             y_pos = y_position[index];
-            index += window_size;
+            index += anomaly.WindowSize;
             
             if(index > belt_thickness_estimates.size()){
               index = belt_thickness_estimates.size();
@@ -696,7 +696,7 @@ coro<std::tuple<bool,size_t,double>,profile,1> anomaly_detection_coro(double y_r
     }
   }
 
-  void splice_detection_thread(cads::Io &profile_fifo,cads::Io &next_fifo)
+  void splice_detection_thread(cads::AnomalyDetection anomaly, cads::Io &profile_fifo,cads::Io &next_fifo)
   {
 
     cads::msg m;
@@ -708,7 +708,7 @@ coro<std::tuple<bool,size_t,double>,profile,1> anomaly_detection_coro(double y_r
     size_t last_splice_index = 0;
     double y_resolution = 1000 * global_conveyor_parameters.TypicalSpeed / constants_gocator.Fps;
 
-    auto origin_detection = anomaly_detection_coro(y_resolution);
+    auto origin_detection = anomaly_detection_coro(anomaly);
 
     long origin_sequence_cnt = 0L;
 

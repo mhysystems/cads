@@ -270,25 +270,6 @@ namespace {
     return cads::UploadConstants{std::chrono::seconds(period)};
   }
 
-  auto mk_anomaly_lua(Lua L) {
-    cads::AnomalyDetection obj;
-
-    auto lua_status = lua_getglobal(L.get(),"anomaly");
-
-    if (lua_istable(L.get(), -1)) { 
-        
-      lua_getfield(L.get(), -1, "WindowLength");
-      obj.WindowLength = lua_tonumber(L.get(), -1);
-      lua_pop(L.get(), 1);
-
-      lua_getfield(L.get(), -1, "BeltPartitionLength");
-      obj.BeltPartitionLength = lua_tonumber(L.get(), -1);
-      lua_pop(L.get(), 1);  
-    }
-
-    return std::make_tuple(obj,std::move(L));
-  }
-  
   auto mk_gocator_lua(Lua L) {
     cads::GocatorConstants obj;
 
@@ -349,7 +330,6 @@ namespace cads {
 
     std::tie(global_belt_parameters,L) = ::mk_belt_lua(std::move(L));
     std::tie(global_conveyor_parameters,L) = ::mk_conveyor_lua(std::move(L));
-    std::tie(anomalies_config,L) = ::mk_anomaly_lua(std::move(L));
     std::tie(constants_gocator,L) = ::mk_gocator_lua(std::move(L));
 
     return 0;
