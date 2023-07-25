@@ -1,5 +1,5 @@
 {
-  "data_source" : "gocator",
+  "data_source" : "../../profiles/rawprofile_cv912.db",
   
   "Device" : {
     "Serial" : 80819

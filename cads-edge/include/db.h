@@ -65,7 +65,7 @@ namespace cads
   bool delete_scan_state(cads::state::scan scan, std::string db_name = "");
   bool update_scan_state(cads::state::scan scan, std::string db_name = "");
   coro<std::tuple<int, z_type>> fetch_scan_coro(long first_index, long last_idx, std::string db_name, int size = 256);
-
+  std::deque<std::tuple<int, cads::z_type>> fetch_scan(long first_index, long last_idx, std::string db_name, int size = 256);
 
   // scan db
   bool create_scan_db(std::string db_name);
@@ -76,6 +76,7 @@ namespace cads
   coro<int, z_type, 1> store_scan_coro(std::string db_name);
   std::tuple<cads::GocatorProperties,int> fetch_scan_gocator(std::string db_name);
   std::tuple<cads::Conveyor,int> fetch_scan_conveyor(std::string db_name);
+
 
 
   // transients

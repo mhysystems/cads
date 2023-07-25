@@ -132,7 +132,13 @@ namespace cads
 
           store_scan_state(scan2);  
 
+        };
 
+        const auto select_data = [](global_t &global,const Select &select)
+        {
+          auto scan_filename = fmt::format("scan-{}.sqlite",global.scan_begin.time_since_epoch().count());
+          auto rows = fetch_scan(select.begin,select.begin+select.size,scan_filename);
+          select.fifo->enqueue(rows);
         };
 
         const auto init_gocator_properties_action = [](global_t &global,const GocatorProperties &v)
@@ -146,6 +152,7 @@ namespace cads
             "invalid_data"_s + event<begin_sequence_t> / reset_globals_action = "valid_data"_s,
             "valid_data"_s + event<scan_t> / store_action = "valid_data"_s,
             "valid_data"_s + event<CompleteBelt> / complete_belt_action = "valid_data"_s,
+            "valid_data"_s + event<Select> / select_data = "valid_data"_s,
             "valid_data"_s + event<end_sequence_t> / reset_globals_action = "invalid_data"_s);
       }
     };
@@ -179,6 +186,9 @@ namespace cads
       case msgid::gocator_properties:
         global.cps.enqueue(m);
         sm.process_event(GocatorProperties{get<GocatorProperties>(get<1>(m))});
+        break;
+      case msgid::select:
+        sm.process_event(get<Select>(get<1>(m)));
         break;
       default:
           global.cps.enqueue(m);

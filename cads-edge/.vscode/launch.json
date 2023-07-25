@@ -33,7 +33,7 @@
 			"type": "cppdbg",
 			"request": "launch",
 			"program": "${workspaceFolder}/debug/cads",
-			"args": ["-r", "-l","debug","-c", "${workspaceFolder}/config.jig.json"],
+			"args": ["-r", "-l","debug","-c", "${workspaceFolder}/config.80819.json"],
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}/debug",
 			"environment": [],

@@ -105,7 +105,12 @@ namespace
       
       for(auto scan : pscans) {
         
-        if(scan.status == 0 && scan.db_name == last.db_name) continue;
+        if(scan.cardinality < 1) {
+          ::delete_scan(scan);
+          continue;
+        }
+
+        if(scan.status == 0 && scan.db_name == last.db_name ) continue;
         
         if(scan.status == 0 && scan.db_name != last.db_name) {
           ::delete_scan(scan);
@@ -117,6 +122,7 @@ namespace
       pscans = filtered_scans;
     }
 
+    std::erase_if(partitioned_scans,[](const std::deque<cads::state::scan> &e){return e.size() == 0;});
     return partitioned_scans;
   }
 
@@ -143,7 +149,7 @@ void upload_scan_thread(std::atomic<bool> &terminate)
       auto [latest,valid] = ::latest_scan(pscans);
 
       if(!valid) {
-        break;
+        continue;
       }
 
       if(latest.status == 1) {

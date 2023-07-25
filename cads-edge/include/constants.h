@@ -129,6 +129,7 @@ namespace cads {
     size_t BeltSize;
     size_t MinPosition;
     size_t MaxPosition;
+    std::string ConveyorName;
   };
 
   struct GocatorConstants {

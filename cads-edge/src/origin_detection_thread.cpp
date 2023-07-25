@@ -608,7 +608,7 @@ coro<std::tuple<size_t,double,std::vector<double>>,double,1> find_dischord_motif
 
 
 
-coro<std::tuple<bool,size_t,double>,profile,1> anomaly_detection_coro(AnomalyDetection anomaly)
+coro<std::tuple<bool,size_t,size_t,double>,profile,1> anomaly_detection_coro(AnomalyDetection anomaly)
   {    
     using namespace SCAMP;
     using namespace std::chrono_literals;
@@ -636,7 +636,7 @@ coro<std::tuple<bool,size_t,double>,profile,1> anomaly_detection_coro(AnomalyDet
     while (!terminate)
     {
       
-      std::tie(p,terminate) = co_yield {found,index,y_pos};
+      std::tie(p,terminate) = co_yield {found,index,index-anomaly.WindowSize,y_pos};
       if(terminate) break;
       
       found = false;
@@ -726,9 +726,8 @@ coro<std::tuple<bool,size_t,double>,profile,1> anomaly_detection_coro(AnomalyDet
           auto [coro_end,result] = origin_detection.resume(p);
           
           if(!coro_end) {
-            auto [valid,index,pos] = result;
+            auto [valid,index,anomaly_index,pos] = result;
             if(valid) {
-              
               auto estimated_belt_length = pos - last_splice_position;
               if(origin_sequence_cnt > 0) {
                   spdlog::get("cads")->info("Estimated Belt Length(m): {}", estimated_belt_length / 1000);
@@ -741,9 +740,13 @@ coro<std::tuple<bool,size_t,double>,profile,1> anomaly_detection_coro(AnomalyDet
                 last_splice_position = pos;
                 last_splice_index = index;
               }
-            
-            
               origin_sequence_cnt++;
+              std::deque<std::tuple<int, cads::z_type>> msg;
+              moodycamel::BlockingReaderWriterQueue<decltype(msg)> rows;
+              next_fifo.enqueue({msgid::select,Select{&rows,anomaly_index,anomaly.WindowSize}});
+
+              rows.wait_dequeue(msg);
+              msg = msg;
             }
           }else 
           {

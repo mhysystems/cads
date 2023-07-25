@@ -77,31 +77,37 @@ namespace
         obj.WindowSize = lua_tonumberx(L, -1, &isnum);
         lua_pop(L, 1);
         if(isnum == 0) goto ERR;
-      }
+      } else goto ERR;
 
       if(lua_getfield(L, index, "BeltPartitionSize") == LUA_TNUMBER) {
         obj.BeltPartitionSize = lua_tonumberx(L, -1, &isnum);
         lua_pop(L, 1);
         if(isnum == 0) goto ERR;
-      }
+      } else goto ERR;
 
       if(lua_getfield(L, index, "BeltSize") == LUA_TNUMBER) {
-        obj.BeltSize = lua_tointegerx(L, -1, &isnum);
+        obj.BeltSize = lua_tonumberx(L, -1, &isnum);
         lua_pop(L, 1);
         if(isnum == 0) goto ERR;
-      }
+      } else goto ERR;
 
       if(lua_getfield(L, index, "MinPosition") == LUA_TNUMBER) {
-        obj.MinPosition = lua_tointegerx(L, -1, &isnum);
+        obj.MinPosition = lua_tonumberx(L, -1, &isnum);
         lua_pop(L, 1);
         if(isnum == 0) goto ERR;
-      }
+      } else goto ERR;
 
       if(lua_getfield(L, index, "MaxPosition") == LUA_TNUMBER) {
-        obj.MaxPosition = lua_tointegerx(L, -1, &isnum);
+        obj.MaxPosition = lua_tonumberx(L, -1, &isnum);
         lua_pop(L, 1);
         if(isnum == 0) goto ERR;
-      }
+      } else goto ERR;
+
+      if(lua_getfield(L, index, "ConveyorName") == LUA_TSTRING) {
+        obj.ConveyorName = lua_tostring(L,-1);
+        lua_pop(L, 1);
+      } else goto ERR;
+
       return obj;
     }
     

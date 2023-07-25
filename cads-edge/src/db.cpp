@@ -758,6 +758,7 @@ namespace cads
 
     return {rtn, std::move(stmt)};
   }
+  
 
   coro<std::tuple<int, profile>> fetch_belt_coro(int revid, long last_idx, long first_index, int size, std::string name)
   {
@@ -1186,6 +1187,8 @@ namespace cads
 
   coro<int, z_type, 1> store_scan_coro(std::string db_name)
   {
+    spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}' args='{}'}})", __func__,"Entering",db_name);
+    
     int err = SQLITE_ERROR;
     {
       err = db_exec(db_name, R"(CREATE TABLE IF NOT EXISTS ZS (Z BLOB NOT NULL))"s);
@@ -1233,7 +1236,7 @@ namespace cads
         if (err != SQLITE_DONE)
         {
           terminate = true;
-          spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = , msg = ''}})", __func__,"sqlite3_step",err);
+          spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = {}, msg = ''}})", __func__,"sqlite3_step",err);
         }
        
         err = sqlite3_reset(stmt.get());
@@ -1253,11 +1256,13 @@ namespace cads
       std::filesystem::remove(db_name);
     }
 
+    spdlog::get("cads")->debug(R"({{func = '{}', rtn = {}}})", __func__,err);
     co_return err;
   }
 
   coro<std::tuple<int, z_type>> fetch_scan_coro(long first_index, long last_idx, std::string db_name, int size)
   {
+    spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}' args='{}'}})", __func__,"Entering",db_name);
     auto query = R"(SELECT rowid,z FROM ZS WHERE rowid >= ? AND rowid < ?)";
     auto [stmt,db] = prepare_query(db_name, query);
 
@@ -1282,6 +1287,22 @@ namespace cads
         }
       }
     }
+
+    spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Exiting");
+  }
+
+  std::deque<std::tuple<int, cads::z_type>> fetch_scan(long first_index, long last_idx, std::string db_name, int size)
+  {
+    auto query = R"(SELECT rowid,z FROM ZS WHERE rowid >= ? AND rowid < ?)";
+    auto [stmt,db] = prepare_query(db_name, query);
+
+    auto iend = first_index + size; 
+    if(iend > last_idx) iend = last_idx;
+    
+    auto [p, s] = fetch_scan_coro_step(std::move(stmt), first_index, iend);
+
+    return p;
+      
   }
 
 

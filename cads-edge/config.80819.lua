@@ -11,8 +11,8 @@ conveyor = {
   PulleyCircumference = 670.0,
   TypicalSpeed = 6.0,
   Belt = 3,
-  Length = 670,
-  WidthN = 1750
+  Length = 4019900,
+  WidthN = 1880
 }
 
 belt = {
@@ -21,8 +21,8 @@ belt = {
   PulleyCover = 7.0,
   CordDiameter = 9.1,
   TopCover = 14.0,
-  Width = 1800,
-  Length = 670,
+  Width = 1700,
+  Length = 4019900,
   LengthN = conveyor.TypicalSpeed / gocator.Fps, 
   Splices = 1,
   Conveyor = 3
@@ -32,28 +32,25 @@ belt = {
 y_res_mm = 1000 * conveyor.TypicalSpeed / gocator.Fps -- In mm
 
 anomaly = {
-  WindowSize = 138 / y_res_mm,
+  WindowSize = 3 * 1000 / y_res_mm,
   BeltPartitionSize = 1000 * 1000 / y_res_mm,
   BeltSize = belt.Length / y_res_mm,
-  MinPosition = (belt.Length - 1000) / y_res_mm,
-  MaxPosition = (belt.Length + 1000) / y_res_mm,
+  MinPosition = (belt.Length - 10000) / y_res_mm,
+  MaxPosition = (belt.Length + 10000) / y_res_mm,
+  ConveyorName = conveyor.Name
 }
 
 function main()
 
   local gocator_cads = BlockingReaderWriterQueue()
-  --local ede_origin = BlockingReaderWriterQueue()
-  local origin_anomaly = BlockingReaderWriterQueue()
-  --local anomaly_savedb = BlockingReaderWriterQueue()
+  local cads_origin = BlockingReaderWriterQueue()
+  local origin_savedb = BlockingReaderWriterQueue()
   local savedb_luamain = BlockingReaderWriterQueue()
   
-  local hh = conveyor.TypicalSpeed / gocator.Fps
   local gocator = mk_gocator(gocator_cads) 
-  --local ede = encoder_distance_estimation(ede_origin,hh)
-  --local thread_process_profile = process_profile(gocator_cads,ede)
-  local belt_loop = loop_beltlength_thread(conveyor,gocator_cads,origin_anomaly)
-  --local dynamic_processing = dynamic_processing_thread(origin_anomaly,anomaly_savedb)
-  local thread_send_save = save_send_thread(conveyor,origin_anomaly,savedb_luamain)
+  local thread_process_profile = process_profile(gocator_cads,cads_origin)
+  local belt_loop = anomaly_detection_thread(anomaly,cads_origin,origin_savedb)
+  local thread_send_save = save_send_thread(conveyor,origin_savedb,savedb_luamain)
 
   gocator:Start()
 
