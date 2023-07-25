@@ -725,7 +725,7 @@ namespace cads
           auto [co_err,rmsg] = remote_control.resume(false);
 
           if(co_err) {
-            spdlog::get("cads")->error("TODO");
+            spdlog::get("cads")->error(R"({{func = '{}', msg = '{}'}})", __func__,"remove control finished");
             break;
           }
 
@@ -742,7 +742,7 @@ namespace cads
 
         measurements.send("scancomplete",0,0.0);
       }catch(std::exception& ex) {
-        spdlog::get("cads")->error("TODO");
+        spdlog::get("cads")->error(R"({{func = '{}', msg = '{}'}})", __func__,ex.what());
       }
     }
   
