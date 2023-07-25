@@ -593,6 +593,14 @@ namespace cads
     }
   }
 
+  void laser_off(std::string data_src)
+  {
+    if (data_src == "gocator"s)
+    {
+      GocatorReader::LaserOff();
+    }
+  }
+
   void cads_local_main(std::string f) 
   {
     namespace fs = std::filesystem;
@@ -659,10 +667,12 @@ namespace cads
     std::atomic<bool> terminate = false;
     std::jthread save_send(upload_scan_thread, std::ref(terminate));
 
+    auto data_src = global_config["data_source"].get<std::string>();
+
     while(!terminate_signal)
     {
       try {
-        stop_gocator();
+        laser_off(data_src);
         auto remote_control = remote_control_coro();
         auto [co_err,rmsg] = remote_control.resume(false);
             
@@ -905,9 +915,8 @@ namespace cads
   
   void stop_gocator()
   {
-    Adapt<BlockingReaderWriterQueue<msg>> gocatorFifo{BlockingReaderWriterQueue<msg>(4096 * 1024)};
-    auto gocator = mk_gocator(gocatorFifo);
-    gocator->Stop();
+    auto data_src = global_config["data_source"].get<std::string>();
+    laser_off(data_src);
   }
 
   void dump_gocator_log()

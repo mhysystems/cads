@@ -117,6 +117,15 @@ namespace cads
     kAlloc_Free(tempAlloc, fileData);
   }
 
+  void GocatorReader::LaserOff()
+  {
+    auto assembly = CreateGoSdk();
+    auto system = CreateGoSystem();
+    GoSystem_Stop(system);
+    GoDestroy(system);
+    GoDestroy(assembly);
+  }
+
   GocatorReader::GocatorReader(Io &gocatorFifo) : GocatorReaderBase(gocatorFifo)
   {
     m_assembly = CreateGoSdk();

@@ -31,10 +31,8 @@ protected:
   std::atomic<bool> m_first_frame = true;
   
   z_type k16sToFloat(k16s*, k16s*, double, double);
-  static void sigint_handler(int s);
 
 public:
-
 	virtual void Start() = 0;
 	virtual void Stop() = 0;
 

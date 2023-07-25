@@ -27,8 +27,8 @@ class GocatorReader : public GocatorReaderBase
 
 protected:
 	
-	GoSystem m_system;
-	kAssembly m_assembly;
+	GoSystem m_system = nullptr;
+	kAssembly m_assembly = nullptr;
   bool m_trim = true;
   std::atomic<size_t> m_buffer_size_warning = 4096;
   
@@ -38,7 +38,7 @@ protected:
   virtual kStatus OnSystem(GoSystem system, GoDataSet dataset);
 
 public:
-
+  static void LaserOff();
 	void Start();
 	void Stop();
   void Log();

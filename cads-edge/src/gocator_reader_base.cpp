@@ -1,5 +1,7 @@
 #include <algorithm>
 
+#include <spdlog/spdlog.h>
+
 #include <gocator_reader_base.h>
 
 
