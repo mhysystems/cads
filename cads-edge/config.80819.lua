@@ -1,4 +1,4 @@
-gocator = {
+gocatorConf = {
   Fps = 984.0
 }
 
@@ -23,13 +23,13 @@ belt = {
   TopCover = 14.0,
   Width = 1700,
   Length = 4019900,
-  LengthN = conveyor.TypicalSpeed / gocator.Fps, 
+  LengthN = conveyor.TypicalSpeed / gocatorConf.Fps, 
   Splices = 1,
   Conveyor = 3
 }
 
 
-y_res_mm = 1000 * conveyor.TypicalSpeed / gocator.Fps -- In mm
+y_res_mm = 1000 * conveyor.TypicalSpeed / gocatorConf.Fps -- In mm
 
 anomaly = {
   WindowSize = 3 * 1000 / y_res_mm,
@@ -52,7 +52,7 @@ function main()
   local belt_loop = anomaly_detection_thread(anomaly,cads_origin,origin_savedb)
   local thread_send_save = save_send_thread(conveyor,origin_savedb,savedb_luamain)
 
-  gocator:Start()
+  gocator:Start(gocatorConf.Fps)
 
   unloop = false
   repeat
