@@ -24,7 +24,7 @@ namespace cads {
   using DateTime = std::chrono::time_point<date::local_t,std::chrono::seconds>;
 
   struct SqliteGocatorConfig {
-    using range_type = std::tuple<long,long>;
+    using range_type = std::tuple<long long,long long>;
     range_type range;
     double fps;
     bool forever;

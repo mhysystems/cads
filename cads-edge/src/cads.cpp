@@ -595,9 +595,9 @@ namespace cads
 
   void laser_off(std::string data_src)
   {
-    if (data_src == "gocator"s)
+    //if (data_src == "gocator"s)
     {
-      GocatorReader::LaserOff();
+      
     }
   }
 
@@ -667,12 +667,10 @@ namespace cads
     std::atomic<bool> terminate = false;
     std::jthread save_send(upload_scan_thread, std::ref(terminate));
 
-    auto data_src = global_config["data_source"].get<std::string>();
-
     while(!terminate_signal)
     {
       try {
-        laser_off(data_src);
+        GocatorReader::LaserOff();
         auto remote_control = remote_control_coro();
         auto [co_err,rmsg] = remote_control.resume(false);
             
@@ -915,8 +913,7 @@ namespace cads
   
   void stop_gocator()
   {
-    auto data_src = global_config["data_source"].get<std::string>();
-    laser_off(data_src);
+    GocatorReader::LaserOff();
   }
 
   void dump_gocator_log()

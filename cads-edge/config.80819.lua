@@ -1,5 +1,12 @@
-gocatorConf = {
+gocator = {
   Fps = 984.0
+}
+
+sqlitegocator = {
+  range : {0,99999999999},
+  fps : gocator.fps,
+  forever : true,
+  delay : 98
 }
 
 conveyor = {
@@ -23,13 +30,13 @@ belt = {
   TopCover = 14.0,
   Width = 1700,
   Length = 4019900,
-  LengthN = conveyor.TypicalSpeed / gocatorConf.Fps, 
+  LengthN = conveyor.TypicalSpeed / gocator.Fps, 
   Splices = 1,
   Conveyor = 3
 }
 
 
-y_res_mm = 1000 * conveyor.TypicalSpeed / gocatorConf.Fps -- In mm
+y_res_mm = 1000 * conveyor.TypicalSpeed / gocator.Fps -- In mm
 
 anomaly = {
   WindowSize = 3 * 1000 / y_res_mm,
@@ -47,12 +54,12 @@ function main()
   local origin_savedb = BlockingReaderWriterQueue()
   local savedb_luamain = BlockingReaderWriterQueue()
   
-  local gocator = mk_gocator(gocator_cads) 
+  local laser = mk_sqlitegocator(sqlitegocator,gocator_cads) 
   local thread_process_profile = process_profile(gocator_cads,cads_origin)
   local belt_loop = anomaly_detection_thread(anomaly,cads_origin,origin_savedb)
   local thread_send_save = save_send_thread(conveyor,origin_savedb,savedb_luamain)
 
-  gocator:Start(gocatorConf.Fps)
+  laser:Start(gocatorConf.Fps)
 
   unloop = false
   repeat
@@ -69,7 +76,7 @@ function main()
   until unloop
 
   print("stopping")
-  gocator:Stop()
+  laser:Stop()
   join_threads({thread_process_profile,window_processing,dynamic_processing,upload_scan})
   print("stopped")
   

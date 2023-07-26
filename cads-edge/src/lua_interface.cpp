@@ -18,6 +18,122 @@
 
 namespace
 {
+  
+  std::optional<double> tonumber(lua_State *L, int index)
+  {
+    int isnum = 0;
+    auto a = lua_tonumberx(L, index, &isnum);
+
+    if(isnum == 0) {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'lua object not a number' }}",__func__);
+      return std::nullopt;
+    }
+
+    return a;
+  }
+
+  std::optional<std::tuple<long long,long long>> topair(lua_State *L, int index) 
+  {
+    if(!lua_istable(L,index)) {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'lua object needs to be a array' }}",__func__);
+      return std::nullopt;
+    }
+    
+    int array_length = lua_rawlen(L, index);
+    
+    if(array_length != 2) 
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'lua object should have only 2 elements in array' }}",__func__); 
+      return std::nullopt;
+    }    
+
+    int num = 0;
+    if(lua_rawgeti(L, index, 1) != LUA_TNUMBER) 
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'lua array doesn't contain number at index {}' }}",__func__,1); 
+      return std::nullopt;
+    } 
+
+    auto a = lua_tointegerx(L, 1, &num);  
+    lua_pop(L, 1);
+    
+    if(num == 0)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'lua array doesn't contain integer at index {}' }}",__func__,1); 
+      return std::nullopt;
+    }
+    
+    if(lua_rawgeti(L, index, 2) != LUA_TNUMBER) 
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'lua array doesn't contain number at index {}' }}",__func__,2); 
+      return std::nullopt;
+    } 
+
+    auto b = lua_tointegerx(L, 1, &num);  
+    lua_pop(L, 1);
+
+    if(num == 0)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'lua array doesn't contain integer at index {}' }}",__func__,2); 
+      return std::nullopt;
+    }
+
+    return std::make_tuple(a,b);
+
+  }
+
+  std::optional<cads::SqliteGocatorConfig> mk_sqlitegocator(lua_State *L, int index)
+  {
+    if(!lua_istable(L,index)) 
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'sqlite gocator needs to be a lua table' }}",__func__);
+      return std::nullopt;
+    }
+
+    lua_getfield(L, index, "range");
+    auto range_opt = topair(L,-1);
+    lua_pop(L,1);
+
+    if(!range_opt) 
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'range not a tuple pair with integers' }}",__func__);
+      return std::nullopt;
+    }
+
+    lua_getfield(L, index, "fps");
+    auto fps_opt = tonumber(L,-1);
+    lua_pop(L,1);
+
+    if(!fps_opt) 
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'fps not a number' }}",__func__);
+      return std::nullopt;
+    }
+
+    if(*fps_opt < 1) 
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'fps less than 1' }}",__func__);
+      return std::nullopt;
+    }
+
+    lua_getfield(L, index, "forever");
+    bool forever = lua_toboolean(L,-1);
+    lua_pop(L,1);
+
+    lua_getfield(L, index, "delay");
+    auto delay_opt = tonumber(L,-1);
+    lua_pop(L,1);
+
+    if(!delay_opt) 
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'delay not a number' }}",__func__);
+      return std::nullopt;
+    }
+
+    return cads::SqliteGocatorConfig{*range_opt,*fps_opt,forever,*delay_opt};
+   
+  }
+  
   auto mk_conveyor(lua_State *L, int index) {
 
     cads::Conveyor obj;
