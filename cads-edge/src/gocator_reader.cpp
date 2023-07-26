@@ -126,6 +126,14 @@ namespace cads
     GoDestroy(assembly);
   }
 
+  bool GocatorReader::Start_impl(double fps) {
+    
+    auto sensor = GoSystem_SensorAt(m_system, 0);
+    auto setup = GoSensor_Setup(sensor);
+    auto status = GoSetup_SetFrameRate(setup, fps);
+    return kIsError(status);
+  }
+
   GocatorReader::GocatorReader(Io &gocatorFifo) : GocatorReaderBase(gocatorFifo)
   {
     m_assembly = CreateGoSdk();
@@ -170,11 +178,6 @@ namespace cads
     if (kIsError(status = GoSetup_SetTriggerSource(setup, GO_TRIGGER_TIME)))
     {
       throw runtime_error{"GoSetup_SetTriggerSource: "s + to_string(status)};
-    }
-
-    if (kIsError(status = GoSetup_SetFrameRate(setup, constants_gocator.Fps)))
-    {
-      throw runtime_error{"GoSetup_SetFrameRate: "s + to_string(status)};
     }
 
     if (kIsError(status = GoSetup_EnableUniformSpacing(setup, kTRUE)))

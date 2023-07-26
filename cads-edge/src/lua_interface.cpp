@@ -205,8 +205,9 @@ namespace
 
   int gocator_start(lua_State *L) 
   {
-    auto gocator = static_cast<std::unique_ptr<cads::GocatorReaderBase>*>(lua_touserdata(L,-1));
-    (*gocator)->Start();
+    auto gocator = static_cast<std::unique_ptr<cads::GocatorReaderBase>*>(lua_touserdata(L,-2));
+    auto fps = lua_tonumber(L,-1);
+    (*gocator)->Start(fps);
 
     return 0;
   }

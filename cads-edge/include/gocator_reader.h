@@ -24,6 +24,7 @@ class GocatorReader : public GocatorReaderBase
 	GocatorReader& operator=(const GocatorReader&) = delete;
 	GocatorReader(GocatorReader&&) = delete;
 	GocatorReader& operator=(GocatorReader&&) = delete;
+  virtual bool Start_impl(double);
 
 protected:
 	

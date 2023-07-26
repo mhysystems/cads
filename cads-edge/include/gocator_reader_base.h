@@ -24,6 +24,7 @@ class GocatorReaderBase
 	GocatorReaderBase& operator=(const GocatorReaderBase&) = delete;
 	GocatorReaderBase(GocatorReaderBase&&) = delete;
 	GocatorReaderBase& operator=(GocatorReaderBase&&) = delete;
+  virtual bool Start_impl(double);
 
 protected:
 	Io& m_gocatorFifo;
@@ -34,6 +35,7 @@ protected:
 
 public:
 	virtual void Start() = 0;
+  bool Start(double);
 	virtual void Stop() = 0;
 
 	GocatorReaderBase(Io&);
