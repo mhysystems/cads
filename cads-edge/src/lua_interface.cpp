@@ -143,9 +143,13 @@ namespace
 
     for (int i = 1; i <= array_length; i++) {
         lua_rawgeti(L, 1, i);
-        auto v = lua_touserdata(L,-1);
-        auto t = static_cast<std::thread*>(v);
-        t->join();
+        if(lua_isuserdata(L,-1)) {
+          auto v = lua_touserdata(L,-1);
+          auto t = static_cast<std::thread*>(v);
+          t->join();
+        }else {
+          spdlog::get("cads")->error("{{ func = {},  msg = 'Array contains non userdata' }}",__func__);
+        }
         lua_pop(L, 1);
     }
 

@@ -24,7 +24,9 @@ class GocatorReader : public GocatorReaderBase
 	GocatorReader& operator=(const GocatorReader&) = delete;
 	GocatorReader(GocatorReader&&) = delete;
 	GocatorReader& operator=(GocatorReader&&) = delete;
-  virtual bool Start_impl(double);
+  virtual bool SetFrameRate(double);
+  virtual bool Start_impl();
+  virtual void Stop_impl();
 
 protected:
 	
@@ -40,8 +42,6 @@ protected:
 
 public:
   static void LaserOff();
-	void Start();
-	void Stop();
   void Log();
 	GocatorReader(Io&);
 	virtual ~GocatorReader();

@@ -852,7 +852,7 @@ namespace cads
     Adapt<BlockingReaderWriterQueue<msg>> gocatorFifo{BlockingReaderWriterQueue<msg>(4096 * 1024)};
 
     auto gocator = mk_gocator(gocatorFifo);
-    gocator->Start();
+    gocator->Start(984.0); // TODO
 
     auto iirfilter = mk_iirfilterSoS();
     auto delay = mk_delay(global_config["iirfilter"]["delay"]);

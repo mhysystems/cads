@@ -63,9 +63,9 @@ namespace cads
 
   }
 
-  void GocatorReader::Start()
+  bool GocatorReader::Start_impl()
   {
-    if(!m_stopped) return;
+    if(!m_stopped) return false;
 
     auto status = GoSystem_Start(m_system);
 
@@ -78,9 +78,11 @@ namespace cads
       m_stopped = false;
       spdlog::get("cads")->info("GoSensor Starting");
     }
+
+    return false;
   }
 
-  void GocatorReader::Stop()
+  void GocatorReader::Stop_impl()
   {
     if(m_stopped) return;
     
@@ -126,7 +128,7 @@ namespace cads
     GoDestroy(assembly);
   }
 
-  bool GocatorReader::Start_impl(double fps) {
+  bool GocatorReader::SetFrameRate(double fps) {
     
     auto sensor = GoSystem_SensorAt(m_system, 0);
     auto setup = GoSensor_Setup(sensor);
@@ -235,7 +237,7 @@ namespace cads
 
   GocatorReader::~GocatorReader()
   {
-    Stop();
+    Stop_impl();
 
     auto status = GoDestroy(m_system);
     if (kIsError(status))

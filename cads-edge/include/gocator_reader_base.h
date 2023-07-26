@@ -24,7 +24,9 @@ class GocatorReaderBase
 	GocatorReaderBase& operator=(const GocatorReaderBase&) = delete;
 	GocatorReaderBase(GocatorReaderBase&&) = delete;
 	GocatorReaderBase& operator=(GocatorReaderBase&&) = delete;
-  virtual bool Start_impl(double);
+  virtual bool Start_impl();
+  virtual void Stop_impl();
+  virtual bool SetFrameRate(double);
 
 protected:
 	Io& m_gocatorFifo;
@@ -34,9 +36,8 @@ protected:
   z_type k16sToFloat(k16s*, k16s*, double, double);
 
 public:
-	virtual void Start() = 0;
   bool Start(double);
-	virtual void Stop() = 0;
+	void Stop();
 
 	GocatorReaderBase(Io&);
   virtual ~GocatorReaderBase() = default;

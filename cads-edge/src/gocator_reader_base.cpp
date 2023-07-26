@@ -12,13 +12,25 @@ namespace cads
   {
   }
 
-  bool GocatorReaderBase::Start_impl(double) {
+  bool GocatorReaderBase::Start_impl() {
+    return false;
+  }
+
+  void GocatorReaderBase::Stop_impl() {
+  }
+
+  bool GocatorReaderBase::SetFrameRate(double) {
     return false;
   }
 
   bool GocatorReaderBase::Start(double fps) {
     spdlog::get("cads")->debug(R"({{func = '{}', msg = 'Framerate {}'}})", __func__,fps);
-    return Start_impl(fps);
+    SetFrameRate(fps);
+    return Start_impl();
+  }
+
+  void GocatorReaderBase::Stop() {
+    Stop_impl();
   }
 
   z_type GocatorReaderBase::k16sToFloat(k16s *z_start, k16s *z_end, double z_resolution, double z_offset)

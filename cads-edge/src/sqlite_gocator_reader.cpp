@@ -23,22 +23,18 @@ extern json global_config;
 namespace cads
 {
 
-  bool SqliteGocatorReader::Start_impl([[maybe_unused]]double fps) 
-  {
-    Start();
-    return false;
-  }
-
-  void SqliteGocatorReader::Start()
+  bool SqliteGocatorReader::Start_impl()
   {
     if (m_stopped)
     {
       m_stopped = false;
       m_thread = std::jthread{&SqliteGocatorReader::OnData, this};
     }
+
+    return false;
   }
 
-  void SqliteGocatorReader::Stop()
+  void SqliteGocatorReader::Stop_impl()
   {
     if (!m_stopped)
     {
@@ -50,7 +46,7 @@ namespace cads
   SqliteGocatorReader::SqliteGocatorReader(Io &gocatorFifo) : GocatorReaderBase(gocatorFifo) {}
 
   SqliteGocatorReader::~SqliteGocatorReader() {
-    Stop();
+    Stop_impl();
   }
 
   void SqliteGocatorReader::OnData()
