@@ -139,7 +139,7 @@ namespace
 
   int join_threads(lua_State *L)
   {
-    int array_length = lua_rawlen(L, 1);
+    int array_length = lua_rawlen(L, -1);
 
     for (int i = 1; i <= array_length; i++) {
         lua_rawgeti(L, 1, i);

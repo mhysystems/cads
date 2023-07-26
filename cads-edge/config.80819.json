@@ -87,7 +87,7 @@
   },
 
   "communications" : {
-    "NatsUrl" : "10.9.1.1",
+    "NatsUrl" : "127.0.0.1",
     "UploadRows" : 1024
   },
 

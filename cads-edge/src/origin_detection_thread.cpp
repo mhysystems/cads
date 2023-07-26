@@ -385,7 +385,7 @@ namespace cads
 
   void loop_beltlength_thread(Conveyor conveyor, cads::Io &profile_fifo, cads::Io &next_fifo)
   {
-
+    spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Entering Thread");
     cads::msg m;
 
     auto start = std::chrono::high_resolution_clock::now();
@@ -473,7 +473,7 @@ namespace cads
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     auto rate = duration != 0 ? (double)cnt / duration : 0;
-    spdlog::get("cads")->info("ORIGIN DETECTION - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, rate);
+    spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Entering Thread");
   }
 
 

@@ -19,6 +19,7 @@ class SqliteGocatorReader : public GocatorReaderBase
 	SqliteGocatorReader& operator=(const SqliteGocatorReader&) = delete;
 	SqliteGocatorReader(SqliteGocatorReader&&) = delete;
 	SqliteGocatorReader& operator=(SqliteGocatorReader&&) = delete;
+  virtual bool Start_impl(double);
 
 protected:
 	std::atomic<bool> m_loop = false;

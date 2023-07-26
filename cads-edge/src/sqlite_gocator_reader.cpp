@@ -23,6 +23,12 @@ extern json global_config;
 namespace cads
 {
 
+  bool SqliteGocatorReader::Start_impl([[maybe_unused]]double fps) 
+  {
+    Start();
+    return false;
+  }
+
   void SqliteGocatorReader::Start()
   {
     if (m_stopped)
