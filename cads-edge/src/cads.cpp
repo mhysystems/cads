@@ -575,25 +575,6 @@ namespace cads
   }
 
 
-  unique_ptr<GocatorReaderBase> mk_gocator(Io &gocatorFifo)
-  {
-    /*
-    auto data_src = global_config["data_source"].get<std::string>();
-
-    if (data_src == "gocator"s)
-    {
-      spdlog::get("cads")->debug("Using gocator as data source");
-      auto gocator = make_unique<GocatorReader>(gocatorFifo);
-      return gocator;
-    }
-    else
-    {
-      spdlog::get("cads")->debug("Using sqlite as data source");
-      auto sqlite = make_unique<SqliteGocatorReader>(gocatorFifo);
-      return sqlite;
-    }*/
-  }
-
   void cads_local_main(std::string f) 
   {
     namespace fs = std::filesystem;
@@ -839,7 +820,7 @@ namespace cads
 
   void generate_signal()
   {
-
+#if 0
     Adapt<BlockingReaderWriterQueue<msg>> gocatorFifo{BlockingReaderWriterQueue<msg>(4096 * 1024)};
 
     auto gocator = mk_gocator(gocatorFifo);
@@ -901,19 +882,13 @@ namespace cads
 
     gocator->Stop();
     spdlog::get("cads")->info("Gocator Stopped");
+  #endif
   }
 
   
   void stop_gocator()
   {
     GocatorReader::LaserOff();
-  }
-
-  void dump_gocator_log()
-  {
-    Adapt<BlockingReaderWriterQueue<msg>> gocatorFifo{BlockingReaderWriterQueue<msg>(4096 * 1024)};
-    GocatorReader gocator(gocatorFifo);
-    gocator.Log();
   }
 
 }

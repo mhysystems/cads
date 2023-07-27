@@ -16,7 +16,6 @@ namespace cads
   bool direct_process();
   void generate_signal();
   void stop_gocator();
-  void dump_gocator_log();
   void process_profile(Io& gocatorFifo, Io& next);
   void process_identity(Io& gocatorFifo, Io& next);
 }

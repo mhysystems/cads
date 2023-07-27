@@ -17,6 +17,7 @@
 #include <lua_script.h>
 #include <constants.h>
 #include <sqlite_gocator_reader.h>
+#include <gocator_reader.h>
 
 namespace
 {
@@ -170,6 +171,32 @@ namespace
    
   }
   
+  std::optional<cads::GocatorConfig> togocatorconfig(lua_State *L, int index)
+  {
+    if(!lua_istable(L,index)) 
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'sqlite gocator needs to be a lua table' }}",__func__);
+      return std::nullopt;
+    }
+
+    lua_getfield(L, index, "Trim");
+    bool trim = lua_toboolean(L,-1);
+    lua_pop(L,1);
+
+    lua_getfield(L, index, "TypicalResolution");
+    auto typical_resolution_opt = tonumber(L,-1);
+    lua_pop(L,1);
+
+    if(!typical_resolution_opt) 
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'TypicalResolution not a number' }}",__func__);
+      return std::nullopt;
+    }
+
+    return cads::GocatorConfig{trim,*typical_resolution_opt};
+   
+  }
+
   auto mk_conveyor(lua_State *L, int index) {
 
     cads::Conveyor obj;
@@ -387,22 +414,46 @@ namespace
   int sqlitegocator(lua_State *L) 
   {
     auto sqlite_gocator_config_opt = tosqlitegocatorconfig(L,1);
+
+    if(!sqlite_gocator_config_opt)
+    {
+      lua_pushnil(L);
+      return 1;
+    }
+
     auto q = static_cast<cads::Io*>(lua_touserdata(L, 2));
     auto p = new (lua_newuserdata(L, sizeof(std::unique_ptr<cads::GocatorReaderBase>))) std::unique_ptr<cads::SqliteGocatorReader>;
     *p = std::make_unique<cads::SqliteGocatorReader>(*sqlite_gocator_config_opt,*q);
+
+    lua_createtable(L, 0, 1); 
+    lua_pushcfunction(L, gocator_gc);
+    lua_setfield(L, -2, "__gc");
+    lua_createtable(L,0,2);
+    lua_pushcfunction(L, gocator_start);
+    lua_setfield(L, -2, "Start");
+    lua_pushcfunction(L, gocator_stop);
+    lua_setfield(L, -2, "Stop");
+    lua_setfield(L, -2, "__index");
+    lua_setmetatable(L, -2);
 
     return 1;
 
   }
 
-  int mk_gocator(lua_State *L)
+  int gocator(lua_State *L)
   {
-    auto q = static_cast<cads::Io*>(lua_touserdata(L, 1));
+    auto gocator_config_opt = togocatorconfig(L,1);
 
-    //auto p = new (lua_newuserdata(L, sizeof(decltype(cads::mk_gocator(*q))))) decltype(cads::mk_gocator(*q));
-    //*p = cads::mk_gocator(*q);
-    
-    
+    if(!gocator_config_opt)
+    {
+      lua_pushnil(L);
+      return 1;
+    }
+
+    auto q = static_cast<cads::Io*>(lua_touserdata(L, 2));
+    auto p = new (lua_newuserdata(L, sizeof(std::unique_ptr<cads::GocatorReaderBase>))) std::unique_ptr<cads::GocatorReader>;
+    *p = std::make_unique<cads::GocatorReader>(*gocator_config_opt,*q);
+
     lua_createtable(L, 0, 1); 
     lua_pushcfunction(L, gocator_gc);
     lua_setfield(L, -2, "__gc");
@@ -523,8 +574,11 @@ namespace cads
       lua_pushcfunction(L, ::join_threads);
       lua_setglobal(L,"join_threads");
 
-      lua_pushcfunction(L, ::mk_gocator);
-      lua_setglobal(L,"mk_gocator");
+      lua_pushcfunction(L, ::gocator);
+      lua_setglobal(L,"gocator");
+
+      lua_pushcfunction(L, ::sqlitegocator);
+      lua_setglobal(L,"sqlitegocator");
 
       lua_pushcfunction(L, ::process_profile);
       lua_setglobal(L,"process_profile");

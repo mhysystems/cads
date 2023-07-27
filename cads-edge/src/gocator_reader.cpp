@@ -136,7 +136,7 @@ namespace cads
     return kIsError(status);
   }
 
-  GocatorReader::GocatorReader(Io &gocatorFifo) : GocatorReaderBase(gocatorFifo)
+  GocatorReader::GocatorReader(GocatorConfig cnf, Io &gocatorFifo) : GocatorReaderBase(gocatorFifo), config(cnf)
   {
     m_assembly = CreateGoSdk();
     m_system = CreateGoSystem();
@@ -304,7 +304,7 @@ namespace cads
     double zResolution = 0.0;
     double xOffset = 0.0;
     double zOffset = 0.0;
-    double yResolution = 1000 * global_conveyor_parameters.TypicalSpeed / constants_gocator.Fps;
+    double yResolution = 1000 * config.TypicalResolution;
 
     for (kSize i = 0; i < GoDataSet_Count(dataset); ++i)
     {
@@ -350,7 +350,7 @@ namespace cads
     auto profile_end = profile + profileWidth;
     auto profile_begin = profile;
 
-    if (true /*Todo move out of this function*/)
+    if (config.Trim)
     {
       for (; profile_end > profile && *(profile_end - 1) == k16S_NULL; --profile_end)
       {

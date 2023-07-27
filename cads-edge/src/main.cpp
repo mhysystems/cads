@@ -27,7 +27,6 @@ int main(int argn, char **argv)
     ("savedb,d", po::bool_switch(), "Only save one approx belt")
     ("stop,s", po::bool_switch(), "Stop Gocator")
     ("signal,e", po::bool_switch(), "Generate signal for input into python filter parameter creation")
-    ("go-log,g", po::bool_switch(), "Dump Gocator Log")
     ("level,l", po::value<std::string>(), "Logging Level")
     ("remote-config,r",po::bool_switch(),"Wait for remote config");
 
@@ -91,8 +90,6 @@ int main(int argn, char **argv)
     store_profile_only();
   }else if(vm["signal"].as<bool>()) {
     generate_signal();
-  }else if(vm["go-log"].as<bool>()) {
-    dump_gocator_log();
   }else if(vm["remote-config"].as<bool>()) {
     cads_remote_main();
   }else{

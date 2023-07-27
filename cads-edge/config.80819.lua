@@ -2,13 +2,6 @@ gocator = {
   Fps = 984.0
 }
 
-sqlitegocator = {
-  range : {0,99999999999},
-  fps : gocator.fps,
-  forever : true,
-  delay : 98
-}
-
 conveyor = {
   Id = 3,
   Org  = "FMG",
@@ -35,6 +28,14 @@ belt = {
   Conveyor = 3
 }
 
+sqlitegocatorConfig = {
+  range = {0,99999999999},
+  fps = gocator.Fps,
+  forever = true,
+  delay = 98,
+  Source = "../../profiles/rawprofile_cv912.db",
+  TypicalSpeed = conveyor.TypicalSpeed
+}
 
 y_res_mm = 1000 * conveyor.TypicalSpeed / gocator.Fps -- In mm
 
@@ -54,12 +55,12 @@ function main()
   local origin_savedb = BlockingReaderWriterQueue()
   local savedb_luamain = BlockingReaderWriterQueue()
   
-  local laser = mk_sqlitegocator(sqlitegocator,gocator_cads) 
+  local laser = sqlitegocator(sqlitegocatorConfig,gocator_cads) 
   local thread_process_profile = process_profile(gocator_cads,cads_origin)
   local belt_loop = anomaly_detection_thread(anomaly,cads_origin,origin_savedb)
   local thread_send_save = save_send_thread(conveyor,origin_savedb,savedb_luamain)
 
-  laser:Start(gocatorConf.Fps)
+  laser:Start(gocator.Fps)
 
   unloop = false
   repeat

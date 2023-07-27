@@ -16,36 +16,41 @@
 namespace cads
 {
 
-class GocatorReader : public GocatorReaderBase
-{
+  struct GocatorConfig {
+    bool Trim;
+    double TypicalResolution;
+  };
 
-	GocatorReader() = delete;
-	GocatorReader(const GocatorReader&) = delete;
-	GocatorReader& operator=(const GocatorReader&) = delete;
-	GocatorReader(GocatorReader&&) = delete;
-	GocatorReader& operator=(GocatorReader&&) = delete;
-  virtual bool SetFrameRate(double);
-  virtual bool Start_impl();
-  virtual void Stop_impl();
+  class GocatorReader : public GocatorReaderBase
+  {
 
-protected:
-	
-	GoSystem m_system = nullptr;
-	kAssembly m_assembly = nullptr;
-  bool m_trim = true;
-  std::atomic<size_t> m_buffer_size_warning = 4096;
-  
-	static kStatus OnData(kPointer context, GoSensor sensor, GoDataSet dataset);
-  static kStatus OnSystem(kPointer context, GoSystem system, GoDataSet data);
-	virtual kStatus OnData(GoDataSet dataset);
-  virtual kStatus OnSystem(GoSystem system, GoDataSet dataset);
+    GocatorReader() = delete;
+    GocatorReader(const GocatorReader&) = delete;
+    GocatorReader& operator=(const GocatorReader&) = delete;
+    GocatorReader(GocatorReader&&) = delete;
+    GocatorReader& operator=(GocatorReader&&) = delete;
+    virtual bool SetFrameRate(double);
+    virtual bool Start_impl();
+    virtual void Stop_impl();
 
-public:
-  static void LaserOff();
-  void Log();
-	GocatorReader(Io&);
-	virtual ~GocatorReader();
-};
+  protected:
+    
+    GoSystem m_system = nullptr;
+    kAssembly m_assembly = nullptr;
+    GocatorConfig config;
+    std::atomic<size_t> m_buffer_size_warning = 4096;
+    
+    static kStatus OnData(kPointer context, GoSensor sensor, GoDataSet dataset);
+    static kStatus OnSystem(kPointer context, GoSystem system, GoDataSet data);
+    virtual kStatus OnData(GoDataSet dataset);
+    virtual kStatus OnSystem(GoSystem system, GoDataSet dataset);
+
+  public:
+    static void LaserOff();
+    void Log();
+    GocatorReader(GocatorConfig,Io&);
+    virtual ~GocatorReader();
+  };
 
 }
 
