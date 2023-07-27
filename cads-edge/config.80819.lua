@@ -29,10 +29,10 @@ belt = {
 }
 
 sqlitegocatorConfig = {
-  range = {0,99999999999},
-  fps = gocator.Fps,
-  forever = true,
-  delay = 98,
+  Range = {4,99999999999},
+  Fps = gocator.Fps,
+  Forever = true,
+  Delay = 98,
   Source = "../../profiles/rawprofile_cv912.db",
   TypicalSpeed = conveyor.TypicalSpeed
 }
@@ -48,6 +48,13 @@ anomaly = {
   ConveyorName = conveyor.Name
 }
 
+profileConfig = {
+  Width = belt.Width,
+  WidthN = conveyor.WidthN,
+  NaNPercentage = 0.15,
+  ClipHeight = 35.0
+}
+
 function main()
 
   local gocator_cads = BlockingReaderWriterQueue()
@@ -56,7 +63,7 @@ function main()
   local savedb_luamain = BlockingReaderWriterQueue()
   
   local laser = sqlitegocator(sqlitegocatorConfig,gocator_cads) 
-  local thread_process_profile = process_profile(gocator_cads,cads_origin)
+  local thread_process_profile = process_profile(profileConfig,gocator_cads,cads_origin)
   local belt_loop = anomaly_detection_thread(anomaly,cads_origin,origin_savedb)
   local thread_send_save = save_send_thread(conveyor,origin_savedb,savedb_luamain)
 

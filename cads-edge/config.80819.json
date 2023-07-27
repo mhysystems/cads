@@ -1,15 +1,6 @@
 {
-  "data_source" : "../../profiles/rawprofile_cv912.db",
-  
   "Device" : {
     "Serial" : 80819
-  },
-
-  "sqlite_gocator" : {
-    "range" : [0,99999999999],
-    "fps" : 984,
-    "forever" : true,
-    "delay" : 98
   },
 
   "fiducial" : {
