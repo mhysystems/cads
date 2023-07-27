@@ -43,7 +43,7 @@ namespace cads
     }
   }
 
-  SqliteGocatorReader::SqliteGocatorReader(Io &gocatorFifo) : GocatorReaderBase(gocatorFifo) {}
+  SqliteGocatorReader::SqliteGocatorReader(SqliteGocatorConfig cnf, Io &gocatorFifo) : GocatorReaderBase(gocatorFifo), config(cnf) {}
 
   SqliteGocatorReader::~SqliteGocatorReader() {
     Stop_impl();
@@ -53,19 +53,19 @@ namespace cads
   {
     using namespace std::chrono_literals;
 
-    auto data_src = global_config["data_source"].get<std::string>();
+    auto data_src = config.Source.generic_string();
     auto [params, err2] = fetch_profile_parameters(data_src);
 
     m_gocatorFifo.enqueue({msgid::gocator_properties, params});
 
-    double y_resolution = 1000 * global_conveyor_parameters.TypicalSpeed / constants_gocator.Fps;
-    auto pulley_period = 1000000us / (int)sqlite_gocator_config.fps;
+    double y_resolution = 1000 * config.TypicalSpeed / config.Fps;
+    auto pulley_period = 1000000us / (int)config.Fps;
     double cnt = 0;
     auto current_time = std::chrono::high_resolution_clock::now();
 
     do
     {
-      auto fetch_profile = fetch_belt_coro(0,std::get<1>(sqlite_gocator_config.range), std::get<0>(sqlite_gocator_config.range), 256, data_src);
+      auto fetch_profile = fetch_belt_coro(0,std::get<1>(config.Range), std::get<0>(config.Range), 256, data_src);
 
       while (!m_stopped)
       {
@@ -73,11 +73,11 @@ namespace cads
         auto [co_terminate, cv] = fetch_profile.resume(0);
         auto [idx, p] = cv;
 
-        if (co_terminate && !sqlite_gocator_config.forever)
+        if (co_terminate && !config.Forever)
         {
           m_stopped = true;
           break;
-        }else if(co_terminate && sqlite_gocator_config.forever) {
+        }else if(co_terminate && config.Forever) {
           break;
         }
 
@@ -99,7 +99,7 @@ namespace cads
         }
 
       }
-    } while (sqlite_gocator_config.forever && !m_stopped);
+    } while (config.Forever && !m_stopped);
     
     m_gocatorFifo.enqueue({msgid::finished, 0});
   }

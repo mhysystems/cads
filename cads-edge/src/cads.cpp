@@ -577,6 +577,7 @@ namespace cads
 
   unique_ptr<GocatorReaderBase> mk_gocator(Io &gocatorFifo)
   {
+    /*
     auto data_src = global_config["data_source"].get<std::string>();
 
     if (data_src == "gocator"s)
@@ -590,15 +591,7 @@ namespace cads
       spdlog::get("cads")->debug("Using sqlite as data source");
       auto sqlite = make_unique<SqliteGocatorReader>(gocatorFifo);
       return sqlite;
-    }
-  }
-
-  void laser_off(std::string data_src)
-  {
-    //if (data_src == "gocator"s)
-    {
-      
-    }
+    }*/
   }
 
   void cads_local_main(std::string f) 

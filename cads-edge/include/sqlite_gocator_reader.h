@@ -25,12 +25,13 @@ class SqliteGocatorReader : public GocatorReaderBase
 protected:
 	std::atomic<bool> m_loop = false;
   std::jthread m_thread;
-	
+  SqliteGocatorConfig config;
+
   void OnData();
 
 public:
 
-  SqliteGocatorReader(Io&);
+  SqliteGocatorReader(SqliteGocatorConfig,Io&);
 	virtual ~SqliteGocatorReader();
 };
 

@@ -18,6 +18,20 @@
 
 namespace
 {
+  std::optional<std::string> tostring(lua_State *L, int index)
+  {
+    size_t len = 0;
+
+    if(!lua_isstring(L,index))
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'lua object not a string' }}",__func__);
+      return std::nullopt;      
+    }
+
+    auto a = lua_tolstring(L,index,&len);
+
+    return a;
+  }
   
   std::optional<double> tonumber(lua_State *L, int index)
   {
@@ -82,7 +96,7 @@ namespace
 
   }
 
-  std::optional<cads::SqliteGocatorConfig> mk_sqlitegocator(lua_State *L, int index)
+  std::optional<cads::SqliteGocatorConfig> tosqlitegocatorconfig(lua_State *L, int index)
   {
     if(!lua_istable(L,index)) 
     {
@@ -90,7 +104,7 @@ namespace
       return std::nullopt;
     }
 
-    lua_getfield(L, index, "range");
+    lua_getfield(L, index, "Range");
     auto range_opt = topair(L,-1);
     lua_pop(L,1);
 
@@ -100,7 +114,7 @@ namespace
       return std::nullopt;
     }
 
-    lua_getfield(L, index, "fps");
+    lua_getfield(L, index, "Fps");
     auto fps_opt = tonumber(L,-1);
     lua_pop(L,1);
 
@@ -116,11 +130,11 @@ namespace
       return std::nullopt;
     }
 
-    lua_getfield(L, index, "forever");
+    lua_getfield(L, index, "Forever");
     bool forever = lua_toboolean(L,-1);
     lua_pop(L,1);
 
-    lua_getfield(L, index, "delay");
+    lua_getfield(L, index, "Delay");
     auto delay_opt = tonumber(L,-1);
     lua_pop(L,1);
 
@@ -130,7 +144,27 @@ namespace
       return std::nullopt;
     }
 
-    return cads::SqliteGocatorConfig{*range_opt,*fps_opt,forever,*delay_opt};
+    lua_getfield(L, index, "Source");
+    auto source_opt = tostring(L,-1);
+    lua_pop(L,1);
+
+    if(!source_opt) 
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'source not a string' }}",__func__);
+      return std::nullopt;
+    }
+
+    lua_getfield(L, index, "TypicalSpeed");
+    auto typical_speed_opt = tonumber(L, -1);
+    lua_pop(L, 1);
+    
+    if(!typical_speed_opt) 
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'source not a string' }}",__func__);
+      return std::nullopt;
+    }
+
+    return cads::SqliteGocatorConfig{*range_opt,*fps_opt,forever,*delay_opt,*source_opt,*typical_speed_opt};
    
   }
   
@@ -346,6 +380,12 @@ namespace
     gocator->~unique_ptr<cads::GocatorReaderBase>();
 
     return 0;
+  }
+
+  int sqlitegocator(lua_State *L) 
+  {
+    auto sqlite_gocator_config_opt = tosqlitegocatorconfig(L,1);
+
   }
 
   int mk_gocator(lua_State *L)

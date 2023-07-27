@@ -5,6 +5,7 @@
 #include <limits>
 #include <string>
 #include <atomic>
+#include <filesystem>
 
 #include <date/date.h>
 #include <nlohmann/json.hpp>
@@ -25,10 +26,12 @@ namespace cads {
 
   struct SqliteGocatorConfig {
     using range_type = std::tuple<long long,long long>;
-    range_type range;
-    double fps;
-    bool forever;
-    double delay;
+    range_type Range;
+    double Fps;
+    bool Forever;
+    double Delay;
+    std::filesystem::path Source;
+    double TypicalSpeed;
   };
   
 
