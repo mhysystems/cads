@@ -24,16 +24,6 @@ namespace cads {
 
   using DateTime = std::chrono::time_point<date::local_t,std::chrono::seconds>;
 
-  struct SqliteGocatorConfig {
-    using range_type = std::tuple<long long,long long>;
-    range_type Range;
-    double Fps;
-    bool Forever;
-    double Delay;
-    std::filesystem::path Source;
-    double TypicalSpeed;
-  };
-  
 
   struct profile_parameters {
     int left_edge_nan;
@@ -150,7 +140,6 @@ namespace cads {
   extern Belt global_belt_parameters;
   extern webapi_urls global_webapi;
   extern Filters global_filters;
-  extern SqliteGocatorConfig sqlite_gocator_config;
   extern Dbscan dbscan_config;
   extern RevolutionSensor revolution_sensor_config;
   extern Communications communications_config;

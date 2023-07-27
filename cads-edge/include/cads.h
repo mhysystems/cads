@@ -19,5 +19,4 @@ namespace cads
   void dump_gocator_log();
   void process_profile(Io& gocatorFifo, Io& next);
   void process_identity(Io& gocatorFifo, Io& next);
-  std::unique_ptr<GocatorReaderBase> mk_gocator(Io &gocatorFifo);
 }

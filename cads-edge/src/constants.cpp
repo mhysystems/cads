@@ -15,15 +15,6 @@ using Lua = std::unique_ptr<lua_State, decltype(&lua_close)>;
 
 namespace {
 
-  auto mk_sqlite_gocator(nlohmann::json config) {
-    auto current_length = config["sqlite_gocator"]["range"].get<cads::SqliteGocatorConfig::range_type>();
-    auto fps = config["sqlite_gocator"]["fps"].get<double>();
-    auto forever = config["sqlite_gocator"]["forever"].get<bool>();
-    auto delay = config["sqlite_gocator"]["delay"].get<double>();
-
-    return cads::SqliteGocatorConfig{current_length,fps,forever,delay};
-  }
-
   auto mk_profile_parameters(nlohmann::json config) {
     using namespace std;
     auto left_edge_nan = config["left_edge_nan"].get<int>();
@@ -298,7 +289,6 @@ namespace cads {
   Scan global_scan_parameters;
   webapi_urls global_webapi;
   Filters global_filters;
-  SqliteGocatorConfig sqlite_gocator_config;
   Dbscan dbscan_config;
   RevolutionSensor revolution_sensor_config;
   Communications communications_config;
@@ -355,7 +345,6 @@ namespace cads {
     global_scan_parameters = mk_scan_parameters(config);
     global_webapi = mk_webapi_urls(config);
     global_filters = mk_filters(config);
-    sqlite_gocator_config = mk_sqlite_gocator(config);
     dbscan_config = mk_dbscan(config);
     revolution_sensor_config = mk_revolution_sensor(config);
     communications_config = mk_communications(config);

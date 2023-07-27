@@ -11,29 +11,39 @@
 namespace cads
 {
 
-class SqliteGocatorReader : public GocatorReaderBase
-{
+  struct SqliteGocatorConfig {
+    using range_type = std::tuple<long long,long long>;
+    range_type Range;
+    double Fps;
+    bool Forever;
+    double Delay;
+    std::filesystem::path Source;
+    double TypicalSpeed;
+  };
 
-	SqliteGocatorReader() = delete;
-	SqliteGocatorReader(const SqliteGocatorReader&) = delete;
-	SqliteGocatorReader& operator=(const SqliteGocatorReader&) = delete;
-	SqliteGocatorReader(SqliteGocatorReader&&) = delete;
-	SqliteGocatorReader& operator=(SqliteGocatorReader&&) = delete;
-  virtual bool Start_impl();
-  virtual void Stop_impl();
+  class SqliteGocatorReader : public GocatorReaderBase
+  {
 
-protected:
-	std::atomic<bool> m_loop = false;
-  std::jthread m_thread;
-  SqliteGocatorConfig config;
+    SqliteGocatorReader() = delete;
+    SqliteGocatorReader(const SqliteGocatorReader&) = delete;
+    SqliteGocatorReader& operator=(const SqliteGocatorReader&) = delete;
+    SqliteGocatorReader(SqliteGocatorReader&&) = delete;
+    SqliteGocatorReader& operator=(SqliteGocatorReader&&) = delete;
+    virtual bool Start_impl();
+    virtual void Stop_impl();
 
-  void OnData();
+  protected:
+    std::atomic<bool> m_loop = false;
+    std::jthread m_thread;
+    SqliteGocatorConfig config;
 
-public:
+    void OnData();
 
-  SqliteGocatorReader(SqliteGocatorConfig,Io&);
-	virtual ~SqliteGocatorReader();
-};
+  public:
+
+    SqliteGocatorReader(SqliteGocatorConfig,Io&);
+    virtual ~SqliteGocatorReader();
+  };
 
 
 }

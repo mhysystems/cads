@@ -1,5 +1,6 @@
 #include <thread>
 #include <filesystem>
+#include <memory>
 
 #include <readerwriterqueue.h>
 
@@ -15,6 +16,7 @@
 
 #include <lua_script.h>
 #include <constants.h>
+#include <sqlite_gocator_reader.h>
 
 namespace
 {
@@ -385,6 +387,11 @@ namespace
   int sqlitegocator(lua_State *L) 
   {
     auto sqlite_gocator_config_opt = tosqlitegocatorconfig(L,1);
+    auto q = static_cast<cads::Io*>(lua_touserdata(L, 2));
+    auto p = new (lua_newuserdata(L, sizeof(std::unique_ptr<cads::GocatorReaderBase>))) std::unique_ptr<cads::SqliteGocatorReader>;
+    *p = std::make_unique<cads::SqliteGocatorReader>(*sqlite_gocator_config_opt,*q);
+
+    return 1;
 
   }
 
@@ -392,8 +399,8 @@ namespace
   {
     auto q = static_cast<cads::Io*>(lua_touserdata(L, 1));
 
-    auto p = new (lua_newuserdata(L, sizeof(decltype(cads::mk_gocator(*q))))) decltype(cads::mk_gocator(*q));
-    *p = cads::mk_gocator(*q);
+    //auto p = new (lua_newuserdata(L, sizeof(decltype(cads::mk_gocator(*q))))) decltype(cads::mk_gocator(*q));
+    //*p = cads::mk_gocator(*q);
     
     
     lua_createtable(L, 0, 1); 
