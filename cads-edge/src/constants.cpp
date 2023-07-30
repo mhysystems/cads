@@ -15,17 +15,6 @@ using Lua = std::unique_ptr<lua_State, decltype(&lua_close)>;
 
 namespace {
 
-  auto mk_profile_parameters(nlohmann::json config) {
-    using namespace std;
-    auto left_edge_nan = config["left_edge_nan"].get<int>();
-    auto right_edge_nan = config["right_edge_nan"].get<int>();
-    auto spike_filter = config["spike_filter"].get<int>();
-    auto sobel_filter = config["sobel_filter"].get<int>();
-
-    return cads::profile_parameters{left_edge_nan,right_edge_nan,spike_filter,sobel_filter};
-
-  }
-
   auto mk_conveyor_parameters(nlohmann::json config) {
 
     int64_t Id = 0;
@@ -283,7 +272,6 @@ namespace {
 namespace cads {  
 
   Device constants_device;
-  profile_parameters global_profile_parameters;
   Conveyor global_conveyor_parameters;
   Belt global_belt_parameters;
   Scan global_scan_parameters;
@@ -339,9 +327,6 @@ namespace cads {
     lua_transition(f);
 		auto config = nlohmann::json::parse(json);
     constants_device = mk_device(config);
-    global_profile_parameters = mk_profile_parameters(config);
-    // done in lua global_conveyor_parameters = mk_conveyor_parameters(config);
-    // done in lua global_belt_parameters = mk_belt_parameters(config);
     global_scan_parameters = mk_scan_parameters(config);
     global_webapi = mk_webapi_urls(config);
     global_filters = mk_filters(config);

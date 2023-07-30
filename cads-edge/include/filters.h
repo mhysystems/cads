@@ -13,8 +13,7 @@ namespace cads
     long long delay;
     std::vector<std::vector<double>> sos;
   };
-  //void spike_filter(z_type& z, int window_size = global_profile_parameters.spike_filter);
-  void spike_filter(z_type& z, int window_size = global_profile_parameters.spike_filter, int lead = global_profile_parameters.left_edge_nan);
+
   void pulley_level_compensate(z_type& z, z_element z_off, z_element z_max);
   std::function<double(double)> mk_iirfilterSoS(std::vector<std::vector<double>>);
   std::function<std::tuple<bool, std::tuple<profile,int,int,int,z_type>>(std::tuple<profile,int,int,int,z_type>)> mk_delay(size_t len);

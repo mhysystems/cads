@@ -20,11 +20,6 @@
     "dump_match" : true
   },
 
-  "left_edge_nan" : 3,
-  "right_edge_nan" : 3,
-  "daily_start_time" : "now",
-  "spike_filter" : 2,
-  "sobel_filter" : 5,
 
   "dbscan" : {
     "InCluster" : 2.5,
@@ -38,11 +33,9 @@
     "bidirectional" : false
   },
 
-  "startup_delete_db" : true,
   "profile_db_name" : "profile.db",
   "state_db_name" : "state.db",
   "transient_db_name" : "transient.db",
-  "use_encoder" : false,
 
   "filters" : {
     "SchmittThreshold" : 0.05

@@ -287,7 +287,6 @@ namespace cads
   std::tuple<double,double,size_t,size_t,ClusterError> pulley_levels_clustered(z_type &z, std::function<double(const z_type &)> estimator)
   {
  
-    spike_filter(z);
     auto clusters = dbscan(z);
     auto avg_l = 0.0;
     auto avg_r = 0.0;

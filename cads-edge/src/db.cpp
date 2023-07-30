@@ -178,137 +178,6 @@ namespace
 
 namespace cads
 {
-
-  int store_daily_upload(date::utc_clock::time_point datetime, std::string name)
-  {
-    auto query = R"(UPDATE STATE SET DAILYUPLOAD = ? WHERE ROWID = 1)"s;
-    auto db_config_name = name.empty() ? global_config["state_db_name"].get<std::string>() : name;
-    auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
-    
-    auto ts = to_str(datetime);
-
-    auto err = sqlite3_bind_text(stmt.get(), 1, ts.c_str(),ts.size(),nullptr);
-
-    if (err != SQLITE_OK)
-    {
-      spdlog::get("db")->error("store_daily_upload: SQLite Error Code:{}", err);
-    }
-
-    tie(err, stmt) = db_step(move(stmt));
-
-    if (err != SQLITE_DONE)
-    {
-      spdlog::get("db")->error("db_step: SQLite Error Code:{}", err);
-    }
-
-    return err;
-  }
-
-  date::utc_clock::time_point fetch_daily_upload(std::string name)
-  {
-    auto query = R"(SELECT DAILYUPLOAD FROM STATE WHERE ROWID = 1)"s;
-    auto db_config_name = name.empty() ? global_config["state_db_name"].get<std::string>() : name;
-    auto [stmt,db] = prepare_query(db_config_name, query);
-    auto err = SQLITE_OK;
-
-    tie(err, stmt) = db_step(move(stmt));
-    
-    if (err != SQLITE_ROW)
-    {
-      spdlog::get("db")->error("db_step: SQLite Error Code:{}", err);
-    }
-    
-    const char* date_cstr = (const char* )sqlite3_column_text(stmt.get(), 0);
-    auto date_cstr_len = sqlite3_column_bytes(stmt.get(), 0);
-
-    std::string date_str(date_cstr,date_cstr_len);
-    return to_clk(date_str); 
-  }
-
-  
-  void store_conveyor_id(int id, std::string name)
-  {
-    auto query = R"(UPDATE STATE SET ConveyorId = ? WHERE ROWID = 1)"s;
-    auto db_config_name = name.empty() ? global_config["state_db_name"].get<std::string>() : name;
-    auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
-    
-    auto err = sqlite3_bind_int(stmt.get(), 1, id);
-
-    if (err != SQLITE_OK)
-    {
-      spdlog::get("db")->error("store_conveyor_id: SQLite Error Code:{}", err);
-    }
-
-    tie(err, stmt) = db_step(move(stmt));
-
-    if (err != SQLITE_DONE)
-    {
-      spdlog::get("db")->error("db_step: SQLite Error Code:{}", err);
-    }
-  }
-
-  std::tuple<int,bool> fetch_conveyor_id(std::string name)
-  {
-    auto query = R"(SELECT ConveyorId FROM STATE WHERE ROWID = 1)"s;
-    auto db_config_name = name.empty() ? global_config["state_db_name"].get<std::string>() : name;
-    auto [stmt,db] = prepare_query(db_config_name, query);
-    auto err = SQLITE_OK;
-
-    tie(err, stmt) = db_step(move(stmt));
-    
-    if (err != SQLITE_ROW)
-    {
-      spdlog::get("db")->error("db_step: SQLite Error Code:{}", err);
-      return {0,true};
-    }
-    
-    int r = sqlite3_column_int(stmt.get(), 0);
-
-    return {r,false}; 
-  }
-
-  void store_belt_id(int id, std::string name)
-  {
-    auto query = R"(UPDATE STATE SET BeltId = ? WHERE ROWID = 1)"s;
-    auto db_config_name = name.empty() ? global_config["state_db_name"].get<std::string>() : name;
-    auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
-    
-    auto err = sqlite3_bind_int(stmt.get(), 1, id);
-
-    if (err != SQLITE_OK)
-    {
-      spdlog::get("db")->error("store_conveyor_id: SQLite Error Code:{}", err);
-    }
-
-    tie(err, stmt) = db_step(move(stmt));
-
-    if (err != SQLITE_DONE)
-    {
-      spdlog::get("db")->error("db_step: SQLite Error Code:{}", err);
-    }
-  }
-
-  std::tuple<int,bool> fetch_belt_id(std::string name)
-  {
-    auto query = R"(SELECT BeltId FROM STATE WHERE ROWID = 1)"s;
-    auto db_config_name = name.empty() ? global_config["state_db_name"].get<std::string>() : name;
-    auto [stmt,db] = prepare_query(db_config_name, query);
-    auto err = SQLITE_OK;
-
-    tie(err, stmt) = db_step(move(stmt));
-    
-    if (err != SQLITE_ROW)
-    {
-      spdlog::get("db")->error("db_step: SQLite Error Code:{}", err);
-      return {0,true};
-    }
-    
-    int r = sqlite3_column_int(stmt.get(), 0);
-
-    return {r,false}; 
-  }
-
-  
   void create_profile_db(std::string name = ""s)
   {
     auto db_name = name.empty() ? global_config["profile_db_name"].get<std::string>() : name;
@@ -321,11 +190,11 @@ namespace cads
         R"(CREATE TABLE IF NOT EXISTS PARAMETERS (x_res REAL NOT NULL, z_res REAL NOT NULL, z_off REAL NOT NULL))"s
         };
     
-    if(global_config["startup_delete_db"].get<bool>()) {
-      std::filesystem::remove(db_name);
-      std::filesystem::remove(db_name + "-shm");
-      std::filesystem::remove(db_name + "-wal");
-    }
+
+    std::filesystem::remove(db_name);
+    std::filesystem::remove(db_name + "-shm");
+    std::filesystem::remove(db_name + "-wal");
+
 
     auto err = db_exec(db_name,tables);
     
@@ -340,34 +209,10 @@ namespace cads
     using namespace date;
     using namespace std::chrono;
 
-    auto sts = global_config["daily_start_time"].get<std::string>();
     auto db_name = name.empty() ? global_config["state_db_name"].get<std::string>() : name;
     
-    std::string ts = "";
-
-    if (sts != "now"s)
-    {
-      std::stringstream st{sts};
-
-      system_clock::duration run_in;
-      st >> parse("%R", run_in);
-
-      date::zoned_time now{ date::current_zone(), std::chrono::system_clock::now()};
-      auto trigger = std::chrono::floor<std::chrono::days>(now.get_local_time()) + run_in;
-      
-      date::zoned_time trigger_local{ date::current_zone(), trigger};
-      auto trigger_utc = date::make_zoned("UTC", trigger_local);
-      ts = date::format("%FT%TZ", trigger_utc);
-
-    }
-    else
-    {
-      ts = to_str(date::utc_clock::now());
-    }
-
     std::vector<std::string> tables{
       R"(PRAGMA journal_mode=WAL)"s,
-      R"(CREATE TABLE IF NOT EXISTS STATE (DAILYUPLOAD TEXT NOT NULL, ConveyorId INTEGER NOT NULL, BeltId INTEGER NOT NULL))",
       R"(CREATE TABLE IF NOT EXISTS MOTIFS (date TEXT NOT NULL, motif BLOB NOT NULL))",
       R"(CREATE TABLE IF NOT EXISTS SCANS (
         scanned_utc TEXT NOT NULL UNIQUE
@@ -377,7 +222,6 @@ namespace cads
         ,uploaded INTEGER NOT NULL
         ,status INTEGER NOT NULL
         ,conveyor_id INTEGER NOT NULL))",
-      fmt::format(R"(INSERT INTO STATE(DAILYUPLOAD,ConveyorId,BeltId) SELECT '{}',{},{} WHERE NOT EXISTS (SELECT * FROM STATE))", ts,0,0),
       R"(VACUUM)"
     };
 

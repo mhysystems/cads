@@ -33,16 +33,6 @@ namespace cads
 
 
   // state db
-  // state table
-  date::utc_clock::time_point fetch_daily_upload(std::string name = "");
-  int store_daily_upload(date::utc_clock::time_point date, std::string name = "");
-  
-  std::tuple<int,bool> fetch_conveyor_id(std::string name = "");
-  void store_conveyor_id(int id, std::string name = "");
-
-  std::tuple<int,bool> fetch_belt_id(std::string name = "");
-  void store_belt_id(int id, std::string name = "");
-
   std::tuple<date::utc_clock::time_point,std::vector<double>> fetch_last_motif(std::string name = "");
   bool store_motif_state(std::tuple<date::utc_clock::time_point,std::vector<double>> row, std::string db_name = "");
 
