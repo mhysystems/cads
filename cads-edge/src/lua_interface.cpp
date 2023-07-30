@@ -18,6 +18,7 @@
 #include <constants.h>
 #include <sqlite_gocator_reader.h>
 #include <gocator_reader.h>
+#include <filters.h>
 
 namespace
 {
@@ -62,6 +63,64 @@ namespace
     }
 
     return a;
+  }
+
+  std::optional<std::vector<double>> tonumbervector(lua_State *L, int index)
+  {
+    if (!lua_istable(L, index))
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'lua object needs to be a array' }}", __func__);
+      return std::nullopt;
+    }
+
+    auto array_length = lua_rawlen(L, index);
+    std::vector<double> lua_array;
+
+    for (decltype(array_length) i = 1; i <= array_length; i++)
+    {
+      lua_rawgeti(L, -1, i);
+      auto num_opt = tonumber(L,-1);
+      lua_pop(L, 1);
+      
+      if (!num_opt)
+      {
+        spdlog::get("cads")->error("{{ func = {},  msg = 'Index {} not a number' }}", __func__,i);
+        return std::nullopt;
+      }else {
+        lua_array.push_back(*num_opt);
+      }
+    }
+
+    return lua_array;
+  }
+
+  std::optional<std::vector<std::vector<double>>> to2Dnumbervector(lua_State *L, int index)
+  {
+    if (!lua_istable(L, index))
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'lua object needs to be a array' }}", __func__);
+      return std::nullopt;
+    }
+
+    auto array_length = lua_rawlen(L, index);
+    std::vector<std::vector<double>> lua_array;
+
+    for (decltype(array_length) i = 1; i <= array_length; i++)
+    {
+      lua_rawgeti(L, -1, i);
+      auto vec = tonumbervector(L,-1);
+      lua_pop(L, 1);
+      
+      if (!vec)
+      {
+        spdlog::get("cads")->error("{{ func = {},  msg = 'Index {} not an array' }}", __func__,i);
+        return std::nullopt;
+      }else {
+        lua_array.push_back(*vec);
+      }
+    }
+
+    return lua_array;
   }
 
   std::optional<std::tuple<long long, long long>> topair(lua_State *L, int index)
@@ -112,6 +171,77 @@ namespace
     }
 
     return std::make_tuple(a, b);
+  }
+
+  
+  std::optional<cads::IIRFilterConfig> toiirfilter(lua_State *L, int index)
+  {
+    const std::string obj_name = "iirfilter";
+
+    if (!lua_istable(L, index))
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'iirfilter needs to be a table' }}", __func__);
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "Skip") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Skip");
+      return std::nullopt;
+    }
+
+    auto skip_opt = tointeger(L, -1);
+    lua_pop(L, 1);
+
+    if (!skip_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'Skip not a integer' }}", __func__);
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "Delay") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Delay");
+      return std::nullopt;
+    }
+
+    auto delay_opt = tointeger(L, -1);
+    lua_pop(L, 1);
+
+    if (!delay_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'Delay not a integer' }}", __func__);
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "Sos") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Sos");
+      return std::nullopt;
+    }
+
+    auto sos_opt = to2Dnumbervector(L, -1);
+    lua_pop(L, 1);
+
+    if (!sos_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'Sos not a 2D array of numbers' }}", __func__);
+      return std::nullopt;
+    }
+
+    if((*sos_opt).size() != 10) {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'Sos array requires 10 sub arrays' }}", __func__);
+      return std::nullopt;
+    }
+
+    for(auto e : *sos_opt) {
+      if(e.size() != 6) {
+        spdlog::get("cads")->error("{{ func = {},  msg = 'Sos sub array requires 6 numbers' }}", __func__);
+        return std::nullopt;       
+      }
+    }
+
+    return cads::IIRFilterConfig{*skip_opt,*delay_opt,*sos_opt};
   }
 
   std::optional<cads::ProfileConfig> toprofileconfig(lua_State *L, int index)
@@ -182,7 +312,37 @@ namespace
       return std::nullopt;
     }
 
-    return cads::ProfileConfig{*width_opt,*widthN_opt,*nanpercentage_opt,*clipheight_opt};
+    if (lua_getfield(L, index, "IIRFilter") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'profile config requires {}' }}", __func__, "IIRFilter");
+      return std::nullopt;
+    }
+
+    auto iirfilter_opt = toiirfilter(L, -1);
+    lua_pop(L, 1);
+
+    if (!iirfilter_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'IIRFilter not a IIRFilterConfig' }}", __func__);
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "PulleySamplesExtend") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'profile config requires {}' }}", __func__, "PulleySamplesExtend");
+      return std::nullopt;
+    }
+
+    auto pulley_sample_extend_opt = tointeger(L, -1);
+    lua_pop(L, 1);
+
+    if (!pulley_sample_extend_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'PulleySamplesExtend not a integer' }}", __func__);
+      return std::nullopt;
+    }
+
+    return cads::ProfileConfig{*width_opt,*widthN_opt,*nanpercentage_opt,*clipheight_opt,*iirfilter_opt,*pulley_sample_extend_opt};
   }
 
   std::optional<cads::SqliteGocatorConfig> tosqlitegocatorconfig(lua_State *L, int index)
@@ -314,7 +474,9 @@ namespace
 
   auto mk_conveyor(lua_State *L, int index)
   {
-
+    lua_getglobal(L,"iirfilter");
+    auto gg = toiirfilter(L,-1);
+    
     cads::Conveyor obj;
 
     if (lua_istable(L, index))
@@ -465,7 +627,7 @@ namespace
 
     for (int i = 1; i <= array_length; i++)
     {
-      lua_rawgeti(L, 1, i);
+      lua_rawgeti(L, -1, i);
       if (lua_isuserdata(L, -1))
       {
         auto v = lua_touserdata(L, -1);

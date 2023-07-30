@@ -37,7 +37,6 @@
 
 #pragma GCC diagnostic pop
 
-#include <filters.h>
 #include <edge_detection.h>
 #include <coro.hpp>
 #include <dynamic_processing.h>
@@ -393,11 +392,11 @@ namespace cads
 
     next.enqueue(m);
 
-    auto iirfilter_left = mk_iirfilterSoS();
-    auto iirfilter_right = mk_iirfilterSoS();
-    auto iirfilter_left_edge = mk_iirfilterSoS();
+    auto iirfilter_left = mk_iirfilterSoS(config.IIRFilter.sos);
+    auto iirfilter_right = mk_iirfilterSoS(config.IIRFilter.sos);
+    auto iirfilter_left_edge = mk_iirfilterSoS(config.IIRFilter.sos);
 
-    auto delay = mk_delay(global_config["iirfilter"]["delay"]);
+    auto delay = mk_delay(config.IIRFilter.delay);
 
     int64_t cnt = 0;
 
@@ -406,12 +405,12 @@ namespace cads
     auto dc_filter = mk_dc_filter();
     auto pulley_speed = mk_pulley_stats();
 
-    long drop_profiles = global_config["iirfilter"]["skip"]; // Allow for iir fillter too stablize
+    long drop_profiles = config.IIRFilter.skip; // Allow for iir fillter too stablize
 
     auto pulley_estimator = mk_pulleyfitter(z_resolution, -15.0);
     auto belt_estimator = mk_pulleyfitter(z_resolution, 0.0);
 
-    auto filter_window_len = global_config["sobel_filter"].get<size_t>();
+    auto filter_window_len = config.PulleySamplesExtend;
 
     auto pulley_rev = revolution_sensor_config.source == RevolutionSensor::Source::length ? mk_pseudo_revolution() : mk_pulley_revolution();
 

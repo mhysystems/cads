@@ -98,9 +98,8 @@ namespace cads
     }
   }
 
-  std::function<double(double)> mk_iirfilterSoS()
+  std::function<double(double)> mk_iirfilterSoS(std::vector<std::vector<double>> coeff)
   {
-    auto coeff = global_config["iirfilter"]["sos"].get<std::vector<std::vector<double>>>();
     auto r = coeff | std::ranges::views::join;
     std::vector<double> in(r.begin(), r.end());
     Iir::Custom::SOSCascade<10> a(*(double(*)[10][6])in.data());

@@ -6,6 +6,7 @@
 #include <gocator_reader_base.h>
 #include <msg.h>
 #include <io.hpp>
+#include <filters.h>
 
 namespace cads
 {
@@ -16,6 +17,8 @@ namespace cads
     long long WidthN;
     double NaNPercentage;
     double ClipHeight;
+    IIRFilterConfig IIRFilter;
+    long long PulleySamplesExtend;
   };
 
   void store_profile_only();
