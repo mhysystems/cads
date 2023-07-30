@@ -1236,7 +1236,7 @@ namespace cads
         if (err != SQLITE_DONE)
         {
           terminate = true;
-          spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = {}, msg = ''}})", __func__,"sqlite3_step",err);
+          spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = {}, msg = '{}'}})", __func__,"sqlite3_step",err,db_name);
         }
        
         err = sqlite3_reset(stmt.get());
@@ -1244,7 +1244,7 @@ namespace cads
         if (err != SQLITE_OK)
         {
           terminate = true;
-          spdlog::get("cads")->error("{}: sqlite3_reset() error code:{}", __func__, err);
+          spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = {}, msg = '{}'}})", __func__,"sqlite3_reset",err,db_name);
         }
 
         if (terminate)
@@ -1256,7 +1256,7 @@ namespace cads
       std::filesystem::remove(db_name);
     }
 
-    spdlog::get("cads")->debug(R"({{func = '{}', rtn = {}}})", __func__,err);
+    spdlog::get("cads")->debug(R"({{func = '{}', rtn = {}, msg = '{}'}})", __func__,err,db_name);
     co_return err;
   }
 

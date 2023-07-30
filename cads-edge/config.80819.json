@@ -20,14 +20,11 @@
     "dump_match" : true
   },
 
-  "width_n" : 1890,
-  "clip_height" : 16.0,
   "left_edge_nan" : 3,
   "right_edge_nan" : 3,
   "daily_start_time" : "now",
   "spike_filter" : 2,
   "sobel_filter" : 5,
-  "nan_%" : 0.15,
 
   "dbscan" : {
     "InCluster" : 2.5,
@@ -71,10 +68,10 @@
   },
 
   "webapi_urls" : {
-    "add_conveyor" : ["https://fmgcads.mhysystems.com/api/conveyors",true],
-    "add_meta" : ["https://fmgcads.mhysystems.com/api/meta",true],
-    "add_belt" : ["https://fmgcads.mhysystems.com/api/belts",true],
-    "add_scan" : ["https://fmgcads.mhysystems.com/api/scans",true]
+    "add_conveyor" : ["https://fmgcads.mhysystems.com/api/conveyors",false],
+    "add_meta" : ["https://fmgcads.mhysystems.com/api/meta",false],
+    "add_belt" : ["https://fmgcads.mhysystems.com/api/belts",false],
+    "add_scan" : ["https://fmgcads.mhysystems.com/api/scans",false]
   },
 
   "communications" : {
@@ -82,7 +79,7 @@
     "UploadRows" : 1024
   },
 
-  "upload_profile" : true,
+  "upload_profile" : false,
   "base_url" : "https://fmgcads.mhysystems.com/api",
   "lua_window_height" : 2,
   "lua_fn" : "function process(width,height)\n return 0\nend"

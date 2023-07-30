@@ -22,12 +22,12 @@ namespace
     std::filesystem::remove(scan.db_name + "-shm");
     std::filesystem::remove(scan.db_name + "-wal");
     std::filesystem::remove(scan.db_name + "-journal");
-    spdlog::get("cads")->info("Removed posted scan. {}", scan.db_name);
+    spdlog::get("cads")->info("{{func = {}, msg = 'Removed scan. {}'}}", __func__,scan.db_name);
   }
   
   int resume_scan(cads::state::scan scan)
   {
-    spdlog::get("cads")->info("Posting a scan. {}", scan.db_name);
+    spdlog::get("cads")->info("{{func = {}, msg = 'Posting a scan. {}'}}", __func__,scan.db_name);
     
     if(scan.status != 2) return 0;
     
@@ -105,7 +105,7 @@ namespace
       
       for(auto scan : pscans) {
         
-        if(scan.cardinality < 1) {
+        if(scan.cardinality < 1 && scan.status != 0) {
           ::delete_scan(scan);
           continue;
         }
@@ -162,6 +162,14 @@ void upload_scan_thread(std::atomic<bool> &terminate)
       }
 
       for(auto scan : pscans) {
+        
+        if (!std::filesystem::exists(scan.db_name))
+        {
+          spdlog::get("cads")->info("{{func = {}, msg = 'File doesn't exist. {}'}}", __func__,scan.db_name);
+          ::delete_scan(scan);
+          continue;
+        }
+        
         if(scan.status == 2) 
         {
           resume_scan(scan);
@@ -184,7 +192,7 @@ void upload_scan_thread(std::atomic<bool> &terminate)
 
   }while(!terminate);
 
-  spdlog::get("cads")->info("Stoppping Upload Thread");
+  spdlog::get("cads")->info("{{func = {}, msg = 'Exiting'}}", __func__);
 }
 
 }

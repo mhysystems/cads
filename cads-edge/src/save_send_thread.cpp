@@ -85,12 +85,11 @@ namespace cads
             1,
             global.conveyor.Id
           };
-
-          update_scan_state(scan);   
-
+        
           global.store_scan = store_scan_coro(new_scan_filename);
           global.scan_begin = scan_end;
-
+          update_scan_state(scan);   
+          
           cads::state::scan scan2 = {
             global.scan_begin,
             new_scan_filename,

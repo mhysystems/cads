@@ -11,7 +11,7 @@ conveyor = {
   PulleyCircumference = 670.0,
   TypicalSpeed = 6.0,
   Belt = 3,
-  Length = 4019900,
+  Length = 19900,
   WidthN = 1880
 }
 
@@ -22,7 +22,7 @@ belt = {
   CordDiameter = 9.1,
   TopCover = 14.0,
   Width = 1700,
-  Length = 4019900,
+  Length = 19900,
   LengthN = conveyor.TypicalSpeed / gocator.Fps, 
   Splices = 1,
   Conveyor = 3
@@ -64,7 +64,8 @@ function main()
   
   local laser = sqlitegocator(sqlitegocatorConfig,gocator_cads) 
   local thread_process_profile = process_profile(profileConfig,gocator_cads,cads_origin)
-  local belt_loop = anomaly_detection_thread(anomaly,cads_origin,origin_savedb)
+  --local belt_loop = anomaly_detection_thread(anomaly,cads_origin,origin_savedb)
+  local belt_loop = loop_beltlength_thread(conveyor,cads_origin,origin_savedb)
   local thread_send_save = save_send_thread(conveyor,origin_savedb,savedb_luamain)
 
   laser:Start(gocator.Fps)
@@ -75,8 +76,8 @@ function main()
 
     if is_value then
       print(msg_id)
-      if msg_id == 5 then break 
-      elseif msg_id == 2 then break
+      if msg_id == 2 then break 
+      --elseif msg_id == 5 then break
       end
     end
 
@@ -129,7 +130,7 @@ end
 
 function make(now)
 
-  local p = 5
+  local p = 50000
   local tag = {revision = 0}
   local field = {"value"}
   local cat = "all"
