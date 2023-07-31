@@ -50,11 +50,11 @@ dbscan = {
 
 revolutionsensor = {
   Source = "length",
-  TriggerDistance = conveyors.PulleyCircumference / 1,
+  TriggerDistance = conveyor.PulleyCircumference / 1,
   Bias = 0,
   Threshold = 0.05,
   Bidirectional = false,
-  Skip = math.floor((conveyors.PulleyCircumference / (1000 * conveyor.TypicalSpeed)) * gocator.Fps * 0.9)
+  Skip = math.floor((conveyor.PulleyCircumference / (1000 * conveyor.TypicalSpeed)) * gocator.Fps * 0.9)
 }
 
 sqlitegocatorConfig = {
