@@ -22,12 +22,6 @@
   },
 
 
-  "dbscan" : {
-    "InCluster" : 2.5,
-    "MinPoints" : 11
-  },
-
-
   "profile_db_name" : "profile.db",
   "state_db_name" : "state.db",
   "transient_db_name" : "transient.db",

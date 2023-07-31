@@ -27,13 +27,6 @@ namespace {
 
   }
 
-  auto mk_dbscan(nlohmann::json config) {
-    auto InCluster = config["dbscan"]["InCluster"].get<double>();
-    auto MinPoints = config["dbscan"]["MinPoints"].get<size_t>();
-    return cads::Dbscan{InCluster,MinPoints};
-
-  }
-
   auto mk_communications(nlohmann::json config) {
     using namespace std;
     
@@ -89,7 +82,6 @@ namespace cads {
 
   Device constants_device;
   webapi_urls global_webapi;
-  Dbscan dbscan_config;
   Communications communications_config;
   Fiducial fiducial_config;
   OriginDetection config_origin_detection;
@@ -114,7 +106,6 @@ namespace cads {
 		auto config = nlohmann::json::parse(json);
     constants_device = mk_device(config);
     global_webapi = mk_webapi_urls(config);
-    dbscan_config = mk_dbscan(config);
     communications_config = mk_communications(config);
     fiducial_config = mk_fiducial(config);
     config_origin_detection = mk_origin_detection(config);
