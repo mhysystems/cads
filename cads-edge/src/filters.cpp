@@ -77,11 +77,6 @@ namespace cads
     };
   }
 
-  std::function<cads::z_element(cads::z_element)> mk_schmitt_trigger(const cads::z_element bias)
-  {
-    return mk_schmitt_trigger(global_filters.SchmittThreshold,bias);
-  }
-
   std::function<cads::z_element(cads::z_element,bool)> mk_amplitude_extraction()
   {
     cads::z_element min = std::numeric_limits<cads::z_element>::max();

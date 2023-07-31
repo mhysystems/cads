@@ -299,6 +299,21 @@ namespace
       return std::nullopt;
     }
 
+    if (lua_getfield(L, index, "Threshold") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Threshold");
+      return std::nullopt;
+    }
+
+    auto theshold_opt = tonumber(L, -1);
+    lua_pop(L, 1);
+
+    if (!theshold_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'Threshold not a number' }}", __func__);
+      return std::nullopt;
+    }
+
     if (lua_getfield(L, index, "Bidirectional") == LUA_TNIL)
     {
       spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Bidirectional");

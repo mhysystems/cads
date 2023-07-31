@@ -26,12 +26,6 @@
     "MinPoints" : 11
   },
 
-  "revolution_sensor" : {
-    "source" : "length",
-    "trigger_num" : 1,
-    "bias" : 0,
-    "bidirectional" : false
-  },
 
   "profile_db_name" : "profile.db",
   "state_db_name" : "state.db",

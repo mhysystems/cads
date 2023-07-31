@@ -75,7 +75,7 @@ std::function<PulleyRevolution(double)>
     auto cnt_est_threshold = config.skip; //period * constants_gocator.Fps * 0.9;
 
     double schmitt1 = 1.0, schmitt0 = -1.0;
-    auto schmitt_trigger = mk_schmitt_trigger(bias);
+    auto schmitt_trigger = mk_schmitt_trigger(config.threshold,bias);
 
     decltype(cnt_est_threshold) cnt = 0;
     auto avg_max_fn = mk_online_mean(bias);

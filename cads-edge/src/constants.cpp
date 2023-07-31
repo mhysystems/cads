@@ -172,14 +172,6 @@ namespace {
 
   }
 
-  auto mk_filters(nlohmann::json config) {
-    
-    auto SchmittThreshold = config["filters"]["SchmittThreshold"].get<double>();
-
-    return cads::Filters{SchmittThreshold};
-
-  }
-
   auto mk_dbscan(nlohmann::json config) {
     auto InCluster = config["dbscan"]["InCluster"].get<double>();
     auto MinPoints = config["dbscan"]["MinPoints"].get<size_t>();
@@ -257,7 +249,6 @@ namespace cads {
   Belt global_belt_parameters;
   Scan global_scan_parameters;
   webapi_urls global_webapi;
-  Filters global_filters;
   Dbscan dbscan_config;
   Communications communications_config;
   Fiducial fiducial_config;
@@ -309,7 +300,6 @@ namespace cads {
     constants_device = mk_device(config);
     global_scan_parameters = mk_scan_parameters(config);
     global_webapi = mk_webapi_urls(config);
-    global_filters = mk_filters(config);
     dbscan_config = mk_dbscan(config);
     communications_config = mk_communications(config);
     fiducial_config = mk_fiducial(config);

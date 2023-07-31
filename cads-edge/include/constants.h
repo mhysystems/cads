@@ -75,10 +75,6 @@ namespace cads {
     value_type add_scan;
   };
 
-  struct Filters {
-    double SchmittThreshold;
-  };
-
   struct Device {
     long Serial;
   };
@@ -93,6 +89,7 @@ namespace cads {
     Source source;
     double trigger_distance;
     double bias;
+    double threshold;
     bool bidirectional;
     long long skip;
   };
@@ -140,7 +137,6 @@ namespace cads {
   extern Conveyor global_conveyor_parameters;
   extern Belt global_belt_parameters;
   extern webapi_urls global_webapi;
-  extern Filters global_filters;
   extern Dbscan dbscan_config;
   extern Communications communications_config;
   extern Fiducial fiducial_config;
