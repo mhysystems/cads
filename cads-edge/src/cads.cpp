@@ -368,7 +368,7 @@ namespace cads
 
     const auto x_width = config.Width;
     const auto nan_percentage = config.NaNPercentage;
-    const auto width_n = (int)config.WidthN; // gcc-11 on ubuntu cannot compile doubles in ranges expression
+    const auto width_n = (int)config.conveyor.WidthN; // gcc-11 on ubuntu cannot compile doubles in ranges expression
     const auto clip_height = (z_element)config.ClipHeight;
     double x_resolution = 1.0;
     double z_resolution = 1.0;
@@ -403,7 +403,7 @@ namespace cads
     auto start = std::chrono::high_resolution_clock::now();
 
     auto dc_filter = mk_dc_filter();
-    auto pulley_speed = mk_pulley_stats();
+    auto pulley_speed = mk_pulley_stats(config.conveyor.TypicalSpeed,config.conveyor.PulleyCircumference);
 
     long drop_profiles = config.IIRFilter.skip; // Allow for iir fillter too stablize
 
@@ -412,7 +412,7 @@ namespace cads
 
     auto filter_window_len = config.PulleySamplesExtend;
 
-    auto pulley_rev = config.RevolutionSensor.source == RevolutionSensorConfig::Source::length ? mk_pseudo_revolution() : mk_pulley_revolution(config.RevolutionSensor);
+    auto pulley_rev = config.RevolutionSensor.source == RevolutionSensorConfig::Source::length ? mk_pseudo_revolution(config.conveyor.PulleyCircumference) : mk_pulley_revolution(config.RevolutionSensor);
 
     do
     {

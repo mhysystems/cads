@@ -45,9 +45,8 @@ namespace cads
 {
 
 std::function<PulleyRevolution(double)> 
-  mk_pseudo_revolution()
+  mk_pseudo_revolution(double trigger_distance)
   {
-    auto trigger_distance = global_conveyor_parameters.PulleyCircumference; // In mm
     double next_revolution = trigger_distance;
 
     return [=](double len) mutable -> PulleyRevolution
@@ -239,12 +238,10 @@ std::function<PulleyRevolution(double)>
 
 
  
-  std::function<std::tuple<double,double,double>(PulleyRevolution,double,std::chrono::time_point<std::chrono::system_clock>)> mk_pulley_stats(double init)
+  std::function<std::tuple<double,double,double>(PulleyRevolution,double,std::chrono::time_point<std::chrono::system_clock>)> mk_pulley_stats(double avg_speed, double pulley_circumfrence)
   {
     using namespace std::placeholders;
 
-    auto pulley_circumfrence = global_conveyor_parameters.PulleyCircumference;
-    auto avg_speed = global_conveyor_parameters.TypicalSpeed;
     auto T0 = 1000 * pulley_circumfrence / avg_speed; // in milliseconds
     auto T1 = 6 * T0;  // in milliseconds
     auto barrel_origin_time = std::chrono::high_resolution_clock::now();
@@ -254,7 +251,7 @@ std::function<PulleyRevolution(double)>
     auto adjust = std::bind(pulley_speed_adjustment, _1, T0, T1);
     auto amplitude_extraction = mk_amplitude_extraction();
 
-    double speed = init / 1000; // m/s
+    double speed = avg_speed / 1000; // m/s
     double amplitude = 0;
     double frequency = 0;
 

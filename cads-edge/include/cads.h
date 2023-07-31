@@ -14,12 +14,12 @@ namespace cads
   struct ProfileConfig
   {
     double Width;
-    long long WidthN;
     double NaNPercentage;
     double ClipHeight;
     IIRFilterConfig IIRFilter;
     long long PulleySamplesExtend;
     RevolutionSensorConfig RevolutionSensor;
+    Conveyor conveyor;
   };
 
   void store_profile_only();

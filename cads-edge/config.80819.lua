@@ -74,12 +74,12 @@ anomaly = {
 
 profileConfig = {
   Width = belt.Width,
-  WidthN = conveyor.WidthN,
   NaNPercentage = 0.15,
   ClipHeight = 35.0,
   IIRFilter = iirfilter,
   PulleySamplesExtend = 10,
-  RevolutionSensor = revolutionsensor
+  RevolutionSensor = revolutionsensor,
+  Conveyor = conveyor
 }
 
 function main()

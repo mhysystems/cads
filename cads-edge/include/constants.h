@@ -104,7 +104,7 @@ namespace cads {
     double fiducial_x;
     double fiducial_y;
     double fiducial_gap;
-
+    double edge_height;
   };
 
   struct OriginDetection {
@@ -133,9 +133,6 @@ namespace cads {
 
 
   extern Device constants_device;
-  extern profile_parameters global_profile_parameters;
-  extern Conveyor global_conveyor_parameters;
-  extern Belt global_belt_parameters;
   extern webapi_urls global_webapi;
   extern Dbscan dbscan_config;
   extern Communications communications_config;

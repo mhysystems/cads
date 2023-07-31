@@ -434,7 +434,7 @@ namespace cads
     params_json["z_off"] = gocator.zOffset;
     params_json["z_min"] = z_min;
     params_json["z_max"] = z_max;
-    params_json["Ymax"] = global_belt_parameters.Length;
+    params_json["Ymax"] = conveyor.Length;
     params_json["YmaxN"] = YmaxN;
     params_json["WidthN"] = conveyor.WidthN;
     params_json["Belt"] = conveyor.Belt;

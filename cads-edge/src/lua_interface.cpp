@@ -173,6 +173,170 @@ namespace
     return std::make_tuple(a, b);
   }
 
+std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
+  {
+
+    const std::string obj_name = "conveyor";
+
+    if (!lua_istable(L, index))
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} needs to be a table' }}", __func__,obj_name);
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "Id") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Id");
+      return std::nullopt;
+    }
+
+    auto id_opt = tointeger(L, -1);
+    lua_pop(L, 1);
+
+    if (!id_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'Id not a number' }}", __func__);
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "Org") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Org");
+      return std::nullopt;
+    }
+
+    auto org_opt = tostring(L, -1);
+    lua_pop(L, 1);
+
+    if (!org_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'Org not a string' }}", __func__);
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "Site") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Site");
+      return std::nullopt;
+    }
+
+    auto site_opt = tostring(L, -1);
+    lua_pop(L, 1);
+
+    if (!site_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'Site not a string' }}", __func__);
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "Name") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Name");
+      return std::nullopt;
+    }
+
+    auto name_opt = tostring(L, -1);
+    lua_pop(L, 1);
+
+    if (!name_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'Name not a string' }}", __func__);
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "Timezone") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Timezone");
+      return std::nullopt;
+    }
+
+    auto Timezone_opt = tostring(L, -1);
+    lua_pop(L, 1);
+
+    if (!Timezone_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'Timezone not a string' }}", __func__);
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "PulleyCircumference") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"PulleyCircumference");
+      return std::nullopt;
+    }
+
+    auto PulleyCircumference_opt = tonumber(L, -1);
+    lua_pop(L, 1);
+
+    if (!PulleyCircumference_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'PulleyCircumference not a number' }}", __func__);
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "TypicalSpeed") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"TypicalSpeed");
+      return std::nullopt;
+    }
+
+    auto TypicalSpeed_opt = tonumber(L, -1);
+    lua_pop(L, 1);
+
+    if (!TypicalSpeed_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'TypicalSpeed not a number' }}", __func__);
+      return std::nullopt;
+    }
+
+
+    if (lua_getfield(L, index, "Belt") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Belt");
+      return std::nullopt;
+    }
+
+    auto Belt_opt = tonumber(L, -1);
+    lua_pop(L, 1);
+
+    if (!Belt_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'Belt not a number' }}", __func__);
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "Length") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Length");
+      return std::nullopt;
+    }
+
+    auto Length_opt = tonumber(L, -1);
+    lua_pop(L, 1);
+
+    if (!Length_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'Length not a number' }}", __func__);
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "WidthN") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"WidthN");
+      return std::nullopt;
+    }
+
+    auto WidthN_opt = tointeger(L, -1);
+    lua_pop(L, 1);
+
+    if (!WidthN_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'WidthN not a number' }}", __func__);
+      return std::nullopt;
+    }
+
+    return  cads::Conveyor{*id_opt,*org_opt,*site_opt,*name_opt,*Timezone_opt,*PulleyCircumference_opt,*TypicalSpeed_opt,*Belt_opt,*Length_opt,*WidthN_opt};
+  }
   
   std::optional<cads::IIRFilterConfig> toiirfilter(lua_State *L, int index)
   {
@@ -374,21 +538,6 @@ namespace
       return std::nullopt;
     }
 
-    if (lua_getfield(L, index, "WidthN") == LUA_TNIL)
-    {
-      spdlog::get("cads")->error("{{ func = {},  msg = 'profile config requires {}' }}", __func__, "WidthN");
-      return std::nullopt;
-    }
-
-    auto widthN_opt = tointeger(L, -1);
-    lua_pop(L, 1);
-
-    if (!widthN_opt)
-    {
-      spdlog::get("cads")->error("{{ func = {},  msg = 'WidthN not a integer' }}", __func__);
-      return std::nullopt;
-    }
-
     if (lua_getfield(L, index, "NaNPercentage") == LUA_TNIL)
     {
       spdlog::get("cads")->error("{{ func = {},  msg = 'profile config requires {}' }}", __func__, "NaNPercentage");
@@ -464,7 +613,23 @@ namespace
       return std::nullopt;
     }
 
-    return cads::ProfileConfig{*width_opt,*widthN_opt,*nanpercentage_opt,*clipheight_opt,*iirfilter_opt,*pulley_sample_extend_opt,*revolution_sensor_opt};
+
+    if (lua_getfield(L, index, "Conveyor") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'profile config requires {}' }}", __func__, "Conveyor");
+      return std::nullopt;
+    }
+
+    auto conveyor_opt = toconveyor(L, -1);
+    lua_pop(L, 1);
+
+    if (!conveyor_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'Conveyor not a Conveyor' }}", __func__);
+      return std::nullopt;
+    }
+
+    return cads::ProfileConfig{*width_opt,*nanpercentage_opt,*clipheight_opt,*iirfilter_opt,*pulley_sample_extend_opt,*revolution_sensor_opt,*conveyor_opt};
   }
 
   std::optional<cads::SqliteGocatorConfig> tosqlitegocatorconfig(lua_State *L, int index)
@@ -594,57 +759,32 @@ namespace
     return cads::GocatorConfig{trim, *typical_resolution_opt};
   }
 
-  auto mk_conveyor(lua_State *L, int index)
+  std::optional<cads::DynamicProcessingConfig> todynamicprocessingconfig(lua_State *L, int index)
   {
-    lua_getglobal(L,"iirfilter");
-    auto gg = toiirfilter(L,-1);
-    
-    cads::Conveyor obj;
+    const std::string obj_name = "dynamicprocessingconfig";
 
-    if (lua_istable(L, index))
+    if (!lua_istable(L, index))
     {
-      lua_getfield(L, index, "Id");
-      obj.Id = lua_tonumber(L, -1);
-      lua_pop(L, 1);
-
-      lua_getfield(L, index, "Org");
-      obj.Org = lua_tostring(L, -1);
-      lua_pop(L, 1);
-
-      lua_getfield(L, index, "Site");
-      obj.Site = lua_tostring(L, -1);
-      lua_pop(L, 1);
-
-      lua_getfield(L, index, "Name");
-      obj.Name = lua_tostring(L, -1);
-      lua_pop(L, 1);
-
-      lua_getfield(L, index, "Timezone");
-      obj.Timezone = lua_tostring(L, -1);
-      lua_pop(L, 1);
-
-      lua_getfield(L, index, "PulleyCircumference");
-      obj.PulleyCircumference = lua_tonumber(L, -1);
-      lua_pop(L, 1);
-
-      lua_getfield(L, index, "TypicalSpeed");
-      obj.TypicalSpeed = lua_tonumber(L, -1);
-      lua_pop(L, 1);
-
-      lua_getfield(L, index, "Belt");
-      obj.Belt = lua_tonumber(L, -1);
-      lua_pop(L, 1);
-
-      lua_getfield(L, index, "Length");
-      obj.Length = lua_tonumber(L, -1);
-      lua_pop(L, 1);
-
-      lua_getfield(L, index, "WidthN");
-      obj.WidthN = lua_tonumber(L, -1);
-      lua_pop(L, 1);
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} needs to be a lua table' }}", __func__,obj_name);
+      return std::nullopt;
     }
 
-    return obj;
+    if (lua_getfield(L, index, "WidthN") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "WidthN");
+      return std::nullopt;
+    }
+
+    auto WidthN_opt = tointeger(L, -1);
+    lua_pop(L, 1);
+
+    if (!WidthN_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'WidthN not a integer' }}", __func__);
+      return std::nullopt;
+    }
+
+    return cads::DynamicProcessingConfig{*WidthN_opt};
   }
 
   std::optional<cads::AnomalyDetection> mk_anomaly(lua_State *L, int index)
@@ -920,20 +1060,29 @@ namespace
 
   int window_processing_thread(lua_State *L)
   {
-    return mk_thread2(L, cads::window_processing_thread);
+    using namespace std::placeholders;
+
+    auto conveyor = toconveyor(L, 1);
+    auto bound = std::bind(cads::window_processing_thread, *conveyor, _1, _2);
+    return mk_thread2(L, bound);
   }
 
   int dynamic_processing_thread(lua_State *L)
   {
-    return mk_thread2(L, cads::dynamic_processing_thread);
+    using namespace std::placeholders;
+
+    auto config = todynamicprocessingconfig(L, 1);
+    auto bound = std::bind(cads::dynamic_processing_thread, *config, _1, _2);
+
+    return mk_thread2(L, bound);
   }
 
   int save_send_thread(lua_State *L)
   {
     using namespace std::placeholders;
 
-    auto conveyor = mk_conveyor(L, 1);
-    auto bound = std::bind(cads::save_send_thread, conveyor, _1, _2);
+    auto conveyor = toconveyor(L, 1);
+    auto bound = std::bind(cads::save_send_thread, *conveyor, _1, _2);
     return mk_thread2(L, bound);
   }
 
@@ -941,8 +1090,8 @@ namespace
   {
     using namespace std::placeholders;
 
-    auto conveyor = mk_conveyor(L, 1);
-    auto bound = std::bind(cads::loop_beltlength_thread, conveyor, _1, _2);
+    auto conveyor = toconveyor(L, 1);
+    auto bound = std::bind(cads::loop_beltlength_thread, *conveyor, _1, _2);
     return mk_thread2(L, bound);
   }
 

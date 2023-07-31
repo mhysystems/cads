@@ -238,7 +238,7 @@ namespace cads
     }
   }
 
-  coro<std::tuple<profile,double,bool>,profile,1> origin_detection_coro(double x_resolution, double y_resolution, int width_n)
+  coro<std::tuple<profile,double,bool>,profile,1> origin_detection_coro(double x_resolution, double y_resolution, int width_n, Conveyor conveyor)
   {    
     auto dump_match = config_origin_detection.dump_match;
     cv::Mat fiducial;
@@ -255,7 +255,7 @@ namespace cads
     double belt_crosscorr_threshold = config_origin_detection.cross_correlation_threshold;
 
 
-    auto edge_height = global_belt_parameters.PulleyCover + global_belt_parameters.CordDiameter + global_belt_parameters.TopCover;
+    auto edge_height = fiducial_config.edge_height;
     auto avg_threshold_fn = mk_online_mean(edge_height - fiducial_config.fiducial_depth);
 
     profile p;
@@ -364,7 +364,7 @@ namespace cads
           }
 
           valid = false;
-          y_max_length = global_belt_parameters.Length * 1.02; 
+          y_max_length = conveyor.Length * 1.02; 
           trigger_length = std::numeric_limits<y_type>::lowest();
           lowest_correlation = std::numeric_limits<double>::max();
         }
@@ -477,7 +477,7 @@ namespace cads
   }
 
 
-  void window_processing_thread(cads::Io &profile_fifo, cads::Io &next_fifo)
+  void window_processing_thread(Conveyor conveyor,cads::Io &profile_fifo, cads::Io &next_fifo)
   {
 
     cads::msg m;
@@ -485,8 +485,8 @@ namespace cads
     auto start = std::chrono::high_resolution_clock::now();
     int64_t cnt = 0;
     auto buffer_size_warning = buffer_warning_increment;
-    double x_resolution = 1.0, y_resolution = global_conveyor_parameters.TypicalSpeed;
-    int width_n = (int)global_belt_parameters.WidthN;
+    double x_resolution = 1.0, y_resolution = conveyor.TypicalSpeed;
+    int width_n = (int)conveyor.WidthN;
 
     profile_fifo.wait_dequeue(m);
     auto m_id = get<0>(m);
@@ -508,7 +508,7 @@ namespace cads
     next_fifo.enqueue(m);
 
 
-    auto origin_detection = origin_detection_coro(x_resolution,y_resolution,width_n);
+    auto origin_detection = origin_detection_coro(x_resolution,y_resolution,width_n,conveyor);
 
     long origin_sequence_cnt = 0;
     size_t scan_cnt = 0;
@@ -706,7 +706,6 @@ coro<std::tuple<bool,size_t,size_t,double>,profile,1> anomaly_detection_coro(Ano
     auto buffer_size_warning = buffer_warning_increment;
     double last_splice_position = 0;
     size_t last_splice_index = 0;
-    double y_resolution = 1000 * global_conveyor_parameters.TypicalSpeed / constants_gocator.Fps;
 
     auto origin_detection = anomaly_detection_coro(anomaly);
 
