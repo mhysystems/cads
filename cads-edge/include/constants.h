@@ -80,8 +80,8 @@ namespace cads {
   };
 
   struct Dbscan {
-    double InCluster;
-    size_t MinPoints;
+    double InClusterRadius;
+    long long MinPoints;
   };
 
   struct RevolutionSensorConfig{

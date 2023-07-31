@@ -43,6 +43,11 @@ belt = {
   Conveyor = 3
 }
 
+dbscan = {
+  InClusterRadius = 2.5,
+  MinPoints = 11
+}
+
 revolutionsensor = {
   Source = "length",
   TriggerDistance = conveyors.PulleyCircumference / 1,
@@ -79,7 +84,8 @@ profileConfig = {
   IIRFilter = iirfilter,
   PulleySamplesExtend = 10,
   RevolutionSensor = revolutionsensor,
-  Conveyor = conveyor
+  Conveyor = conveyor,
+  Dbscan = dbscan
 }
 
 function main()

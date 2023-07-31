@@ -20,6 +20,7 @@ namespace cads
     long long PulleySamplesExtend;
     RevolutionSensorConfig RevolutionSensor;
     Conveyor conveyor;
+    Dbscan dbscan;
   };
 
   void store_profile_only();

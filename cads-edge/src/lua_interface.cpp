@@ -338,6 +338,49 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
     return  cads::Conveyor{*id_opt,*org_opt,*site_opt,*name_opt,*Timezone_opt,*PulleyCircumference_opt,*TypicalSpeed_opt,*Belt_opt,*Length_opt,*WidthN_opt};
   }
   
+  std::optional<cads::Dbscan> todbscan(lua_State *L, int index)
+  {
+    const std::string obj_name = "dbscan";
+
+    if (!lua_istable(L, index))
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} needs to be a table' }}", __func__,obj_name);
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "InClusterRadius") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"InClusterRadius");
+      return std::nullopt;
+    }
+
+    auto InClusterRadius_opt = tonumber(L, -1);
+    lua_pop(L, 1);
+
+    if (!InClusterRadius_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'InClusterRadius not a number' }}", __func__);
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "MinPoints") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"MinPoints");
+      return std::nullopt;
+    }
+
+    auto MinPoints_opt = tointeger(L, -1);
+    lua_pop(L, 1);
+
+    if (!MinPoints_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'MinPoints not a number' }}", __func__);
+      return std::nullopt;
+    }
+
+    return cads::Dbscan{*InClusterRadius_opt,*MinPoints_opt};
+  }
+
   std::optional<cads::IIRFilterConfig> toiirfilter(lua_State *L, int index)
   {
     const std::string obj_name = "iirfilter";
@@ -629,7 +672,22 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
       return std::nullopt;
     }
 
-    return cads::ProfileConfig{*width_opt,*nanpercentage_opt,*clipheight_opt,*iirfilter_opt,*pulley_sample_extend_opt,*revolution_sensor_opt,*conveyor_opt};
+    if (lua_getfield(L, index, "Dbscan") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'profile config requires {}' }}", __func__, "Dbscan");
+      return std::nullopt;
+    }
+
+    auto Dbscan_opt = todbscan(L, -1);
+    lua_pop(L, 1);
+
+    if (!Dbscan_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'Dbscan not a Dbscan' }}", __func__);
+      return std::nullopt;
+    }
+
+    return cads::ProfileConfig{*width_opt,*nanpercentage_opt,*clipheight_opt,*iirfilter_opt,*pulley_sample_extend_opt,*revolution_sensor_opt,*conveyor_opt,*Dbscan_opt};
   }
 
   std::optional<cads::SqliteGocatorConfig> tosqlitegocatorconfig(lua_State *L, int index)

@@ -9,6 +9,7 @@
 #include <chrono>
 #include <string>
 #include <ranges>
+#include <constants.h>
 
 namespace cads
 {
@@ -52,6 +53,6 @@ namespace cads
   };
   
   std::string ClusterErrorToString(ClusterError error);
-  std::tuple<double, double, size_t, size_t, ClusterError> pulley_levels_clustered(z_type &z, std::function<double(const z_type &)> estimator = average);
+  std::tuple<double, double, size_t, size_t, ClusterError> pulley_levels_clustered(z_type &z, Dbscan, std::function<double(const z_type &)> estimator = average);
 
 }

@@ -461,7 +461,7 @@ namespace cads
       auto ix = p.x_off;
       auto iz = p.z;
 
-      auto [pulley_level, pulley_right, ll, lr, cerror] = pulley_levels_clustered(iz, pulley_estimator);
+      auto [pulley_level, pulley_right, ll, lr, cerror] = pulley_levels_clustered(iz, config.dbscan,pulley_estimator);
 
       if (cerror != ClusterError::None)
       {
