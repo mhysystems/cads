@@ -347,7 +347,7 @@ namespace
       source = cads::RevolutionSensorConfig::Source::height_filtered;  
     }
 
-    return cads::RevolutionSensorConfig{source,*trigger_dis_opt,*bias_opt,bidirectional,*skip_opt};
+    return cads::RevolutionSensorConfig{source,*trigger_dis_opt,*bias_opt,*theshold_opt,bidirectional,*skip_opt};
   }
 
 
@@ -464,7 +464,7 @@ namespace
       return std::nullopt;
     }
 
-    return cads::ProfileConfig{*width_opt,*widthN_opt,*nanpercentage_opt,*clipheight_opt,*iirfilter_opt,*pulley_sample_extend_opt};
+    return cads::ProfileConfig{*width_opt,*widthN_opt,*nanpercentage_opt,*clipheight_opt,*iirfilter_opt,*pulley_sample_extend_opt,*revolution_sensor_opt};
   }
 
   std::optional<cads::SqliteGocatorConfig> tosqlitegocatorconfig(lua_State *L, int index)

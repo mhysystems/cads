@@ -31,10 +31,6 @@
   "state_db_name" : "state.db",
   "transient_db_name" : "transient.db",
 
-  "filters" : {
-    "SchmittThreshold" : 0.05
-  },
-
   "scan" : {
     "Orientation" : -1
   },
