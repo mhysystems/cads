@@ -19,6 +19,7 @@ namespace cads
     double ClipHeight;
     IIRFilterConfig IIRFilter;
     long long PulleySamplesExtend;
+    RevolutionSensorConfig RevolutionSensor;
   };
 
   void store_profile_only();

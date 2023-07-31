@@ -412,7 +412,7 @@ namespace cads
 
     auto filter_window_len = config.PulleySamplesExtend;
 
-    auto pulley_rev = revolution_sensor_config.source == RevolutionSensor::Source::length ? mk_pseudo_revolution() : mk_pulley_revolution();
+    auto pulley_rev = config.RevolutionSensor.source == RevolutionSensorConfig::Source::length ? mk_pseudo_revolution() : mk_pulley_revolution(config.RevolutionSensor);
 
     do
     {
@@ -508,11 +508,11 @@ namespace cads
       regression_compensate(z, 0, z.size(), gradient);
 
       PulleyRevolution ps;
-      if (revolution_sensor_config.source == RevolutionSensor::Source::height_raw)
+      if (config.RevolutionSensor.source == RevolutionSensorConfig::Source::height_raw)
       {
         ps = pulley_rev(pulley_level);
       }
-      else if(revolution_sensor_config.source == RevolutionSensor::Source::length) 
+      else if(config.RevolutionSensor.source == RevolutionSensorConfig::Source::length) 
       {
         ps = pulley_rev(y);
       }

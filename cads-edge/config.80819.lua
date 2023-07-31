@@ -43,6 +43,14 @@ belt = {
   Conveyor = 3
 }
 
+revolutionsensor = {
+  Source = "length",
+  TriggerDistance = conveyors.PulleyCircumference / 1,
+  Bias = 0,
+  Bidirectional = false,
+  Skip = math.floor((conveyors.PulleyCircumference / (1000 * conveyor.TypicalSpeed)) * gocator.Fps * 0.9)
+}
+
 sqlitegocatorConfig = {
   Range = {4,99999999999},
   Fps = gocator.Fps,
@@ -69,7 +77,8 @@ profileConfig = {
   NaNPercentage = 0.15,
   ClipHeight = 35.0,
   IIRFilter = iirfilter,
-  PulleySamplesExtend = 10;
+  PulleySamplesExtend = 10,
+  RevolutionSensor = revolutionsensor
 }
 
 function main()

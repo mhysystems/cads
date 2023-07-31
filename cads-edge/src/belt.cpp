@@ -67,20 +67,17 @@ std::function<PulleyRevolution(double)>
 
 
  std::function<PulleyRevolution(double)> 
-  mk_pulley_revolution()
+  mk_pulley_revolution(RevolutionSensorConfig config)
   {
-    auto n = revolution_sensor_config.trigger_num;
-    auto bidirectional = revolution_sensor_config.bidirectional;
-    auto bias = revolution_sensor_config.bias;
-    auto pully_circumfrence = global_conveyor_parameters.PulleyCircumference; // In mm
-    auto trigger_distance = pully_circumfrence / n;
-    auto period = global_conveyor_parameters.PulleyCircumference / global_conveyor_parameters.TypicalSpeed;
-    long cnt_est_threshold = period * constants_gocator.Fps * 0.9;
+    auto bidirectional = config.bidirectional;
+    auto bias = config.bias;
+    auto trigger_distance = config.trigger_distance;
+    auto cnt_est_threshold = config.skip; //period * constants_gocator.Fps * 0.9;
 
     double schmitt1 = 1.0, schmitt0 = -1.0;
     auto schmitt_trigger = mk_schmitt_trigger(bias);
 
-    long cnt = 0;
+    decltype(cnt_est_threshold) cnt = 0;
     auto avg_max_fn = mk_online_mean(bias);
     auto avg_min_fn = mk_online_mean(bias);
 

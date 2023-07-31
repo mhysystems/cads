@@ -187,25 +187,6 @@ namespace {
 
   }
 
-  auto mk_revolution_sensor(nlohmann::json config) {
-    auto source_s = config["revolution_sensor"]["source"].get<std::string>();
-    cads::RevolutionSensor::Source source;
-    if(source_s == "raw") {
-      source = cads::RevolutionSensor::Source::height_raw;
-    }else if(source_s == "length") {
-      source = cads::RevolutionSensor::Source::length;
-    }else {
-      source = cads::RevolutionSensor::Source::height_filtered;  
-    }
-
-    auto trigger_num = config["revolution_sensor"]["trigger_num"].get<size_t>();
-    auto bias = config["revolution_sensor"]["bias"].get<double>();
-    auto bidirectional = config["revolution_sensor"]["bidirectional"].get<bool>();
-
-    return cads::RevolutionSensor{source,trigger_num,bias,bidirectional};
-
-  }
-
   auto mk_communications(nlohmann::json config) {
     using namespace std;
     
@@ -278,7 +259,6 @@ namespace cads {
   webapi_urls global_webapi;
   Filters global_filters;
   Dbscan dbscan_config;
-  RevolutionSensor revolution_sensor_config;
   Communications communications_config;
   Fiducial fiducial_config;
   OriginDetection config_origin_detection;
@@ -331,7 +311,6 @@ namespace cads {
     global_webapi = mk_webapi_urls(config);
     global_filters = mk_filters(config);
     dbscan_config = mk_dbscan(config);
-    revolution_sensor_config = mk_revolution_sensor(config);
     communications_config = mk_communications(config);
     fiducial_config = mk_fiducial(config);
     config_origin_detection = mk_origin_detection(config);

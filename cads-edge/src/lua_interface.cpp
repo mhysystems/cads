@@ -244,6 +244,98 @@ namespace
     return cads::IIRFilterConfig{*skip_opt,*delay_opt,*sos_opt};
   }
 
+  std::optional<cads::RevolutionSensorConfig> torevolutionsensor(lua_State *L, int index)
+  {
+    const std::string obj_name = "revolutionsensor";
+
+    if (!lua_istable(L, index))
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} needs to be a table' }}", __func__,obj_name);
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "Source") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Source");
+      return std::nullopt;
+    }
+
+    auto source_opt = tostring(L, -1);
+    lua_pop(L, 1);
+
+    if (!source_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'Source not a string' }}", __func__);
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "TriggerDistance") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"TriggerDistance");
+      return std::nullopt;
+    }
+
+    auto trigger_dis_opt = tonumber(L, -1);
+    lua_pop(L, 1);
+
+    if (!trigger_dis_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'TriggerDistance not a number' }}", __func__);
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "Bias") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Bias");
+      return std::nullopt;
+    }
+
+    auto bias_opt = tonumber(L, -1);
+    lua_pop(L, 1);
+
+    if (!bias_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'Bias not a numbers' }}", __func__);
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "Bidirectional") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Bidirectional");
+      return std::nullopt;
+    }
+
+    bool bidirectional = lua_toboolean(L, -1);
+    lua_pop(L, 1);
+
+    if (lua_getfield(L, index, "Skip") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Skip");
+      return std::nullopt;
+    }
+
+    auto skip_opt = tointeger(L, -1);
+    lua_pop(L, 1);
+
+    if (!skip_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'Skip not a number' }}", __func__);
+      return std::nullopt;
+    }
+
+    cads::RevolutionSensorConfig::Source source;
+    if(*source_opt == "raw") {
+      source = cads::RevolutionSensorConfig::Source::height_raw;
+    }else if(*source_opt  == "length") {
+      source = cads::RevolutionSensorConfig::Source::length;
+    }else {
+      source = cads::RevolutionSensorConfig::Source::height_filtered;  
+    }
+
+    return cads::RevolutionSensorConfig{source,*trigger_dis_opt,*bias_opt,bidirectional,*skip_opt};
+  }
+
+
   std::optional<cads::ProfileConfig> toprofileconfig(lua_State *L, int index)
   {
     if (!lua_istable(L, index))
@@ -339,6 +431,21 @@ namespace
     if (!pulley_sample_extend_opt)
     {
       spdlog::get("cads")->error("{{ func = {},  msg = 'PulleySamplesExtend not a integer' }}", __func__);
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "RevolutionSensor") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'profile config requires {}' }}", __func__, "RevolutionSensor");
+      return std::nullopt;
+    }
+
+    auto revolution_sensor_opt = torevolutionsensor(L, -1);
+    lua_pop(L, 1);
+
+    if (!revolution_sensor_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'RevolutionSensor not a RevolutionSensorConfig' }}", __func__);
       return std::nullopt;
     }
 

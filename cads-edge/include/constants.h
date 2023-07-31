@@ -88,12 +88,13 @@ namespace cads {
     size_t MinPoints;
   };
 
-  struct RevolutionSensor{
+  struct RevolutionSensorConfig{
     enum class Source {height_raw, height_filtered, length};
     Source source;
-    size_t trigger_num;
+    double trigger_distance;
     double bias;
     bool bidirectional;
+    long long skip;
   };
 
   struct Communications {
@@ -141,7 +142,6 @@ namespace cads {
   extern webapi_urls global_webapi;
   extern Filters global_filters;
   extern Dbscan dbscan_config;
-  extern RevolutionSensor revolution_sensor_config;
   extern Communications communications_config;
   extern Fiducial fiducial_config;
   extern OriginDetection config_origin_detection;

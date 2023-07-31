@@ -14,7 +14,7 @@ namespace cads
 {
   using PulleyRevolution = std::tuple<bool, double>;
 
-  std::function<PulleyRevolution(double)> mk_pulley_revolution();
+  std::function<PulleyRevolution(double)> mk_pulley_revolution(RevolutionSensorConfig);
   std::function<PulleyRevolution(double)> mk_pseudo_revolution();
   std::function<std::tuple<double,double,double>(PulleyRevolution,double,std::chrono::time_point<std::chrono::system_clock>)> mk_pulley_stats(double init = global_conveyor_parameters.TypicalSpeed);
   std::function<int(z_type &,int,int)> mk_profiles_align(int width_n);
