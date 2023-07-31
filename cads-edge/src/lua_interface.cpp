@@ -296,12 +296,12 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
       return std::nullopt;
     }
 
-    auto Belt_opt = tonumber(L, -1);
+    auto Belt_opt = tointeger(L, -1);
     lua_pop(L, 1);
 
     if (!Belt_opt)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = 'Belt not a number' }}", __func__);
+      spdlog::get("cads")->error("{{ func = {},  msg = 'Belt not a integer' }}", __func__);
       return std::nullopt;
     }
 
@@ -794,15 +794,29 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
 
   std::optional<cads::GocatorConfig> togocatorconfig(lua_State *L, int index)
   {
+    const std::string obj_name = "gocatorconfig";
+
     if (!lua_istable(L, index))
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = 'sqlite gocator needs to be a lua table' }}", __func__);
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} needs to be a lua table' }}", __func__,obj_name);
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "Trim") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name,"Trim");
       return std::nullopt;
     }
 
     lua_getfield(L, index, "Trim");
     bool trim = lua_toboolean(L, -1);
     lua_pop(L, 1);
+
+    if (lua_getfield(L, index, "TypicalResolution") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name,"TypicalResolution");
+      return std::nullopt;
+    }
 
     lua_getfield(L, index, "TypicalResolution");
     auto typical_resolution_opt = tonumber(L, -1);

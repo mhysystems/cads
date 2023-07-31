@@ -68,6 +68,11 @@ sqlitegocatorConfig = {
 
 y_res_mm = 1000 * conveyor.TypicalSpeed / gocator.Fps -- In mm
 
+laserConf = {
+  Trim = true,
+  TypicalResolution = y_res_mm
+}
+
 anomaly = {
   WindowSize = 3 * 1000 / y_res_mm,
   BeltPartitionSize = 1000 * 1000 / y_res_mm,
@@ -95,7 +100,7 @@ function main()
   local origin_savedb = BlockingReaderWriterQueue()
   local savedb_luamain = BlockingReaderWriterQueue()
   
-  local laser = sqlitegocator(sqlitegocatorConfig,gocator_cads) 
+  local laser = gocator(laserConfig,gocator_cads) 
   local thread_process_profile = process_profile(profileConfig,gocator_cads,cads_origin)
   --local belt_loop = anomaly_detection_thread(anomaly,cads_origin,origin_savedb)
   local belt_loop = loop_beltlength_thread(conveyor,cads_origin,origin_savedb)
