@@ -197,7 +197,7 @@ namespace cads
   
   coro<std::tuple<profile,double,bool>,profile,1> maxlength_coro(double y_max_length)
   {
-
+    spdlog::get("cads")->debug(R"({{func = '{}', msg = 'Slice data at {}'}})", __func__,y_max_length);
     profile p;
     bool terminate = false;
 
@@ -432,10 +432,12 @@ namespace cads
               if(op.y == 0) {
                 
                 if(origin_sequence_cnt == 0) {
+                  spdlog::get("cads")->debug(R"({{func = '{}', msg = 'Begin Sequence'}})", __func__);
                   next_fifo.enqueue({msgid::begin_sequence, origin_sequence_cnt});
                 }
 
                 if(origin_sequence_cnt > 0) {
+                  spdlog::get("cads")->debug(R"({{func = '{}', msg = 'Estimated belt length {}'}})", __func__,estimated_belt_length);
                   measurements.send("beltlength",0,estimated_belt_length);
                   next_fifo.enqueue({msgid::complete_belt, CompleteBelt{0,scan_cnt}});
                 }
