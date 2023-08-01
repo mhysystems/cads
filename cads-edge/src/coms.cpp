@@ -276,7 +276,7 @@ namespace cads
 
         auto [sub, head, data] = msg;
 
-        spdlog::get("cads")->debug("{}:natsConnection_PublishString {},{}", __func__, sub.c_str(), data.c_str());
+        //spdlog::get("cads")->debug("{}:natsConnection_PublishString {},{}", __func__, sub.c_str(), data.c_str());
 
         natsMsg *nats_msg_raw = nullptr;
  
@@ -370,6 +370,7 @@ namespace cads
         }
   
         if(bufv.size() > 0) {
+          spdlog::get("cads")->error(R"({{func ='{}', msg = 'Buffer Size:{} Compressed Size:{}'}})", __func__, buf.size(),bufv.size());
           sending = data_tag;
           response = cpr::PostAsync(endpoint,cpr::Body{(char *)bufv.data(), bufv.size()}, cpr::Header{{"Content-Encoding", "br"}, {"Content-Type", "application/octet-stream"}});
         }else {
