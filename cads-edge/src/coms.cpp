@@ -370,7 +370,7 @@ namespace cads
         }
   
         if(bufv.size() > 0) {
-          spdlog::get("cads")->error(R"({{func ='{}', msg = 'Buffer Size:{} Compressed Size:{}'}})", __func__, buf.size(),bufv.size());
+          spdlog::get("cads")->debug(R"({{func ='{}', msg = 'Buffer Size:{} Compressed Size:{}'}})", __func__, buf.size(),bufv.size());
           sending = data_tag;
           response = cpr::PostAsync(endpoint,cpr::Body{(char *)bufv.data(), bufv.size()}, cpr::Header{{"Content-Encoding", "br"}, {"Content-Type", "application/octet-stream"}});
         }else {
@@ -522,7 +522,7 @@ namespace cads
           builder.Finish(CadsFlatbuffers::Createprofile_array(builder, z_resolution, z_offset, idx - communications_config.UploadRows, profiles_flat.size(), builder.CreateVector(profiles_flat)));
 
           auto [terminate,sent_rows] = send_bytes.resume({{builder.GetBufferPointer(),builder.GetBufferPointer()+builder.GetSize()},profiles_flat.size()});
-          profiles_flat.clear();
+          profiles_flat.clear(); builder.Clear();
           if(terminate) break;
           scan.uploaded += sent_rows;
           update_scan_state(scan);
@@ -535,7 +535,7 @@ namespace cads
         {
           builder.Finish(CadsFlatbuffers::Createprofile_array(builder, z_resolution, z_offset, idx - profiles_flat.size(), profiles_flat.size(), builder.CreateVector(profiles_flat)));
           auto [terminate,sent_rows] = send_bytes.resume({{builder.GetBufferPointer(),builder.GetBufferPointer()+builder.GetSize()},profiles_flat.size()});
-          profiles_flat.clear();
+          profiles_flat.clear(); builder.Clear();
           if(terminate) break;
           scan.uploaded += sent_rows;
           update_scan_state(scan);
