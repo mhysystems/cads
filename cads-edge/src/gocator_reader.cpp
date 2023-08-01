@@ -304,7 +304,7 @@ namespace cads
     double zResolution = 0.0;
     double xOffset = 0.0;
     double zOffset = 0.0;
-    double yResolution = 1000 * config.TypicalResolution;
+    double yResolution = config.TypicalResolution;
 
     for (kSize i = 0; i < GoDataSet_Count(dataset); ++i)
     {
