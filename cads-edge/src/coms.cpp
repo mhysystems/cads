@@ -363,7 +363,7 @@ namespace cads
 
         if (!(cpr::ErrorCode::OK == r.error.code && cpr::status::HTTP_OK == r.status_code))
         {
-          spdlog::get("upload")->error("Upload failed with http status code {}", r.status_code);
+          spdlog::get("cads")->error(R"({{func ='{}', msg = 'Upload {} failed with http status code {}'}})", __func__, r.url.c_str(),r.status_code);
           break;
         }else{
           sent = sending;
@@ -373,6 +373,7 @@ namespace cads
           sending = data_tag;
           response = cpr::PostAsync(endpoint,cpr::Body{(char *)bufv.data(), bufv.size()}, cpr::Header{{"Content-Encoding", "br"}, {"Content-Type", "application/octet-stream"}});
         }else {
+          spdlog::get("cads")->error(R"({{func ='{}', msg = 'Buffer Size:{} Compressed Size:{}'}})", __func__, buf.size(),bufv.size());
           break;
         }
       }else {
