@@ -76,21 +76,14 @@ namespace {
 
     if(!config.contains("heartbeat"))
     {
-      return cads::HeartBeat{false,""};
-    }
-
-    if(!config["heartbeat"].contains("SendHeartBeat")) {
-      return cads::HeartBeat{false,""};
-    }
-
-    if(!config["heartbeat"].contains("Subject")) {
-      return cads::HeartBeat{false,""};
+      return cads::HeartBeat{false,"",std::chrono::milliseconds(1)};
     }
 
     auto SendHeartBeat = config["heartbeat"]["SendHeartBeat"].get<bool>();
     auto Subject = config["heartbeat"]["Subject"].get<std::string>();
+    auto Period =  config["heartbeat"]["Period_ms"].get<long>();
 
-    return cads::HeartBeat{SendHeartBeat,Subject};
+    return cads::HeartBeat{SendHeartBeat,Subject,std::chrono::milliseconds(Period)};
   }
 
   void sigint_handler([[maybe_unused]]int s) {

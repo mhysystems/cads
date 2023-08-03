@@ -303,7 +303,7 @@ namespace cads
     }
   }
 
-  void realtime_metrics_thread(moodycamel::BlockingConcurrentQueue<msg> &queue, bool heartbeat)
+  void realtime_metrics_thread(moodycamel::BlockingConcurrentQueue<msg> &queue, HeartBeat beat, bool heartbeat)
   {
     bool terminate = false;
     msg m;

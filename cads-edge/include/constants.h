@@ -23,6 +23,7 @@ namespace cads {
   struct HeartBeat {
     bool SendHeartBeat;
     std::string Subject;
+    std::chrono::milliseconds Period;
   };
 
   struct profile_parameters {
