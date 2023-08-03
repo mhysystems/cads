@@ -303,6 +303,39 @@ namespace cads
     }
   }
 
+  void realtime_metrics_thread(moodycamel::BlockingConcurrentQueue<msg> &queue, bool heartbeat)
+  {
+    bool terminate = false;
+    msg m;
+    auto heartbeat_subject = "caas." + std::to_string(constants_device.Serial) + ".heartbeat";
+    auto heartbeat_msg = std::make_tuple(heartbeat_subject,"","");
+    auto realtime_metrics = realtime_metrics_coro();
+
+    if(heartbeat) {
+      realtime_metrics.resume(heartbeat_msg);
+    }
+
+    for(;!terminate;) {
+      if(!queue.wait_dequeue_timed(m, std::chrono::milliseconds(30000))) {
+        if(heartbeat) {
+          realtime_metrics.resume(heartbeat_msg);
+        }
+
+        continue;
+      }
+
+      auto id = get<0>(m);
+      if(id == msgid::realtime_metric){
+        auto metric = get<RealtimeMetric>(get<1>(m));
+        auto msg = std::make_tuple(metric.subject,metric.header,metric.data);
+        realtime_metrics.resume(msg);
+      }
+
+    }
+
+
+  }
+
   std::string ReplaceString(std::string subject, const std::string &search,
                             const std::string &replace)
   {
