@@ -303,22 +303,19 @@ namespace cads
     }
   }
 
-  void realtime_metrics_thread(moodycamel::BlockingConcurrentQueue<msg> &queue, HeartBeat beat, bool heartbeat)
+  void realtime_metrics_thread(moodycamel::BlockingConcurrentQueue<msg> &queue, HeartBeat beat, bool &terminate)
   {
-    bool terminate = false;
     msg m;
-    auto heartbeat_subject = "caas." + std::to_string(constants_device.Serial) + ".heartbeat";
-    auto heartbeat_msg = std::make_tuple(heartbeat_subject,"","");
     auto realtime_metrics = realtime_metrics_coro();
 
-    if(heartbeat) {
-      realtime_metrics.resume(heartbeat_msg);
+    if(beat.SendHeartBeat) {
+      realtime_metrics.resume(std::make_tuple(beat.Subject,"",""));
     }
 
-    for(;!terminate;) {
-      if(!queue.wait_dequeue_timed(m, std::chrono::milliseconds(30000))) {
-        if(heartbeat) {
-          realtime_metrics.resume(heartbeat_msg);
+    for(;!std::atomic_ref<bool>(terminate);) {
+      if(!queue.wait_dequeue_timed(m, beat.Period)) {
+        if(beat.SendHeartBeat) {
+          realtime_metrics.resume(std::make_tuple(beat.Subject,"",""));
         }
 
         continue;
