@@ -72,6 +72,26 @@ namespace {
     return cads::UploadConstants{std::chrono::seconds(period)};
   }
 
+  auto mk_heartbeat(nlohmann::json config) {
+
+    if(!config.contains("heartbeat"))
+    {
+      return cads::HeartBeat{false,""};
+    }
+
+    if(!config["heartbeat"].contains("SendHeartBeat")) {
+      return cads::HeartBeat{false,""};
+    }
+
+    if(!config["heartbeat"].contains("Subject")) {
+      return cads::HeartBeat{false,""};
+    }
+
+    auto SendHeartBeat = config["heartbeat"]["SendHeartBeat"].get<bool>();
+    auto Subject = config["heartbeat"]["Subject"].get<std::string>();
+
+    return cads::HeartBeat{SendHeartBeat,Subject};
+  }
 
   void sigint_handler([[maybe_unused]]int s) {
     cads::terminate_signal = true;
@@ -88,6 +108,7 @@ namespace cads {
   Measure measurements;
   AnomalyDetection anomalies_config;
   UploadConstants constants_upload;
+  HeartBeat constants_heartbeat;
 
   std::atomic<bool> terminate_signal = false;
 
@@ -110,6 +131,7 @@ namespace cads {
     fiducial_config = mk_fiducial(config);
     config_origin_detection = mk_origin_detection(config);
     constants_upload = mk_upload(config);
+    constants_heartbeat = mk_heartbeat(config);
     global_config = config;
 
     measurements.init();

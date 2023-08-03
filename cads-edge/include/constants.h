@@ -20,6 +20,10 @@ namespace cads {
 
   using DateTime = std::chrono::time_point<date::local_t,std::chrono::seconds>;
 
+  struct HeartBeat {
+    bool SendHeartBeat;
+    std::string Subject;
+  };
 
   struct profile_parameters {
     int left_edge_nan;
@@ -137,7 +141,7 @@ namespace cads {
   extern Measure measurements;
   extern GocatorConstants constants_gocator;
   extern UploadConstants constants_upload;
-
+  extern HeartBeat constants_heartbeat;
   extern std::atomic<bool> terminate_signal;
   
   void init_config(std::string f);
