@@ -312,9 +312,13 @@ namespace cads
       realtime_metrics.resume(std::make_tuple(beat.Subject,"",""));
     }
 
+    auto trigger = std::chrono::system_clock::now() + beat.Period;
+    
     for(;!std::atomic_ref<bool>(terminate);) {
-      if(!queue.wait_dequeue_timed(m, beat.Period)) {
-        if(beat.SendHeartBeat) {
+      if(!queue.wait_dequeue_timed(m, std::chrono::milliseconds(500))) {
+        auto now = std::chrono::system_clock::now();
+        if(beat.SendHeartBeat && now > trigger) {
+          trigger += beat.Period;
           realtime_metrics.resume(std::make_tuple(beat.Subject,"",""));
         }
 

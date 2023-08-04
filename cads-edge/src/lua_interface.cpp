@@ -22,7 +22,24 @@
 
 namespace
 {
-  
+  int time_str(lua_State *L) {
+    using ds = std::chrono::duration<double>;
+    auto time = lua_tonumber(L,1);
+    ds ddd(time);
+    auto tp = date::utc_time(ddd);
+    auto str = date::format("%FT%TZ", tp);
+    lua_pushstring(L,str.c_str());
+    return 1;
+  }
+
+  int get_now(lua_State *L)
+  {
+    auto tp = std::chrono::duration<double>(date::utc_clock::now().time_since_epoch());
+    double tpd = tp.count();
+    lua_pushnumber(L, tpd);
+    return 1;
+  }
+
   int send_external_msg(lua_State *L) {   
     auto p = (moodycamel::BlockingConcurrentQueue<std::tuple<std::string, std::string, std::string>> *)lua_topointer(L, lua_upvalueindex(1));
     std::string sub(lua_tostring(L,1));
@@ -896,48 +913,48 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
       lua_newtable(L);
       lua_pushnumber(L, 1); 
       lua_pushstring(L,sub.c_str());
-      lua_settable(L,-2);
+      lua_settable(L,-3);
 
       lua_pushnumber(L, 2); 
       lua_pushnumber(L,quality);
-      lua_settable(L,-2);
+      lua_settable(L,-3);
       
       lua_pushnumber(L, 3); 
       auto tp = std::chrono::duration<double>(get<2>(m).time_since_epoch());
       lua_pushnumber(L, tp.count());
-      lua_settable(L,-2);
+      lua_settable(L,-3);
             
       switch (value.index()) {
         case 0:
           lua_pushnumber(L, 4); 
           lua_pushnumber(L, get<double>(value)); 
-          lua_settable(L,-2);     
+          lua_settable(L,-3);     
           break;
         case 1:
           lua_pushnumber(L, 4);
           lua_pushstring(L, get<std::string>(value).c_str());
-          lua_settable(L,-2);
+          lua_settable(L,-3);
           break;
         case 2: 
           lua_pushnumber(L, 4);
           lua_pushlightuserdata(L, &value);
           lua_pushcclosure(L, execute_func2<double>, 1);
-          lua_settable(L,-2);
+          lua_settable(L,-3);
           break;
         case 3: 
           lua_pushnumber(L, 4);
           lua_pushlightuserdata(L, &value);
           lua_pushcclosure(L, execute_func2<std::string>, 1);
-          lua_settable(L,-2);
+          lua_settable(L,-3);
           break;
         case 4: {
           auto [v,location] = get<std::tuple<double,double>>(value);
           lua_pushnumber(L, 4);
           lua_pushnumber(L, v);
-          lua_settable(L,-2);
+          lua_settable(L,-3);
           lua_pushnumber(L, 5); 
           lua_pushnumber(L, location); 
-          lua_settable(L,-2);
+          lua_settable(L,-3);
           break;
           
         }
@@ -1090,7 +1107,7 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
     auto mid = std::get<0>(m);
     lua_pushinteger(L, mid);
 
-    if(mid == cads::msgid::realtime_metric) {
+    if(mid == cads::msgid::measure) {
       pushmetric(L,std::get<cads::Measure::MeasureMsg>(std::get<1>(m)));
       return 3;
     }
@@ -1348,6 +1365,12 @@ namespace cads
 
       lua_pushcfunction(L, ::get_serial);
       lua_setglobal(L, "get_serial");
+
+      lua_pushcfunction(L,time_str);
+      lua_setglobal(L,"timeToString");
+
+      lua_pushcfunction(L,get_now);
+      lua_setglobal(L,"getNow");
 
       return UL;
     }

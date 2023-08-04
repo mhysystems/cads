@@ -60,7 +60,7 @@ revolutionsensor = {
 }
 
 sqlitegocatorConfig = {
-  Range = {4,99999999999},
+  Range = {0,99999999999},
   Fps = gocator.Fps,
   Forever = true,
   Delay = 98,
@@ -102,13 +102,6 @@ function timeToString(time) -- overwritten externally
   return tostring(time)
 end
 
-function out(sub, json) -- overwritten externally
-end
-
-function encode(category, msg) 
-  out(conveyor.Org,category,json.encode(msg))
-end
-
 function msgAppendList(root, keys, values)
   
   for i,v in ipairs(values) do 
@@ -129,7 +122,7 @@ end
 
 function make(now)
 
-  local p = 50000
+  local p = 5
   local tag = {revision = 0}
   local field = {"value"}
   local cat = "all"
@@ -155,10 +148,10 @@ function make(now)
     cnt = cnt - 1
   end
   
-  measurements = m
+  return m
 end
 
-function send(out,name,quality,time,...)
+function send(out,measurements,name,quality,time,...)
 
   if measurements[name] then
 
@@ -189,23 +182,17 @@ function sendHack(serial)
   out("caas." .. serial .. ".scancomplete","","")
 end
 
-
-
-
-
-
-
-
 function main(sendmsg)
 
-  local measurements = make(0)
+  local measurements = make(getNow())
 
   local gocator_cads = BlockingReaderWriterQueue()
   local cads_origin = BlockingReaderWriterQueue()
   local origin_savedb = BlockingReaderWriterQueue()
   local savedb_luamain = BlockingReaderWriterQueue()
   
-  local laser = gocator(laserConfig,gocator_cads) 
+  --local laser = gocator(laserConfig,gocator_cads)
+  local laser = sqlitegocator(sqlitegocatorConfig,gocator_cads) 
   local thread_process_profile = process_profile(profileConfig,gocator_cads,cads_origin)
   --local belt_loop = anomaly_detection_thread(anomaly,cads_origin,origin_savedb)
   local belt_loop = loop_beltlength_thread(conveyor,cads_origin,origin_savedb)
@@ -218,11 +205,10 @@ function main(sendmsg)
     local is_value,msg_id,data = wait_for(savedb_luamain)
 
     if is_value then
-      print(msg_id)
       if msg_id == 2 then break 
       --elseif msg_id == 5 then break
-      elseif msg_id == 100 then
-      send(sendmsg,table.unpack(data))
+      elseif msg_id == 11 then
+        send(sendmsg,measurements,table.unpack(data))
       end
     end
 
