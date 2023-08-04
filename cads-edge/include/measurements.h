@@ -43,8 +43,8 @@ namespace cads
     void terminate();
     void send(std::string, int quality, double);
     void send(std::string, int quality, std::string);
-    void send(std::string, int quality, std::function<double()>);
-    void send(std::string, int quality, std::function<std::string()>);
+    //void send(std::string, int quality, std::function<double()>);
+    //void send(std::string, int quality, std::function<std::string()>);
     void send(std::string, int quality, std::tuple<double,double>);
 
     Measure& operator= (Measure&&) noexcept;

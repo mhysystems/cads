@@ -75,7 +75,7 @@ namespace cads
     return rtn;
   }
 
-  coro<double, msg> lua_processing_coro(int width)
+  coro<double, msg> lua_processing_coro(int width, cads::Io &next)
   {
     auto height = global_config["lua_window_height"].get<int>();
     
@@ -129,7 +129,7 @@ namespace cads
           result = eval_lua_process(L,width,height);
           auto location = std::round(p.y / 1000) * 1000;
           if(result > 0 /*&& !anomolies.contains(location)*/) {
-            measurements.send("anomaly",0,std::make_tuple(result,location));
+            next.enqueue({msgid::measure,Measure::MeasureMsg{"anomaly",0,date::utc_clock::now(),std::make_tuple(result,location)}});
             //anomolies.insert(location);
           }
         }
@@ -155,7 +155,7 @@ namespace cads
     auto buffer_size_warning = buffer_warning_increment;
     int widthn = (int)config.WidthN;
 
-    auto realtime_processing = lua_processing_coro(widthn);
+    auto realtime_processing = lua_processing_coro(widthn,next_fifo);
     
     auto start = std::chrono::high_resolution_clock::now();
 

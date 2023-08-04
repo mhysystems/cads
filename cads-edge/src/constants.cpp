@@ -98,7 +98,6 @@ namespace cads {
   Communications communications_config;
   Fiducial fiducial_config;
   OriginDetection config_origin_detection;
-  Measure measurements;
   AnomalyDetection anomalies_config;
   UploadConstants constants_upload;
   HeartBeat constants_heartbeat;
@@ -126,9 +125,6 @@ namespace cads {
     constants_upload = mk_upload(config);
     constants_heartbeat = mk_heartbeat(config);
     global_config = config;
-
-    measurements.init();
-
   }
 
   void drop_config() {

@@ -248,18 +248,20 @@ namespace cads {
     }
   }
   
+ /* 
   void Measure::send(std::string measure, int quality, std::function<double()> value) {
     if(data != nullptr && !data->terminate) {
       data->fifo.try_enqueue({measure,quality,date::utc_clock::now(),value});
     }
   }
 
+
   void Measure::send(std::string measure, int quality, std::function<std::string()> value) {
     if(data != nullptr && !data->terminate) {
       data->fifo.try_enqueue({measure,quality,date::utc_clock::now(),value});
     }
   }
-
+*/
   void Measure::send(std::string measure, int quality, std::tuple<double,double> value) {
     if(data != nullptr && !data->terminate) {
       data->fifo.try_enqueue({measure,quality,date::utc_clock::now(),value});

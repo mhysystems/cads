@@ -139,7 +139,6 @@ namespace cads {
   extern Communications communications_config;
   extern Fiducial fiducial_config;
   extern OriginDetection config_origin_detection;
-  extern Measure measurements;
   extern GocatorConstants constants_gocator;
   extern UploadConstants constants_upload;
   extern HeartBeat constants_heartbeat;

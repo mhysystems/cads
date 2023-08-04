@@ -22,6 +22,36 @@
 
 namespace
 {
+  
+  int send_external_msg(lua_State *L) {   
+    auto p = (moodycamel::BlockingConcurrentQueue<std::tuple<std::string, std::string, std::string>> *)lua_topointer(L, lua_upvalueindex(1));
+    std::string sub(lua_tostring(L,1));
+    std::string cat(lua_tostring(L,2));
+    std::string msg(lua_tostring(L,3));
+    p->enqueue({sub,cat,msg});
+    return 0;
+  }
+  
+  int execute_func(lua_State *L) {
+    auto p = (std::function<double()> *)lua_topointer(L, lua_upvalueindex(1));
+    auto r = (*p)();
+    lua_pushnumber(L,r);
+    return 1;
+  }
+
+  template<class T>int execute_func2(lua_State *L) {
+    auto p = (std::function<T()> *)lua_topointer(L, lua_upvalueindex(1));
+    auto r = (*p)();
+    
+    if constexpr (std::is_same<double,T>::value) {
+      lua_pushnumber(L,r);    
+    }else{
+      lua_pushstring(L,r.c_str()); 
+    }
+
+    return 1;
+  }
+
   std::optional<std::string> tostring(lua_State *L, int index)
   {
     size_t len = 0;
@@ -859,6 +889,64 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
     return cads::DynamicProcessingConfig{*WidthN_opt};
   }
 
+  void pushmetric(lua_State *L, cads::Measure::MeasureMsg m) 
+  {
+      auto [sub,quality,time,value] = m;
+
+      lua_newtable(L);
+      lua_pushnumber(L, 1); 
+      lua_pushstring(L,sub.c_str());
+      lua_settable(L,-2);
+
+      lua_pushnumber(L, 2); 
+      lua_pushnumber(L,quality);
+      lua_settable(L,-2);
+      
+      lua_pushnumber(L, 3); 
+      auto tp = std::chrono::duration<double>(get<2>(m).time_since_epoch());
+      lua_pushnumber(L, tp.count());
+      lua_settable(L,-2);
+            
+      switch (value.index()) {
+        case 0:
+          lua_pushnumber(L, 4); 
+          lua_pushnumber(L, get<double>(value)); 
+          lua_settable(L,-2);     
+          break;
+        case 1:
+          lua_pushnumber(L, 4);
+          lua_pushstring(L, get<std::string>(value).c_str());
+          lua_settable(L,-2);
+          break;
+        case 2: 
+          lua_pushnumber(L, 4);
+          lua_pushlightuserdata(L, &value);
+          lua_pushcclosure(L, execute_func2<double>, 1);
+          lua_settable(L,-2);
+          break;
+        case 3: 
+          lua_pushnumber(L, 4);
+          lua_pushlightuserdata(L, &value);
+          lua_pushcclosure(L, execute_func2<std::string>, 1);
+          lua_settable(L,-2);
+          break;
+        case 4: {
+          auto [v,location] = get<std::tuple<double,double>>(value);
+          lua_pushnumber(L, 4);
+          lua_pushnumber(L, v);
+          lua_settable(L,-2);
+          lua_pushnumber(L, 5); 
+          lua_pushnumber(L, location); 
+          lua_settable(L,-2);
+          break;
+          
+        }
+        default: break;
+      }
+
+  }
+
+
   std::optional<cads::AnomalyDetection> mk_anomaly(lua_State *L, int index)
   {
 
@@ -1001,6 +1089,11 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
     lua_pushboolean(L, have_value);
     auto mid = std::get<0>(m);
     lua_pushinteger(L, mid);
+
+    if(mid == cads::msgid::realtime_metric) {
+      pushmetric(L,std::get<cads::Measure::MeasureMsg>(std::get<1>(m)));
+      return 3;
+    }
 
     return 2;
   }
@@ -1302,4 +1395,9 @@ namespace cads
     return {std::move(L), false};
   }
 
+  void push_externalmsg(lua_State *L, moodycamel::BlockingConcurrentQueue<std::tuple<std::string, std::string, std::string>> *queue)
+  {
+    lua_pushlightuserdata(L, queue);
+    lua_pushcclosure(L, ::send_external_msg, 1);
+  }
 }

@@ -1,3 +1,5 @@
+json = require "json"
+
 gocator = {
   Fps = 984.0
 }
@@ -93,47 +95,6 @@ profileConfig = {
   Dbscan = dbscan
 }
 
-function main()
-
-  local gocator_cads = BlockingReaderWriterQueue()
-  local cads_origin = BlockingReaderWriterQueue()
-  local origin_savedb = BlockingReaderWriterQueue()
-  local savedb_luamain = BlockingReaderWriterQueue()
-  
-  local laser = gocator(laserConfig,gocator_cads) 
-  local thread_process_profile = process_profile(profileConfig,gocator_cads,cads_origin)
-  --local belt_loop = anomaly_detection_thread(anomaly,cads_origin,origin_savedb)
-  local belt_loop = loop_beltlength_thread(conveyor,cads_origin,origin_savedb)
-  local thread_send_save = save_send_thread(conveyor,origin_savedb,savedb_luamain)
-
-  laser:Start(gocator.Fps)
-
-  unloop = false
-  repeat
-    local is_value,msg_id = wait_for(savedb_luamain)
-
-    if is_value then
-      print(msg_id)
-      if msg_id == 2 then break 
-      --elseif msg_id == 5 then break
-      end
-    end
-
-    unloop = coroutine.yield(0)
-  until unloop
-
-  print("stopping")
-  laser:Stop()
-  join_threads({thread_process_profile,window_processing,dynamic_processing,upload_scan})
-  print("stopped")
-  
-end
-
-mainco = coroutine.create(main)
-
--- Meaurement Interface --
-
-json = require "json"
 
 measurements = {}
 
@@ -197,7 +158,7 @@ function make(now)
   measurements = m
 end
 
-function send(name,quality,time,...)
+function send(out,name,quality,time,...)
 
   if measurements[name] then
 
@@ -216,7 +177,7 @@ function send(name,quality,time,...)
       
       msgAppendTable(msg,measurements[name].tags)
       msgAppendList(msg,measurements[name].fields, {...})
-      encode(measurements[name].category, msg)
+      out(conveyor.Org,measurements[name].category,json.encode(msg))
       m.time0 = time
     end
 
@@ -227,3 +188,56 @@ end
 function sendHack(serial) 
   out("caas." .. serial .. ".scancomplete","","")
 end
+
+
+
+
+
+
+
+
+function main(sendmsg)
+
+  local measurements = make(0)
+
+  local gocator_cads = BlockingReaderWriterQueue()
+  local cads_origin = BlockingReaderWriterQueue()
+  local origin_savedb = BlockingReaderWriterQueue()
+  local savedb_luamain = BlockingReaderWriterQueue()
+  
+  local laser = gocator(laserConfig,gocator_cads) 
+  local thread_process_profile = process_profile(profileConfig,gocator_cads,cads_origin)
+  --local belt_loop = anomaly_detection_thread(anomaly,cads_origin,origin_savedb)
+  local belt_loop = loop_beltlength_thread(conveyor,cads_origin,origin_savedb)
+  local thread_send_save = save_send_thread(conveyor,origin_savedb,savedb_luamain)
+
+  laser:Start(gocator.Fps)
+
+  unloop = false
+  repeat
+    local is_value,msg_id,data = wait_for(savedb_luamain)
+
+    if is_value then
+      print(msg_id)
+      if msg_id == 2 then break 
+      --elseif msg_id == 5 then break
+      elseif msg_id == 100 then
+      send(sendmsg,table.unpack(data))
+      end
+    end
+
+    unloop = coroutine.yield(0)
+  until unloop
+
+  print("stopping")
+  laser:Stop()
+  join_threads({thread_process_profile,window_processing,dynamic_processing,upload_scan})
+  print("stopped")
+  
+end
+
+mainco = coroutine.create(main)
+
+
+
+

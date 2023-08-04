@@ -303,9 +303,9 @@ namespace cads
     }
   }
 
-  void realtime_metrics_thread(moodycamel::BlockingConcurrentQueue<msg> &queue, HeartBeat beat, bool &terminate)
+  void realtime_metrics_thread(moodycamel::BlockingConcurrentQueue<std::tuple<std::string, std::string, std::string>> &queue, HeartBeat beat, bool &terminate)
   {
-    msg m;
+    std::tuple<std::string, std::string, std::string> m;
     auto realtime_metrics = realtime_metrics_coro();
 
     if(beat.SendHeartBeat) {
@@ -321,13 +321,7 @@ namespace cads
         continue;
       }
 
-      auto id = get<0>(m);
-      if(id == msgid::realtime_metric){
-        auto metric = get<RealtimeMetric>(get<1>(m));
-        auto msg = std::make_tuple(metric.subject,metric.header,metric.data);
-        realtime_metrics.resume(msg);
-      }
-
+      realtime_metrics.resume(m);
     }
 
 

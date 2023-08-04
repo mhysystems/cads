@@ -26,5 +26,5 @@ namespace cads
   std::tuple<state::scan,bool> post_scan(state::scan scan);
   std::vector<profile> http_get_frame(double y, int len, date::utc_clock::time_point chrono);
   cads::coro<int, std::tuple<std::string, std::string, std::string>, 1>  realtime_metrics_coro();
-  void realtime_metrics_thread(moodycamel::BlockingConcurrentQueue<msg> &queue, HeartBeat beat, bool &terminate);
+  void realtime_metrics_thread(moodycamel::BlockingConcurrentQueue<std::tuple<std::string, std::string, std::string>> &queue, HeartBeat beat, bool &terminate);
 }

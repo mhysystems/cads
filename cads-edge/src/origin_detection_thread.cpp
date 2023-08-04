@@ -238,7 +238,7 @@ namespace cads
     }
   }
 
-  coro<std::tuple<profile,double,bool>,profile,1> origin_detection_coro(double x_resolution, double y_resolution, int width_n, Conveyor conveyor)
+  coro<std::tuple<profile,double,bool>,profile,1> origin_detection_coro(double x_resolution, double y_resolution, int width_n, Conveyor conveyor,cads::Io &next)
   {    
     auto dump_match = config_origin_detection.dump_match;
     cv::Mat fiducial;
@@ -296,7 +296,7 @@ namespace cads
       y_type y = profile_buffer.front().y;
  
       if(sequence_cnt >= 1) {
-        measurements.send("cadstoorigin",0,y);
+        next.enqueue({msgid::measure,Measure::MeasureMsg{"cadstoorigin",0,date::utc_clock::now(),y}});
       }
 
       if (y >= trigger_length)
@@ -321,7 +321,7 @@ namespace cads
           start = now;
 
           if(sequence_cnt > 1) {
-            measurements.send("beltrotationperiod",0,period); 
+            next.enqueue({msgid::measure,Measure::MeasureMsg{"beltrotationperiod",0,date::utc_clock::now(),(double)period}});
             trigger_length = y * 0.95; //TODO
           }
           
@@ -438,7 +438,7 @@ namespace cads
 
                 if(origin_sequence_cnt > 0) {
                   spdlog::get("cads")->debug(R"({{func = '{}', msg = 'Estimated belt length {}'}})", __func__,estimated_belt_length);
-                  measurements.send("beltlength",0,estimated_belt_length);
+                  next_fifo.enqueue({msgid::measure,Measure::MeasureMsg{"beltlength",0,date::utc_clock::now(),estimated_belt_length}});
                   next_fifo.enqueue({msgid::complete_belt, CompleteBelt{0,scan_cnt}});
                 }
                 
@@ -510,7 +510,7 @@ namespace cads
     next_fifo.enqueue(m);
 
 
-    auto origin_detection = origin_detection_coro(x_resolution,y_resolution,width_n,conveyor);
+    auto origin_detection = origin_detection_coro(x_resolution,y_resolution,width_n,conveyor,next_fifo);
 
     long origin_sequence_cnt = 0;
     size_t scan_cnt = 0;
@@ -538,7 +538,7 @@ namespace cads
                 }
 
                 if(origin_sequence_cnt > 0) {
-                  measurements.send("beltlength",0,estimated_belt_length);
+                  next_fifo.enqueue({msgid::measure,Measure::MeasureMsg{"beltlength",0,date::utc_clock::now(),estimated_belt_length}});
                   next_fifo.enqueue({msgid::complete_belt, CompleteBelt{0,scan_cnt}});
                 }
                 
@@ -732,7 +732,7 @@ coro<std::tuple<bool,size_t,size_t,double>,profile,1> anomaly_detection_coro(Ano
               auto estimated_belt_length = pos - last_splice_position;
               if(origin_sequence_cnt > 0) {
                   spdlog::get("cads")->info("Estimated Belt Length(m): {}", estimated_belt_length / 1000);
-                  measurements.send("beltlength",0,estimated_belt_length);
+                  next_fifo.enqueue({msgid::measure,Measure::MeasureMsg{"beltlength",0,date::utc_clock::now(),estimated_belt_length}});
                   next_fifo.enqueue({msgid::complete_belt, CompleteBelt{last_splice_index,index}});
                   last_splice_position = pos;
                   last_splice_index = 0;
