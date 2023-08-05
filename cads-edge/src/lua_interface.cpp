@@ -963,6 +963,21 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
 
   }
 
+  void pushcaasmsg(lua_State *L, cads::CaasMsg m) 
+  {
+      auto [sub,data] = m;
+
+      lua_newtable(L);
+      lua_pushnumber(L, 1); 
+      lua_pushstring(L,sub.c_str());
+      lua_settable(L,-3);
+
+      lua_pushnumber(L, 2); 
+      lua_pushstring(L,data.c_str());
+      lua_settable(L,-3);
+  }
+
+
 
   std::optional<cads::AnomalyDetection> mk_anomaly(lua_State *L, int index)
   {
@@ -1109,6 +1124,10 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
 
     if(mid == cads::msgid::measure) {
       pushmetric(L,std::get<cads::Measure::MeasureMsg>(std::get<1>(m)));
+      return 3;
+    }else if(mid == cads::msgid::caas_msg)
+    {
+      pushcaasmsg(L,std::get<cads::CaasMsg>(std::get<1>(m)));
       return 3;
     }
 
@@ -1317,9 +1336,12 @@ namespace cads
   namespace lua
   {
 
-    Lua init(Lua UL)
+    Lua init(Lua UL, long long serial)
     {
       auto L = UL.get();
+
+      lua_pushinteger(L,serial);
+      lua_setglobal(L,"DeviceSerial");
 
       lua_pushcfunction(L, ::BlockingReaderWriterQueue);
       lua_setglobal(L, "BlockingReaderWriterQueue");
@@ -1383,7 +1405,7 @@ namespace cads
     auto L = Lua{luaL_newstate(), lua_close};
     luaL_openlibs(L.get());
 
-    L = lua::init(std::move(L));
+    L = lua::init(std::move(L),constants_device.Serial);
     auto lua_status = luaL_dostring(L.get(), lua_code.c_str());
 
     if (lua_status != LUA_OK)
@@ -1405,7 +1427,7 @@ namespace cads
     auto L = Lua{luaL_newstate(), lua_close};
     luaL_openlibs(L.get());
 
-    L = lua::init(std::move(L));
+    L = lua::init(std::move(L),constants_device.Serial);
 
     auto lua_status = luaL_dofile(L.get(), luafile.string().c_str());
 

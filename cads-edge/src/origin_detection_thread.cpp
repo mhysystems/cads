@@ -26,6 +26,7 @@
 
 
 
+
 using namespace moodycamel;
 
 namespace 
@@ -209,12 +210,13 @@ namespace cads
       
       if(terminate) break;
 
-      y_type y = p.y;
+      y_type y = p.y - y_offset;
 
-      if (y >= y_max_length + y_offset)
+      if (y >= y_max_length)
       {
-        y_offset = y;
+        y_offset = p.y;
       }
+      
       p = {p.time,p.y - y_offset, p.x_off, p.z};
 
       std::tie(p,terminate) = co_yield {p,y,true};  
@@ -429,6 +431,10 @@ namespace cads
 
             if(valid) {
 
+              if(origin_sequence_cnt > 0) {
+                next_fifo.enqueue({msgid::caas_msg,CaasMsg{"scanprogress", std::to_string(std::floor(100* estimated_belt_length / conveyor.Length))}});  
+              }
+
               if(op.y == 0) {
                 
                 if(origin_sequence_cnt == 0) {
@@ -437,7 +443,7 @@ namespace cads
                 }
 
                 if(origin_sequence_cnt > 0) {
-                  spdlog::get("cads")->debug(R"({{func = '{}', msg = 'Estimated belt length {}'}})", __func__,estimated_belt_length);
+                  spdlog::get("cads")->debug(R"({{func = '{}', msg = 'Estimated belt length {}'}})", __func__,estimated_belt_length);                  
                   next_fifo.enqueue({msgid::measure,Measure::MeasureMsg{"beltlength",0,date::utc_clock::now(),estimated_belt_length}});
                   next_fifo.enqueue({msgid::complete_belt, CompleteBelt{0,scan_cnt}});
                 }

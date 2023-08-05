@@ -122,7 +122,7 @@ end
 
 function make(now)
 
-  local p = 5
+  local p = 50000
   local tag = {revision = 0}
   local field = {"value"}
   local cat = "all"
@@ -199,6 +199,7 @@ function main(sendmsg)
   local thread_send_save = save_send_thread(conveyor,origin_savedb,savedb_luamain)
 
   laser:Start(gocator.Fps)
+  local beltprogress = 0
 
   unloop = false
   repeat
@@ -209,6 +210,13 @@ function main(sendmsg)
       --elseif msg_id == 5 then break
       elseif msg_id == 11 then
         send(sendmsg,measurements,table.unpack(data))
+      elseif msg_id == 10 then
+        local m,progress = table.unpack(data)
+        if progress ~= beltprogress then
+          print("caas." .. DeviceSerial .. "." .. m,"",progress)
+          sendmsg("caas." .. DeviceSerial .. "." .. m,"",progress)
+          beltprogress = progress
+        end
       end
     end
 

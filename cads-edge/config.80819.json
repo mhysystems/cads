@@ -38,10 +38,10 @@
     "UploadRows" : 1024
   },
 
-  "heatbeat" : {
+  "heartbeat" : {
     "SendHeartBeat" : true,
     "Subject" :  "caas.80819.heartbeat",
-    "Period_ms" : 30000
+    "Period_ms" : 3000
   },
 
   "upload_profile" : false,
