@@ -1,5 +1,5 @@
 button {
-  font-size: min(30vi,6em);
+  font-size: 2rem;
   width : 100%;
 }
 
@@ -9,4 +9,16 @@ button[disabled] {
 
 input {
   width : 100%;
+  font-size: 2rem;
+}
+
+progress {
+  width : 100%;
+}
+
+bottomrow {
+  display : grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr;
+  gap : 1rem;
 }

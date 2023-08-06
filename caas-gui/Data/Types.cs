@@ -19,7 +19,6 @@ public class Device
 {
   public int Serial { get; set; } = 0;
   public string MsgSubjectPublish { get; set; } = string.Empty;
-  public string MsgSubjectSubscribe { get; set; } = string.Empty;
   public string Org { get; set; } = string.Empty;
   public DeviceState State { get; set; } = DeviceState.Disconnect;
 

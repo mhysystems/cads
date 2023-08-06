@@ -1,12 +1,14 @@
 @import url('open-iconic/font/css/open-iconic-bootstrap.min.css');
 
 html, body {
-  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: 'Century Gothic', Helvetica, Arial, sans-serif;
   box-sizing: border-box;
+  font-size: 2em;
 }
 
 :root {
   --content-max-width : 800px;
+  --mhy-blue : #051d4b;
 }
 
 h1:focus {
@@ -19,8 +21,8 @@ a, .btn-link {
 
 .btn-primary {
     color: #fff;
-    background-color: #1b6ec2;
-    border-color: #1861ac;
+    background-color: var(--mhy-blue);
+    border-color: var(--mhy-blue);
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {

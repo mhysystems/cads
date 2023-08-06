@@ -18,7 +18,7 @@ article {
   grid-row: 2;
   display: grid;
   grid-template-columns: 1fr;
-  grid-template-rows: 3.5rem 1fr;
+  grid-template-rows: 4.5rem 1fr 1fr;
   height : 100%;
   max-width: var(--content-max-width);
   margin: 0 auto;
@@ -29,10 +29,10 @@ article {
 
 .top-row {
     grid-row: 1;
-    background-color: #051d4b;
+    background-color: var(--mhy-blue);
     border-bottom: 1px solid #d6d5d5;
     justify-content: flex-end;
-    height: 3.5rem;
+    height: 2.5rem;
     display: flex;
     align-items: center;
 }

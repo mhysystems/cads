@@ -62,14 +62,14 @@ public class NatsConsumerHostedService : BackgroundService
         args.Url = _config.NatsUrl;
         using var c = new ConnectionFactory().CreateConnection(args) ?? throw new NullReferenceException("Nats CreateConnection is null");
 
-        async void msgHandler(object? sender, MsgHandlerEventArgs args)
+        async void msgHandler(object? sender, MsgHandlerEventArgs msg)
         {
           var options = new JsonSerializerOptions
           {
             PropertyNameCaseInsensitive = true
           };
           
-          var subject = ValidateSubject(args.Message?.Subject);
+          var subject = ValidateSubject(msg.Message?.Subject);
           
           if(subject is not null) {
 
@@ -85,6 +85,16 @@ public class NatsConsumerHostedService : BackgroundService
               if(!device.State.HasFlag(DeviceState.Connected)) {
                 device.State |= DeviceState.Connected;
                 await _messageshubContext.Clients.Group(device.Serial.ToString()).SendAsync("UpdateDevice",device,stoppingToken);
+              }
+            }else if(id == "scanprogress") {
+              var value = msg.Message?.Data;
+              if(value is not null) {
+                var str = System.Text.Encoding.Default.GetString(value);
+                if(Double.TryParse(str, out double progress)){
+                  await _messageshubContext.Clients.Group(device.Serial.ToString()).SendAsync("UpdateProgress",progress,stoppingToken);
+                }else {
+                  _logger.LogError("Scanprogress value not a double");
+                }
               }
             }else if(id == "scancomplete") {
               
