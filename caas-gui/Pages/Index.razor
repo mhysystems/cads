@@ -76,6 +76,7 @@
       hubConnection.On<Device>("UpdateDevice", (d) =>
       {
         device = d;
+        progress = 0;
         deviceStatus = DeviceStateMsg(d.State);
         InvokeAsync(StateHasChanged);
       });
@@ -88,6 +89,7 @@
       hubConnection.On<DeviceError>("DeviceError",(m) => {
         var (d,e) = m;
         device = d;
+        progress = 0;
         deviceStatus = DeviceStateMsg(d.State);
         InvokeAsync(StateHasChanged);
       });

@@ -39,7 +39,7 @@
   },
 
   "heartbeat" : {
-    "SendHeartBeat" : false,
+    "SendHeartBeat" : true,
     "Subject" :  "caas.80819.heartbeat",
     "Period_ms" : 30000
   },

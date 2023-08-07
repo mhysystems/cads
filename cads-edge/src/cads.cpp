@@ -372,33 +372,26 @@ namespace cads
     std::atomic<bool> terminate_upload = false;
     bool terminate_metrics = false;
     moodycamel::BlockingConcurrentQueue<std::tuple<std::string, std::string, std::string>> queue;
+    moodycamel::BlockingConcurrentQueue<remote_msg> remote_queue;
     std::jthread save_send(upload_scan_thread, std::ref(terminate_upload));
     std::jthread realtime_metrics(realtime_metrics_thread, std::ref(queue), constants_heartbeat, std::ref(terminate_metrics));
+    std::jthread remote_control(remote_control_thread, std::ref(remote_queue), std::ref(terminate_metrics));
    
     while(!terminate_signal)
     {
       try {
         GocatorReader::LaserOff();
-        auto remote_control = remote_control_coro();
-        auto [co_err,rmsg] = remote_control.resume(false);
+        remote_msg rmsg;
             
-        bool restart = false;
         // Wait for start message
         while(!terminate_signal) {
-      
-          if(co_err) {
-            spdlog::get("cads")->error("TODO");
-            stop_gocator();
-            restart = true;
-            break;
-          }
-
+          remote_queue.wait_dequeue(rmsg);
+          
           if(rmsg.index() == 0) break;
 
-          std::tie(co_err,rmsg) = remote_control.resume(false);
         }
 
-        if(restart || terminate_signal) continue;
+        if(terminate_signal) continue;
 
         auto start_msg = std::get<Start>(rmsg);
         auto [L,err] = run_lua_code(start_msg.lua_code);
@@ -444,14 +437,9 @@ namespace cads
           }
 
 
-          auto [co_err,rmsg] = remote_control.resume(false);
-
-          if(co_err) {
-            spdlog::get("cads")->error(R"({{func = '{}', msg = '{}'}})", __func__,"remove control finished");
-            break;
-          }
-
-          if(rmsg.index() != 2) break;
+          auto have_msg = remote_queue.try_dequeue(rmsg);
+          
+          if(have_msg && rmsg.index() != 2) break;
 
 
         }

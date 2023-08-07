@@ -21,7 +21,7 @@
 
 namespace cads
 {
-  void remote_control_thread( bool &, moodycamel::BlockingConcurrentQueue<remote_msg> &);
+  void remote_control_thread(moodycamel::BlockingConcurrentQueue<remote_msg> &, bool &);
   cads::coro<cads::remote_msg,bool> remote_control_coro();
   std::tuple<state::scan,bool> post_scan(state::scan scan);
   std::vector<profile> http_get_frame(double y, int len, date::utc_clock::time_point chrono);

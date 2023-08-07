@@ -58,87 +58,7 @@ namespace
 
 namespace cads
 {
-
-  void remote_control_thread(bool &terminate, moodycamel::BlockingConcurrentQueue<remote_msg> &queue)
-  {
-
-    using NC = std::unique_ptr<natsConnection, decltype(&natsConnection_Destroy)>;
-    using NO = std::unique_ptr<natsOptions, decltype(&natsOptions_Destroy)>;
-    using NS = std::unique_ptr<natsSubscription,decltype(&natsSubscription_Destroy)>;
- 
-    auto endpoint_url = communications_config.NatsUrl;
-
-    auto nats_subject = fmt::format("{}",constants_device.Serial);
-
-
-    for (; !terminate;)
-    {
-      natsOptions *opts_raw = nullptr;
-      auto status = natsOptions_Create(&opts_raw);
-      if (status != NATS_OK){ 
-        spdlog::get("cads")->error("{}:natsOptions_Create->{}", __func__, (int)status);
-        continue;
-      }
-
-      NO opts{opts_raw,natsOptions_Destroy};
-
-      if((status = natsOptions_SetAllowReconnect(opts.get(), false)) != NATS_OK){ 
-        spdlog::get("cads")->error("{}:natsOptions_SetAllowReconnect->{}", __func__, (int)status);
-        continue;
-      }
-
-      natsOptions_SetURL(opts.get(), endpoint_url.c_str());
-
-      natsConnection *conn_raw = nullptr;
-      status = natsConnection_Connect(&conn_raw, opts.get());
-      if (status != NATS_OK) continue;
-
-      NC conn{conn_raw,natsConnection_Destroy};
-
-      natsSubscription *sub_raw = nullptr;
-      status = natsConnection_SubscribeSync(&sub_raw, conn.get(), nats_subject.c_str());
-      if (status != NATS_OK){ 
-        spdlog::get("cads")->error("{}:natsConnection_SubscribeSync->{}", __func__, (int)status);
-        continue;
-      }
-
-      NS sub{sub_raw,natsSubscription_Destroy};
-
-      for (auto loop = true; loop && !terminate;)
-      {
-
-        natsMsg *msg = nullptr;
-        auto s = natsSubscription_NextMsg(&msg, sub.get(), 500);
-
-        if (s == NATS_TIMEOUT)
-        {
-        }
-        else if (s == NATS_CONNECTION_CLOSED)
-        {
-          loop = false;
-        }
-        else if (s == NATS_OK)
-        {
-          auto cads_msg = CadsFlatbuffers::GetMsg(natsMsg_GetData(msg));
-          auto msg_contents = cads_msg->contents_type();
-
-          switch(msg_contents) {
-            case CadsFlatbuffers::MsgContents_Start : {
-              auto str = flatbuffers::GetString(cads_msg->contents_as_Start()->lua_code());
-              queue.enqueue({Start{str}});
-            }
-            break;
-            default:
-            break;
-          }
-         }
-        
-        natsMsg_Destroy(msg);
-      }
-    }
-  }
-
-  coro<remote_msg,bool> remote_control_coro()
+coro<remote_msg,bool> remote_control_coro()
   {
 
     using NC = std::unique_ptr<natsConnection, decltype(&natsConnection_Destroy)>;
@@ -227,6 +147,27 @@ namespace cads
     spdlog::get("cads")->error(R"({{ func = '{}' msg = '{}'}})", __func__, "Exiting coroutine");
   }
 
+  void remote_control_thread(moodycamel::BlockingConcurrentQueue<remote_msg> &queue, bool &terminate)
+  {
+
+    while(!std::atomic_ref<bool>(terminate)) {
+    auto remote_control = remote_control_coro();
+   
+      for(;!std::atomic_ref<bool>(terminate);) {
+        auto [err,msg] = remote_control.resume(terminate);
+        
+        if(err) {
+          break;
+        }
+        
+        queue.enqueue(msg);
+      }
+    }
+
+    
+  }
+
+  
   cads::coro<int, std::tuple<std::string, std::string, std::string>, 1> realtime_metrics_coro()
   {
 
