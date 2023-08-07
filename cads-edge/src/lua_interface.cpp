@@ -619,6 +619,7 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
     }
 
     auto Enable = (bool)lua_toboolean(L,-1);
+    lua_pop(L, 1);
 
     return cads::MeasureConfig{Enable};
   }
