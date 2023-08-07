@@ -85,6 +85,13 @@
         InvokeAsync(StateHasChanged);
       });
 
+      hubConnection.On<DeviceError>("DeviceError",(m) => {
+        var (d,e) = m;
+        device = d;
+        deviceStatus = DeviceStateMsg(d.State);
+        InvokeAsync(StateHasChanged);
+      });
+
       await hubConnection.StartAsync();
       await hubConnection.InvokeAsync("JoinGroup",device.Serial.ToString());
     }

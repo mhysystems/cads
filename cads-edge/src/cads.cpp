@@ -162,7 +162,9 @@ namespace cads
       double nan_cnt = std::count_if(p.z.begin(), p.z.end(), [](z_element z)
                                      { return std::isnan(z); });
 
-      next.enqueue({msgid::measure,Measure::MeasureMsg{"nancount",0,date::utc_clock::now(),nan_cnt}});
+      if(config.measureConfig.Enable) {
+        next.enqueue({msgid::measure,Measure::MeasureMsg{"nancount",0,date::utc_clock::now(),nan_cnt}});
+      }
 
       if ((nan_cnt / p.z.size()) > nan_percentage)
       {
@@ -197,8 +199,10 @@ namespace cads
       auto pulley_right_filtered = (z_element)iirfilter_right(pulley_right);
       auto left_edge_filtered = (z_element)iirfilter_left_edge(ll);
 
-      next.enqueue({msgid::measure,Measure::MeasureMsg{"pulleylevel",0,date::utc_clock::now(),pulley_level_filtered}});
-      next.enqueue({msgid::measure,Measure::MeasureMsg{"beltedgeposition",0,date::utc_clock::now(),double(ix + left_edge_filtered * x_resolution)}});
+      if(config.measureConfig.Enable) {
+        next.enqueue({msgid::measure,Measure::MeasureMsg{"pulleylevel",0,date::utc_clock::now(),pulley_level_filtered}});
+        next.enqueue({msgid::measure,Measure::MeasureMsg{"beltedgeposition",0,date::utc_clock::now(),double(ix + left_edge_filtered * x_resolution)}});
+      }
 
       auto pulley_level_unbias = dc_filter(pulley_level_filtered);
 
@@ -243,9 +247,11 @@ namespace cads
         next.enqueue({msgid::stopped,0});
         break;
       }
-
-      next.enqueue({msgid::measure,Measure::MeasureMsg{"pulleyspeed",0,date::utc_clock::now(),speed}});
-      next.enqueue({msgid::measure,Measure::MeasureMsg{"pulleyoscillation",0,date::utc_clock::now(),amplitude}});
+      
+      if(config.measureConfig.Enable) {
+        next.enqueue({msgid::measure,Measure::MeasureMsg{"pulleyspeed",0,date::utc_clock::now(),speed}});
+        next.enqueue({msgid::measure,Measure::MeasureMsg{"pulleyoscillation",0,date::utc_clock::now(),amplitude}});
+      }
 
       if (cnt % (1000 * 60) == 0)
       {
@@ -287,6 +293,11 @@ namespace cads
 
   }
 
+  std::tuple<std::string,std::string,std::string> caasMsg(std::string sub,std::string head, std::string data)
+  {
+    auto caas_sub = "caas."s + std::to_string(constants_device.Serial) + "."s + sub;
+    return std::make_tuple(caas_sub,head,data);
+  }
 
   void cads_local_main(std::string f) 
   {
@@ -363,7 +374,7 @@ namespace cads
     moodycamel::BlockingConcurrentQueue<std::tuple<std::string, std::string, std::string>> queue;
     std::jthread save_send(upload_scan_thread, std::ref(terminate_upload));
     std::jthread realtime_metrics(realtime_metrics_thread, std::ref(queue), constants_heartbeat, std::ref(terminate_metrics));
-
+   
     while(!terminate_signal)
     {
       try {
@@ -406,12 +417,18 @@ namespace cads
         
         auto mainco = lua_tothread(L.get(), -1); 
 
-        while(!terminate_signal)
+        for(auto first = true;!terminate_signal;first=false)
         {
-          lua_pushboolean(mainco,false);
+          
+          if(first) {
+            push_externalmsg(mainco,&queue);
+          }else{
+            lua_pushboolean(mainco,false);
+          }
+          
           auto nargs = 0;
           auto mainco_status = lua_resume(mainco,L.get(),1,&nargs);
-
+          
           if(mainco_status == LUA_YIELD) 
           {
           
@@ -426,6 +443,7 @@ namespace cads
             break;
           }
 
+
           auto [co_err,rmsg] = remote_control.resume(false);
 
           if(co_err) {
@@ -434,6 +452,7 @@ namespace cads
           }
 
           if(rmsg.index() != 2) break;
+
 
         }
         auto mainco_status = lua_status(mainco);
@@ -444,13 +463,14 @@ namespace cads
           lua_resume(mainco,L.get(),1,&nargs);
         }
 
-        queue.enqueue(std::make_tuple("scancomplete","0","0.0"));
+        queue.enqueue(caasMsg("scancomplete","",""));
       }catch(std::exception& ex) {
         spdlog::get("cads")->error(R"({{func = '{}', msg = '{}'}})", __func__,ex.what());
+        queue.enqueue(caasMsg("error","",ex.what()));
       }
     }
   
-    queue.enqueue(std::make_tuple("scancomplete","0","0.0"));
+    queue.enqueue(caasMsg("scancomplete","",""));
     terminate_upload = true; // stops upload thread
     terminate_metrics = true;
   }

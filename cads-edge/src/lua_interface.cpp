@@ -604,6 +604,24 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
     return cads::RevolutionSensorConfig{source,*trigger_dis_opt,*bias_opt,*theshold_opt,bidirectional,*skip_opt};
   }
 
+  std::optional<cads::MeasureConfig> tomeasureconfig(lua_State *L, int index)
+  {
+    if (!lua_istable(L, index))
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'measure config needs to be a table' }}", __func__);
+      return std::nullopt;
+    } 
+
+    if (lua_getfield(L, index, "Enable") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'measure config requires {}' }}", __func__, "Enable");
+      return std::nullopt;
+    }
+
+    auto Enable = (bool)lua_toboolean(L,-1);
+
+    return cads::MeasureConfig{Enable};
+  }
 
   std::optional<cads::ProfileConfig> toprofileconfig(lua_State *L, int index)
   {
@@ -734,7 +752,22 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
       return std::nullopt;
     }
 
-    return cads::ProfileConfig{*width_opt,*nanpercentage_opt,*clipheight_opt,*iirfilter_opt,*pulley_sample_extend_opt,*revolution_sensor_opt,*conveyor_opt,*Dbscan_opt};
+    if (lua_getfield(L, index, "Measures") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'profile config requires {}' }}", __func__, "Measures");
+      return std::nullopt;
+    }
+
+    auto Measures_opt = tomeasureconfig(L, -1);
+    lua_pop(L, 1);
+
+    if (!Measures_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'Measures not a Measures' }}", __func__);
+      return std::nullopt;
+    }
+
+    return cads::ProfileConfig{*width_opt,*nanpercentage_opt,*clipheight_opt,*iirfilter_opt,*pulley_sample_extend_opt,*revolution_sensor_opt,*conveyor_opt,*Dbscan_opt,*Measures_opt};
   }
 
   std::optional<cads::SqliteGocatorConfig> tosqlitegocatorconfig(lua_State *L, int index)
@@ -1119,6 +1152,11 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
     cads::msg m;
     auto have_value = io->wait_dequeue_timed(m, std::chrono::seconds(s));
     lua_pushboolean(L, have_value);
+
+    if(!have_value) {
+      return 1;
+    }
+
     auto mid = std::get<0>(m);
     lua_pushinteger(L, mid);
 

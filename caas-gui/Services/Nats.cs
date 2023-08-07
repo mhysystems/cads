@@ -103,6 +103,16 @@ public class NatsConsumerHostedService : BackgroundService
                 Db.UpdateDeviceStatus(_dBContext,device);
                 await _messageshubContext.Clients.Group(device.Serial.ToString()).SendAsync("UpdateDevice",device,stoppingToken);
               }
+            }else if(id == "error") {
+              var value = msg.Message?.Data;
+              var str = value is not null ?  System.Text.Encoding.Default.GetString(value) : "";
+              
+              if(device.State.HasFlag(DeviceState.Scanning)) {
+                device.State &= ~DeviceState.Scanning;
+                Db.UpdateDeviceStatus(_dBContext,device);
+                DeviceError dbg = new(device,str);
+                await _messageshubContext.Clients.Group(device.Serial.ToString()).SendAsync("DeviceError",dbg,stoppingToken);
+              }
             }
           }else {
             _logger.LogError("Nats message missing subject");

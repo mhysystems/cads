@@ -414,6 +414,7 @@ namespace cads
 
     long origin_sequence_cnt = 0;
     size_t scan_cnt = 0;
+    auto scanprogress = -1.0;
 
     for (auto loop = true;loop;++cnt)
     {
@@ -430,9 +431,12 @@ namespace cads
             auto [op,estimated_belt_length,valid] = result;
 
             if(valid) {
+              
+              auto scanprogress_now = std::floor(100* estimated_belt_length / conveyor.Length);
 
-              if(origin_sequence_cnt > 0) {
-                next_fifo.enqueue({msgid::caas_msg,CaasMsg{"scanprogress", std::to_string(std::floor(100* estimated_belt_length / conveyor.Length))}});  
+              if(origin_sequence_cnt > 0 && scanprogress != scanprogress_now) {
+                scanprogress = scanprogress_now;
+                next_fifo.enqueue({msgid::caas_msg,CaasMsg{"scanprogress", std::to_string(scanprogress_now)}});  
               }
 
               if(op.y == 0) {

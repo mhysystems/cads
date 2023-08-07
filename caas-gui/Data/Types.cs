@@ -25,6 +25,8 @@ public class Device
   public DateTime LastSeen { get; set; } = DateTime.MinValue;
 }
 
+public record DeviceError(Device Dev,string What);
+
 public class Conveyor
 {
   public int Id { get; set; } = 0;

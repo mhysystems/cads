@@ -39,9 +39,9 @@
   },
 
   "heartbeat" : {
-    "SendHeartBeat" : true,
+    "SendHeartBeat" : false,
     "Subject" :  "caas.80819.heartbeat",
-    "Period_ms" : 3000
+    "Period_ms" : 30000
   },
 
   "upload_profile" : false,

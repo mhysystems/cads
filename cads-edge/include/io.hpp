@@ -20,7 +20,7 @@ namespace cads
     virtual ~Io() = default;
     virtual bool enqueue(msg) = 0;
     virtual void wait_dequeue(msg&) = 0;
-     virtual bool wait_dequeue_timed(msg& x, std::chrono::seconds s) = 0;
+    virtual bool wait_dequeue_timed(msg& x, std::chrono::seconds s) = 0;
     virtual size_t size_approx() = 0;
     
     private:

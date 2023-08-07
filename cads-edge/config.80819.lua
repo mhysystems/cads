@@ -1,8 +1,6 @@
 json = require "json"
 
-gocator = {
-  Fps = 984.0
-}
+gocatorFps = 984.0
 
 iirfilter = {
   Skip = 41706,
@@ -40,7 +38,7 @@ belt = {
   TopCover = 14.0,
   Width = 1700,
   Length = 19900,
-  LengthN = conveyor.TypicalSpeed / gocator.Fps, 
+  LengthN = conveyor.TypicalSpeed / gocatorFps, 
   Splices = 1,
   Conveyor = 3
 }
@@ -56,19 +54,19 @@ revolutionsensor = {
   Bias = 0,
   Threshold = 0.05,
   Bidirectional = false,
-  Skip = math.floor((conveyor.PulleyCircumference / (1000 * conveyor.TypicalSpeed)) * gocator.Fps * 0.9)
+  Skip = math.floor((conveyor.PulleyCircumference / (1000 * conveyor.TypicalSpeed)) * gocatorFps * 0.9)
 }
 
 sqlitegocatorConfig = {
   Range = {0,99999999999},
-  Fps = gocator.Fps,
+  Fps = gocatorFps,
   Forever = true,
   Delay = 98,
   Source = "../../profiles/rawprofile_cv912.db",
   TypicalSpeed = conveyor.TypicalSpeed
 }
 
-y_res_mm = 1000 * conveyor.TypicalSpeed / gocator.Fps -- In mm
+y_res_mm = 1000 * conveyor.TypicalSpeed / gocatorFps -- In mm
 
 laserConf = {
   Trim = true,
@@ -84,6 +82,10 @@ anomaly = {
   ConveyorName = conveyor.Name
 }
 
+measures = {
+  Enable = false
+}
+
 profileConfig = {
   Width = belt.Width,
   NaNPercentage = 0.15,
@@ -92,11 +94,9 @@ profileConfig = {
   PulleySamplesExtend = 10,
   RevolutionSensor = revolutionsensor,
   Conveyor = conveyor,
-  Dbscan = dbscan
+  Dbscan = dbscan,
+  Measures = measures
 }
-
-
-measurements = {}
 
 function timeToString(time) -- overwritten externally
   return tostring(time)
@@ -178,10 +178,6 @@ function send(out,measurements,name,quality,time,...)
 
 end
 
-function sendHack(serial) 
-  out("caas." .. serial .. ".scancomplete","","")
-end
-
 function main(sendmsg)
 
   local measurements = make(getNow())
@@ -191,14 +187,14 @@ function main(sendmsg)
   local origin_savedb = BlockingReaderWriterQueue()
   local savedb_luamain = BlockingReaderWriterQueue()
   
-  --local laser = gocator(laserConfig,gocator_cads)
+  --local laser = gocator(laserConf,gocator_cads)
   local laser = sqlitegocator(sqlitegocatorConfig,gocator_cads) 
   local thread_process_profile = process_profile(profileConfig,gocator_cads,cads_origin)
   --local belt_loop = anomaly_detection_thread(anomaly,cads_origin,origin_savedb)
   local belt_loop = loop_beltlength_thread(conveyor,cads_origin,origin_savedb)
   local thread_send_save = save_send_thread(conveyor,origin_savedb,savedb_luamain)
 
-  laser:Start(gocator.Fps)
+  laser:Start(gocatorFps)
   local beltprogress = 0
 
   unloop = false
@@ -231,7 +227,3 @@ function main(sendmsg)
 end
 
 mainco = coroutine.create(main)
-
-
-
-

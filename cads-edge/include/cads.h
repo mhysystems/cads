@@ -11,6 +11,10 @@
 namespace cads
 {
 
+  struct MeasureConfig {
+    bool Enable;
+  };
+
   struct ProfileConfig
   {
     double Width;
@@ -21,6 +25,7 @@ namespace cads
     RevolutionSensorConfig RevolutionSensor;
     Conveyor conveyor;
     Dbscan dbscan;
+    MeasureConfig measureConfig;
   };
 
   void store_profile_only();
