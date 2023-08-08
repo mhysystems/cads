@@ -181,7 +181,7 @@ namespace cads
 
       if (cerror != ClusterError::None)
       {
-        // spdlog::get("cads")->debug("Clustering error : {}", ClusterErrorToString(cerror));
+        spdlog::get("cads")->debug("Clustering error : {}", ClusterErrorToString(cerror));
         // store_errored_profile(p.z,ClusterErrorToString(cerror));
       }
 
