@@ -1,5 +1,5 @@
 button {
-  font-size: 2rem;
+  font-size: 1rem;
   width : 100%;
 }
 
@@ -9,7 +9,7 @@ button[disabled] {
 
 input {
   width : 100%;
-  font-size: 2rem;
+  font-size: 1rem;
 }
 
 progress {
@@ -18,7 +18,52 @@ progress {
 
 bottomrow {
   display : grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap : 0.25rem;
+}
+
+.top-row {
+  grid-row: 1;
+  background-color: var(--mhy-blue);
+  justify-content: space-between;
+  height: var(--top-row-height);
+  display: flex;
+  align-items: center;
+  color : white;
+  padding : 0 0.25rem 0 0.25rem;
+}
+
+centreing {
+  grid-row: 2;
+  display : grid;
+  grid-template-columns: 1fr;
   grid-template-rows: 1fr;
-  gap : 1rem;
+  height : 100%;
+  width : 100%;
+  justify-items: center;
+
+}
+
+article {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 2.5rem 1fr 1fr;
+  height : 100%;
+  max-width: var(--content-max-width);
+  width : min(100vw,var(--content-max-width));
+  align-items: end;
+  padding : 0 0.25rem 0 0.25rem
+}
+
+main {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: var(--top-row-height) 1fr;
+  height: 100%;
+}
+
+.mhylogo {
+  height : 100%;
+  width : auto;
 }
