@@ -19,8 +19,7 @@ cadsSrc += files(
   'lua_interface.cpp',
   'interpolation.cpp',
   'upload.cpp',
-  'utils.cpp',
-  'measurements.cpp'
+  'utils.cpp'
 )
 
 cadsEntry += files('main.cpp')

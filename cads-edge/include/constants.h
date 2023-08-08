@@ -10,7 +10,6 @@
 #include <date/date.h>
 #include <nlohmann/json.hpp>
 #include <GoSdk/GoSdkDef.h>
-#include <measurements.h>
 
 extern nlohmann::json global_config;
 constexpr size_t buffer_warning_increment = 4096;

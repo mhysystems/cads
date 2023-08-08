@@ -4,12 +4,23 @@
 #include <tuple>
 #include <string>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuseless-cast"
+
+#include <date/date.h>
+#include <date/tz.h>
+
+#pragma GCC diagnostic pop
+
 #include <profile.h>
 #include <readerwriterqueue.h>
-#include <measurements.h>
 
 namespace cads
 { 
+  namespace Measure {
+    using MeasureMsg = std::tuple<std::string,int,date::utc_clock::time_point,std::variant<double,std::string,std::function<double()>,std::function<std::string()>,std::tuple<double,double>>>;
+  }
+
   using PulleyRevolutionScan = std::tuple<bool, double, cads::profile>;
   enum msgid{gocator_properties,scan,finished,begin_sequence,end_sequence,complete_belt,pulley_revolution_scan,stopped,nothing,select,caas_msg,measure};
   struct GocatorProperties{double xResolution; double zResolution; double zOffset;};
