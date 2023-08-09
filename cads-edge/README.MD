@@ -7,7 +7,7 @@ sudo apt update && sudo apt upgrade -y
 
 
 1) Install needed libraries and programs
-	sudo apt-get install libsqlite3-dev sqlite3 ninja-build libssl-dev libcurl4 libcurl4-openssl-dev libtbb-dev python3-pip libprotobuf-c-dev libboost-all-dev
+	sudo apt-get install libsqlite3-dev sqlite3 ninja-build libssl-dev libcurl4 libcurl4-openssl-dev libtbb-dev python3-pip libprotobuf-c-dev libboost-all-dev libgsl-dev libgflags-dev
 
 	## Nano ##
   	Compiles with GPU enabled
@@ -46,7 +46,7 @@ sudo apt update && sudo apt upgrade -y
 
 # Memory Leaks
 Valgrind
-valgrind --tool=memcheck --leak-check=full --show-leak-kinds=all --log-file="val.log" ./cads -c ../config.json 
+valgrind --tool=memcheck --track-origins=yes --leak-check=full --show-leak-kinds=all --log-file="val.log" ./cads -c ../config.json 
 
 GCC Address Sanitzer
 Uncomment meson.build
@@ -62,7 +62,25 @@ VCPKG_DEFAULT_TRIPLET=x64-windows
 maybe cross file
 meson setup --cross-file meson-vcpkg.txt win
 
-{"Site":"localdev","Conveyor":"test","Time": "2023-04-22T02:17:06.00Z", "YArea":1000,"Value":15}
+#Cuda on nano to stop the driver killing the app
+echo N > /sys/kernel/debug/gpu.0/timeouts_enabled
+
+matrix profile with length of 31323 and window = 333 on nano takes about 1sec.
+
+#Jetson Nano upgrade issue
+https://forums.developer.nvidia.com/t/solution-dpkg-error-processing-package-nvidia-l4t-bootloader-configure/208627
+sudo mv /var/lib/dpkg/info/ /var/lib/dpkg/backup/
+sudo mkdir /var/lib/dpkg/info/
+sudo apt-get update
+sudo apt-get -f install
+sudo mv /var/lib/dpkg/info/* /var/lib/dpkg/backup/
+sudo rm -rf /var/lib/dpkg/info
+sudo mv /var/lib/dpkg/backup/ /var/lib/dpkg/info/
+
+#Upgrading python
+Use pyenv
+https://github.com/pyenv/pyenv
+
 
 
 

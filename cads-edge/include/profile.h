@@ -9,6 +9,7 @@
 #include <chrono>
 #include <string>
 #include <ranges>
+#include <constants.h>
 
 namespace cads
 {
@@ -22,6 +23,7 @@ namespace cads
 
   struct profile
   {
+    std::chrono::time_point<std::chrono::system_clock> time;
     y_type y;
     double x_off;
     z_type z;
@@ -29,34 +31,7 @@ namespace cads
   using profile_window = std::deque<profile>;
   bool operator==(const profile &, const profile &);
 
-  const cads::profile null_profile{std::numeric_limits<cads::y_type>::max(), std::numeric_limits<double>::max(), {}};
-
-  struct profile_params
-  {
-    double y_res;
-    double x_res;
-    double z_res;
-    double z_off;
-    double encoder_res;
-    double z_max;
-  };
-
-  struct meta
-  {
-    std::string site = "";
-    std::string conveyor = "";
-    std::string chrono = "";
-    double x_res = 0;
-    double y_res = 0;
-    double z_res = 0;
-    double z_off = 0;
-    double z_max = 0;
-    double z_min = 0;
-    double Ymax = 0;
-    double YmaxN = 0;
-    double WidthN = 0;
-    long Belt = 0;
-  };
+  const cads::profile null_profile{ std::chrono::time_point<std::chrono::system_clock>::min(),std::numeric_limits<cads::y_type>::max(), std::numeric_limits<double>::max(), {}};
 
   struct transient
   {
@@ -78,6 +53,6 @@ namespace cads
   };
   
   std::string ClusterErrorToString(ClusterError error);
-  std::tuple<double, double, size_t, size_t, ClusterError> pulley_levels_clustered(z_type &z, std::function<double(const z_type &)> estimator = average);
+  std::tuple<double, double, size_t, size_t, ClusterError> pulley_levels_clustered(z_type &z, Dbscan, std::function<double(const z_type &)> estimator = average);
 
 }

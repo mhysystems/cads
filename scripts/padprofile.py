@@ -9,7 +9,7 @@ def process_profile(db: str, width : int, pad : float) :
     conn = sqlite3.connect(db)
     cur = conn.cursor()
     cur2 = conn.cursor()
-    tmp = np.empty((1, int(width / np.dtype(np.float32).itemsize)),dtype='f')
+    tmp = np.empty((1, int(width)),dtype='f')
     for row in cur.execute(f"SELECT rowid,z from PROFILE where length(z) != ?",[width]):
         tmp.fill(pad)
         z = np.frombuffer(row[1],dtype='f')

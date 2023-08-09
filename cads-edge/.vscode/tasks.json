@@ -2,6 +2,19 @@
 	"version": "2.0.0",
 	"tasks": [
     {
+      "label": "build",
+      "type": "shell",
+      "command": "ninja",
+      "options": {
+          "cwd": "${workspaceFolder}/debug"
+      },
+      "group": {
+          "kind": "build",
+          "isDefault": true
+      }
+  },
+    
+    {
       "label": "valgrind-debug",
       "type": "valgrind",
       "target": "${workspaceFolder}/debug/cads",

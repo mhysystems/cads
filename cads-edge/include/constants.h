@@ -4,27 +4,26 @@
 #include <cmath>
 #include <limits>
 #include <string>
+#include <atomic>
+#include <filesystem>
 
 #include <date/date.h>
 #include <nlohmann/json.hpp>
 #include <GoSdk/GoSdkDef.h>
-#include <measurements.h>
 
 extern nlohmann::json global_config;
 constexpr size_t buffer_warning_increment = 4096;
 
 namespace cads {
 
+
   using DateTime = std::chrono::time_point<date::local_t,std::chrono::seconds>;
 
-  struct SqliteGocatorConfig {
-    using range_type = std::tuple<long,long>;
-    range_type range;
-    double fps;
-    bool forever;
-    double delay;
+  struct HeartBeat {
+    bool SendHeartBeat;
+    std::string Subject;
+    std::chrono::milliseconds Period;
   };
-  
 
   struct profile_parameters {
     int left_edge_nan;
@@ -40,9 +39,10 @@ namespace cads {
     std::string Name;
     std::string Timezone;
     double PulleyCircumference;
-    double MaxSpeed;
+    double TypicalSpeed;
     int64_t Belt;
-
+    double Length;
+    int64_t WidthN;
     operator std::string() const;
   };
 
@@ -54,6 +54,7 @@ namespace cads {
     double TopCover; 
     double Length;
     double Width;
+    double WidthN;
     int64_t Splices;
     int64_t Conveyor;
 
@@ -74,23 +75,23 @@ namespace cads {
     value_type add_scan;
   };
 
-  struct Filters {
-    double SchmittThreshold;
-    std::vector<float> LeftDamp;
-    float LeftDampOff;
+  struct Device {
+    long Serial;
   };
 
   struct Dbscan {
-    double InCluster;
-    size_t MinPoints;
+    double InClusterRadius;
+    long long MinPoints;
   };
 
-  struct RevolutionSensor{
-    enum class Source { raw, filtered};
+  struct RevolutionSensorConfig{
+    enum class Source {height_raw, height_filtered, length};
     Source source;
-    size_t trigger_num;
+    double trigger_distance;
     double bias;
+    double threshold;
     bool bidirectional;
+    long long skip;
   };
 
   struct Communications {
@@ -103,7 +104,7 @@ namespace cads {
     double fiducial_x;
     double fiducial_y;
     double fiducial_gap;
-
+    double edge_height;
   };
 
   struct OriginDetection {
@@ -113,18 +114,34 @@ namespace cads {
     bool   dump_match;
   };
 
-  extern profile_parameters global_profile_parameters;
-  extern Conveyor global_conveyor_parameters;
-  extern Belt global_belt_parameters;
+  struct AnomalyDetection {
+    size_t WindowSize;
+    size_t BeltPartitionSize;
+    size_t BeltSize;
+    size_t MinPosition;
+    size_t MaxPosition;
+    std::string ConveyorName;
+  };
+
+  struct GocatorConstants {
+    double Fps;
+  };
+
+  struct UploadConstants {
+    std::chrono::seconds Period;
+  };
+
+
+  extern Device constants_device;
   extern webapi_urls global_webapi;
-  extern Filters global_filters;
-  extern SqliteGocatorConfig sqlite_gocator_config;
   extern Dbscan dbscan_config;
-  extern RevolutionSensor revolution_sensor_config;
   extern Communications communications_config;
   extern Fiducial fiducial_config;
   extern OriginDetection config_origin_detection;
-  extern Measure measurements;
+  extern GocatorConstants constants_gocator;
+  extern UploadConstants constants_upload;
+  extern HeartBeat constants_heartbeat;
+  extern std::atomic<bool> terminate_signal;
   
   void init_config(std::string f);
   void drop_config();

@@ -16,39 +16,41 @@
 namespace cads
 {
 
-class GocatorReader : public GocatorReaderBase
-{
+  struct GocatorConfig {
+    bool Trim;
+    double TypicalResolution;
+  };
 
-	GocatorReader() = delete;
-	GocatorReader(const GocatorReader&) = delete;
-	GocatorReader& operator=(const GocatorReader&) = delete;
-	GocatorReader(GocatorReader&&) = delete;
-	GocatorReader& operator=(GocatorReader&&) = delete;
+  class GocatorReader : public GocatorReaderBase
+  {
 
-protected:
-	
-	void* m_system;
-	void* m_assembly;
-	void* m_sensor;
-  bool m_use_encoder = true;
-  bool m_trim = true;
-  std::atomic<k64s> m_yOffset = 0;
-  std::atomic<size_t> m_buffer_size_warning = 4096;
-  
-	static kStatus OnData(kPointer context, GoSensor sensor, GoDataSet dataset);
-  static kStatus OnSystem(kPointer context, GoSystem system, GoDataSet data);
-	virtual kStatus OnData(GoSensor sensor, GoDataSet dataset);
-  virtual kStatus OnSystem(GoSystem system, GoDataSet dataset);
+    GocatorReader() = delete;
+    GocatorReader(const GocatorReader&) = delete;
+    GocatorReader& operator=(const GocatorReader&) = delete;
+    GocatorReader(GocatorReader&&) = delete;
+    GocatorReader& operator=(GocatorReader&&) = delete;
+    virtual bool SetFrameRate(double);
+    virtual bool Start_impl();
+    virtual void Stop_impl();
 
-public:
+  protected:
+    
+    GoSystem m_system = nullptr;
+    kAssembly m_assembly = nullptr;
+    GocatorConfig config;
+    std::atomic<size_t> m_buffer_size_warning = 4096;
+    
+    static kStatus OnData(kPointer context, GoSensor sensor, GoDataSet dataset);
+    static kStatus OnSystem(kPointer context, GoSystem system, GoDataSet data);
+    virtual kStatus OnData(GoDataSet dataset);
+    virtual kStatus OnSystem(GoSystem system, GoDataSet dataset);
 
-	void Start();
-	void Stop();
-  void Log();
-	GocatorReader(moodycamel::BlockingReaderWriterQueue<cads::msg>&, std::string ip_add = "");
-  GocatorReader(moodycamel::BlockingReaderWriterQueue<cads::msg>&, bool, bool trim = true, std::string ip_add = "");
-	virtual ~GocatorReader();
-};
+  public:
+    static void LaserOff();
+    void Log();
+    GocatorReader(GocatorConfig,Io&);
+    virtual ~GocatorReader();
+  };
 
 }
 

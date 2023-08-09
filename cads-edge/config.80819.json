@@ -1,0 +1,51 @@
+{
+  "Device" : {
+    "Serial" : 80819
+  },
+
+  "fiducial" : {
+    "fiducial_depth" : 2,
+    "fiducial_x" : 25,
+    "fiducial_y" : 40,
+    "fiducial_gap" : 40,
+    "edge_height" : 30.1
+  },
+
+  "upload" : {
+    "Period" : 120
+  },
+
+  "OriginDetection" : {
+    "BeltLength": [660,680],
+    "cross_correlation_threshold" : 0.285,
+    "dump_match" : true
+  },
+
+
+  "profile_db_name" : "profile.db",
+  "state_db_name" : "state.db",
+  "transient_db_name" : "transient.db",
+
+  "webapi_urls" : {
+    "add_conveyor" : ["https://fmgcads.mhysystems.com/api/conveyors",false],
+    "add_meta" : ["https://fmgcads.mhysystems.com/api/meta",false],
+    "add_belt" : ["https://fmgcads.mhysystems.com/api/belts",false],
+    "add_scan" : ["https://fmgcads.mhysystems.com/api/scans",false]
+  },
+
+  "communications" : {
+    "NatsUrl" : "127.0.0.1",
+    "UploadRows" : 1024
+  },
+
+  "heartbeat" : {
+    "SendHeartBeat" : true,
+    "Subject" :  "caas.80819.heartbeat",
+    "Period_ms" : 30000
+  },
+
+  "upload_profile" : false,
+  "base_url" : "https://fmgcads.mhysystems.com/api",
+  "lua_window_height" : 2,
+  "lua_fn" : "function process(width,height)\n return 0\nend"
+}

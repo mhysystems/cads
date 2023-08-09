@@ -39,6 +39,7 @@ arr,arrf = np.loadtxt("../cads-edge/debug/filt.txt",
 #plt.plot(np.append([0 for x in range(1,228)],arr))
 #plt.plot(np.append([0 for x in range(1,334)],arrf))
 plt.plot(arr)
+np.savetxt("profile.txt",arr)
 #plt.plot(arrf)
 
 #plt.plot(signal.sosfilt(sos,arrf))

@@ -1,79 +1,19 @@
 #include <tuple>
 #include <algorithm> 
 #include <sstream>
+#include <filesystem>
+#include <signal.h> 
 
 #include <date/tz.h>
+#include <lua.hpp>
 
 #include <constants.h>
 #include <init.h>
 
 nlohmann::json global_config;
+using Lua = std::unique_ptr<lua_State, decltype(&lua_close)>;
 
 namespace {
-
-  auto mk_sqlite_gocator(nlohmann::json config) {
-    auto current_length = config["sqlite_gocator"]["range"].get<cads::SqliteGocatorConfig::range_type>();
-    auto fps = config["sqlite_gocator"]["fps"].get<double>();
-    auto forever = config["sqlite_gocator"]["forever"].get<bool>();
-    auto delay = config["sqlite_gocator"]["delay"].get<double>();
-
-    return cads::SqliteGocatorConfig{current_length,fps,forever,delay};
-  }
-
-  auto mk_profile_parameters(nlohmann::json config) {
-    using namespace std;
-    auto left_edge_nan = config["left_edge_nan"].get<int>();
-    auto right_edge_nan = config["right_edge_nan"].get<int>();
-    auto spike_filter = config["spike_filter"].get<int>();
-    auto sobel_filter = config["sobel_filter"].get<int>();
-
-    return cads::profile_parameters{left_edge_nan,right_edge_nan,spike_filter,sobel_filter};
-
-  }
-
-  auto mk_conveyor_parameters(nlohmann::json config) {
-
-    int64_t Id = 0;
-    auto Org = config["conveyor"]["Org"].get<std::string>();
-    auto Site = config["conveyor"]["Site"].get<std::string>();
-    auto Name = config["conveyor"]["Name"].get<std::string>();
-    auto Timezone = config["conveyor"]["Timezone"].get<std::string>();
-
-    auto PulleyCircumference = config["conveyor"]["PulleyCircumference"].get<double>();
-    auto MaxSpeed = config["conveyor"]["MaxSpeed"].get<double>();
-    
-    int64_t Belt = 0;
-
-    return cads::Conveyor{Id,Org,Site,Name,Timezone,PulleyCircumference,MaxSpeed,Belt};
-
-  }
-
-  auto mk_belt_parameters(nlohmann::json config) {
-
-    int64_t Id = 0;
-    cads::DateTime Installed;
-    std::istringstream in(config["belt"]["Installed"].get<std::string>());
-    in >> date::parse("%FT%TZ", Installed);
-    auto PulleyCover = config["belt"]["PulleyCover"].get<double>();
-    auto CordDiameter = config["belt"]["CordDiameter"].get<double>();
-    auto TopCover = config["belt"]["TopCover"].get<double>();
-    auto Length = config["belt"]["Length"].get<double>();
-    auto Width = config["belt"]["Width"].get<double>();
-    auto Splices = config["belt"]["Splices"].get<int64_t>();
-    int64_t Conveyor = 0;
-
-    return cads::Belt{Id,Installed,PulleyCover,CordDiameter,TopCover,Length,Width,Splices,Conveyor};
-
-  }
-
-  auto mk_scan_parameters(nlohmann::json config) {
-
-    auto Orientation = config["scan"]["Orientation"].get<int32_t>();
-
-    return cads::Scan{Orientation};
-
-  }
-
 
   auto mk_webapi_urls(nlohmann::json config) {
     using namespace std;
@@ -84,40 +24,6 @@ namespace {
     auto add_scan = config["webapi_urls"]["add_scan"].get<cads::webapi_urls::value_type>();
 
     return cads::webapi_urls{add_conveyor,add_meta,add_belt,add_scan};
-
-  }
-
-  auto mk_filters(nlohmann::json config) {
-    
-    auto SchmittThreshold = config["filters"]["SchmittThreshold"].get<double>();
-    auto LeftDamp = config["filters"]["LeftDamp"].get<std::vector<float>>();
-    auto LeftDampOff =  config["filters"]["LeftDampOff"].get<float>();
-
-    return cads::Filters{SchmittThreshold,LeftDamp,LeftDampOff};
-
-  }
-
-  auto mk_dbscan(nlohmann::json config) {
-    auto InCluster = config["dbscan"]["InCluster"].get<double>();
-    auto MinPoints = config["dbscan"]["MinPoints"].get<size_t>();
-    return cads::Dbscan{InCluster,MinPoints};
-
-  }
-
-  auto mk_revolution_sensor(nlohmann::json config) {
-    auto source_s = config["revolution_sensor"]["source"].get<std::string>();
-    cads::RevolutionSensor::Source source;
-    if(source_s == "raw") {
-      source = cads::RevolutionSensor::Source::raw;
-    }else {
-      source = cads::RevolutionSensor::Source::filtered;  
-    }
-
-    auto trigger_num = config["revolution_sensor"]["trigger_num"].get<size_t>();
-    auto bias = config["revolution_sensor"]["bias"].get<double>();
-    auto bidirectional = config["revolution_sensor"]["bidirectional"].get<bool>();
-
-    return cads::RevolutionSensor{source,trigger_num,bias,bidirectional};
 
   }
 
@@ -137,9 +43,10 @@ namespace {
     double fiducial_x = config["fiducial"]["fiducial_x"].get<double>();
     double fiducial_y = config["fiducial"]["fiducial_y"].get<double>();
     double fiducial_gap = config["fiducial"]["fiducial_gap"].get<double>();
+    double edge_height = config["fiducial"]["edge_height"].get<double>();
 
 
-    return cads::Fiducial{fiducial_depth,fiducial_x,fiducial_y,fiducial_gap};
+    return cads::Fiducial{fiducial_depth,fiducial_x,fiducial_y,fiducial_gap,edge_height};
   }
 
   auto mk_origin_detection(nlohmann::json config) {
@@ -150,42 +57,74 @@ namespace {
 
     return cads::OriginDetection{belt_length,cross_correlation_threshold,dump_match};
   }
+
+  auto mk_device(nlohmann::json config) {
+    
+    auto serial = config["Device"]["Serial"].get<long>();
+
+    return cads::Device{serial};
+  }
+
+  auto mk_upload(nlohmann::json config) {
+    
+    auto period = config["upload"]["Period"].get<long>();
+
+    return cads::UploadConstants{std::chrono::seconds(period)};
+  }
+
+  auto mk_heartbeat(nlohmann::json config) {
+
+    if(!config.contains("heartbeat"))
+    {
+      return cads::HeartBeat{false,"",std::chrono::milliseconds(1)};
+    }
+
+    auto SendHeartBeat = config["heartbeat"]["SendHeartBeat"].get<bool>();
+    auto Subject = config["heartbeat"]["Subject"].get<std::string>();
+    auto Period =  config["heartbeat"]["Period_ms"].get<long>();
+
+    return cads::HeartBeat{SendHeartBeat,Subject,std::chrono::milliseconds(Period)};
+  }
+
+  void sigint_handler([[maybe_unused]]int s) {
+    cads::terminate_signal = true;
+  }
 }
 
 namespace cads {  
 
-  profile_parameters global_profile_parameters;
-  Conveyor global_conveyor_parameters;
-  Belt global_belt_parameters;
-  Scan global_scan_parameters;
+  Device constants_device;
   webapi_urls global_webapi;
-  Filters global_filters;
-  SqliteGocatorConfig sqlite_gocator_config;
-  Dbscan dbscan_config;
-  RevolutionSensor revolution_sensor_config;
   Communications communications_config;
   Fiducial fiducial_config;
   OriginDetection config_origin_detection;
-  Measure measurements;
+  AnomalyDetection anomalies_config;
+  UploadConstants constants_upload;
+  HeartBeat constants_heartbeat;
+
+  std::atomic<bool> terminate_signal = false;
+
     
   void init_config(std::string f) {
+    struct sigaction sigIntHandler;
+
+    sigIntHandler.sa_handler = ::sigint_handler;
+    sigemptyset(&sigIntHandler.sa_mask);
+    sigIntHandler.sa_flags = 0;
+
+    sigaction(SIGINT, &sigIntHandler, NULL);
+    
+    
     auto json = slurpfile(f);
 		auto config = nlohmann::json::parse(json);
-    global_profile_parameters = mk_profile_parameters(config);
-    global_conveyor_parameters = mk_conveyor_parameters(config);
-    global_belt_parameters = mk_belt_parameters(config);
-    global_scan_parameters = mk_scan_parameters(config);
+    constants_device = mk_device(config);
     global_webapi = mk_webapi_urls(config);
-    global_filters = mk_filters(config);
-    sqlite_gocator_config = mk_sqlite_gocator(config);
-    dbscan_config = mk_dbscan(config);
-    revolution_sensor_config = mk_revolution_sensor(config);
     communications_config = mk_communications(config);
     fiducial_config = mk_fiducial(config);
     config_origin_detection = mk_origin_detection(config);
+    constants_upload = mk_upload(config);
+    constants_heartbeat = mk_heartbeat(config);
     global_config = config;
-
-    measurements.init(); // Needs to be last
   }
 
   void drop_config() {
@@ -207,6 +146,7 @@ namespace cads {
     params_json["Timezone"] = Timezone;
     params_json["PulleyCircumference"] = PulleyCircumference;
     params_json["Belt"] = Belt;
+    params_json["Length"] = Length;
 
     return params_json.dump();
   }

@@ -5,7 +5,8 @@
 #include <coms.h>
 #include <constants.h>
 #include <fiducial.h>
-#include <readerwriterqueue.h>
+#include <init.h>
+
 #include <gocator_reader.h>
 #include <sqlite_gocator_reader.h>
 
@@ -16,7 +17,6 @@
 #include <tuple>
 #include <algorithm>
 #include <thread>
-#include <memory>
 #include <ranges>
 #include <chrono>
 #include <sstream>
@@ -24,6 +24,8 @@
 #include <iostream>
 
 #include <spdlog/spdlog.h>
+#include <core/SCAMP.h>
+#include <lua_script.h>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wuseless-cast"
@@ -35,7 +37,6 @@
 
 #pragma GCC diagnostic pop
 
-#include <filters.h>
 #include <edge_detection.h>
 #include <coro.hpp>
 #include <dynamic_processing.h>
@@ -46,97 +47,51 @@
 #include <upload.h>
 #include <utils.hpp>
 
+
+
 using namespace std;
 using namespace moodycamel;
 using namespace std::chrono;
-using CadsMat = cv::UMat; // cv::cuda::GpuMat
 
-namespace
+namespace cads
 {
-  using namespace cads;
-
-  void upload_conveyorbelt_parameters()
-  {
-
-    auto [conveyor_id, err] = fetch_conveyor_id();
-
-    if (!err && conveyor_id == 0)
+  void process_identity(Io& gocatorFifo, Io& next) {
+    msg m;
+    do
     {
-      auto [new_id, err] = remote_addconveyor(global_conveyor_parameters);
-      if (!err)
+
+      gocatorFifo.wait_dequeue(m);
+      auto m_id = get<0>(m);
+
+      if(m_id == cads::msgid::gocator_properties) continue;
+
+      if (m_id != cads::msgid::scan)
       {
-        store_conveyor_id(new_id);
-        conveyor_id = new_id;
+        break;
       }
-    }
 
-    auto [belt_id, errb] = fetch_belt_id();
 
-    if (!errb && belt_id == 0 && conveyor_id != 0)
-    {
-      auto belt = global_belt_parameters;
-      belt.Conveyor = conveyor_id;
-      auto [new_id, err] = remote_addbelt(belt);
+      auto p = get<profile>(get<1>(m));
+      next.enqueue(m);
 
-      if (!err)
-      {
-        store_belt_id(new_id);
-        belt_id = new_id;
-      }
-    }
+    } while (std::get<0>(m) != msgid::finished);
   }
 
-  std::tuple<unique_ptr<GocatorReaderBase>, bool> mk_gocator(BlockingReaderWriterQueue<msg> &gocatorFifo, bool trim = true, bool use_encoder = false)
-  {
-    auto data_src = global_config["data_source"].get<std::string>();
-
-    if (data_src == "gocator"s)
-    {
-      bool connect_via_ip = global_config.contains("gocator_ip");
-      spdlog::get("cads")->debug("Using gocator as data source");
-      auto gocator = connect_via_ip ? make_unique<GocatorReader>(gocatorFifo, use_encoder, trim, global_config.at("gocator_ip"s).get<std::string>()) : make_unique<GocatorReader>(gocatorFifo, use_encoder, trim);
-      return {std::move(gocator), true};
-    }
-    else
-    {
-      spdlog::get("cads")->debug("Using sqlite as data source");
-      auto sqlite = make_unique<SqliteGocatorReader>(gocatorFifo);
-      return {std::move(sqlite), false};
-    }
-  }
-
-  enum class Process_Status
-  {
-    Error,
-    Finished,
-    Stopped
-  };
-
-  Process_Status process_impl(BlockingReaderWriterQueue<msg> &next)
+  void process_profile(ProfileConfig config, Io& gocatorFifo, Io& next)
   {
 
-    std::jthread uploading_conveyorbelt_parameters(upload_conveyorbelt_parameters);
-
-    BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
-    BlockingReaderWriterQueue<msg> winFifo(4096 * 1024);
-
-    const auto x_width = global_belt_parameters.Width;
-    const auto nan_percentage = global_config["nan_%"].get<double>();
-    const auto width_n = global_config["width_n"].get<int>();
-    const auto clip_height = global_config["clip_height"].get<z_element>();
-    const auto use_encoder = global_config["use_encoder"].get<bool>();
-
-    auto [gocator, is_gocator] = mk_gocator(gocatorFifo, use_encoder);
-    gocator->Start();
+    const auto x_width = config.Width;
+    const auto nan_percentage = config.NaNPercentage;
+    const auto width_n = (int)config.conveyor.WidthN; // gcc-11 on ubuntu cannot compile doubles in ranges expression
+    const auto clip_height = (z_element)config.ClipHeight;
+    double x_resolution = 1.0;
+    double z_resolution = 1.0;
 
     cads::msg m;
+
+
     gocatorFifo.wait_dequeue(m);
     auto m_id = get<0>(m);
-
-    if (m_id == cads::msgid::finished)
-    {
-      return Process_Status::Finished;
-    }
 
     if (m_id != cads::msgid::gocator_properties)
     {
@@ -144,66 +99,34 @@ namespace
     }
     else
     {
-      auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution, encoder_framerate] = get<GocatorProperties>(get<1>(m));
-      spdlog::get("cads")->info("Gocator y_resolution:{}, x_resolution:{}, z_resolution:{}, z_offset:{}, encoder_resolution:{}, encoder_framerate:{}", y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution, encoder_framerate);
+      auto p = get<GocatorProperties>(get<1>(m));
+      x_resolution = p.xResolution;
+      z_resolution = p.zResolution;
     }
 
-    // Forward gocator gocator_properties
-    winFifo.enqueue(m);
-    auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution, encoder_framerate] = get<GocatorProperties>(get<1>(m));
-    store_profile_parameters({y_resolution, x_resolution, z_resolution, 33.0, encoder_resolution, clip_height});
+    next.enqueue(m);
 
-    BlockingReaderWriterQueue<msg> db_fifo;
-    BlockingReaderWriterQueue<msg> dynamic_processing_fifo;
+    auto iirfilter_left = mk_iirfilterSoS(config.IIRFilter.sos);
+    auto iirfilter_right = mk_iirfilterSoS(config.IIRFilter.sos);
+    auto iirfilter_left_edge = mk_iirfilterSoS(config.IIRFilter.sos);
 
-    std::jthread save_send(save_send_thread, std::ref(db_fifo), std::ref(next));
-
-    std::jthread dynamic_processing;
-    std::jthread origin_dectection;
-    if (global_config.contains("origin_detector") && global_config["origin_detector"] == "bypass")
-    {
-      origin_dectection = std::jthread(bypass_fiducial_detection_thread, std::ref(winFifo), std::ref(db_fifo));
-    }
-    else
-    {
-      auto y_res = encoder_framerate != 0.0 ? global_conveyor_parameters.MaxSpeed / encoder_framerate : y_resolution;
-      origin_dectection = std::jthread(window_processing_thread, x_resolution, y_res, width_n, std::ref(winFifo), std::ref(dynamic_processing_fifo));
-      dynamic_processing = std::jthread(dynamic_processing_thread, std::ref(dynamic_processing_fifo), std::ref(db_fifo), width_n);
-    }
-
-    auto iirfilter_left = mk_iirfilterSoS();
-    auto iirfilter_right = mk_iirfilterSoS();
-    auto iirfilter_left_edge = mk_iirfilterSoS();
-
-    auto delay = mk_delay(global_config["iirfilter"]["delay"]);
+    auto delay = mk_delay(config.IIRFilter.delay);
 
     int64_t cnt = 0;
 
     auto start = std::chrono::high_resolution_clock::now();
 
     auto dc_filter = mk_dc_filter();
-    auto pulley_speed = mk_pulley_stats();
+    auto pulley_speed = mk_pulley_stats(config.conveyor.TypicalSpeed,config.conveyor.PulleyCircumference);
 
-    long drop_profiles = global_config["iirfilter"]["skip"]; // Allow for iir fillter too stablize
-    Process_Status status = Process_Status::Finished;
-
-    auto csp = [&](const profile &p)
-    {
-      winFifo.enqueue({msgid::scan, p});
-    };
-
-    // auto fn = encoder_distance_id(csp);
-    auto stride = global_conveyor_parameters.MaxSpeed / encoder_framerate;
-    auto fn = encoder_distance_estimation(csp, stride);
+    long drop_profiles = config.IIRFilter.skip; // Allow for iir fillter too stablize
 
     auto pulley_estimator = mk_pulleyfitter(z_resolution, -15.0);
     auto belt_estimator = mk_pulleyfitter(z_resolution, 0.0);
 
-    auto filter_window_len = global_config["sobel_filter"].get<size_t>();
+    auto filter_window_len = config.PulleySamplesExtend;
 
-    auto time0 = std::chrono::high_resolution_clock::now();
-
-    auto pulley_rev = mk_pulley_revolution(encoder_framerate);
+    auto pulley_rev = config.RevolutionSensor.source == RevolutionSensorConfig::Source::length ? mk_pseudo_revolution(config.conveyor.PulleyCircumference) : mk_pulley_revolution(config.RevolutionSensor);
 
     do
     {
@@ -213,77 +136,52 @@ namespace
 
       if (m_id != cads::msgid::scan)
       {
+        next.enqueue(m);
         break;
       }
 
       ++cnt;
-
-      if (cnt % 20000 == 0)
-      {
-        auto now = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double, std::micro> dt = now - time0;
-        time0 = now;
-        spdlog::get("cads")->debug("Gocator sending rate : {}", 20000 * (1000000 / dt.count()));
-      }
 
       auto p = get<profile>(get<1>(m));
 
       if (p.z.size() * x_resolution < x_width * 0.75)
       {
         spdlog::get("cads")->error("Gocator sending profiles with widths less than 0.75 of expected width");
-        if (is_gocator)
-        {
-          status = Process_Status::Error;
-          break;
-        }
-        else
-        {
-          continue;
-        }
+        next.enqueue({msgid::finished,0});
+        break;
       }
 
       if (p.z.size() < (size_t)width_n)
       {
         spdlog::get("cads")->error("Gocator sending profiles with sample number {} less than {}", p.z.size(), width_n);
-        if (is_gocator)
-        {
-          status = Process_Status::Error;
-          break;
-        }
-        else
-        {
-          continue;
-        }
+        next.enqueue({msgid::finished,0});
+        break;
+
       }
 
       double nan_cnt = std::count_if(p.z.begin(), p.z.end(), [](z_element z)
                                      { return std::isnan(z); });
 
-      measurements.send("nancount", 0, nan_cnt);
+      if(config.measureConfig.Enable) {
+        next.enqueue({msgid::measure,Measure::MeasureMsg{"nancount",0,date::utc_clock::now(),nan_cnt}});
+      }
 
       if ((nan_cnt / p.z.size()) > nan_percentage)
       {
         spdlog::get("cads")->error("Percentage of nan({}) in profile > {}%", nan_cnt, nan_percentage * 100);
-        if (is_gocator)
-        {
-          status = Process_Status::Error;
-          break;
-        }
-        else
-        {
-          continue;
-        }
+        next.enqueue({msgid::finished,0});
+        break;
       }
 
       auto iy = p.y;
       auto ix = p.x_off;
       auto iz = p.z;
 
-      auto [pulley_level, pulley_right, ll, lr, cerror] = pulley_levels_clustered(iz, pulley_estimator);
+      auto [pulley_level, pulley_right, ll, lr, cerror] = pulley_levels_clustered(iz, config.dbscan,pulley_estimator);
 
       if (cerror != ClusterError::None)
       {
-        // spdlog::get("cads")->debug("Clustering error : {}", ClusterErrorToString(cerror));
+        spdlog::get("cads")->debug("Clustering error : {}", ClusterErrorToString(cerror));
         // store_errored_profile(p.z,ClusterErrorToString(cerror));
       }
 
@@ -301,12 +199,14 @@ namespace
       auto pulley_right_filtered = (z_element)iirfilter_right(pulley_right);
       auto left_edge_filtered = (z_element)iirfilter_left_edge(ll);
 
-      measurements.send("pulleylevel", 0, pulley_level_filtered);
-      measurements.send("beltedgeposition", 0, ix + left_edge_filtered * x_resolution);
+      if(config.measureConfig.Enable) {
+        next.enqueue({msgid::measure,Measure::MeasureMsg{"pulleylevel",0,date::utc_clock::now(),pulley_level_filtered}});
+        next.enqueue({msgid::measure,Measure::MeasureMsg{"beltedgeposition",0,date::utc_clock::now(),double(ix + left_edge_filtered * x_resolution)}});
+      }
 
       auto pulley_level_unbias = dc_filter(pulley_level_filtered);
 
-      auto [delayed, dd] = delay({iy, ix, iz, (int)left_edge_filtered, (int)ll, (int)lr, p.z});
+      auto [delayed, dd] = delay({{p.time,iy,ix,iz}, (int)left_edge_filtered, (int)ll, (int)lr, p.z});
 
       if (!delayed)
         continue;
@@ -317,36 +217,41 @@ namespace
         continue;
       }
 
-      auto [y, x, z, left_edge_index_avg, left_edge_index, right_edge_index, raw_z] = dd;
+      auto [delayed_profile, left_edge_index_avg, left_edge_index, right_edge_index, raw_z] = dd;
+      auto y = delayed_profile.y;
+      auto x = delayed_profile.x_off;
+      auto z = delayed_profile.z;
 
       auto gradient = (pulley_right_filtered - pulley_level_filtered) / (double)z.size();
       regression_compensate(z, 0, z.size(), gradient);
 
       PulleyRevolution ps;
-      if (revolution_sensor_config.source == RevolutionSensor::Source::raw)
+      if (config.RevolutionSensor.source == RevolutionSensorConfig::Source::height_raw)
       {
         ps = pulley_rev(pulley_level);
+      }
+      else if(config.RevolutionSensor.source == RevolutionSensorConfig::Source::length) 
+      {
+        ps = pulley_rev(y);
       }
       else
       {
         ps = pulley_rev(pulley_level_unbias);
       }
 
-      auto [speed, frequency, amplitude] = pulley_speed(ps, pulley_level_unbias);
+      auto [speed, frequency, amplitude] = pulley_speed(ps, pulley_level_unbias, delayed_profile.time);
 
       if (speed == 0)
       {
         spdlog::get("cads")->error("Belt proabaly stopped.");
-
-        if (is_gocator)
-        {
-          status = Process_Status::Stopped;
-          break;
-        }
+        next.enqueue({msgid::stopped,0});
+        break;
       }
-
-      measurements.send("pulleyspeed", 0, speed);
-      measurements.send("pulleyoscillation", 0, amplitude);
+      
+      if(config.measureConfig.Enable) {
+        next.enqueue({msgid::measure,Measure::MeasureMsg{"pulleyspeed",0,date::utc_clock::now(),speed}});
+        next.enqueue({msgid::measure,Measure::MeasureMsg{"pulleyoscillation",0,date::utc_clock::now(),amplitude}});
+      }
 
       if (cnt % (1000 * 60) == 0)
       {
@@ -375,18 +280,10 @@ namespace
 
       auto f = z | views::take(left_edge_index_aligned + width_n) | views::drop(left_edge_index_aligned);
 
-      if (use_encoder)
-      {
-        winFifo.enqueue({msgid::scan, cads::profile{y, x + left_edge_index_aligned * x_resolution, {f.begin(), f.end()}}});
-      }
-      else
-      {
-        fn.resume({ps, cads::profile{y, pulley_level_filtered, {f.begin(), f.end()}}});
-      }
+      next.enqueue({msgid::scan, cads::profile{delayed_profile.time,y, x + left_edge_index_aligned * x_resolution, {f.begin(), f.end()}}});
 
     } while (std::get<0>(m) != msgid::finished);
 
-    winFifo.enqueue({msgid::finished, 0});
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
@@ -394,95 +291,188 @@ namespace
     auto rate = duration != 0 ? (double)cnt / duration : 0;
     spdlog::get("cads")->info("CADS - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, rate);
 
-    gocator->Stop();
-
-    origin_dectection.join();
-    spdlog::get("cads")->info("Origin Detection Stopped");
-
-    save_send.join();
-    spdlog::get("cads")->info("Upload Thread Stopped");
-
-    return status;
   }
 
-}
-
-namespace cads
-{
-
-  void upload_profile_only(std::string params, std::string db_name)
+  std::tuple<std::string,std::string,std::string> caasMsg(std::string sub,std::string head, std::string data)
   {
-    auto db = db_name.empty() ? global_config["profile_db_name"].get<std::string>() : db_name;
-
-    if (params == "")
-    {
-      spdlog::get("cads")->error("--upload argument need to be supplied in the form of [revid,first_idx,last_idx]");
-    }
-    else
-    {
-
-      auto args = nlohmann::json::parse(params);
-      auto [rev_id, first_idx, last_idx] = args.get<std::tuple<int, int, int>>();
-      auto fetch_belt = fetch_belt_coro(0, last_idx, first_idx, 256, db);
-      auto [belt_id, belt_id_err] = fetch_belt_id();
-
-      if (belt_id_err && belt_id == 0)
-      {
-        spdlog::get("cads")->info("Belt is not registered with server");
-        return;
-      }
-
-      meta m;
-
-      auto [params, err] = fetch_profile_parameters(db);
-      auto [Ymin, Ymax, YmaxN, WidthN, err2] = fetch_belt_dimensions(rev_id, last_idx, db);
-      auto now = chrono::floor<chrono::seconds>(date::utc_clock::now()); // Default sends to much decimal precision for asp.net core
-      auto ts = date::format("%FT%TZ", now);
-
-      m.chrono = ts;
-      m.conveyor = global_conveyor_parameters.Name;
-      m.site = global_conveyor_parameters.Site;
-      m.WidthN = WidthN;
-      m.x_res = params.x_res;
-      m.y_res = params.y_res;
-      m.Ymax = Ymax;
-      m.YmaxN = YmaxN;
-      m.z_off = params.z_off;
-      m.z_res = params.z_res;
-      m.Belt = belt_id;
-
-      auto post_profile = post_profiles_coro(m);
-
-      while (true)
-      {
-        auto [co_terminate, cv] = fetch_belt.resume(0);
-        auto [idx, p] = cv;
-
-        if (co_terminate)
-        {
-          break;
-        }
-
-        if (p.z.size() < size_t(WidthN))
-        {
-          const auto cnt = WidthN - p.z.size();
-          p.z.insert(p.z.end(), cnt, 0);
-        }
-
-        auto f = p.z | views::take(int(WidthN));
-        post_profile.resume(cads::profile{p.y, p.x_off, {f.begin(), f.end()}});
-      }
-    }
+    auto caas_sub = "caas."s + std::to_string(constants_device.Serial) + "."s + sub;
+    return std::make_tuple(caas_sub,head,data);
   }
+
+  void cads_local_main(std::string f) 
+  {
+    namespace fs = std::filesystem;
+
+    fs::path luafile{f};
+    luafile.replace_extension("lua");
+    
+    std::atomic<bool> terminate_upload = false;
+    bool terminate_metrics = false;
+    moodycamel::BlockingConcurrentQueue<std::tuple<std::string, std::string, std::string>> queue;
+    std::jthread save_send(upload_scan_thread, std::ref(terminate_upload));
+    std::jthread realtime_metrics(realtime_metrics_thread, std::ref(queue), constants_heartbeat, std::ref(terminate_metrics));
+  
+    auto [L,err] = run_lua_config(f);
+
+    if(err) {
+      return;
+    }
+
+    auto lua_type = lua_getglobal(L.get(),"mainco");
+    
+    if(lua_type != LUA_TTHREAD) {
+      spdlog::get("cads")->error("TODO");
+      return;
+    }
+    
+    auto mainco = lua_tothread(L.get(), -1); 
+
+    for(auto first = true;!terminate_signal;first=false)
+    {
+      
+      if(first) {
+        push_externalmsg(mainco,&queue);
+      }else{
+        lua_pushboolean(mainco,false);
+      }
+      
+      auto nargs = 0;
+      auto mainco_status = lua_resume(mainco,L.get(),1,&nargs);
+      
+      if(mainco_status == LUA_YIELD) 
+      {
+      
+      }
+      else if(mainco_status == LUA_OK) // finished 
+      {
+        break;
+      } 
+      else
+      {
+        spdlog::get("cads")->error("{}: lua_resume: {}",__func__,lua_tostring(mainco,-1));
+        break;
+      }
+
+    }
+
+    auto mainco_status = lua_status(mainco);
+    
+    if( mainco_status == LUA_OK || mainco_status == LUA_YIELD ) {
+      auto nargs = 0;
+      lua_pushboolean(mainco,true);
+      lua_resume(mainco,L.get(),1,&nargs);
+    }
+
+    terminate_upload = true; // stops upload thread
+    terminate_metrics = true; // stops metrics thread
+  }
+
+  void cads_remote_main() {
+    
+    std::atomic<bool> terminate_upload = false;
+    bool terminate_metrics = false;
+    moodycamel::BlockingConcurrentQueue<std::tuple<std::string, std::string, std::string>> queue;
+    moodycamel::BlockingConcurrentQueue<remote_msg> remote_queue;
+    std::jthread save_send(upload_scan_thread, std::ref(terminate_upload));
+    std::jthread realtime_metrics(realtime_metrics_thread, std::ref(queue), constants_heartbeat, std::ref(terminate_metrics));
+    std::jthread remote_control(remote_control_thread, std::ref(remote_queue), std::ref(terminate_metrics));
+   
+    while(!terminate_signal)
+    {
+      try {
+        GocatorReader::LaserOff();
+        remote_msg rmsg;
+            
+        // Wait for start message
+        while(!terminate_signal) {
+          remote_queue.wait_dequeue(rmsg);
+          
+          if(rmsg.index() == 0) break;
+
+        }
+
+        if(terminate_signal) continue;
+
+        auto start_msg = std::get<Start>(rmsg);
+        auto [L,err] = run_lua_code(start_msg.lua_code);
+
+        if(err) {
+          continue;
+        }
+
+        auto lua_type = lua_getglobal(L.get(),"mainco");
+        
+        if(lua_type != LUA_TTHREAD) {
+          spdlog::get("cads")->error("TODO");
+          continue;
+        }
+
+        
+        auto mainco = lua_tothread(L.get(), -1); 
+
+        for(auto first = true;!terminate_signal;first=false)
+        {
+          
+          if(first) {
+            push_externalmsg(mainco,&queue);
+          }else{
+            lua_pushboolean(mainco,false);
+          }
+          
+          auto nargs = 0;
+          auto mainco_status = lua_resume(mainco,L.get(),1,&nargs);
+          
+          if(mainco_status == LUA_YIELD) 
+          {
+          
+          }
+          else if(mainco_status == LUA_OK) // finished 
+          {
+            break;
+          } 
+          else
+          {
+            spdlog::get("cads")->error("{}: lua_resume: {}",__func__,lua_tostring(mainco,-1));
+            break;
+          }
+
+
+          auto have_msg = remote_queue.try_dequeue(rmsg);
+          
+          if(have_msg && rmsg.index() != 2) break;
+
+
+        }
+        auto mainco_status = lua_status(mainco);
+        
+        if(mainco_status == LUA_YIELD ) {
+          auto nargs = 0;
+          lua_pushboolean(mainco,true);
+          lua_resume(mainco,L.get(),1,&nargs);
+        }
+
+        queue.enqueue(caasMsg("scancomplete","",""));
+      }catch(std::exception& ex) {
+        spdlog::get("cads")->error(R"({{func = '{}', msg = '{}'}})", __func__,ex.what());
+        queue.enqueue(caasMsg("error","",ex.what()));
+      }
+    }
+  
+    queue.enqueue(caasMsg("scancomplete","",""));
+    terminate_upload = true; // stops upload thread
+    terminate_metrics = true;
+  }
+
 
   void store_profile_only()
   {
+#if 0
     auto terminate_subscribe = false;
     moodycamel::BlockingConcurrentQueue<int> nats_queue;
-    BlockingReaderWriterQueue<msg> gocatorFifo;
+    Adapt<BlockingReaderWriterQueue<msg>> gocatorFifo{BlockingReaderWriterQueue<msg>(4096 * 1024)};
     std::jthread remote_control(remote_control_thread, std::ref(nats_queue), std::ref(terminate_subscribe));
 
-    auto [gocator, is_gocator] = mk_gocator(gocatorFifo, false);
+    auto gocator  = mk_gocator(gocatorFifo);
 
     gocator->Start();
 
@@ -500,9 +490,6 @@ namespace cads
       auto ts = date::format("%FT%TZ", now);
       spdlog::get("cads")->info("Let's go! - {}", ts);
     }
-
-    auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution, gocator_framerate] = get<GocatorProperties>(get<1>(m));
-    store_profile_parameters({y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution, global_config["clip_height"].get<double>()});
 
     auto store_profile = store_profile_coro();
 
@@ -557,46 +544,17 @@ namespace cads
 
     gocator->Stop();
     spdlog::get("cads")->info("Cads raw data dumping finished");
+  #endif
   }
 
-  void process()
-  {
-
-    BlockingReaderWriterQueue<msg> scan_upload_fifo(4096 * 1024);
-    std::jthread save_send(upload_scan_thread, std::ref(scan_upload_fifo));
-
-    for (int sleep_wait = 5;;)
-    {
-
-      auto status = process_impl(scan_upload_fifo);
-
-      if (status == Process_Status::Error)
-      {
-        spdlog::get("cads")->info("Sleeping for {} minutes", sleep_wait);
-        std::this_thread::sleep_for(std::chrono::seconds(sleep_wait * 60));
-
-      }
-      else if (status == Process_Status::Stopped)
-      {
-        spdlog::get("cads")->info("Sleeping for {} seconds", 30);
-        std::this_thread::sleep_for(std::chrono::seconds(30));
-      }
-      else
-      {
-        break;
-      }
-    }
-
-    scan_upload_fifo.enqueue({msgid::finished, 0});
-  }
 
   void generate_signal()
   {
+#if 0
+    Adapt<BlockingReaderWriterQueue<msg>> gocatorFifo{BlockingReaderWriterQueue<msg>(4096 * 1024)};
 
-    BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
-
-    auto [gocator, is_gocator] = mk_gocator(gocatorFifo);
-    gocator->Start();
+    auto gocator = mk_gocator(gocatorFifo);
+    gocator->Start(984.0); // TODO
 
     auto iirfilter = mk_iirfilterSoS();
     auto delay = mk_delay(global_config["iirfilter"]["delay"]);
@@ -616,13 +574,13 @@ namespace cads
       std::throw_with_nested(std::runtime_error("preprocessing:First message must be gocator_properties"));
     }
 
-    auto [y_resolution, x_resolution, z_resolution, z_offset, encoder_resolution, encoder_framerate] = get<GocatorProperties>(get<1>(m));
+    auto gocator_props = get<GocatorProperties>(get<1>(m));
 
     auto differentiation = mk_dc_filter();
 
     std::ofstream filt("filt.txt");
 
-    auto pulley_estimator = mk_pulleyfitter(z_resolution, -212.0);
+    auto pulley_estimator = mk_pulleyfitter(gocator_props.zResolution, -212.0);
 
     do
     {
@@ -634,9 +592,6 @@ namespace cads
       {
 
         auto p = get<profile>(get<1>(m));
-        auto iy = p.y;
-        auto ix = p.x_off;
-        auto iz = p.z;
 
         auto [pulley_left, pulley_right, ll, lr, cerror] = pulley_levels_clustered(p.z, pulley_estimator);
 
@@ -646,32 +601,24 @@ namespace cads
         filt << bottom_avg << "," << bottom_filtered << '\n';
         filt.flush();
 
-        auto [delayed, dd] = delay({iy, ix, iz, 0, 0, 0, p.z});
+        auto [delayed, dd] = delay({p, 0, 0, 0, p.z});
         if (!delayed)
           continue;
 
-        auto [y, x, z, ignore_d, ignore_a, ignore_b, ignore_c] = dd;
+        auto [delayed_profile, ignore_d, ignore_a, ignore_b, ignore_c] = dd;
       }
 
     } while (std::get<0>(m) != msgid::finished);
 
     gocator->Stop();
     spdlog::get("cads")->info("Gocator Stopped");
+  #endif
   }
 
+  
   void stop_gocator()
   {
-
-    BlockingReaderWriterQueue<msg> f;
-    GocatorReader gocator(f);
-    gocator.Stop();
-  }
-
-  void dump_gocator_log()
-  {
-    BlockingReaderWriterQueue<msg> gocatorFifo(4096 * 1024);
-    GocatorReader gocator(gocatorFifo);
-    gocator.Log();
+    GocatorReader::LaserOff();
   }
 
 }

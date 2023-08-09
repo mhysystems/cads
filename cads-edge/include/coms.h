@@ -4,7 +4,6 @@
 #include <vector>
 #include <tuple>
 
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wuseless-cast"
 
@@ -18,15 +17,14 @@
 #include <constants.h>
 #include <coro.hpp>
 #include <db.h>
+#include <msg.h>
 
 namespace cads
 {
-  void remote_control_thread(moodycamel::BlockingConcurrentQueue<int> &,bool&);
-  bool post_scan(state::scan db_name);
+  void remote_control_thread(moodycamel::BlockingConcurrentQueue<remote_msg> &, bool &);
+  cads::coro<cads::remote_msg,bool> remote_control_coro();
+  std::tuple<state::scan,bool> post_scan(state::scan scan);
   std::vector<profile> http_get_frame(double y, int len, date::utc_clock::time_point chrono);
-  std::tuple<int,bool> remote_addconveyor(Conveyor params); 
-  std::tuple<int,bool> remote_addbelt(Belt params); 
-
-  cads::coro<int, cads::profile, 1> post_profiles_coro(cads::meta meta);
   cads::coro<int, std::tuple<std::string, std::string, std::string>, 1>  realtime_metrics_coro();
+  void realtime_metrics_thread(moodycamel::BlockingConcurrentQueue<std::tuple<std::string, std::string, std::string>> &queue, HeartBeat beat, bool &terminate);
 }

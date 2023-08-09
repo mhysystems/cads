@@ -1,9 +1,13 @@
 #pragma once
 
-#include <readerwriterqueue.h>
-#include <msg.h>
+#include <io.hpp>
 
 namespace cads
 {
-   void dynamic_processing_thread(moodycamel::BlockingReaderWriterQueue<msg> &profile_fifo, moodycamel::BlockingReaderWriterQueue<msg> &next_fifo, int width);
+  struct DynamicProcessingConfig
+  {
+    long long WidthN;
+  };
+
+  void dynamic_processing_thread(DynamicProcessingConfig, cads::Io &profile_fifo, cads::Io &next_fifo);
 }

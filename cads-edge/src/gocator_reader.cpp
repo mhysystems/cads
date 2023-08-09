@@ -63,53 +63,101 @@ namespace cads
 
   }
 
-  void GocatorReader::Start()
+  bool GocatorReader::Start_impl()
   {
-    auto status = GoSensor_Start(m_sensor);
+    if(!m_stopped) return false;
+
+    auto status = GoSystem_Start(m_system);
 
     if (kIsError(status))
     {
       throw runtime_error{"GoSensor_Start: "s + to_string(status)};
-    }else{
+    }
+    else
+    {
+      m_stopped = false;
       spdlog::get("cads")->info("GoSensor Starting");
     }
+
+    return false;
   }
 
-  void GocatorReader::Stop()
+  void GocatorReader::Stop_impl()
   {
+    if(m_stopped) return;
     
-    auto status = GoSensor_Stop(m_sensor);
-
+    auto status = GoSystem_Stop(m_system);
+    
     if (kIsError(status))
     {
-      spdlog::get("cads")->error("GoSensor_Stop(m_sensor) -> {}", status);
-    } else {
+      spdlog::get("cads")->error("GoSystem_Stop(m_sensor) -> {}", status);
+    }
+    else
+    {
+      m_gocatorFifo.enqueue({msgid::finished, 0});
+      m_stopped = true;
       spdlog::get("cads")->info("GoSensor Stopped");
     }
   }
 
-  void GocatorReader::Log() {
-    
-    kObj(GoSensor, m_sensor);
-    kAlloc tempAlloc = kObject_Alloc(m_sensor);
-    kByte* fileData = kNULL;
+  void GocatorReader::Log()
+  {
+
+    auto sensor = GoSystem_SensorAt(m_system, 0);
+    kObj(GoSensor, sensor);
+    kAlloc tempAlloc = kObject_Alloc(sensor);
+    kByte *fileData = kNULL;
     kSize fileSize = 0;
 
-    GoSensor_IsReadable(m_sensor);
+    GoSensor_IsReadable(sensor);
 
     GoControl_ReadFile(obj->control, GO_SENSOR_LIVE_LOG_NAME, &fileData, &fileSize, tempAlloc);
 
-        // Uncomment to save transform to file (useful for debugging transform problems)
+    // Uncomment to save transform to file (useful for debugging transform problems)
     kFile_Save("GoSensor.log", fileData, fileSize);
 
     kAlloc_Free(tempAlloc, fileData);
-
   }
 
-  GocatorReader::GocatorReader(moodycamel::BlockingReaderWriterQueue<msg> &gocatorFifo, std::string ip_add) : GocatorReaderBase(gocatorFifo)
+  void GocatorReader::LaserOff()
+  {
+    auto assembly = CreateGoSdk();
+    auto system = CreateGoSystem();
+    GoSystem_Stop(system);
+    GoDestroy(system);
+    GoDestroy(assembly);
+  }
+
+  bool GocatorReader::SetFrameRate(double fps) {
+    
+    auto sensor = GoSystem_SensorAt(m_system, 0);
+    auto setup = GoSensor_Setup(sensor);
+    auto status = GoSetup_SetFrameRate(setup, fps);
+    return kIsError(status);
+  }
+
+  GocatorReader::GocatorReader(GocatorConfig cnf, Io &gocatorFifo) : GocatorReaderBase(gocatorFifo), config(cnf)
   {
     m_assembly = CreateGoSdk();
     m_system = CreateGoSystem();
+
+    auto status = GoSystem_Connect(m_system);
+
+    if (kIsError(status))
+    {
+      throw runtime_error{"GoSystem_Connect: "s + to_string(status)};
+    }
+
+    if (kIsError(status = GoSystem_Stop(m_system)))
+    {
+      throw runtime_error{"GoSystem_Stop: "s + to_string(status)};
+    }
+
+    if (kIsError(status = GoSystem_EnableData(m_system, kTRUE)))
+    {
+      throw runtime_error{"GoSystem_EnableData: "s + to_string(status)};
+    }
+
     auto sensor_count = GoSystem_SensorCount(m_system);
 
     if (sensor_count < 1)
@@ -121,68 +169,17 @@ namespace cads
       spdlog::get("cads")->info("Number of Camera's found: {}", sensor_count);
     }
 
-    if (!ip_add.empty())
-    {
-      kIpAddress gocator_ip;
-      auto status = kIpAddress_Parse(&gocator_ip, ip_add.c_str());
-
-      if (kIsError(status))
-      {
-        throw runtime_error{"Illformed Ip Address: "s + to_string(status)};
-      }else
-
-      status = GoSystem_FindSensorByIpAddress(m_system, &gocator_ip, &m_sensor);
-
-      if (kIsError(status))
-      {
-        throw runtime_error{"Cannot connect to gocator via IP: "s + to_string(status)};
-      }
-    }
-    else
-    {
-      m_sensor = GoSystem_SensorAt(m_system, 0);
-    }
-
-    auto status = GoSensor_Connect(m_sensor);
-    
-    if (kIsError(status))
-    {
-      throw runtime_error{"GoSensor_Connect: "s + to_string(status)};
-    }
-    
-    if (kIsError(status = GoSensor_Stop(m_sensor)))
-    {
-      throw runtime_error{"GoSensor_Stop: "s + to_string(status)};
-    }
-
-    if (kIsError(status = GoSensor_SetDataHandler(m_sensor, OnData, this)))
-    {
-      throw runtime_error{"GoSensor_SetDataHandler: "s + to_string(status)};
-    }
-
-    if (kIsError(status = GoSensor_EnableData(m_sensor, kTRUE)))
-    {
-      throw runtime_error{"GoSensor_EnableData: "s + to_string(status)};
-    }
-
-#if 0
-                   
-  if (kIsError(status = GoSystem_SetHealthHandler(m_system, OnSystem, this)))
-	{
-			throw runtime_error{"GoSensor_SetDataHandler: "s + to_string(status)};
-	}
-
-  if (kIsError(status = GoSensor_EnableHealth(m_sensor, kTRUE)))
-	{
-			throw runtime_error{"GoSensor_EnableHealth: "s + to_string(status)};
-	}
-#endif
-
-    auto setup = GoSensor_Setup(m_sensor);
+    auto sensor = GoSystem_SensorAt(m_system, 0);
+    auto setup = GoSensor_Setup(sensor);
 
     if (kNULL == setup)
     {
       throw runtime_error{"GoSensor_Setup: Invalid setup handle"};
+    }
+
+    if (kIsError(status = GoSetup_SetTriggerSource(setup, GO_TRIGGER_TIME)))
+    {
+      throw runtime_error{"GoSetup_SetTriggerSource: "s + to_string(status)};
     }
 
     if (kIsError(status = GoSetup_EnableUniformSpacing(setup, kTRUE)))
@@ -190,27 +187,80 @@ namespace cads
       throw runtime_error{"GoSetup_EnableUniformSpacing: "s + to_string(status)};
     }
 
-    m_encoder_resolution = (double)GoTransform_EncoderResolution(GoSensor_Transform(m_sensor));
-    m_yResolution = GoSetup_EncoderSpacing(setup);
-    m_frame_rate = GoSetup_FrameRate(setup);
+    if (kIsError(status = GoSetup_SetAlignmentType(setup, GO_ALIGNMENT_TYPE_STATIONARY)))
+    {
+      throw runtime_error{"GoSetup_SetAlignmentType: "s + to_string(status)};
+    }
+
+    if (kIsError(status = GoSetup_SetAlignmentStationaryTarget(setup, GO_ALIGNMENT_TARGET_NONE)))
+    {
+      throw runtime_error{"GoSetup_SetAlignmentStationaryTarget: "s + to_string(status)};
+    }
+
+    if (kIsError(status = GoSystem_StartAlignment(m_system)))
+    {
+      throw runtime_error{"GoSetup_SetAlignmentStationaryTarget: "s + to_string(status)};
+    }
+
+    const auto timeout_us = 30000000;
+    GoDataSet dataset = nullptr;
+    if ((status = GoSystem_ReceiveData(m_system, &dataset, timeout_us)) == kOK)
+    {
+      for (kSize i = 0; i < GoDataSet_Count(dataset); ++i)
+      {
+        GoDataMsg message = GoDataSet_At(dataset, i);
+        if (GoDataMsg_Type(message) == GO_DATA_MESSAGE_TYPE_ALIGNMENT)
+        {
+          if ((status = GoAlignMsg_Status(message)) == kOK)
+          {
+            spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__, "Gocator is aligned");
+          }
+          else
+          {
+            spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__, "Gocator is NOT aligned");
+            throw runtime_error{"GoSystem_StartAlignment: "s + to_string(status)};
+          }
+        }
+      }
+      GoDestroy(dataset);
+    }
+    else
+    {
+      throw runtime_error{"GoSystem_StartAlignment: "s + to_string(status)};
+    }
+
+    if (kIsError(status = GoSystem_SetDataHandler(m_system, OnData, this)))
+    {
+      throw runtime_error{"GoSensor_SetDataHandler: "s + to_string(status)};
+    }
   }
 
-  GocatorReader::GocatorReader(moodycamel::BlockingReaderWriterQueue<msg> &gocatorFifo, bool use_encoder, bool trim, std::string ip_add) : GocatorReader(gocatorFifo, ip_add)
+  GocatorReader::~GocatorReader()
   {
-    m_trim = trim;
-    m_use_encoder = use_encoder;
+    Stop_impl();
+
+    auto status = GoDestroy(m_system);
+    if (kIsError(status))
+    {
+      spdlog::get("cads")->error("GoDestroy system:{}", status);
+    }
+
+    status = GoDestroy(m_assembly);
+    if (kIsError(status))
+    {
+      spdlog::get("cads")->error("GoDestroy assembly:{}", status);
+    }
   }
 
-  kStatus kCall GocatorReader::OnData(kPointer context, GoSensor sensor, GoDataSet dataset)
+  kStatus kCall GocatorReader::OnData(kPointer context, [[maybe_unused]] GoSystem system, GoDataSet dataset)
   {
     auto me = static_cast<GocatorReader *>(context);
-    
-    if(!me->terminate) {
-      me->OnData(sensor, dataset);
-    }else {
-      me->m_gocatorFifo.enqueue({msgid::finished, 0});
+
+    if (!me->m_stopped)
+    {
+      me->OnData(dataset);
     }
-    
+
     GoDestroy(dataset);
     if (me->m_gocatorFifo.size_approx() > me->m_buffer_size_warning)
     {
@@ -226,32 +276,6 @@ namespace cads
     return static_cast<GocatorReader *>(context)->OnSystem(system, data);
   }
 
-  GocatorReader::~GocatorReader()
-  {
-    Stop();
-    kStatus status = kOK;
-
-    status = GoSensor_EnableData(m_sensor,kFALSE);
-    if(kIsError(status)) {
-      spdlog::get("cads")->error("GoSensor_EnableData:{}",status);
-    }
-    status = GoSensor_Disconnect(m_sensor);
-    if(kIsError(status)) {    
-      spdlog::get("cads")->error("GoSensor_Disconnect:{}",status);
-    }
-    
-    status = GoDestroy(m_system);
-    if(kIsError(status)) {    
-      spdlog::get("cads")->error("GoDestroy system:{}",status);
-    }
-    
-    status = GoDestroy(m_assembly);
-    if(kIsError(status)) {
-      spdlog::get("cads")->error("GoDestroy assembly:{}",status);
-    }
-  }
-
-
   kStatus GocatorReader::OnSystem([[maybe_unused]] GoSystem system, GoDataSet dataset)
   {
     for (kSize i = 0; i < GoDataSet_Count(dataset); ++i)
@@ -261,7 +285,7 @@ namespace cads
       {
         auto healthIndicator = GoHealthMsg_At(message, k);
         if (healthIndicator->id == GO_HEALTH_ENCODER_VALUE)
-          spdlog::get("gocator")->info("Indicator[{}]: Id:{} Instance:{} Value:{}", k, healthIndicator->id, healthIndicator->instance, healthIndicator->value);
+          spdlog::get("cads")->info("Indicator[{}]: Id:{} Instance:{} Value:{}", k, healthIndicator->id, healthIndicator->instance, healthIndicator->value);
       }
     }
 
@@ -270,12 +294,9 @@ namespace cads
     return kOK;
   }
 
-  kStatus GocatorReader::OnData(GoSensor sensor, GoDataSet dataset)
+  kStatus GocatorReader::OnData(GoDataSet dataset)
   {
-    (void)sensor;
-
     double frame = 0.0;
-    k64s encoder = 0;
     double y = 0.0;
     k16s *profile = 0;
     kSize profileWidth = 0;
@@ -283,6 +304,7 @@ namespace cads
     double zResolution = 0.0;
     double xOffset = 0.0;
     double zOffset = 0.0;
+    double yResolution = config.TypicalResolution;
 
     for (kSize i = 0; i < GoDataSet_Count(dataset); ++i)
     {
@@ -296,7 +318,6 @@ namespace cads
         {
           GoStamp *goStamp = GoStampMsg_At(message, j);
           frame = (double)goStamp->frameIndex;
-          encoder = goStamp->encoder;
         }
       }
       break;
@@ -320,30 +341,18 @@ namespace cads
     if (m_first_frame)
     {
       m_first_frame = false;
-
-      if(m_use_encoder) {
-        m_yOffset = encoder;
-      }else {
-        m_yOffset = frame;
-      }
-      m_gocatorFifo.enqueue({msgid::gocator_properties, GocatorProperties{m_yResolution, xResolution, zResolution, zOffset, m_encoder_resolution, m_frame_rate}});
+      m_gocatorFifo.enqueue({msgid::gocator_properties, GocatorProperties{xResolution, zResolution, zOffset}});
     }
 
-    if (m_use_encoder)
-    {
-      y = std::abs((encoder - m_yOffset) * m_encoder_resolution);
-    }
-    else
-    {
-      y = (frame - m_yOffset) * m_yResolution;
-    }
+    y = (frame - 1) * yResolution;
 
     // Trim invalid values
     auto profile_end = profile + profileWidth;
     auto profile_begin = profile;
 
-    if(m_trim) {    
-      for (; profile_end > profile && *(profile_end-1) == k16S_NULL; --profile_end)
+    if (config.Trim)
+    {
+      for (; profile_end > profile && *(profile_end - 1) == k16S_NULL; --profile_end)
       {
       }
 
@@ -354,8 +363,11 @@ namespace cads
 
     auto samples_width = (double)distance(profile, profile_begin);
     auto z = GocatorReaderBase::k16sToFloat(profile_begin, profile_end, zResolution, zOffset);
-    m_gocatorFifo.enqueue({msgid::scan, cads::profile{y, xOffset + samples_width * xResolution, std::move(z)}});
-
+    if(z.size() != 0) {
+      m_gocatorFifo.enqueue({msgid::scan, cads::profile{std::chrono::high_resolution_clock::now(), y, xOffset + samples_width * xResolution, std::move(z)}});
+    }else {
+      spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__, "No z samples");
+    }
 
     return kOK;
   }

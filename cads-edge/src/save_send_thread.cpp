@@ -15,7 +15,6 @@
 #pragma GCC diagnostic pop
 
 #include <save_send_thread.h>
-#include <constants.h>
 #include <coms.h>
 #include <db.h>
 #include <spdlog/spdlog.h>
@@ -23,21 +22,9 @@
 using namespace moodycamel;
 using namespace std::chrono;
 
-namespace {
-
-  std::tuple<double,double,double,double> get_gocator_subset(cads::GocatorProperties g) 
-  {
-    //struct{double yResolution; double xResolution; double zResolution; double zOffset; double m_encoder_resolution; double m_frame_rate;};
-    return {std::get<2>(g),std::get<3>(g),global_config["width_n"].get<double>(),std::get<5>(g)};
-    //return {g.zResolution,g.zOffset,global_config["width_n"].get<double>(),g.m_frame_rate};
-  }
-
-}
-
-
 namespace cads
 {
-  void save_send_thread(BlockingReaderWriterQueue<msg> &profile_fifo, BlockingReaderWriterQueue<msg> &next)
+  void save_send_thread(Conveyor conveyor, cads::Io &profile_fifo, cads::Io &next)
   {
     namespace sml = boost::sml;
 
@@ -51,12 +38,13 @@ namespace cads
       coro<int, double,1> store_last_y = store_last_y_coro();
       coro<int, z_type, 1> store_scan;
       GocatorProperties gocator_properties;
+      Conveyor conveyor;
       date::utc_clock::time_point scan_begin;
-      BlockingReaderWriterQueue<msg> & cps;
+      cads::Io & cps;
 
-      global_t(BlockingReaderWriterQueue<msg> &m, date::utc_clock::time_point sb, std::string s) : store_scan(store_scan_coro(s)), scan_begin(sb), cps(m){};
+      global_t(cads::Io &m, Conveyor c, date::utc_clock::time_point sb, std::string s) : store_scan(store_scan_coro(s)), conveyor(c),scan_begin(sb), cps(m){};
 
-    } global(next,scan_begin,scan_filename_init);
+    } global(next,conveyor,scan_begin,scan_filename_init);
 
 
     struct transitions
@@ -73,21 +61,49 @@ namespace cads
           global.store_last_y.resume(e.value.y);
         };
 
-        const auto complete_belt_action = [](global_t &global, const complete_belt_t &e)
+        const auto complete_belt_action = [](global_t &global, const CompleteBelt &e)
         {
           global.idx = 0;
 
           auto scan_end = date::utc_clock::now();
           auto scan_filename = fmt::format("scan-{}.sqlite",global.scan_begin.time_since_epoch().count());
-          store_scan_gocator(get_gocator_subset(global.gocator_properties),scan_filename);
-          store_scan_properties({global.scan_begin,scan_end},scan_filename);
-          
-          store_scan_state(scan_filename);          
-          global.cps.enqueue({msgid::complete_belt, 0});
+          store_scan_gocator(global.gocator_properties,scan_filename);
+          store_scan_conveyor(global.conveyor,scan_filename);
           
           auto new_scan_filename = fmt::format("scan-{}.sqlite",scan_end.time_since_epoch().count());
+          create_scan_db(new_scan_filename);
+          transfer_profiles(scan_filename,new_scan_filename,e.start_value + 1 + e.length); // +1 as sqlite begins at 1 not 0
+
+          // needs to be after transfer_profiles because uploader can run and delete scan before 
+          // transfer complete
+          cads::state::scan scan = {
+            global.scan_begin,
+            scan_filename,
+            e.start_value,
+            e.length,
+            0,
+            1,
+            global.conveyor.Id
+          };
+        
           global.store_scan = store_scan_coro(new_scan_filename);
           global.scan_begin = scan_end;
+          update_scan_state(scan);   
+          
+          cads::state::scan scan2 = {
+            global.scan_begin,
+            new_scan_filename,
+            0,
+            0,
+            0,
+            0,
+            global.conveyor.Id
+          };
+
+          store_scan_state(scan2);  
+
+
+          global.cps.enqueue({msgid::complete_belt, 0});
 
         };
 
@@ -99,11 +115,29 @@ namespace cads
           std::filesystem::remove(scan_filename);
           
           auto scan_end = date::utc_clock::now();
-          auto filename = fmt::format("scan-{}.sqlite",std::chrono::system_clock::now().time_since_epoch().count());
           auto new_scan_filename = fmt::format("scan-{}.sqlite",scan_end.time_since_epoch().count());
           global.store_scan = store_scan_coro(new_scan_filename);
           global.scan_begin = scan_end;
 
+          cads::state::scan scan2 = {
+            global.scan_begin,
+            new_scan_filename,
+            0,
+            0,
+            0,
+            0,
+            global.conveyor.Id
+          };
+
+          store_scan_state(scan2);  
+
+        };
+
+        const auto select_data = [](global_t &global,const Select &select)
+        {
+          auto scan_filename = fmt::format("scan-{}.sqlite",global.scan_begin.time_since_epoch().count());
+          auto rows = fetch_scan(select.begin,select.begin+select.size,scan_filename);
+          select.fifo->enqueue(rows);
         };
 
         const auto init_gocator_properties_action = [](global_t &global,const GocatorProperties &v)
@@ -116,7 +150,8 @@ namespace cads
             *"init"_s + event<GocatorProperties> / init_gocator_properties_action = "invalid_data"_s,
             "invalid_data"_s + event<begin_sequence_t> / reset_globals_action = "valid_data"_s,
             "valid_data"_s + event<scan_t> / store_action = "valid_data"_s,
-            "valid_data"_s + event<complete_belt_t> / complete_belt_action = "valid_data"_s,
+            "valid_data"_s + event<CompleteBelt> / complete_belt_action = "valid_data"_s,
+            "valid_data"_s + event<Select> / select_data = "valid_data"_s,
             "valid_data"_s + event<end_sequence_t> / reset_globals_action = "invalid_data"_s);
       }
     };
@@ -132,6 +167,7 @@ namespace cads
       {
       case msgid::finished:
         loop = false;
+        global.cps.enqueue(m);
         break;
       case msgid::scan:
         sm.process_event(scan_t{get<profile>(get<1>(m))});
@@ -143,12 +179,18 @@ namespace cads
         sm.process_event(end_sequence_t{});
         break;
       case msgid::complete_belt:
-        sm.process_event(complete_belt_t{get<double>(get<1>(m))});
+        sm.process_event(CompleteBelt{get<CompleteBelt>(get<1>(m))});
+        global.cps.enqueue(m);
         break;
       case msgid::gocator_properties:
+        global.cps.enqueue(m);
         sm.process_event(GocatorProperties{get<GocatorProperties>(get<1>(m))});
         break;
+      case msgid::select:
+        sm.process_event(get<Select>(get<1>(m)));
+        break;
       default:
+          global.cps.enqueue(m);
         break;
       }
     }

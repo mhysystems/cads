@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <numeric>
 #include <bit>
+#include <cassert>
 
 #include <profile.h>
 #include <constants.h>
@@ -158,7 +159,7 @@ namespace cads
 
   // Return sequence of clustered z values and offset into profile
   // Input is a slice of profile, hence tracking offset
-  std::tuple<zrange,size_t> cluster(zrange z, z_element origin, z_element max_diff = dbscan_config.InCluster, z_element dis = dbscan_config.MinPoints )
+  std::tuple<zrange,size_t> cluster(zrange z, z_element origin, z_element max_diff, z_element dis )
   {
 
     namespace sr = std::ranges;
@@ -186,7 +187,7 @@ namespace cads
 
     if (d > dis)
     {
-      auto [c,cd] = cluster({i,end(z)},e);
+      auto [c,cd] = cluster({i,end(z)},e,max_diff,dis);
       if(cd > 0) {
         return {{begin(z),end(c)},d + cd};
       }else{
@@ -198,13 +199,7 @@ namespace cads
   }
   
   
-  std::tuple<zrange,size_t> cluster(z_type &z)
-  {
-
-    return cluster(mk_zrange(z),z[0]);
-  }
-
-  void cluster_merge(z_clusters& group, zrange c, double in_cluster = dbscan_config.InCluster) 
+  void cluster_merge(z_clusters& group, zrange c, double in_cluster) 
   {
 
     if(group.size() < 1) {
@@ -226,26 +221,26 @@ namespace cads
 
   }
 
-  z_clusters dbscan(zrange z, std::vector<z_cluster> &&group = {}, size_t min_points = dbscan_config.MinPoints)
+  z_clusters dbscan(zrange z, std::vector<z_cluster> &&group, Dbscan config)
   {
 
-    auto [a,d] = cluster(z,*begin(z));
+    auto [a,d] = cluster(z,*begin(z),config.InClusterRadius,config.MinPoints);
 
-    if(d > min_points) {
-      cluster_merge(group,a);
+    if(d > config.MinPoints) {
+      cluster_merge(group,a,config.InClusterRadius);
     }
 
     if (end(a) != end(z))
     {
-      group = dbscan({end(a), end(z)}, std::move(group));
+      group = dbscan({end(a), end(z)}, std::move(group),config);
     }
 
     return group;
   }
 
-  z_clusters dbscan(z_type &z)
+  z_clusters dbscan(z_type &z, Dbscan config)
   {
-    return dbscan(mk_zrange(z));
+    return dbscan(mk_zrange(z),{},config);
 
   }
 
@@ -283,11 +278,10 @@ namespace cads
     return std::reduce(v.begin(), v.end()) / count;
   }
 
-  std::tuple<double,double,size_t,size_t,ClusterError> pulley_levels_clustered(z_type &z, std::function<double(const z_type &)> estimator)
+  std::tuple<double,double,size_t,size_t,ClusterError> pulley_levels_clustered(z_type &z, Dbscan config, std::function<double(const z_type &)> estimator )
   {
  
-    spike_filter(z);
-    auto clusters = dbscan(z);
+    auto clusters = dbscan(z,config);
     auto avg_l = 0.0;
     auto avg_r = 0.0;
     size_t left_edge = 0;

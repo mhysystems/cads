@@ -1,7 +1,5 @@
 #include <filesystem>
 #include <tuple>
-#include <list>
-#include <future>
 #include <algorithm>
 
 #include <date/date.h>
@@ -12,24 +10,120 @@
 #include <constants.h>
 #include <coms.h>
 #include <msg.h>
+#include <upload.h>
 
 namespace 
 {
+
+  void delete_scan(cads::state::scan scan) 
+  {
+    cads::delete_scan_state(scan);
+    std::filesystem::remove(scan.db_name);
+    std::filesystem::remove(scan.db_name + "-shm");
+    std::filesystem::remove(scan.db_name + "-wal");
+    std::filesystem::remove(scan.db_name + "-journal");
+    spdlog::get("cads")->info("{{func = {}, msg = 'Removed scan. {}'}}", __func__,scan.db_name);
+  }
+  
   int resume_scan(cads::state::scan scan)
   {
-    auto [scan_begin,path,uploaded,status] = scan;
-
-    spdlog::get("cads")->info("Posting a scan. {}", path);
-    auto err = cads::post_scan(scan);
+    spdlog::get("cads")->info("{{func = {}, msg = 'Posting a scan. {}'}}", __func__,scan.db_name);
+    
+    if(scan.status != 2) return 0;
+    
+    auto [updated_scan,err] = cads::post_scan(scan);
     
     if(!err) {
-      cads::delete_scan_state(path);
-      std::filesystem::remove(path);
-      spdlog::get("cads")->info("Removed posted scan. {}", path);
-    }else{
-      
+      updated_scan.status = 3;
+      cads::update_scan_state(updated_scan);
     }
+
     return 0;
+  }
+
+  std::vector<std::deque<cads::state::scan>> partiton(std::deque<cads::state::scan> scans) {
+
+    if(scans.size() < 2) return {scans};
+
+    auto first = scans.front();
+    
+    auto it = std::partition(scans.begin(), scans.end(), [=](cads::state::scan e) {return e.conveyor_id == first.conveyor_id;});
+
+    std::vector<std::deque<cads::state::scan>> rtn{{std::begin(scans),it}};
+
+    if(it != scans.end())
+    {
+      auto remainder = partiton({it,std::end(scans)});
+      rtn.insert(rtn.end(), remainder.begin(),remainder.end());
+    }
+    
+    return rtn;
+  }
+  
+  std::tuple<cads::state::scan,bool> latest_scan(std::deque<cads::state::scan> scans) {
+    using namespace std;
+
+    if(scans.size() == 0)  return {cads::state::scan{},false};
+
+    cads::state::scan max;
+    max.scanned_utc = date::utc_clock::time_point::min();
+    max.status = 0;
+
+    for(auto scan : scans) {
+      
+      if(scan.scanned_utc > max.scanned_utc && scan.status >= max.status) {
+        max = scan;
+      }
+    }
+
+    return {max,max.status != 0};
+  }
+
+    std::tuple<cads::state::scan,bool> last_filling(std::deque<cads::state::scan> scans) {
+    using namespace std;
+    
+    auto new_end = remove_if(begin(scans),end(scans),[](cads::state::scan e) { return e.status != 0;});
+    auto i = max_element(begin(scans),new_end,[](cads::state::scan a,cads::state::scan b){ return a.scanned_utc < b.scanned_utc;});
+
+    if(i == end(scans)) {
+      return {cads::state::scan{},false};
+    }else {
+      return {*i,i != new_end};
+    }
+  }
+
+  std::vector<std::deque<cads::state::scan>> remove_all_incomplete(std::vector<std::deque<cads::state::scan>> partitioned_scans) 
+  {
+    
+    for(auto &pscans : partitioned_scans) {
+
+      auto [last,valid] = last_filling(pscans);
+
+      if(!valid) continue;
+
+      std::deque<cads::state::scan> filtered_scans;
+      
+      for(auto scan : pscans) {
+        
+        if(scan.cardinality < 1 && scan.status != 0) {
+          ::delete_scan(scan);
+          continue;
+        }
+
+        if(scan.status == 0 && scan.db_name == last.db_name ) continue;
+        
+        if(scan.status == 0 && scan.db_name != last.db_name) {
+          ::delete_scan(scan);
+        }else {
+          filtered_scans.push_back(scan);
+        }
+      }
+
+      pscans = filtered_scans;
+    }
+
+    std::erase_if(partitioned_scans,[](const std::deque<cads::state::scan> &e){return e.size() == 0;});
+    return partitioned_scans;
   }
 
 }
@@ -37,88 +131,68 @@ namespace
 namespace cads
 {
 
-void upload_scan_thread(moodycamel::BlockingReaderWriterQueue<msg> &fifo) 
+void upload_scan_thread(std::atomic<bool> &terminate) 
 {
-  std::future<std::invoke_result_t<decltype(resume_scan), state::scan>> fut;
-  std::list<decltype(fut)> running_uploads;
-
-  bool loop = true;
-  cads::msg m;
-
-
-  auto scans = fetch_scan_state();
-
-  // resume incomplete scan upload
-  for(auto scan : scans) {
-    
-    auto [scan_begin,path,uploaded,status] = scans.front();
-    
-    if(status == 1) {
-      running_uploads.push_back(std::async(resume_scan, scan));
-    }
-  }
-
 
   do
   {
-    auto have_value = fifo.wait_dequeue_timed(m, std::chrono::seconds(60));
-
-    if(have_value) {
-      spdlog::get("cads")->info("Recieved a scan");
-    }    
-
-    switch (get<0>(m))
-    {
-      case msgid::finished:
-        loop = false;
-        break;
-      default:
-        break;
-    }
+    std::this_thread::sleep_for(std::chrono::seconds(15));
+      
 
     auto scans = fetch_scan_state();
 
-    // restart errored uploads
-    for(const auto &scan : scans) {
-      auto [scan_begin,path,uploaded,status] = scan;
-      if(status == 1 && running_uploads.size() == 0) {
-        running_uploads.push_back(std::async(resume_scan, scan));
+    if(scans.size() == 0) continue;
+
+    auto partitioned_scans = ::remove_all_incomplete(::partiton(scans));
+
+    for(auto pscans : partitioned_scans) {
+      auto [latest,valid] = ::latest_scan(pscans);
+
+      if(!valid) {
+        continue;
+      }
+
+      if(latest.status == 1) {
+        latest.status = 2;
+        if(!update_scan_state(latest)) {
+          break;
+        }
+
+        continue;
+      }
+
+      for(auto scan : pscans) {
+        
+        if (!std::filesystem::exists(scan.db_name))
+        {
+          spdlog::get("cads")->info("{{func = {}, msg = 'File doesn't exist. {}'}}", __func__,scan.db_name);
+          ::delete_scan(scan);
+          continue;
+        }
+        
+        if(scan.status == 2) 
+        {
+          resume_scan(scan);
+        }
+        else if(scan.status == 1 && scan.scanned_utc >= (latest.scanned_utc + constants_upload.Period) ) 
+        {
+          scan.status = 2;
+          if(update_scan_state(scan))
+          {
+            latest = scan;
+            resume_scan(scan);
+          }
+        }
+        else if(scan.scanned_utc < (latest.scanned_utc + constants_upload.Period) && scan.status != 2 && scan.status != 0) 
+        {
+          delete_scan(scan);
+        }
       }
     }
 
+  }while(!terminate);
 
-    std::remove_if(scans.begin(),scans.end(),[](auto s) { return std::get<state::scani::Status>(s) != 0;});
-
-    // keep last scan
-    while(scans.size() > 1)
-    {
-      auto [scan_begin,path,uploaded,status] = scans.front();
-      scans.pop_front();
-      
-      if(status == 0) {
-        delete_scan_state(path);
-        std::filesystem::remove(path);
-        spdlog::get("cads")->info("Removing a scan. {}", path);
-      }
-    }
-
-    // remove finshed uploads
-    std::erase_if(running_uploads,[](const decltype(fut) &f ){return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;});
-    
-    if(scans.size() > 0) {
-      auto last_upload_day = cads::fetch_daily_upload();
-      auto [scan_begin,path,uploaded,status] = scans.front();
-      
-      if( scan_begin > last_upload_day) {
-        store_scan_status(1,path);
-        auto next_upload_date = last_upload_day + std::chrono::days(1);
-        store_daily_upload(next_upload_date);
-        running_uploads.push_back(std::async(resume_scan, scans.front()));
-      }
-    }
-  
-  }while(loop);
-
+  spdlog::get("cads")->info("{{func = {}, msg = 'Exiting'}}", __func__);
 }
 
 }

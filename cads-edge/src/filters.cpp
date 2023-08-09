@@ -15,126 +15,24 @@
 #include <constants.h>
 
 
-
-
 namespace cads
 {
-  void spike_filter(z_type &z, int max_window_size)
-  {
-
-    int z_size = (int)z.size();
-
-    if (max_window_size > z_size)
-      return;
-
-    for (auto i = 0; i < z_size - 3; i++)
-    {
-
-      if (!std::isnan(z[i]))
-        continue;
-
-      for (auto j = 3; j <= std::min(z_size - i, max_window_size); j++)
-      {
-        if (std::isnan(z[i + j - 1]))
-        {
-          for (auto k = i + 1; k < i + j; ++k)
-          {
-            z[k] = std::numeric_limits<z_element>::quiet_NaN();
-          }
-          i += j - 1 - 1; // Extra -1 is due to for(...,i++)
-          break;
-        }
-      }
-    }
-  }
-
-  void spike_filter(z_type &z, int window_size, int lead)
-  {
-
-    int z_size = (int)z.size();
-
-    if (window_size > z_size && window_size == 0)
-      return;
-
-    for (auto i = 0; i < z_size - 2*lead + 1; i++)
-    {
-
-      if (!std::isnan(z[i]))
-        continue;
-
-      auto b = 1; // begin
-      while(std::isnan(z[i + b]) && (b < lead)) ++b;
-
-      if(b != lead)
-        continue;
-
-      for(auto ws = 1; (ws <= window_size) && ((i + 2*lead + ws) < z_size); ws++) {
-        if (!std::isnan(z[i + lead + ws + 1]))
-          continue;
-
-        auto e = 1; //end
-        while(std::isnan(z[i + lead + ws + e]) && (e < lead)) ++e;
-
-        if(e != lead)
-          continue;
-
-        for(auto j = 0; j < ws; ++j) {
-          z[i + j + lead] = std::numeric_limits<z_element>::quiet_NaN();
-        }
-      }
-    }
-  }
-
-
   void pulley_level_compensate(z_type &z, z_element z_off, z_element z_max)
   {
-    const auto z_max_compendated = z_max + z_off;
+    const float threshold = z_max * 0.2;
 
     for (auto &e : z)
     {
       e += z_off;
-      if (e < 15.0f )
+      if (e < threshold )
         e = 0;
-      if (e > z_max_compendated)
-        e = z_max_compendated;
+      if (e > z_max)
+        e = z_max;
     }
   }
 
-  void constraint_clipping(z_type& z, z_element z_min, z_element z_max) {
-    for (auto &e : z)
-    {
-      if(!std::isnan(e)) {
-        if (e < z_min )
-          e = z_min;
-        if (e > z_max)
-          e = z_max;
-      }
-    } 
-  }
-
-  std::function<void(z_type &z)> mk_pulley_damp() {
-    auto d = global_filters.LeftDamp;
-    auto off = global_filters.LeftDampOff;
-
-    return [=](z_type &z) {
-      auto zi = z.begin();
-      auto di = d.begin();
-
-      while(zi < z.end() && di < d.end()) {
-        auto v = *zi + off;
-        v *= *di;
-        *zi = v - off;
-        
-        zi++;di++;
-      }
-
-    };
-  }
-
-
-  std::function<double(double)> mk_iirfilterSoS()
+  std::function<double(double)> mk_iirfilterSoS(std::vector<std::vector<double>> coeff)
   {
-    auto coeff = global_config["iirfilter"]["sos"].get<std::vector<std::vector<double>>>();
     auto r = coeff | std::ranges::views::join;
     std::vector<double> in(r.begin(), r.end());
     Iir::Custom::SOSCascade<10> a(*(double(*)[10][6])in.data());
@@ -145,17 +43,17 @@ namespace cads
     };
   }
 
-  std::function<std::tuple<bool, std::tuple<y_type, double, z_type,int,int,int,z_type>>(std::tuple<y_type, double, z_type,int,int,int,z_type>)> mk_delay(size_t len)
+  std::function<std::tuple<bool, std::tuple<profile,int,int,int,z_type>>(std::tuple<profile,int,int,int,z_type>)> mk_delay(size_t len)
   {
 
-    std::deque<std::tuple<y_type, double, z_type,int,int,int,z_type>> delay;
-    return [=](std::tuple<y_type, double, z_type,int,int,int,z_type> p) mutable
+    std::deque<std::tuple<profile,int,int,int,z_type>> delay;
+    return [=](std::tuple<profile,int,int,int,z_type> p) mutable
     {
       delay.push_back(p);
 
       if (delay.size() < len)
       {
-        return std::tuple{false, std::tuple<y_type, double, z_type,int,int,int,z_type>()};
+        return std::tuple{false, std::tuple<profile,int,int,int,z_type>()};
       }
 
       auto rn = delay.front();
@@ -177,11 +75,6 @@ namespace cads
       level = high || (level && !low);
       return level ? cads::z_element(1) : cads::z_element(-1);
     };
-  }
-
-  std::function<cads::z_element(cads::z_element)> mk_schmitt_trigger(const cads::z_element bias)
-  {
-    return mk_schmitt_trigger(global_filters.SchmittThreshold,bias);
   }
 
   std::function<cads::z_element(cads::z_element,bool)> mk_amplitude_extraction()

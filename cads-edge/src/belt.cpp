@@ -23,7 +23,8 @@ namespace
 
     if (milliseconds >= T0)
     {
-      auto c = -m * (milliseconds) + (1 + m * T0);
+      const auto period = milliseconds - T0;
+      auto c = 1 - m * period;
       if (c > 0.0)
       {
         return c;
@@ -43,24 +44,39 @@ namespace
 namespace cads
 {
 
- std::function<PulleyRevolution(double)> 
-  mk_pulley_revolution(double fps)
+std::function<PulleyRevolution(double)> 
+  mk_pseudo_revolution(double trigger_distance)
   {
-    auto n = revolution_sensor_config.trigger_num;
-    auto bidirectional = revolution_sensor_config.bidirectional;
-    auto bias = revolution_sensor_config.bias;
-    auto pully_circumfrence = global_conveyor_parameters.PulleyCircumference; // In mm
-    auto trigger_distance = pully_circumfrence / n;
-    auto period = global_conveyor_parameters.PulleyCircumference / global_conveyor_parameters.MaxSpeed;
-    long cnt_est = period * fps;
+    double next_revolution = trigger_distance;
+
+    return [=](double len) mutable -> PulleyRevolution
+    {
+      auto rtn = PulleyRevolution{false, trigger_distance};
+
+      if (len > next_revolution)
+      {
+        next_revolution = len + trigger_distance;
+        std::get<0>(rtn) = true;
+      }
+
+      return rtn;
+    };
+  }
+
+
+
+ std::function<PulleyRevolution(double)> 
+  mk_pulley_revolution(RevolutionSensorConfig config)
+  {
+    auto bidirectional = config.bidirectional;
+    auto bias = config.bias;
+    auto trigger_distance = config.trigger_distance;
+    auto cnt_est_threshold = config.skip; //period * constants_gocator.Fps * 0.9;
 
     double schmitt1 = 1.0, schmitt0 = -1.0;
-    auto schmitt_trigger = mk_schmitt_trigger(bias);
-    auto time0 = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> dt = time0 - time0;
-    long cnt = 0;
-    unsigned long big_cnt = 0;
+    auto schmitt_trigger = mk_schmitt_trigger(config.threshold,bias);
 
+    decltype(cnt_est_threshold) cnt = 0;
     auto avg_max_fn = mk_online_mean(bias);
     auto avg_min_fn = mk_online_mean(bias);
 
@@ -84,24 +100,15 @@ namespace cads
       avg_min = avg_min_fn(min);
       bias = avg_min * 0.75 + avg_max * (1 - 0.75);
       
-      if(big_cnt++ % 2000 == 0) {
-          spdlog::get("cads")->debug("schmitt trigger level: {}, avgmax: {}, avgmin: {}",bias, avg_max, avg_min);
-      }
-
-      auto rtn = PulleyRevolution{false, trigger_distance,dt};
+      auto rtn = PulleyRevolution{false, trigger_distance};
 
       schmitt1 = schmitt_trigger(pulley_height);
 
-      if ((cnt > (cnt_est * 0.9)) && ((std::signbit(schmitt1) == true && std::signbit(schmitt0) == false) || 
+      if ((cnt > cnt_est_threshold) && ((std::signbit(schmitt1) == true && std::signbit(schmitt0) == false) || 
          (bidirectional && (std::signbit(schmitt1) == false && std::signbit(schmitt0) == true))))
       {
         cnt = 0;
-        auto now = std::chrono::high_resolution_clock::now();
-        dt = now - time0;
-        time0 = now;
         std::get<0>(rtn) = true;
-        std::get<2>(rtn) = dt;
-
       }
 
       schmitt0 = schmitt1;
@@ -109,11 +116,10 @@ namespace cads
     };
   }
 
-  coro<int, std::tuple<PulleyRevolution, profile>> encoder_distance_estimation(std::function<void(profile)> next, double stride)
+  coro<cads::msg, cads::msg,1> encoder_distance_estimation(cads::Io &next, double stride)
   {
     namespace sml = boost::sml;
 
-    auto args_in = std::tuple<PulleyRevolution, profile>{};
     std::deque<profile> fifo;
 
     struct root_event
@@ -133,10 +139,10 @@ namespace cads
       double stride;
       std::deque<profile> fifo;
       decltype(next) csp;
-    } global;
+      global_t(decltype(next) i) : csp(i) {}
+    } global(next);
 
     global.stride = stride;
-    global.csp = next;
 
     class transitions
     {
@@ -154,7 +160,7 @@ namespace cads
           {
             auto e = global.fifo[std::size_t(i)];
             e.y = global.distance + std::size_t(i) * global.stride;
-            global.csp(e);
+            global.csp.enqueue({msgid::scan,e});
           }
 
           global.distance += o.root_distance;
@@ -176,25 +182,40 @@ namespace cads
     };
 
     sml::sm<transitions> sm{global};
+    msg args_in;
 
     for (auto terminate = false; !terminate;)
     {
-      std::tie(args_in, terminate) = co_yield 0;
-      auto [pulley_revolution, p] = args_in;
-
+      std::tie(args_in, terminate) = co_yield {msgid::nothing,0};
+      
       if (terminate)
         continue;
 
-      auto [root, root_distance, time] = pulley_revolution;
+      auto id = std::get<0>(args_in);
 
-      if (root)
-      {
-        sm.process_event(root_event{root_distance, p});
+      switch(id) {
+        case msgid::pulley_revolution_scan: {
+          auto [root, root_distance,p] = std::get<PulleyRevolutionScan>(std::get<1>(args_in));
+          if (root)
+          {
+            sm.process_event(root_event{root_distance, p});
+          }
+          else
+          {
+            sm.process_event(profile_event{p});
+          }
+          break;
+        }
+        case msgid::stopped:
+        case msgid::finished: {
+          next.enqueue(args_in);
+          terminate = true;
+          break;
+        }
+        default:
+          next.enqueue(args_in);
       }
-      else
-      {
-        sm.process_event(profile_event{p});
-      }
+      
     }
   }
 
@@ -217,14 +238,12 @@ namespace cads
 
 
  
-  std::function<std::tuple<double,double,double>(PulleyRevolution,double)> mk_pulley_stats(double init)
+  std::function<std::tuple<double,double,double>(PulleyRevolution,double,std::chrono::time_point<std::chrono::system_clock>)> mk_pulley_stats(double avg_speed, double pulley_circumfrence)
   {
     using namespace std::placeholders;
 
-    auto pulley_circumfrence = global_conveyor_parameters.PulleyCircumference;
-    auto avg_speed = global_conveyor_parameters.MaxSpeed;
-    auto T0 = 1000 * pulley_circumfrence / avg_speed; // in ms
-    auto T1 = 2 * T0;  // in ms
+    auto T0 = 1000 * pulley_circumfrence / avg_speed; // in milliseconds
+    auto T1 = 6 * T0;  // in milliseconds
     auto barrel_origin_time = std::chrono::high_resolution_clock::now();
     
     double period = 1.0;
@@ -232,15 +251,14 @@ namespace cads
     auto adjust = std::bind(pulley_speed_adjustment, _1, T0, T1);
     auto amplitude_extraction = mk_amplitude_extraction();
 
-    double speed = init;
+    double speed = avg_speed / 1000; // m/s
     double amplitude = 0;
     double frequency = 0;
 
-    return [=](PulleyRevolution pulley_revolution, double pulley_osc) mutable -> std::tuple<double,double,double>
+    return [=](PulleyRevolution pulley_revolution, double pulley_osc, std::chrono::time_point<std::chrono::system_clock> now) mutable -> std::tuple<double,double,double>
     {
-      auto [root, root_distance, root_dt] = pulley_revolution;
+      auto [root, root_distance] = pulley_revolution;
 
-      auto now = std::chrono::high_resolution_clock::now();
       std::chrono::duration<double, std::milli> dt = now - barrel_origin_time;
       period = dt.count();
       amplitude_extraction(pulley_osc, false);
@@ -257,7 +275,7 @@ namespace cads
 
       if (cnt == 0)
       {
-        barrel_origin_time = std::chrono::high_resolution_clock::now();
+        barrel_origin_time = now;
         cnt++;
       }
 

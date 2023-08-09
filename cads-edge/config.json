@@ -1,8 +1,12 @@
 {
-  "data_source" : "gocator",
+  "data_source" : "../../profiles/rawprofile_cv912.db",
+
+  "Device" : {
+    "Serial" : 1234
+  },
   
   "sqlite_gocator" : {
-    "range" : [0,9007199254740991],
+    "range" : [0,99999999999],
     "fps" : 984,
     "forever" : false,
     "delay" : 98
@@ -22,7 +26,6 @@
   },
 
   "z_height" : 27.0,
-  "width_n" : 1890,
   "clip_height" : 36.0,
   "left_edge_nan" : 3,
   "right_edge_nan" : 3,
@@ -86,7 +89,7 @@
     "Name" : "cv001",
     "Timezone" : "Australia/Perth",
     "PulleyCircumference" : 4178.32,
-    "MaxSpeed" : 6090.0
+    "MaxSpeed" : 6.09
   },
 
   "belt" : {
@@ -95,6 +98,7 @@
     "CordDiameter" : 9.1,
     "TopCover" : 14.0,
     "Width" : 1600,
+    "WidthN" : 1890,
     "Length" : 12545200,
     "Splices" : 1
   },

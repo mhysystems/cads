@@ -4,6 +4,9 @@
 #include <tuple>
 #include <exception>
 #include <type_traits>
+#include <chrono>
+
+#include <msg.h>
 
 namespace cads
 {
@@ -88,14 +91,16 @@ namespace cads
     };
 
     handle_type coro_hnd;
+    bool valid_handle = false;
 
 
     friend void swap(coro& first, coro& second)
     {
       std::swap(first.coro_hnd, second.coro_hnd);
+      std::swap(first.valid_handle, second.valid_handle);
     }
     
-    coro(handle_type h) : coro_hnd(h){}
+    coro(handle_type h) : coro_hnd(h), valid_handle(true){}
     coro& operator=(coro&& rhs) noexcept
     {
       swap(*this,rhs);
@@ -105,17 +110,23 @@ namespace cads
     
     // To keep track of what is used
     coro() = delete;
-    coro(const coro&) = delete;
-    coro(coro&& c) = delete;
+    coro(const coro&) = delete;    
     coro& operator=(const coro&) = delete;
+    
+    coro(coro&& c) {
+      swap(*this,c);
+    };
+
     
     
     ~coro() { 
-
-      if (!coro_hnd.done()) {
-        terminate();
+      
+      if(valid_handle && coro_hnd) {
+        if (!coro_hnd.done()) {
+          terminate();
+        }
+        coro_hnd.destroy(); 
       }
-      coro_hnd.destroy(); 
 
     }
 
@@ -127,6 +138,30 @@ namespace cads
         coro_hnd.resume(); // Eventually calls await_resume
       
       return {coro_hnd.done(), coro_hnd.promise().from_coro};
+    }
+
+    bool enqueue(TC a) {
+      return std::get<0>(resume(a));
+    }
+
+    void wait_dequeue(FC& fc) {
+      TC tc;
+      bool i;
+      std::tie(i,fc) = resume(tc);
+    }
+
+    bool wait_dequeue_timed(msg& x, [[maybe_unused]]std::chrono::seconds s) {
+      wait_dequeue(x);
+      return true;
+    }
+
+    size_t size_approx() {
+      return 1;
+    }
+
+    bool is_done()
+    {
+      return coro_hnd.done();
     }
 
     void terminate()

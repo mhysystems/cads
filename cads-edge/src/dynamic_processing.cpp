@@ -75,7 +75,7 @@ namespace cads
     return rtn;
   }
 
-  coro<double, msg> lua_processing_coro(int width)
+  coro<double, msg> lua_processing_coro(int width, cads::Io &next)
   {
     auto height = global_config["lua_window_height"].get<int>();
     
@@ -129,7 +129,7 @@ namespace cads
           result = eval_lua_process(L,width,height);
           auto location = std::round(p.y / 1000) * 1000;
           if(result > 0 /*&& !anomolies.contains(location)*/) {
-            measurements.send("anomaly",0,std::make_tuple(result,location));
+            next.enqueue({msgid::measure,Measure::MeasureMsg{"anomaly",0,date::utc_clock::now(),std::make_tuple(result,location)}});
             //anomolies.insert(location);
           }
         }
@@ -146,16 +146,20 @@ namespace cads
     spdlog::get("cads")->info("lua_processing_coro finished");
   }
 
-  void dynamic_processing_thread(moodycamel::BlockingReaderWriterQueue<msg> &profile_fifo, moodycamel::BlockingReaderWriterQueue<msg> &next_fifo, int width)
+  void dynamic_processing_thread(DynamicProcessingConfig config, cads::Io &profile_fifo, cads::Io &next_fifo)
   {
 
-    auto realtime_processing = lua_processing_coro(width);
     int64_t cnt = 0;
     profile p;
     cads::msg m;
     auto buffer_size_warning = buffer_warning_increment;
+    int widthn = (int)config.WidthN;
 
+    auto realtime_processing = lua_processing_coro(widthn,next_fifo);
+    
     auto start = std::chrono::high_resolution_clock::now();
+
+    bool module_failure = false;
 
     for (auto loop = true;loop;)
     {
@@ -165,6 +169,7 @@ namespace cads
       switch(get<0>(m)) {
         case msgid::scan:
            p = get<profile>(get<1>(m));
+           next_fifo.enqueue(m);
         break;
         case msgid::finished:
           loop = false;
@@ -175,11 +180,17 @@ namespace cads
           continue;
       }
 
+      // Stops filling up logs with errors
+      if(realtime_processing.is_done()) {
+        continue;
+      }
+
       auto [err, rslt] = realtime_processing.resume(m);
 
       if (err)
       {
-        spdlog::get("cads")->error("dynamic_processing_thread: realtime_processing");
+        module_failure = true;
+        spdlog::get("cads")->error(R"({{func = '{}' fn = '{}', rtn = {}, msg = '{}' }})",__func__,"realtime_processing",err,"Stopped processing. Passthrough only");
       }
 
       if (rslt > 0)
@@ -192,8 +203,6 @@ namespace cads
         spdlog::get("cads")->warn("Cads Dynamic Processing showing signs of not being able to keep up with data source. Size {}", buffer_size_warning);
         buffer_size_warning += buffer_warning_increment;
       }
-
-      next_fifo.enqueue(m);
     }
 
     auto end = std::chrono::high_resolution_clock::now();

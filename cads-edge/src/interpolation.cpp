@@ -8,6 +8,40 @@
 namespace cads
 {
 
+  decltype(cads::profile::z) interpolate_to_widthn(decltype(cads::profile::z) z, size_t n )
+  {
+    using namespace std;
+
+    auto step = (double)z.size() / (double)n;
+    decltype(z) interpolated_z(n);
+
+    assert(step > 0);
+
+    for(size_t i = 0; i < n; i++) {
+      interpolated_z[i] = z[(size_t)floor(i*step)];
+    }
+
+    return interpolated_z;
+  }
+
+  decltype(cads::profile::z) interpolation_nearest(decltype(cads::profile::z) z)
+  {
+    using namespace std;
+    namespace sr = std::ranges;
+    
+    auto z_range = z | sr::views::filter([](float e) { return !std::isnan(e); });
+    decltype(cads::profile::z) filtered_z{z_range.begin(),z_range.end()};
+    auto step = (double)z.size() / (double)filtered_z.size();
+    
+    assert(step > 0);
+    
+    for(size_t i = 0; i < z.size(); i++) {
+      z[i] = filtered_z[(size_t)floor(i*step)];  
+    }
+
+    return z;
+  }
+
   void interpolation_nearest(z_type::iterator begin, z_type::iterator end, std::function<bool(z_element)> is)
   {
 
@@ -155,10 +189,10 @@ namespace cads
     {
       i = std::find_if(i, z.end(), [](z_element a)
                        { return std::isnan(a); });
-      auto l = i;
+    
 
       auto cnt = 10;
-
+      auto l = i;
       while (l >= z.begin() && cnt > 0)
       {
         if (!std::isnan(*l))

@@ -23,16 +23,18 @@ extern json global_config;
 namespace cads
 {
 
-  void SqliteGocatorReader::Start()
+  bool SqliteGocatorReader::Start_impl()
   {
     if (m_stopped)
     {
       m_stopped = false;
       m_thread = std::jthread{&SqliteGocatorReader::OnData, this};
     }
+
+    return false;
   }
 
-  void SqliteGocatorReader::Stop()
+  void SqliteGocatorReader::Stop_impl()
   {
     if (!m_stopped)
     {
@@ -41,43 +43,41 @@ namespace cads
     }
   }
 
-  SqliteGocatorReader::SqliteGocatorReader(moodycamel::BlockingReaderWriterQueue<msg> &gocatorFifo, SqliteGocatorConfig config) : GocatorReaderBase(gocatorFifo), m_config(config)
-  {
-  }
+  SqliteGocatorReader::SqliteGocatorReader(SqliteGocatorConfig cnf, Io &gocatorFifo) : GocatorReaderBase(gocatorFifo), config(cnf) {}
 
-  SqliteGocatorReader::SqliteGocatorReader(moodycamel::BlockingReaderWriterQueue<msg> &gocatorFifo) : GocatorReaderBase(gocatorFifo), m_config(sqlite_gocator_config)
-  {
+  SqliteGocatorReader::~SqliteGocatorReader() {
+    Stop_impl();
   }
 
   void SqliteGocatorReader::OnData()
   {
-    auto data_src = global_config["data_source"].get<std::string>();
+    using namespace std::chrono_literals;
+
+    auto data_src = config.Source.generic_string();
     auto [params, err2] = fetch_profile_parameters(data_src);
 
-    m_gocatorFifo.enqueue({msgid::gocator_properties, GocatorProperties{params.y_res, params.x_res, params.z_res, params.z_off, params.encoder_res, m_config.fps}});
+    m_gocatorFifo.enqueue({msgid::gocator_properties, params});
 
-    m_yResolution = params.y_res;
-    m_encoder_resolution = params.encoder_res;
-    auto pulley_period_us = 1000000 / m_config.fps;
-    uint64_t cnt = 0;
+    double y_resolution = 1000 * config.TypicalSpeed / config.Fps;
+    auto pulley_period = 1000000us / (int)config.Fps;
+    double cnt = 0;
+    auto current_time = std::chrono::high_resolution_clock::now();
 
     do
     {
-      auto fetch_profile = fetch_belt_coro(0,std::get<1>(m_config.range), std::get<0>(m_config.range), 256, data_src);
-      auto loop_time = std::chrono::high_resolution_clock::now();
-      std::chrono::duration<double, std::micro> slept_for(0);
+      auto fetch_profile = fetch_belt_coro(0,std::get<1>(config.Range), std::get<0>(config.Range), 256, data_src);
+
       while (!m_stopped)
       {
 
         auto [co_terminate, cv] = fetch_profile.resume(0);
         auto [idx, p] = cv;
 
-        if (co_terminate && !m_config.forever)
+        if (co_terminate && !config.Forever)
         {
-          m_gocatorFifo.enqueue({msgid::finished, 0});
           m_stopped = true;
           break;
-        }else if(co_terminate && m_config.forever) {
+        }else if(co_terminate && config.Forever) {
           break;
         }
 
@@ -87,19 +87,10 @@ namespace cads
         auto last = std::find_if(p.z.rbegin(), p.z.rend(), [](z_element z)
                                  { return !std::isnan(z); });
 
-        m_gocatorFifo.enqueue({msgid::scan, profile{p.y, p.x_off, z_type(first, last.base())}});
-        
-        auto now = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double, std::micro> dt = now - loop_time;
+        if(!m_stopped) m_gocatorFifo.enqueue({msgid::scan, profile{current_time,cnt*y_resolution, p.x_off, z_type(first, last.base())}});
 
-        loop_time = now;
+        current_time += pulley_period;
         cnt++;
-        auto sleep_for = uint64_t(2*pulley_period_us - (dt + slept_for).count() - m_config.delay);
-        
-        auto start = std::chrono::system_clock::now();
-        std::this_thread::sleep_for(std::chrono::microseconds(sleep_for));
-        auto end = std::chrono::system_clock::now();  
-        slept_for = end - start;           
                      
         if (m_gocatorFifo.size_approx() > buffer_warning_increment)
         {
@@ -107,13 +98,10 @@ namespace cads
           while(m_gocatorFifo.size_approx() > buffer_warning_increment / 4){}
         }
 
-        if (terminate)
-        {
-          m_gocatorFifo.enqueue({msgid::finished, 0});
-          m_stopped = true;
-        }
       }
-    } while (m_config.forever && !terminate);
+    } while (config.Forever && !m_stopped);
+    
+    m_gocatorFifo.enqueue({msgid::finished, 0});
   }
 
 }

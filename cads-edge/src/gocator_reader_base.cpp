@@ -1,5 +1,6 @@
 #include <algorithm>
-#include <signal.h> 
+
+#include <spdlog/spdlog.h>
 
 #include <gocator_reader_base.h>
 
@@ -7,22 +8,29 @@
 
 namespace cads
 {
-  std::atomic<bool> GocatorReaderBase::terminate = false;
-
-  void GocatorReaderBase::sigint_handler([[maybe_unused]]int s) {
-    terminate = true;
+  GocatorReaderBase::GocatorReaderBase(Io& fifo) : m_gocatorFifo(fifo)
+  {
   }
 
-  GocatorReaderBase::GocatorReaderBase(moodycamel::BlockingReaderWriterQueue<msg> &gocatorFifo) : m_gocatorFifo(gocatorFifo) 
-  {
-    struct sigaction sigIntHandler;
+  bool GocatorReaderBase::Start_impl() {
+    return false;
+  }
 
-    sigIntHandler.sa_handler = sigint_handler;
-    sigemptyset(&sigIntHandler.sa_mask);
-    sigIntHandler.sa_flags = 0;
+  void GocatorReaderBase::Stop_impl() {
+  }
 
-    sigaction(SIGINT, &sigIntHandler, NULL);
+  bool GocatorReaderBase::SetFrameRate(double) {
+    return false;
+  }
 
+  bool GocatorReaderBase::Start(double fps) {
+    spdlog::get("cads")->debug(R"({{func = '{}', msg = 'Framerate {}'}})", __func__,fps);
+    SetFrameRate(fps);
+    return Start_impl();
+  }
+
+  void GocatorReaderBase::Stop() {
+    Stop_impl();
   }
 
   z_type GocatorReaderBase::k16sToFloat(k16s *z_start, k16s *z_end, double z_resolution, double z_offset)

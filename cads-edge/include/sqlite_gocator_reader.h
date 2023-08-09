@@ -11,30 +11,39 @@
 namespace cads
 {
 
-class SqliteGocatorReader : public GocatorReaderBase
-{
+  struct SqliteGocatorConfig {
+    using range_type = std::tuple<long long,long long>;
+    range_type Range;
+    double Fps;
+    bool Forever;
+    double Delay;
+    std::filesystem::path Source;
+    double TypicalSpeed;
+  };
 
-	SqliteGocatorReader() = delete;
-	SqliteGocatorReader(const SqliteGocatorReader&) = delete;
-	SqliteGocatorReader& operator=(const SqliteGocatorReader&) = delete;
-	SqliteGocatorReader(SqliteGocatorReader&&) = delete;
-	SqliteGocatorReader& operator=(SqliteGocatorReader&&) = delete;
+  class SqliteGocatorReader : public GocatorReaderBase
+  {
 
-protected:
-	std::atomic<bool> m_loop = false;
-  std::jthread m_thread;
-  SqliteGocatorConfig m_config;
-	
-  void OnData();
+    SqliteGocatorReader() = delete;
+    SqliteGocatorReader(const SqliteGocatorReader&) = delete;
+    SqliteGocatorReader& operator=(const SqliteGocatorReader&) = delete;
+    SqliteGocatorReader(SqliteGocatorReader&&) = delete;
+    SqliteGocatorReader& operator=(SqliteGocatorReader&&) = delete;
+    virtual bool Start_impl();
+    virtual void Stop_impl();
 
-public:
+  protected:
+    std::atomic<bool> m_loop = false;
+    std::jthread m_thread;
+    SqliteGocatorConfig config;
 
-	void Start();
-	void Stop();
-  SqliteGocatorReader(moodycamel::BlockingReaderWriterQueue<msg>&, SqliteGocatorConfig);
-  SqliteGocatorReader(moodycamel::BlockingReaderWriterQueue<msg>&);
-	virtual ~SqliteGocatorReader() = default;
-};
+    void OnData();
+
+  public:
+
+    SqliteGocatorReader(SqliteGocatorConfig,Io&);
+    virtual ~SqliteGocatorReader();
+  };
 
 
 }

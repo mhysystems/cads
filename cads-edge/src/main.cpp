@@ -20,26 +20,21 @@ int main(int argn, char **argv)
 	using namespace cads;
 
 	po::options_description desc("Allowed options");
-  po::positional_options_description pos_desc;
 
 	desc.add_options()
 		("help,h", "produce help message")
 		("config,c", po::value<std::string>(), "Config JSON file.")
     ("savedb,d", po::bool_switch(), "Only save one approx belt")
     ("stop,s", po::bool_switch(), "Stop Gocator")
-    ("upload,u", po::value<std::string>()->implicit_value(""), "Upload Profile Only")
     ("signal,e", po::bool_switch(), "Generate signal for input into python filter parameter creation")
-    ("go-log,g", po::bool_switch(), "Dump Gocator Log")
     ("level,l", po::value<std::string>(), "Logging Level")
-    ("db-name", po::value<std::string>(), "db file");
-
-  pos_desc.add("db-name", 1);
+    ("remote-config,r",po::bool_switch(),"Wait for remote config");
 
 	po::variables_map vm;
 
 	try
 	{
-		po::store(po::command_line_parser(argn, argv).options(desc).positional(pos_desc).run(), vm);
+		po::store(po::command_line_parser(argn, argv).options(desc).run(), vm);
 		po::notify(vm);
 	}
 	catch (std::exception &e)
@@ -61,7 +56,9 @@ int main(int argn, char **argv)
     return 0;
   }
 
-	if (vm.count("config") > 0)
+  init_logs(60); // Must be before init_config
+	
+  if (vm.count("config") > 0)
 	{
 		auto f = vm["config"].as<std::string>();
     init_config(f);
@@ -74,7 +71,7 @@ int main(int argn, char **argv)
 		return EXIT_FAILURE;
 	}
 
-  init_logs(60);
+
   create_default_dbs();
 
   if(vm.count("level") > 0) {
@@ -89,18 +86,16 @@ int main(int argn, char **argv)
 
   }
   
-  if(vm.count("upload")) {
-    auto dbname = vm.count("db-name") ? vm["db-name"].as<std::string>() : "";
-    upload_profile_only(vm["upload"].as<std::string>(),dbname);
-  }else if(vm["savedb"].as<bool>()) {
+  if(vm["savedb"].as<bool>()) {
     store_profile_only();
   }else if(vm["signal"].as<bool>()) {
     generate_signal();
-  }else if(vm["go-log"].as<bool>()) {
-    dump_gocator_log();
+  }else if(vm["remote-config"].as<bool>()) {
+    cads_remote_main();
   }else{
-	  process();
+	  cads_local_main(vm["config"].as<std::string>());
   }
 
+  drop_logs();
 	return 0;
 }

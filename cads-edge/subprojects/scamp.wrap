@@ -1,0 +1,7 @@
+[wrap-git]
+url = https://github.com/hexagonhill/SCAMP.git
+revision = hexdev
+depth=1
+
+[provide]
+scamp = scamp_dep

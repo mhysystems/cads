@@ -1,15 +1,15 @@
 {
     "configurations": [
         {
-            "name": "Linux",
+            "name": "Linux x64",
             "includePath": [
                 "${workspaceFolder}/**"
             ],
             "defines": [],
-            "compilerPath": "/usr/bin/gcc-11",
+            "compilerPath": "/usr/bin/gcc",
             "cStandard": "gnu11",
             "cppStandard": "gnu++20",
-            "intelliSenseMode": "linux-gcc-arm64",
+            "intelliSenseMode": "linux-gcc-x64",
             "compileCommands": "${workspaceFolder}/debug/compile_commands.json"
         }
     ],

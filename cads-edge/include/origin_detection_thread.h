@@ -1,10 +1,11 @@
 #pragma once
 
-#include <readerwriterqueue.h>
-#include <msg.h>
+#include <io.hpp>
+#include <constants.h>
 
 namespace cads
 {
-  void window_processing_thread(double x_resolution, double y_resolution, int width_n, moodycamel::BlockingReaderWriterQueue<msg> &profile_fifo, moodycamel::BlockingReaderWriterQueue<msg> &next_fifo);
-  void bypass_fiducial_detection_thread(moodycamel::BlockingReaderWriterQueue<msg> &profile_fifo, moodycamel::BlockingReaderWriterQueue<msg> &next_fifo);
+  void window_processing_thread(Conveyor conveyor,cads::Io &profile_fifo, cads::Io &next_fifo);
+  void splice_detection_thread(cads::AnomalyDetection anomaly, cads::Io &profile_fifo, cads::Io &next_fifo);
+  void loop_beltlength_thread(Conveyor conveyor, cads::Io &profile_fifo, cads::Io &next_fifo);
 }
