@@ -45,7 +45,5 @@
   },
 
   "upload_profile" : false,
-  "base_url" : "https://fmgcads.mhysystems.com/api",
-  "lua_window_height" : 2,
-  "lua_fn" : "function process(width,height)\n return 0\nend"
+  "base_url" : "https://fmgcads.mhysystems.com/api"
 }

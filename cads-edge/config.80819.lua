@@ -98,6 +98,14 @@ profileConfig = {
   Measures = measures
 }
 
+dynamicProcessingConfig = {
+  WidthN = conveyor.WidthN,
+  WindowSize = 2,
+  InitValue = 30.0,
+  LuaCode = LuaCodeSelfRef,
+  Entry = "process"  
+}
+
 function timeToString(time) -- overwritten externally
   return tostring(time)
 end
@@ -189,7 +197,7 @@ function main(sendmsg)
   
   --local laser = gocator(laserConf,gocator_cads)
   local laser = sqlitegocator(sqlitegocatorConfig,gocator_cads) 
-  local thread_process_profile = process_profile(profileConfig,gocator_cads,cads_origin)
+  local thread_process_profile = dynamic_processing_thread(dynamicProcessingConfig,gocator_cads,cads_origin)
   --local belt_loop = anomaly_detection_thread(anomaly,cads_origin,origin_savedb)
   local belt_loop = loop_beltlength_thread(conveyor,cads_origin,origin_savedb)
   local thread_send_save = save_send_thread(conveyor,origin_savedb,savedb_luamain)

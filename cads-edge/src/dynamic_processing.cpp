@@ -56,10 +56,10 @@ namespace cads
     lua_setglobal(L, "win");
   }
 
-  double eval_lua_process(lua_State *L, int width, int height)
+  double eval_lua_process(lua_State *L, int width, int height,std::string entry)
   {
 
-    lua_getglobal(L, "process");
+    lua_getglobal(L, entry.c_str());
     lua_pushnumber(L, width);
     lua_pushnumber(L, height);
     lua_pcall(L, 2, 1, 0);
@@ -75,21 +75,22 @@ namespace cads
     return rtn;
   }
 
-  coro<double, msg> lua_processing_coro(int width, cads::Io &next)
+  coro<double, msg> lua_processing_coro(DynamicProcessingConfig config, cads::Io &next)
   {
-    auto height = global_config["lua_window_height"].get<int>();
+    auto height = config.WindowSize;
+    auto width = config.WidthN;
     
     if(width < 1 || height < 1) {
       std::throw_with_nested(std::runtime_error("lua_processing_coro: Width or height less than one"));
     }
     
-    auto window = std::vector<z_element>(size_t(width * height), 33.0/*std::numeric_limits<z_element>::quiet_NaN()*/);
+    auto window = std::vector<z_element>(size_t(width * height), config.InitValue);
 
     lua_State *L = luaL_newstate();
     luaL_openlibs(L);
     inject_global_array(L, window.data());
     
-    auto lua_fn = global_config["lua_fn"].get<std::string>();
+    auto lua_fn = config.LuaCode;
 
    if (luaL_dostring(L, lua_fn.c_str()) != LUA_OK)
     {
@@ -117,8 +118,12 @@ namespace cads
         auto p = get<profile>(get<1>(m));
 
         if((int)p.z.size() != width) {
-          spdlog::get("cads")->error("Profile width {} != window width {}",p.z.size(),width);
-          break;
+          spdlog::get("cads")->error("{{ func = {},  msg = 'Profile width {} != window width {}' }}",__func__,p.z.size(),width);
+          if(p.z.size() > (std::size_t)width) {
+            p.z.erase(p.z.begin()+width, p.z.end());
+          }else{
+            p.z.insert(p.z.end(), width - p.z.size(), (float)config.InitValue);
+          }
         }
         memmove(window.data() + width, window.data(), size_t(width*(height-1))*sizeof(z_element)); // shift 2d array by one row
         memcpy(window.data(), p.z.data(), size_t(width)*sizeof(z_element));
@@ -126,7 +131,7 @@ namespace cads
         result = 0.0;
         auto belt_section = cnt++ % (int64_t)height;
         if(belt_section == 0) {
-          result = eval_lua_process(L,width,height);
+          result = eval_lua_process(L,width,height,config.Entry);
           auto location = std::round(p.y / 1000) * 1000;
           if(result > 0 /*&& !anomolies.contains(location)*/) {
             next.enqueue({msgid::measure,Measure::MeasureMsg{"anomaly",0,date::utc_clock::now(),std::make_tuple(result,location)}});
@@ -153,13 +158,8 @@ namespace cads
     profile p;
     cads::msg m;
     auto buffer_size_warning = buffer_warning_increment;
-    int widthn = (int)config.WidthN;
-
-    auto realtime_processing = lua_processing_coro(widthn,next_fifo);
-    
+    auto realtime_processing = lua_processing_coro(config,next_fifo);
     auto start = std::chrono::high_resolution_clock::now();
-
-    bool module_failure = false;
 
     for (auto loop = true;loop;)
     {
@@ -189,7 +189,6 @@ namespace cads
 
       if (err)
       {
-        module_failure = true;
         spdlog::get("cads")->error(R"({{func = '{}' fn = '{}', rtn = {}, msg = '{}' }})",__func__,"realtime_processing",err,"Stopped processing. Passthrough only");
       }
 

@@ -19,6 +19,7 @@
 #include <sqlite_gocator_reader.h>
 #include <gocator_reader.h>
 #include <filters.h>
+#include <init.h>
 
 namespace
 {
@@ -936,8 +937,68 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
       spdlog::get("cads")->error("{{ func = {},  msg = 'WidthN not a integer' }}", __func__);
       return std::nullopt;
     }
+      
+    if (lua_getfield(L, index, "WindowSize") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "WindowSize");
+      return std::nullopt;
+    }
 
-    return cads::DynamicProcessingConfig{*WidthN_opt};
+    auto WindowSize_opt = tointeger(L, -1);
+    lua_pop(L, 1);
+
+    if (!WindowSize_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'WindowSize not a integer' }}", __func__);
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "InitValue") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "InitValue");
+      return std::nullopt;
+    }
+
+    auto InitValue_opt = tonumber(L, -1);
+    lua_pop(L, 1);
+
+    if (!InitValue_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'InitValue not a number' }}", __func__);
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "LuaCode") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "LuaCode");
+      return std::nullopt;
+    }
+
+    auto LuaCode_opt = tostring(L, -1);
+    lua_pop(L, 1);
+
+    if (!LuaCode_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'LuaCode not a string' }}", __func__);
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "Entry") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "Entry");
+      return std::nullopt;
+    }
+
+    auto Entry_opt = tostring(L, -1);
+    lua_pop(L, 1);
+
+    if (!Entry_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'Entry not a string' }}", __func__);
+      return std::nullopt;
+    }
+
+    return cads::DynamicProcessingConfig{*WidthN_opt,*WindowSize_opt,*InitValue_opt,*LuaCode_opt,*Entry_opt};
   }
 
   void pushmetric(lua_State *L, cads::Measure::MeasureMsg m) 
@@ -1375,12 +1436,15 @@ namespace cads
   namespace lua
   {
 
-    Lua init(Lua UL, long long serial)
+    Lua init(Lua UL, long long serial, std::string lua_code)
     {
       auto L = UL.get();
 
       lua_pushinteger(L,serial);
       lua_setglobal(L,"DeviceSerial");
+
+      lua_pushstring(L,lua_code.c_str());
+      lua_setglobal(L,"LuaCodeSelfRef");
 
       lua_pushcfunction(L, ::BlockingReaderWriterQueue);
       lua_setglobal(L, "BlockingReaderWriterQueue");
@@ -1444,12 +1508,12 @@ namespace cads
     auto L = Lua{luaL_newstate(), lua_close};
     luaL_openlibs(L.get());
 
-    L = lua::init(std::move(L),constants_device.Serial);
+    L = lua::init(std::move(L),constants_device.Serial,lua_code);
     auto lua_status = luaL_dostring(L.get(), lua_code.c_str());
 
     if (lua_status != LUA_OK)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = 'luaL_dofile: {}' }}", __func__, lua_tostring(L.get(), -1));
+      spdlog::get("cads")->error("{{ func = {},  msg = 'luaL_dostring: {}' }}", __func__, lua_tostring(L.get(), -1));
       return {std::move(L), true};
     }
 
@@ -1463,20 +1527,7 @@ namespace cads
     fs::path luafile{f};
     luafile.replace_extension("lua");
 
-    auto L = Lua{luaL_newstate(), lua_close};
-    luaL_openlibs(L.get());
-
-    L = lua::init(std::move(L),constants_device.Serial);
-
-    auto lua_status = luaL_dofile(L.get(), luafile.string().c_str());
-
-    if (lua_status != LUA_OK)
-    {
-      spdlog::get("cads")->error("{}: luaL_dofile: {}", __func__, lua_tostring(L.get(), -1));
-      return {std::move(L), true};
-    }
-
-    return {std::move(L), false};
+    return run_lua_code(slurpfile(luafile.string()));
   }
 
   void push_externalmsg(lua_State *L, moodycamel::BlockingConcurrentQueue<std::tuple<std::string, std::string, std::string>> *queue)
