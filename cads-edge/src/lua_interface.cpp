@@ -43,9 +43,13 @@ namespace
 
   int send_external_msg(lua_State *L) {   
     auto p = (moodycamel::BlockingConcurrentQueue<std::tuple<std::string, std::string, std::string>> *)lua_topointer(L, lua_upvalueindex(1));
-    std::string sub(lua_tostring(L,1));
-    std::string cat(lua_tostring(L,2));
-    std::string msg(lua_tostring(L,3));
+    size_t strlen = 0;
+    auto str = lua_tolstring(L,1,&strlen);
+    std::string sub(str,strlen);
+    str = lua_tolstring(L,2,&strlen);
+    std::string cat(str,strlen);
+    str = lua_tolstring(L,3,&strlen);
+    std::string msg(str,strlen);
     p->enqueue({sub,cat,msg});
     return 0;
   }
@@ -1064,11 +1068,11 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
 
       lua_newtable(L);
       lua_pushnumber(L, 1); 
-      lua_pushstring(L,sub.c_str());
+      lua_pushlstring(L,sub.c_str(),data.size());
       lua_settable(L,-3);
 
       lua_pushnumber(L, 2); 
-      lua_pushstring(L,data.c_str());
+      lua_pushlstring(L,data.c_str(),data.size());
       lua_settable(L,-3);
   }
 
@@ -1423,6 +1427,24 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
     return 1;
   }
 
+  int profile_decimation(lua_State *L)
+  {
+   
+    double stride = lua_tonumber(L, 1);
+    double modulo = lua_tointeger(L, 2);
+    auto next = static_cast<cads::Io *>(lua_touserdata(L, 3));
+
+    using user_type = cads::Adapt<decltype(cads::profile_decimation_coro(stride,modulo,std::ref(*next)))>;
+
+    new (lua_newuserdata(L, sizeof(user_type))) user_type(cads::profile_decimation_coro(stride,modulo,std::ref(*next)));
+
+    lua_createtable(L, 0, 1);
+    lua_pushcfunction(L, Io_gc);
+    lua_setfield(L, -2, "__gc");
+    lua_setmetatable(L, -2);
+    return 1;
+  }
+
   int get_serial(lua_State *L)
   {
     lua_pushinteger(L, cads::constants_device.Serial);
@@ -1496,6 +1518,9 @@ namespace cads
 
       lua_pushcfunction(L,get_now);
       lua_setglobal(L,"getNow");
+
+      lua_pushcfunction(L,profile_decimation);
+      lua_setglobal(L,"profile_decimation");
 
       return UL;
     }

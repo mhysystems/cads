@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using System.Runtime.InteropServices;
 
 using NATS.Client;
 using caas_gui.Data;
@@ -10,6 +11,7 @@ namespace caas_gui.Services;
 
 public class NatsConsumerHostedService : BackgroundService
 {
+
   protected readonly ILogger<NatsConsumerHostedService> _logger;
   protected readonly IHubContext<MessagesHub> _messageshubContext;
   protected readonly AppSettings _config;
@@ -95,6 +97,11 @@ public class NatsConsumerHostedService : BackgroundService
                 }else {
                   _logger.LogError("Scanprogress value not a double");
                 }
+              }
+            }else if(id == "profile"){
+              var value = msg.Message?.Data;
+              if(value is not null) {
+                await _messageshubContext.Clients.Group(device.Serial.ToString()).SendAsync("Profile",value,stoppingToken);
               }
             }else if(id == "scancomplete") {
               

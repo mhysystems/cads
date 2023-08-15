@@ -55,6 +55,30 @@ using namespace std::chrono;
 
 namespace cads
 {
+  coro<cads::msg,cads::msg,1> profile_decimation_coro(double stride, long long modulo, cads::Io &next)
+  {
+    cads::msg empty;
+    for(long cnt = 0;;cnt++){
+      
+      auto [msg,terminate] = co_yield empty;  
+      
+      if(terminate) break;
+
+      switch(std::get<0>(msg)) {
+        case msgid::scan: {
+          if(cnt % modulo == 0){
+            auto p = std::get<profile>(std::get<1>(msg));
+            auto z = decimate(p.z,stride);
+            next.enqueue({msgid::caas_msg,cads::CaasMsg{"profile",std::string((char*)z.data(),z.size()*sizeof(float))}});
+          }
+        }
+        break;
+        default:
+          next.enqueue(msg);
+      }
+    }
+  }
+
   void process_identity(Io& gocatorFifo, Io& next) {
     msg m;
     do

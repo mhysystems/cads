@@ -1,8 +1,8 @@
 {
   "Device" : {
-    "Serial" : 80819
+    "Serial" : 1234
   },
-
+  
   "fiducial" : {
     "fiducial_depth" : 2,
     "fiducial_x" : 25,
@@ -10,27 +10,26 @@
     "fiducial_gap" : 40,
     "edge_height" : 30.1
   },
-
+  
   "upload" : {
     "Period" : 120
   },
 
   "OriginDetection" : {
-    "BeltLength": [660,680],
+    "BeltLength": [12555200,12575200],
     "cross_correlation_threshold" : 0.285,
     "dump_match" : true
   },
-
 
   "profile_db_name" : "profile.db",
   "state_db_name" : "state.db",
   "transient_db_name" : "transient.db",
 
   "webapi_urls" : {
-    "add_conveyor" : ["https://fmgcads.mhysystems.com/api/conveyors",false],
-    "add_meta" : ["https://fmgcads.mhysystems.com/api/meta",false],
-    "add_belt" : ["https://fmgcads.mhysystems.com/api/belts",false],
-    "add_scan" : ["https://fmgcads.mhysystems.com/api/scans",false]
+    "add_conveyor" : ["http://localhost:5000/api/conveyors",false],
+    "add_meta" : ["http://localhost:5000/api/meta",true],
+    "add_belt" : ["http://localhost:5000/api/belts",true],
+    "add_scan" : ["http://localhost:5000/api/scans",true]
   },
 
   "communications" : {
@@ -39,11 +38,11 @@
   },
 
   "heartbeat" : {
-    "SendHeartBeat" : true,
+    "SendHeartBeat" : false,
     "Subject" :  "caas.80819.heartbeat",
-    "Period_ms" : 30000
+    "Period_ms" : 10000
   },
 
   "upload_profile" : false,
-  "base_url" : "https://fmgcads.mhysystems.com/api"
+  "base_url" : "http://localhost:5000/api"
 }

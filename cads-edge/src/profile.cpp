@@ -16,8 +16,20 @@
 #include <interpolation.h>
 #include <filters.h>
 
+
 namespace cads
 {
+  z_type decimate(z_type z, double stride) 
+  {
+    auto size = z.size();
+    size_t c = 0;
+    for (double i = 0; std::size_t(i) < size; i+= stride)
+    {
+      z[c++] = z[std::size_t(i)];
+    }
+    z.erase(z.begin()+c,z.end());
+    return z;
+  }
 
   std::string ClusterErrorToString(ClusterError error)
   {
@@ -369,5 +381,4 @@ namespace cads
       }
     }
   }
-
 } // namespace cads

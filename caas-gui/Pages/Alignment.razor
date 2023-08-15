@@ -1,0 +1,29 @@
+@inject IJSRuntime JS
+
+
+  <canvas @ref="@jsPlotElement" width="420"></canvas>
+
+
+
+@code
+{
+  protected IJSObjectReference? jsPlot;
+  protected ElementReference jsPlotElement;  
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender)
+    {
+      await using var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
+      jsPlot = await module.InvokeAsync<IJSObjectReference>("mk_CanvasPlot",jsPlotElement);
+      await UpdateProfileData(new byte[1]);
+
+    }
+  }
+
+  public async Task UpdateProfileData(byte[] z) {
+    if(jsPlot is not null) {
+      await jsPlot.InvokeVoidAsync("updatePlot",z);
+    }
+  }
+}

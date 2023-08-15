@@ -34,7 +34,7 @@ bottomrow {
   padding : 0 0.25rem 0 0.25rem;
 }
 
-centreing {
+mainview {
   grid-row: 2;
   display : grid;
   grid-template-columns: 1fr;
@@ -42,16 +42,25 @@ centreing {
   height : 100%;
   width : 100%;
   justify-items: center;
-
 }
 
-article {
+fixedwidth {
+  display : grid;
+  grid-template-columns: 1fr;
+  grid-template-rows:1fr;
+  height : 100%;
+  max-width: var(--content-max-width);
+  width : min(100vw,var(--content-max-width));
+}
+
+
+
+beltscan {
   display: grid;
   grid-template-columns: 1fr;
   grid-template-rows: 2.5rem 1fr 1fr;
   height : 100%;
-  max-width: var(--content-max-width);
-  width : min(100vw,var(--content-max-width));
+  width : 100%;
   align-items: end;
   padding : 0 0.25rem 0 0.25rem
 }

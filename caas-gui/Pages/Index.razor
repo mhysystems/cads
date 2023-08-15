@@ -7,40 +7,58 @@
 @inject NavigationManager NavigationManager
 
 @implements IAsyncDisposable
+
+
 <main>
-@if(device is not null && hubConnection is not null) {
-  <PageTitle>Caas Remote</PageTitle>
-  <div class="top-row">
+  @if (device is not null && hubConnection is not null)
+  {
+    <PageTitle>Caas Remote</PageTitle>
+    <div class="top-row">
     <div>@device.Serial</div>
-    <img class="mhylogo img-fluid vertical-fit" src="https://cadswebsite.blob.core.windows.net/wwwroot/MHY Systems Logo.png" alt="Mhy Systems logo" />
+    <img class="mhylogo img-fluid vertical-fit"
+      src="https://cadswebsite.blob.core.windows.net/wwwroot/MHY Systems Logo.png" alt="Mhy Systems logo" />
   </div>
-  <centreing>
-    <article>
-    <input list="datalistOptions" @onchange="@((ChangeEventArgs __e) => selectedConveyor = __e?.Value?.ToString())"/>
-    <datalist id="datalistOptions">
-      @foreach(var conveyor in conveyors) {
-        <option value="@conveyor.Name"/>
+    <mainview>
+      <fixedwidth>
+    @if (true)
+      {
+        <Alignment @ref="alignView"></Alignment>
       }
-    </datalist>
-    <middlerow>
-      <p>@deviceStatus</p>
-      @if(isScanning) {
-        <progress max="100" value="@progress"></progress>
+      else
+      {
+        <beltscan>
+          <input list="datalistOptions" @onchange="@((ChangeEventArgs __e) => selectedConveyor = __e?.Value?.ToString())" />
+          <datalist id="datalistOptions">
+            @foreach (var conveyor in conveyors)
+            {
+              <option value="@conveyor.Name" />
+            }
+          </datalist>
+          <middlerow>
+            <p>@deviceStatus</p>
+            @if (isScanning)
+            {
+              <progress max="100" value="@progress"></progress>
+            }
+          </middlerow>
+          <bottomrow>
+            <button class="btn btn-primary" @onclick="ScanClicked" disabled="@(!isConnected || isScanning)">Scan</button>
+            <button class="btn btn-primary" @onclick="CancelClicked" disabled="@(!isConnected)">Cancel</button>
+          </bottomrow>
+        </beltscan>
       }
-    </middlerow>
-    <bottomrow>
-      <button class="btn btn-primary" @onclick="ScanClicked" disabled="@(!isConnected || isScanning)">Scan</button>
-      <button class="btn btn-primary" @onclick="CancelClicked" disabled="@(!isConnected)">Cancel</button>
-    </bottomrow>
-    </article>
-  </centreing>
-}else if(device is not null) {
-  <PageTitle>Error</PageTitle>
-  <p>Unable to connect to Caas Device</p>
-}
+    </fixedwidth>
+    </mainview>
+  }
+  else if (device is not null)
+  {
+    <PageTitle>Error</PageTitle>
+    <p>Unable to connect to Caas Device</p>
+  }
 </main>
 
-@code 
+
+@code
 {
   [Parameter]
   public string deviceCipherText { get; set; } = string.Empty;
@@ -48,36 +66,42 @@
 
   protected IEnumerable<Conveyor> conveyors = Enumerable.Empty<Conveyor>();
 
-  protected string? selectedConveyor {get; set;}
+  protected string? selectedConveyor { get; set; }
   private HubConnection? hubConnection;
 
-  protected bool isConnected => hubConnection?.State == HubConnectionState.Connected && device is not null && device.State.HasFlag(DeviceState.Connected);
-  protected bool isScanning => hubConnection?.State == HubConnectionState.Connected && device is not null && device.State.HasFlag(DeviceState.Connected) && device.State.HasFlag(DeviceState.Scanning);
+  protected bool isConnected => hubConnection?.State == HubConnectionState.Connected && device is not null &&
+  device.State.HasFlag(DeviceState.Connected);
+  protected bool isScanning => hubConnection?.State == HubConnectionState.Connected && device is not null &&
+  device.State.HasFlag(DeviceState.Connected) && device.State.HasFlag(DeviceState.Scanning);
 
   protected string deviceStatus = "Cads unit not detected";
   protected double progress = 0;
 
+  Alignment alignView = new();
+
   protected override async Task OnInitializedAsync()
   {
     device = MsgService.GetDevice(deviceCipherText);
-    
-    if(device is not null) {
-      deviceStatus = DeviceStateMsg(device.State); 
+
+    if (device is not null)
+    {
+      deviceStatus = DeviceStateMsg(device.State);
       conveyors = MsgService.GetConveyers(device);
 
       hubConnection = new HubConnectionBuilder()
-        .WithUrl(NavigationManager.ToAbsoluteUri("/msg"))
-        .Build();
+      .WithUrl(NavigationManager.ToAbsoluteUri("/msg"))
+      .Build();
 
       hubConnection.On<string>("ReceiveMessage", (message) =>
       {
-        switch(message) {
-          case "ClientDisconnect" :
-          hubConnection.InvokeAsync("LeaveGroup",device.Serial.ToString());
-          hubConnection = null;
-          break;
+        switch (message)
+        {
+          case "ClientDisconnect":
+            hubConnection.InvokeAsync("LeaveGroup", device.Serial.ToString());
+            hubConnection = null;
+            break;
           default:
-          break;
+            break;
         }
         InvokeAsync(StateHasChanged);
       });
@@ -90,13 +114,20 @@
         InvokeAsync(StateHasChanged);
       });
 
-      hubConnection.On<double>("UpdateProgress",(d) => {
+      hubConnection.On<double>("UpdateProgress", (d) =>
+      {
         progress = d;
         InvokeAsync(StateHasChanged);
       });
 
-      hubConnection.On<DeviceError>("DeviceError",(m) => {
-        var (d,e) = m;
+      hubConnection.On<byte[]>("Profile", async (z) =>
+      {
+        await alignView.UpdateProfileData(z);
+      });
+
+      hubConnection.On<DeviceError>("DeviceError", (m) =>
+      {
+        var (d, e) = m;
         device = d;
         progress = 0;
         deviceStatus = DeviceStateMsg(d.State);
@@ -104,45 +135,49 @@
       });
 
       await hubConnection.StartAsync();
-      await hubConnection.InvokeAsync("JoinGroup",device.Serial.ToString());
+      await hubConnection.InvokeAsync("JoinGroup", device.Serial.ToString());
     }
   }
   private void ScanClicked()
-  { 
-    if(isConnected && selectedConveyor is not null && device is not null) {
-      
-        var conveyor = conveyors.Where( e => e.Name == selectedConveyor);
-        if(conveyor.Any()) {
-            device.State |= DeviceState.Scanning;
-            MsgService.PublishStart(device,conveyor.First());  
-            deviceStatus = DeviceStateMsg(device.State);
-            StateHasChanged();
-        }
+  {
+    if (isConnected && selectedConveyor is not null && device is not null)
+    {
+
+      var conveyor = conveyors.Where(e => e.Name == selectedConveyor);
+      if (conveyor.Any())
+      {
+        device.State |= DeviceState.Scanning;
+        MsgService.PublishStart(device, conveyor.First());
+        deviceStatus = DeviceStateMsg(device.State);
+        StateHasChanged();
+      }
     }
   }
   private void CancelClicked()
-  { 
-    if(isConnected && selectedConveyor is not null && device is not null) {
-      
-      var conveyor = conveyors.Where( e => e.Name == selectedConveyor);
-      if(conveyor.Any()) {
-          device.State &= ~DeviceState.Scanning;
-          MsgService.PublishStop(device); 
-          deviceStatus = DeviceStateMsg(device.State);
-          StateHasChanged();   
-        }
+  {
+    if (isConnected && selectedConveyor is not null && device is not null)
+    {
+
+      var conveyor = conveyors.Where(e => e.Name == selectedConveyor);
+      if (conveyor.Any())
+      {
+        device.State &= ~DeviceState.Scanning;
+        MsgService.PublishStop(device);
+        deviceStatus = DeviceStateMsg(device.State);
+        StateHasChanged();
+      }
     }
   }
 
   protected string DeviceStateMsg(DeviceState d)
   {
     var rtn = "Cads unit not detected";
-    
-    if(d.HasFlag(DeviceState.Connected))
-    {
-      rtn = "Ready";     
 
-      if(d.HasFlag(DeviceState.Scanning))
+    if (d.HasFlag(DeviceState.Connected))
+    {
+      rtn = "Ready";
+
+      if (d.HasFlag(DeviceState.Scanning))
       {
         rtn = "Scanning";
       }
@@ -150,6 +185,7 @@
 
     return rtn;
   }
+
   public async ValueTask DisposeAsync()
   {
     if (hubConnection is not null)

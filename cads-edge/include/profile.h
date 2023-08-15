@@ -52,6 +52,7 @@ namespace cads
     ExcessiveNeigbours
   };
   
+  z_type decimate(z_type z, double stride);
   std::string ClusterErrorToString(ClusterError error);
   std::tuple<double, double, size_t, size_t, ClusterError> pulley_levels_clustered(z_type &z, Dbscan, std::function<double(const z_type &)> estimator = average);
 
