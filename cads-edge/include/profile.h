@@ -53,6 +53,7 @@ namespace cads
   };
   
   z_type decimate(z_type z, double stride);
+  z_type profile_decimate(z_type z, size_t width);
   std::string ClusterErrorToString(ClusterError error);
   std::tuple<double, double, size_t, size_t, ClusterError> pulley_levels_clustered(z_type &z, Dbscan, std::function<double(const z_type &)> estimator = average);
 

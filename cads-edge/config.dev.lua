@@ -114,7 +114,7 @@ function main(sendmsg)
 
   local gocator_luamain = BlockingReaderWriterQueue()
   
-  local decimate = profile_decimation(4,10000,gocator_luamain)
+  local decimate = profile_decimation(420,10000,gocator_luamain)
   local laser = sqlitegocator(sqlitegocatorConfig,decimate) 
 
   laser:Start(gocatorFps)

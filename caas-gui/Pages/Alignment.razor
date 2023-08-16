@@ -1,12 +1,18 @@
+
+@implements IAsyncDisposable
+
 @inject IJSRuntime JS
 
-
-  <canvas @ref="@jsPlotElement" width="420"></canvas>
-
-
+<alignment-main>
+  <canvas @ref="@jsPlotElement" width="420" height="120"></canvas>
+  <button class="btn btn-primary" @onclick="UserAligned">Align</button>
+</alignment-main>
 
 @code
 {
+  [Parameter]
+  public EventCallback<bool> aligned {get; set;}
+
   protected IJSObjectReference? jsPlot;
   protected ElementReference jsPlotElement;  
 
@@ -17,7 +23,6 @@
       await using var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
       jsPlot = await module.InvokeAsync<IJSObjectReference>("mk_CanvasPlot",jsPlotElement);
       await UpdateProfileData(new byte[1]);
-
     }
   }
 
@@ -25,5 +30,21 @@
     if(jsPlot is not null) {
       await jsPlot.InvokeVoidAsync("updatePlot",z);
     }
+  }
+
+  private async Task UserAligned(MouseEventArgs e)
+  {
+    await aligned.InvokeAsync(true);
+  }
+
+  async ValueTask IAsyncDisposable.DisposeAsync()
+  {
+    try 
+    {
+      if (jsPlot is not null) {
+        await jsPlot.DisposeAsync();
+        jsPlot = null;
+      }
+    }catch(Microsoft.JSInterop.JSDisconnectedException) {}
   }
 }

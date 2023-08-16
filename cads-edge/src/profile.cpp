@@ -19,6 +19,29 @@
 
 namespace cads
 {
+  
+  z_type profile_decimate(z_type z, size_t width)
+  {
+    auto linear_section = size_t((double)z.size() * 0.05);
+    auto stride = (z.size() - 2.0 * linear_section) / (width - 2.0 * linear_section) ;
+    auto size = z.size() - linear_section;
+
+    size_t c = linear_section;
+
+    for (double i = linear_section; std::size_t(i) < size; i+= stride)
+    {
+      z[c++] = z[std::size_t(i)];
+    }
+
+    for (; c < width; c++)
+    {
+      z[c] = z[size++];
+    }
+
+    z.erase(z.begin()+width,z.end());
+    return z;
+  }
+  
   z_type decimate(z_type z, double stride) 
   {
     auto size = z.size();

@@ -1,4 +1,15 @@
+alignment-main {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr 1fr 1fr;
+  height : 100%;
+  width : 100%;
+  align-items: end;
+  padding : 0 0.25rem 0 0.25rem
+}
+
 canvas {
   width : 100%;
-  height : 100%;
+  aspect-ratio: 420 / 120;
+  background-color: lightgray;
 }

@@ -55,7 +55,7 @@ using namespace std::chrono;
 
 namespace cads
 {
-  coro<cads::msg,cads::msg,1> profile_decimation_coro(double stride, long long modulo, cads::Io &next)
+  coro<cads::msg,cads::msg,1> profile_decimation_coro(long long widthn, long long modulo, cads::Io &next)
   {
     cads::msg empty;
     for(long cnt = 0;;cnt++){
@@ -68,8 +68,10 @@ namespace cads
         case msgid::scan: {
           if(cnt % modulo == 0){
             auto p = std::get<profile>(std::get<1>(msg));
-            auto z = decimate(p.z,stride);
-            next.enqueue({msgid::caas_msg,cads::CaasMsg{"profile",std::string((char*)z.data(),z.size()*sizeof(float))}});
+            if(p.z.size() > (size_t)widthn) {
+              auto z = profile_decimate(p.z,widthn);
+              next.enqueue({msgid::caas_msg,cads::CaasMsg{"profile",std::string((char*)z.data(),z.size()*sizeof(float))}});
+            }
           }
         }
         break;

@@ -37,5 +37,5 @@ namespace cads
   void stop_gocator();
   void process_profile(ProfileConfig, Io& gocatorFifo, Io& next);
   void process_identity(Io& gocatorFifo, Io& next);
-  cads::coro<cads::msg,cads::msg,1> profile_decimation_coro(double, long long, cads::Io &next);
+  cads::coro<cads::msg,cads::msg,1> profile_decimation_coro(long long, long long, cads::Io &next);
 }

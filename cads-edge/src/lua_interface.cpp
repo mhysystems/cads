@@ -1430,13 +1430,13 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
   int profile_decimation(lua_State *L)
   {
    
-    double stride = lua_tonumber(L, 1);
+    auto widthn = tointeger(L, 1);
     double modulo = lua_tointeger(L, 2);
     auto next = static_cast<cads::Io *>(lua_touserdata(L, 3));
 
-    using user_type = cads::Adapt<decltype(cads::profile_decimation_coro(stride,modulo,std::ref(*next)))>;
+    using user_type = cads::Adapt<decltype(cads::profile_decimation_coro(*widthn,modulo,std::ref(*next)))>;
 
-    new (lua_newuserdata(L, sizeof(user_type))) user_type(cads::profile_decimation_coro(stride,modulo,std::ref(*next)));
+    new (lua_newuserdata(L, sizeof(user_type))) user_type(cads::profile_decimation_coro(*widthn,modulo,std::ref(*next)));
 
     lua_createtable(L, 0, 1);
     lua_pushcfunction(L, Io_gc);
