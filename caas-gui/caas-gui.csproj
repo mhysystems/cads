@@ -27,11 +27,14 @@
       <Output ItemName="FlatbufferGeneratedCsharp" TaskParameter="Outputs" />
     </Exec>
 
+    <Copy SourceFiles="..\flatbuffers-typescript\cads-flatbuffers\wwwroot\cads-flatbuffers-plot.es.js" DestinationFolder="wwwroot"/> 
   </Target>
 
   <ItemGroup>
     <ProjectReference Include="..\flatbuffers-csharp-lib\Google.FlatBuffers.csproj" />
     <ProjectReference Include="..\keygen\keygen.csproj" />
   </ItemGroup>
+
+
 
 </Project>

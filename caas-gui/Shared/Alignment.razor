@@ -4,6 +4,12 @@
 @inject IJSRuntime JS
 
 <alignment-main>
+  <text-mapping>
+    <text>Noise</text>
+    <text>:</text>
+    <text @ref="@noiseValue">0</text>
+    <text>%</text>
+  </text-mapping>
   <canvas @ref="@jsPlotElement" width="420" height="120"></canvas>
   <button class="btn btn-primary" @onclick="UserAligned">Align</button>
 </alignment-main>
@@ -15,19 +21,20 @@
 
   protected IJSObjectReference? jsPlot;
   protected ElementReference jsPlotElement;  
+  protected ElementReference noiseValue;  
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
     if (firstRender)
     {
       await using var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
-      jsPlot = await module.InvokeAsync<IJSObjectReference>("mk_CanvasPlot",jsPlotElement);
-      await UpdateProfileData(new byte[1]);
+      jsPlot = await module.InvokeAsync<IJSObjectReference>("mk_CanvasPlot",jsPlotElement,noiseValue);
     }
   }
 
   public async Task UpdateProfileData(byte[] z) {
-    if(jsPlot is not null) {
+    // 32 is primitive sanity check for minimum number of bytes
+    if(jsPlot is not null && (z.Length > 32)) {
       await jsPlot.InvokeVoidAsync("updatePlot",z);
     }
   }

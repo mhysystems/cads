@@ -20,9 +20,9 @@
   </div>
     <mainview>
       <fixedwidth>
-    @if (true)
+    @if (!aligned)
       {
-        <Alignment @ref="alignView"></Alignment>
+        <Alignment @ref="alignView" aligned="@AlignedUpdate"></Alignment>
       }
       else
       {
@@ -77,7 +77,8 @@
   protected string deviceStatus = "Cads unit not detected";
   protected double progress = 0;
 
-  Alignment alignView = new();
+  protected Alignment alignView = new();
+  protected bool aligned = false;
 
   protected override async Task OnInitializedAsync()
   {
@@ -184,6 +185,11 @@
     }
 
     return rtn;
+  }
+
+  void AlignedUpdate(bool a)
+  {
+    aligned = a;
   }
 
   public async ValueTask DisposeAsync()

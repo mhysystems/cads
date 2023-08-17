@@ -1,47 +1,20 @@
-#include <cads.h>
-#include <regression.h>
-
-#include <db.h>
-#include <coms.h>
-#include <constants.h>
-#include <fiducial.h>
-#include <init.h>
-
-#include <gocator_reader.h>
-#include <sqlite_gocator_reader.h>
-
 #include <exception>
-#include <limits>
 #include <string>
 #include <vector>
 #include <tuple>
-#include <algorithm>
 #include <thread>
-#include <ranges>
-#include <chrono>
-#include <sstream>
-#include <fstream>
-#include <iostream>
+#include <algorithm>
 
 #include <spdlog/spdlog.h>
-#include <core/SCAMP.h>
 #include <lua_script.h>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wuseless-cast"
-
-#include <date/date.h>
-#include <date/tz.h>
-#include <fmt/core.h>
-#include <fmt/chrono.h>
-
-#pragma GCC diagnostic pop
-
+#include <cads.h>
+#include <regression.h>
+#include <coms.h>
+#include <constants.h>
+#include <gocator_reader.h>
 #include <edge_detection.h>
 #include <coro.hpp>
-#include <dynamic_processing.h>
-#include <save_send_thread.h>
-#include <origin_detection_thread.h>
 #include <belt.h>
 #include <interpolation.h>
 #include <upload.h>
@@ -58,6 +31,8 @@ namespace cads
   coro<cads::msg,cads::msg,1> profile_decimation_coro(long long widthn, long long modulo, cads::Io &next)
   {
     cads::msg empty;
+    double z_resolution = 1, z_offset = 0;
+
     for(long cnt = 0;;cnt++){
       
       auto [msg,terminate] = co_yield empty;  
@@ -65,12 +40,24 @@ namespace cads
       if(terminate) break;
 
       switch(std::get<0>(msg)) {
+        
+        case cads::msgid::gocator_properties: {
+          auto p = std::get<GocatorProperties>(std::get<1>(msg));
+          z_offset = p.zOffset;
+          z_resolution = p.zResolution;
+        }
+        break;
         case msgid::scan: {
           if(cnt % modulo == 0){
             auto p = std::get<profile>(std::get<1>(msg));
             if(p.z.size() > (size_t)widthn) {
-              auto z = profile_decimate(p.z,widthn);
-              next.enqueue({msgid::caas_msg,cads::CaasMsg{"profile",std::string((char*)z.data(),z.size()*sizeof(float))}});
+              
+              double nan_cnt = std::count_if(p.z.begin(), p.z.end(), [](z_element z)
+                                { return std::isnan(z); });
+              
+              p.x_off = nan_cnt / p.z.size();
+              p.z = profile_decimate(p.z,widthn);
+              next.enqueue({msgid::caas_msg,cads::CaasMsg{"profile",profile_as_flatbufferstring(p,z_resolution,z_offset)}});
             }
           }
         }

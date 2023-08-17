@@ -16,7 +16,10 @@ cads-edge/bin/**/*
 cads-gui/localdev*
 cads-gui/flatbuffers-typescript/node_modules/
 cads-gui/flatbuffers-typescript/cads-flatbuffers/
+
+flatbuffers-typescript/*/*
 cads-gui/wwwroot/*.*
+caas-gui/wwwroot/*.*
 cads-gui/scans/**
 cads-gui/scans
 cads-gui/CadsFlatbuffers/*.*
@@ -27,6 +30,7 @@ cads-gui/CadsFlatbuffers/*.*
 whaleback-cv405-*
 cads-gui/flatbuffers-typescript/**
 !cads-gui/wwwroot/plot.js
+!caas-gui/wwwroot/plot.js
 !cads-gui/wwwroot/css/site.css
 !cads-gui/wwwroot/querybuilder.js
 !cads-gui/wwwroot/background_download.js

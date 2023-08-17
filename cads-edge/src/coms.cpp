@@ -34,6 +34,13 @@ using namespace std;
 
 namespace
 {
+  std::vector<int16_t> z_as_int16(cads::z_type z,double z_resolution, double z_offset) {
+    namespace sr = std::ranges;
+  
+    auto tmp_z = z | sr::views::transform([=](float e) -> int16_t
+                                            { return std::isnan(e) ? std::numeric_limits<int16_t>::lowest() : int16_t(((double)e - z_offset) / z_resolution); });
+    return {tmp_z.begin(), tmp_z.end()};  
+  }
 
   std::vector<uint8_t> compress(uint8_t *input, uint32_t size)
   {
@@ -480,9 +487,7 @@ coro<remote_msg,bool> remote_control_coro()
         belt_z_max = std::max(belt_z_max, (double)pmax);
         belt_z_min = std::min(belt_z_min, (double)pmin);
 
-        auto tmp_z = zs | sr::views::transform([=](float e) -> int16_t
-                                               { return std::isnan(e) ? std::numeric_limits<int16_t>::lowest() : int16_t(((double)e - z_offset) / z_resolution); });
-        std::vector<int16_t> short_z{tmp_z.begin(), tmp_z.end()};
+        auto short_z = z_as_int16(zs,z_resolution,z_offset);
 
         profiles_flat.push_back(CadsFlatbuffers::CreateprofileDirect(builder, y, 0, &short_z));
 
@@ -531,6 +536,19 @@ coro<remote_msg,bool> remote_control_coro()
     }
 
     return {scan,failure};
+  }
+
+  std::string profile_as_flatbufferstring(profile p, double z_resolution, double z_offset){
+    using namespace flatbuffers; 
+   
+    FlatBufferBuilder builder(4096);
+    std::vector<flatbuffers::Offset<CadsFlatbuffers::profile>> profiles_flat;
+
+    auto short_z = z_as_int16(p.z,z_resolution,z_offset);
+    profiles_flat.push_back(CadsFlatbuffers::CreateprofileDirect(builder, p.y, p.x_off, &short_z));
+    builder.Finish(CadsFlatbuffers::Createprofile_array(builder, z_resolution, z_offset, 0, profiles_flat.size(), builder.CreateVector(profiles_flat)));
+
+    return std::string((char*)builder.GetBufferPointer(),builder.GetSize());
   }
 
 #if 0
