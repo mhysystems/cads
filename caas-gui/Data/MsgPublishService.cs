@@ -47,6 +47,22 @@ public class MsgPublishService
 
   }
 
+  public void PublishLuaCode(string subject, string luaCode) 
+  {
+    var opts = ConnectionFactory.GetDefaultOptions();
+    opts.Url = _config.NatsUrl;
+
+    using var c = new ConnectionFactory().CreateConnection(opts);
+    var builder = new FlatBufferBuilder(4096);
+
+    var LuaCode = builder.CreateString(luaCode);
+    var start = Start.CreateStart(builder, LuaCode);
+    var data = CadsFlatbuffers.Msg.CreateMsg(builder, MsgContents.Start, start.Value);
+    builder.Finish(data.Value);
+
+    c.Publish(subject, builder.SizedByteArray());
+  }
+
   public void PublishStart(Device device, Conveyor conveyor)
   {
     var opts = ConnectionFactory.GetDefaultOptions();
@@ -65,7 +81,14 @@ public class MsgPublishService
     Db.UpdateDeviceStatus(_dBContext,device);
   }
 
-    public void PublishStop(Device device)
+  public void PublishAlign(Device device) 
+  {
+    var luaCode = File.ReadAllText(_config.AlignmentCode);
+    PublishLuaCode(device.MsgSubjectPublish, luaCode);
+    Db.UpdateDeviceStatus(_dBContext,device);
+  }
+
+  public void PublishStop(Device device)
   {
     var opts = ConnectionFactory.GetDefaultOptions();
     opts.Url = _config.NatsUrl;

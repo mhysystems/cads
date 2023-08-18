@@ -10,7 +10,7 @@
 
 
 <main>
-  @if (device is not null && hubConnection is not null)
+  @if (device is not null && hubConnection is not null && device.State.HasFlag(DeviceState.Connected))
   {
     <PageTitle>Caas Remote</PageTitle>
     <div class="top-row">
@@ -20,7 +20,7 @@
   </div>
     <mainview>
       <fixedwidth>
-    @if (!aligned)
+    @if (!device.State.HasFlag(DeviceState.Aligned))
       {
         <Alignment @ref="alignView" aligned="@AlignedUpdate"></Alignment>
       }
@@ -78,7 +78,6 @@
   protected double progress = 0;
 
   protected Alignment alignView = new();
-  protected bool aligned = false;
 
   protected override async Task OnInitializedAsync()
   {
@@ -187,9 +186,24 @@
     return rtn;
   }
 
-  void AlignedUpdate(bool a)
+  void AlignedUpdate(Alignment.AlignmentState a)
   {
-    aligned = a;
+    if(device is not null) 
+    {
+      if(a == Alignment.AlignmentState.Align)
+      {
+        MsgService.PublishAlign(device);
+      }
+      else if(a == Alignment.AlignmentState.Aligned)
+      {
+        device.State |= DeviceState.Aligned;
+        MsgService.PublishStop(device);
+      }
+      else if(a == Alignment.AlignmentState.Cancel) {
+        device.State &= ~DeviceState.Aligned;
+        MsgService.PublishStop(device);
+      }
+    }
   }
 
   public async ValueTask DisposeAsync()

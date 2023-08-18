@@ -27,7 +27,7 @@
       <Output ItemName="FlatbufferGeneratedCsharp" TaskParameter="Outputs" />
     </Exec>
 
-    <Copy SourceFiles="..\flatbuffers-typescript\cads-flatbuffers\wwwroot\cads-flatbuffers-plot.es.js" DestinationFolder="wwwroot"/> 
+    <Copy SourceFiles="..\flatbuffers-typescript\wwwroot\cads-flatbuffers-plot.es.js" DestinationFolder="wwwroot"/> 
   </Target>
 
   <ItemGroup>

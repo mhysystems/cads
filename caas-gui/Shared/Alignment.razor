@@ -11,13 +11,24 @@
     <text>%</text>
   </text-mapping>
   <canvas @ref="@jsPlotElement" width="420" height="120"></canvas>
-  <button class="btn btn-primary" @onclick="UserAligned">Align</button>
+  <bottomrow>
+    <button class="btn btn-primary" @onclick="UserAligned">@(alignmentState == AlignmentState.Cancel ? "Align" : "OK")</button>
+    <button class="btn btn-primary" @onclick="CancelClick">Cancel</button>
+  </bottomrow>
 </alignment-main>
 
 @code
 {
+  public enum AlignmentState {
+    Cancel = 0,
+    Align = 1,
+    Aligned = 2
+  }
+
+  AlignmentState alignmentState = AlignmentState.Cancel;
+
   [Parameter]
-  public EventCallback<bool> aligned {get; set;}
+  public EventCallback<AlignmentState> aligned {get; set;}
 
   protected IJSObjectReference? jsPlot;
   protected ElementReference jsPlotElement;  
@@ -41,7 +52,20 @@
 
   private async Task UserAligned(MouseEventArgs e)
   {
-    await aligned.InvokeAsync(true);
+    if(alignmentState == AlignmentState.Cancel) { 
+      alignmentState = AlignmentState.Align;
+      await aligned.InvokeAsync(alignmentState);
+    }
+    else if(alignmentState == AlignmentState.Align) {
+      alignmentState = AlignmentState.Cancel;
+      await aligned.InvokeAsync(AlignmentState.Aligned);
+    }
+  }
+
+  private async Task CancelClick(MouseEventArgs e)
+  {
+    alignmentState = AlignmentState.Cancel;
+    await aligned.InvokeAsync(AlignmentState.Cancel);
   }
 
   async ValueTask IAsyncDisposable.DisposeAsync()
