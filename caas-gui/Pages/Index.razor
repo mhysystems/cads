@@ -155,17 +155,13 @@
   }
   private void CancelClicked()
   {
-    if (isConnected && selectedConveyor is not null && device is not null)
+    if (isConnected && device is not null)
     {
-
-      var conveyor = conveyors.Where(e => e.Name == selectedConveyor);
-      if (conveyor.Any())
-      {
-        device.State &= ~DeviceState.Scanning;
-        MsgService.PublishStop(device);
-        deviceStatus = DeviceStateMsg(device.State);
-        StateHasChanged();
-      }
+      if(device.State.HasFlag(DeviceState.Scanning)){device.State &= ~DeviceState.Scanning;}
+      else if(device.State.HasFlag(DeviceState.Aligned)){device.State &= ~DeviceState.Aligned;}
+      MsgService.PublishStop(device);
+      deviceStatus = DeviceStateMsg(device.State);
+      StateHasChanged();
     }
   }
 

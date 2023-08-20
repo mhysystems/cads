@@ -16,8 +16,10 @@ cads-edge/bin/**/*
 cads-gui/localdev*
 cads-gui/flatbuffers-typescript/node_modules/
 cads-gui/flatbuffers-typescript/cads-flatbuffers/
-
 flatbuffers-typescript/*/*
+flatbuffers-typescript/z-data.ts
+flatbuffers-typescript/plot-data.ts
+flatbuffers-typescript/cads-flatbuffers.ts
 cads-gui/wwwroot/*.*
 caas-gui/wwwroot/*.*
 cads-gui/scans/**
