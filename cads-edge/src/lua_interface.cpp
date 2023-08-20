@@ -1068,7 +1068,7 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
 
       lua_newtable(L);
       lua_pushnumber(L, 1); 
-      lua_pushlstring(L,sub.c_str(),data.size());
+      lua_pushlstring(L,sub.c_str(),sub.size());
       lua_settable(L,-3);
 
       lua_pushnumber(L, 2); 
