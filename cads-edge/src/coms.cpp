@@ -279,28 +279,11 @@ coro<remote_msg,bool> remote_control_coro()
 
   }
 
-  std::string ReplaceString(std::string subject, const std::string &search,
-                            const std::string &replace)
-  {
-    size_t pos = 0;
-    while ((pos = subject.find(search, pos)) != std::string::npos)
-    {
-      subject.replace(pos, search.length(), replace);
-      pos += replace.length();
-    }
-    return subject;
-  }
-
-  std::string mk_post_profile_url(date::utc_clock::time_point time, std::string site, std::string conveyor)
+  std::string mk_post_profile_url(date::utc_clock::time_point time, std::string site, std::string conveyor, std::string endpoint_url)
   {
     
     // Default sends to much decimal precision for asp.net core
     auto ts = to_str(chrono::floor<chrono::seconds>(time)); 
-    
-    auto endpoint_url = global_config["base_url"].get<std::string>() + "/belt";
-
-    if (endpoint_url == "null")
-      return endpoint_url;
 
     return endpoint_url + '/' + site + '/' + conveyor + '/' + ts;
   }
@@ -366,17 +349,11 @@ coro<remote_msg,bool> remote_control_coro()
   }
   
   
-  void http_post_profile_properties_json(std::string json)
+  void http_post_profile_properties_json(std::string json, decltype(webapi_urls::add_meta) urls)
   {
 
-    auto endpoint_url = global_config["base_url"].get<std::string>() + "/meta";
-    auto upload_props = global_config["upload_profile"].get<bool>();
-
-    if (endpoint_url == "null")
-    {
-      spdlog::get("cads")->info("base_url set to null. Config not uploaded");
-      return;
-    }
+    auto endpoint_url = std::get<0>(urls);
+    auto upload_props = std::get<1>(urls);
 
     cpr::Response r;
     const cpr::Url endpoint{endpoint_url};
@@ -399,7 +376,7 @@ coro<remote_msg,bool> remote_control_coro()
     }
   }
 
-  void http_post_profile_properties2(date::utc_clock::time_point chrono, double YmaxN, double y_step, double z_min, double z_max, Conveyor conveyor, GocatorProperties gocator)
+  void http_post_profile_properties2(date::utc_clock::time_point chrono, double YmaxN, double y_step, double z_min, double z_max, Conveyor conveyor, GocatorProperties gocator, decltype(webapi_urls::add_meta) urls)
   {
     nlohmann::json params_json;
 
@@ -417,10 +394,10 @@ coro<remote_msg,bool> remote_control_coro()
     params_json["WidthN"] = conveyor.WidthN;
     params_json["Belt"] = conveyor.Belt;
 
-    http_post_profile_properties_json(params_json.dump());
+    http_post_profile_properties_json(params_json.dump(), urls);
   }
 
-  std::tuple<state::scan,bool> post_scan(state::scan scan)
+  std::tuple<state::scan,bool> post_scan(state::scan scan, webapi_urls urls)
   {
     using namespace flatbuffers;    
     
@@ -452,14 +429,12 @@ coro<remote_msg,bool> remote_control_coro()
       return {scan,true};
     } 
 
-    auto endpoint_url = mk_post_profile_url(scan.scanned_utc,conveyor.Site,conveyor.Name);
-    auto upload_profile = global_config["upload_profile"].get<bool>();
     auto fetch_profile = fetch_scan_coro(scan.begin_index + 1 + scan.uploaded, scan.begin_index + scan.cardinality + 1, db_name);
 
     FlatBufferBuilder builder(4096 * 128);
     std::vector<flatbuffers::Offset<CadsFlatbuffers::profile>> profiles_flat;
 
-    auto send_bytes = send_bytes_coro(0L,endpoint_url,upload_profile);
+    auto send_bytes = send_bytes_coro(0L,mk_post_profile_url(scan.scanned_utc,conveyor.Site,conveyor.Name, std::get<0>(urls.add_belt)),std::get<1>(urls.add_belt));
 
     auto YmaxN = scan.cardinality;
 
@@ -513,9 +488,6 @@ coro<remote_msg,bool> remote_control_coro()
           if(terminate) break;
           scan.uploaded += sent_rows;
           update_scan_state(scan);
-
-          //size += send_flatbuffer_array(builder, z_resolution, z_offset, idx - profiles_flat.size(), profiles_flat, endpoint, upload_profile);
-          //store_scan_uploaded(idx + 1, db_name);
         }
         
         auto [terminate,sent_rows] = send_bytes.resume({std::vector<uint8_t>(),0});
@@ -532,7 +504,7 @@ coro<remote_msg,bool> remote_control_coro()
     bool failure = scan.uploaded != YmaxN;
     if (!failure)
     {
-      http_post_profile_properties2(scan.scanned_utc, YmaxN, y_step, belt_z_min, belt_z_max, conveyor, gocator);
+      http_post_profile_properties2(scan.scanned_utc, YmaxN, y_step, belt_z_min, belt_z_max, conveyor, gocator, urls.add_meta);
     }
 
     return {scan,failure};
@@ -551,27 +523,4 @@ coro<remote_msg,bool> remote_control_coro()
     return std::string((char*)builder.GetBufferPointer(),builder.GetSize());
   }
 
-#if 0
-  std::vector<profile> http_get_frame(double y, int len, date::utc_clock::time_point chrono)
-  {
-    using namespace flatbuffers;
-
-    auto ts = date::format("%Y-%m-%d-%H%M%OS", chrono);
-    cpr::Url endpoint{mk_get_profile_url(y, len, ts)};
-    cpr::Response r = cpr::Get(endpoint);
-
-    auto pd = CadsFlatbuffers::Getplot_data(r.text.c_str());
-    auto stride = pd->z_samples()->size() / pd->y_samples()->size();
-    std::vector<profile> rtn;
-
-    for (auto i = 0; auto e : *pd->y_samples())
-    {
-
-      auto z = pd->z_samples();
-      rtn.push_back({e, pd->x_off(), {z->begin() + stride * i, z->begin() + stride * (1 + i++)}});
-    }
-
-    return rtn;
-  }
-#endif
 }

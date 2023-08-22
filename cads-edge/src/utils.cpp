@@ -51,6 +51,17 @@ namespace cads
     }
   }
 
+  std::string ReplaceString(std::string subject, const std::string &search,
+                            const std::string &replace)
+  {
+    size_t pos = 0;
+    while ((pos = subject.find(search, pos)) != std::string::npos)
+    {
+      subject.replace(pos, search.length(), replace);
+      pos += replace.length();
+    }
+    return subject;
+  }
 
   void write_vector(std::vector<double> xs,std::string name) {
     std::ofstream file{name};

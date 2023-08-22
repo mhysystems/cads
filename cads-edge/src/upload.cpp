@@ -7,7 +7,6 @@
 #include <spdlog/spdlog.h>
 
 #include <db.h>
-#include <constants.h>
 #include <coms.h>
 #include <msg.h>
 #include <upload.h>
@@ -25,13 +24,13 @@ namespace
     spdlog::get("cads")->info("{{func = {}, msg = 'Removed scan. {}'}}", __func__,scan.db_name);
   }
   
-  int resume_scan(cads::state::scan scan)
+  int resume_scan(cads::state::scan scan, cads::webapi_urls urls)
   {
     spdlog::get("cads")->info("{{func = {}, msg = 'Posting a scan. {}'}}", __func__,scan.db_name);
     
     if(scan.status != 2) return 0;
     
-    auto [updated_scan,err] = cads::post_scan(scan);
+    auto [updated_scan,err] = cads::post_scan(scan, urls);
     
     if(!err) {
       updated_scan.status = 3;
@@ -131,7 +130,7 @@ namespace
 namespace cads
 {
 
-void upload_scan_thread(std::atomic<bool> &terminate) 
+void upload_scan_thread(std::atomic<bool> &terminate, UploadConfig config) 
 {
 
   do
@@ -172,18 +171,18 @@ void upload_scan_thread(std::atomic<bool> &terminate)
         
         if(scan.status == 2) 
         {
-          resume_scan(scan);
+          resume_scan(scan,config.urls);
         }
-        else if(scan.status == 1 && scan.scanned_utc >= (latest.scanned_utc + constants_upload.Period) ) 
+        else if(scan.status == 1 && scan.scanned_utc >= (latest.scanned_utc + config.Period) ) 
         {
           scan.status = 2;
           if(update_scan_state(scan))
           {
             latest = scan;
-            resume_scan(scan);
+            resume_scan(scan,config.urls);
           }
         }
-        else if(scan.scanned_utc < (latest.scanned_utc + constants_upload.Period) && scan.status != 2 && scan.status != 0) 
+        else if(scan.scanned_utc < (latest.scanned_utc + config.Period) && scan.status != 2 && scan.status != 0) 
         {
           delete_scan(scan);
         }

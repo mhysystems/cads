@@ -322,7 +322,7 @@ namespace cads
     std::atomic<bool> terminate_upload = false;
     bool terminate_metrics = false;
     moodycamel::BlockingConcurrentQueue<std::tuple<std::string, std::string, std::string>> queue;
-    std::jthread save_send(upload_scan_thread, std::ref(terminate_upload));
+    std::jthread save_send(upload_scan_thread, std::ref(terminate_upload), upload_config);
     std::jthread realtime_metrics(realtime_metrics_thread, std::ref(queue), constants_heartbeat, std::ref(terminate_metrics));
   
     auto [L,err] = run_lua_config(f);
@@ -386,7 +386,7 @@ namespace cads
     bool terminate_metrics = false;
     moodycamel::BlockingConcurrentQueue<std::tuple<std::string, std::string, std::string>> queue;
     moodycamel::BlockingConcurrentQueue<remote_msg> remote_queue;
-    std::jthread save_send(upload_scan_thread, std::ref(terminate_upload));
+    std::jthread save_send(upload_scan_thread, std::ref(terminate_upload),upload_config);
     std::jthread realtime_metrics(realtime_metrics_thread, std::ref(queue), constants_heartbeat, std::ref(terminate_metrics));
     std::jthread remote_control(remote_control_thread, std::ref(remote_queue), std::ref(terminate_metrics));
    

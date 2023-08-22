@@ -61,27 +61,8 @@ namespace cads {
     operator std::string() const;
   };
 
-  struct Scan {
-    int32_t Orientation;
-
-    operator std::string() const;
-  };
-
-  struct webapi_urls {
-    using value_type = std::tuple<std::string,bool>;
-    value_type add_conveyor;
-    value_type add_meta;
-    value_type add_belt;
-    value_type add_scan;
-  };
-
   struct Device {
     long Serial;
-  };
-
-  struct Dbscan {
-    double InClusterRadius;
-    long long MinPoints;
   };
 
   struct RevolutionSensorConfig{
@@ -127,19 +108,23 @@ namespace cads {
     double Fps;
   };
 
-  struct UploadConstants {
+  struct webapi_urls {
+    using value_type = std::tuple<std::string,bool>;
+    value_type add_meta;
+    value_type add_belt;
+  };
+
+  struct UploadConfig {
     std::chrono::seconds Period;
+    webapi_urls urls;
   };
 
 
   extern Device constants_device;
-  extern webapi_urls global_webapi;
-  extern Dbscan dbscan_config;
   extern Communications communications_config;
   extern Fiducial fiducial_config;
   extern OriginDetection config_origin_detection;
-  extern GocatorConstants constants_gocator;
-  extern UploadConstants constants_upload;
+  extern UploadConfig upload_config;
   extern HeartBeat constants_heartbeat;
   extern std::atomic<bool> terminate_signal;
   

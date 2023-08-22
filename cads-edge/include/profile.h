@@ -13,6 +13,11 @@
 
 namespace cads
 {
+  struct Dbscan {
+    double InClusterRadius;
+    long long MinPoints;
+  };
+
   using z_element = float; // int16_t;
   using y_type = double;
   using z_type = std::vector<z_element>;

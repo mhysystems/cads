@@ -23,8 +23,7 @@ namespace cads
 {
   void remote_control_thread(moodycamel::BlockingConcurrentQueue<remote_msg> &, bool &);
   cads::coro<cads::remote_msg,bool> remote_control_coro();
-  std::tuple<state::scan,bool> post_scan(state::scan scan);
-  std::vector<profile> http_get_frame(double y, int len, date::utc_clock::time_point chrono);
+  std::tuple<state::scan,bool> post_scan(state::scan scan,webapi_urls) ;
   cads::coro<int, std::tuple<std::string, std::string, std::string>, 1>  realtime_metrics_coro();
   void realtime_metrics_thread(moodycamel::BlockingConcurrentQueue<std::tuple<std::string, std::string, std::string>> &queue, HeartBeat beat, bool &terminate);
   std::string profile_as_flatbufferstring(profile p, double z_resolution, double z_offset);

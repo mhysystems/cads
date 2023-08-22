@@ -12,7 +12,11 @@
   },
   
   "upload" : {
-    "Period" : 120
+    "Period" : 120,
+    "webapi" : {
+      "add_meta" : ["http://localhost:5000/api/meta",true],
+      "add_belt" : ["http://localhost:5000/api/belt",true]
+    }
   },
 
   "OriginDetection" : {
@@ -25,13 +29,6 @@
   "state_db_name" : "state.db",
   "transient_db_name" : "transient.db",
 
-  "webapi_urls" : {
-    "add_conveyor" : ["http://localhost:5000/api/conveyors",false],
-    "add_meta" : ["http://localhost:5000/api/meta",true],
-    "add_belt" : ["http://localhost:5000/api/belts",true],
-    "add_scan" : ["http://localhost:5000/api/scans",true]
-  },
-
   "communications" : {
     "NatsUrl" : "127.0.0.1",
     "UploadRows" : 1024
@@ -41,8 +38,5 @@
     "SendHeartBeat" : false,
     "Subject" :  "caas.1234.heartbeat",
     "Period_ms" : 10000
-  },
-
-  "upload_profile" : false,
-  "base_url" : "http://localhost:5000/api"
+  }
 }

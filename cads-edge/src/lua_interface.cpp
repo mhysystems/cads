@@ -175,7 +175,9 @@ namespace
     return lua_array;
   }
 
-  std::optional<std::tuple<long long, long long>> topair(lua_State *L, int index)
+  template<typename T1, typename T2> std::optional<std::tuple<T1,T2>> topair(lua_State *L, int index);
+
+  template<> std::optional<std::tuple<long long,long long>> topair(lua_State *L, int index)
   {
     if (!lua_istable(L, index))
     {
@@ -790,7 +792,7 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
       return std::nullopt;
     }
 
-    auto range_opt = topair(L, -1);
+    auto range_opt = topair<long long,long long>(L, -1);
     lua_pop(L, 1);
 
     if (!range_opt)

@@ -15,18 +15,6 @@ using Lua = std::unique_ptr<lua_State, decltype(&lua_close)>;
 
 namespace {
 
-  auto mk_webapi_urls(nlohmann::json config) {
-    using namespace std;
-    
-    auto add_conveyor = config["webapi_urls"]["add_conveyor"].get<cads::webapi_urls::value_type>();
-    auto add_meta = config["webapi_urls"]["add_meta"].get<cads::webapi_urls::value_type>();
-    auto add_belt = config["webapi_urls"]["add_belt"].get<cads::webapi_urls::value_type>();
-    auto add_scan = config["webapi_urls"]["add_scan"].get<cads::webapi_urls::value_type>();
-
-    return cads::webapi_urls{add_conveyor,add_meta,add_belt,add_scan};
-
-  }
-
   auto mk_communications(nlohmann::json config) {
     using namespace std;
     
@@ -65,11 +53,21 @@ namespace {
     return cads::Device{serial};
   }
 
+  auto mk_webapi_urls(nlohmann::json config) {
+    
+    auto add_meta = config["add_meta"].get<cads::webapi_urls::value_type>();
+    auto add_belt = config["add_belt"].get<cads::webapi_urls::value_type>();
+
+    return cads::webapi_urls{add_meta,add_belt};
+
+  }
+
   auto mk_upload(nlohmann::json config) {
     
     auto period = config["upload"]["Period"].get<long>();
+    auto webapi = mk_webapi_urls(config["upload"]["webapi"]);
 
-    return cads::UploadConstants{std::chrono::seconds(period)};
+    return cads::UploadConfig{std::chrono::seconds(period),webapi};
   }
 
   auto mk_heartbeat(nlohmann::json config) {
@@ -94,12 +92,11 @@ namespace {
 namespace cads {  
 
   Device constants_device;
-  webapi_urls global_webapi;
   Communications communications_config;
   Fiducial fiducial_config;
   OriginDetection config_origin_detection;
   AnomalyDetection anomalies_config;
-  UploadConstants constants_upload;
+  UploadConfig upload_config;
   HeartBeat constants_heartbeat;
 
   std::atomic<bool> terminate_signal = false;
@@ -118,11 +115,10 @@ namespace cads {
     auto json = slurpfile(f);
 		auto config = nlohmann::json::parse(json);
     constants_device = mk_device(config);
-    global_webapi = mk_webapi_urls(config);
     communications_config = mk_communications(config);
     fiducial_config = mk_fiducial(config);
     config_origin_detection = mk_origin_detection(config);
-    constants_upload = mk_upload(config);
+    upload_config = mk_upload(config);
     constants_heartbeat = mk_heartbeat(config);
     global_config = config;
   }
@@ -167,15 +163,5 @@ namespace cads {
     
     return params_json.dump();
   }
-
-  Scan::operator std::string() const {
-    
-    nlohmann::json params_json;
-  
-    params_json["Orientation"] = Orientation;
-    
-    return params_json.dump();
-  }
-
 
 }
