@@ -90,6 +90,7 @@ profileConfig = {
   Width = belt.Width,
   NaNPercentage = 0.15,
   ClipHeight = 35.0,
+  PulleyEstimatorInit = -15.0,
   IIRFilter = iirfilter,
   PulleySamplesExtend = 10,
   RevolutionSensor = revolutionsensor,

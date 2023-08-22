@@ -684,6 +684,21 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
       return std::nullopt;
     }
 
+    if (lua_getfield(L, index, "PulleyEstimatorInit") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'profile config requires {}' }}", __func__, "PulleyEstimatorInit");
+      return std::nullopt;
+    }
+
+    auto PulleyEstimatorInit_opt = tonumber(L, -1);
+    lua_pop(L, 1);
+
+    if (!PulleyEstimatorInit_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'PulleyEstimatorInit not a number' }}", __func__);
+      return std::nullopt;
+    }
+
     if (lua_getfield(L, index, "IIRFilter") == LUA_TNIL)
     {
       spdlog::get("cads")->error("{{ func = {},  msg = 'profile config requires {}' }}", __func__, "IIRFilter");
@@ -775,7 +790,7 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
       return std::nullopt;
     }
 
-    return cads::ProfileConfig{*width_opt,*nanpercentage_opt,*clipheight_opt,*iirfilter_opt,*pulley_sample_extend_opt,*revolution_sensor_opt,*conveyor_opt,*Dbscan_opt,*Measures_opt};
+    return cads::ProfileConfig{*width_opt,*nanpercentage_opt,*clipheight_opt,*PulleyEstimatorInit_opt,*iirfilter_opt,*pulley_sample_extend_opt,*revolution_sensor_opt,*conveyor_opt,*Dbscan_opt,*Measures_opt};
   }
 
   std::optional<cads::SqliteGocatorConfig> tosqlitegocatorconfig(lua_State *L, int index)

@@ -27,7 +27,6 @@
 
 #pragma GCC diagnostic pop
 
-#include <constants.h>
 #include <utils.hpp>
 
 using namespace std;

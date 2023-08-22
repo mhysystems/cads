@@ -28,6 +28,42 @@ using namespace std::chrono;
 
 namespace cads
 {
+
+coro<cads::msg,cads::msg,1> partition_belt_coro(long long widthn, long long modulo, cads::Io &next)
+  {
+    cads::msg empty;
+    double z_resolution = 1, z_offset = 0;
+
+    for(long cnt = 0;;cnt++){
+      
+      auto [msg,terminate] = co_yield empty;  
+      
+      if(terminate) break;
+
+      switch(std::get<0>(msg)) {
+        
+        case msgid::scan: {
+          if(cnt % modulo == 0){
+            auto p = std::get<profile>(std::get<1>(msg));
+            if(p.z.size() > (size_t)widthn) {
+              
+              double nan_cnt = std::count_if(p.z.begin(), p.z.end(), [](z_element z)
+                                { return std::isnan(z); });
+              
+              p.x_off = nan_cnt / p.z.size();
+              p.z = profile_decimate(p.z,widthn);
+              next.enqueue({msgid::caas_msg,cads::CaasMsg{"profile",profile_as_flatbufferstring(p,z_resolution,z_offset)}});
+            }
+          }
+        }
+        break;
+        default:
+          next.enqueue(msg);
+      }
+    }
+  }
+
+
   coro<cads::msg,cads::msg,1> profile_decimation_coro(long long widthn, long long modulo, cads::Io &next)
   {
     cads::msg empty;
@@ -134,7 +170,7 @@ namespace cads
 
     long drop_profiles = config.IIRFilter.skip; // Allow for iir fillter too stablize
 
-    auto pulley_estimator = mk_pulleyfitter(z_resolution, -15.0);
+    auto pulley_estimator = mk_pulleyfitter(z_resolution, config.PulleyEstimatorInit);
     auto belt_estimator = mk_pulleyfitter(z_resolution, 0.0);
 
     auto filter_window_len = config.PulleySamplesExtend;

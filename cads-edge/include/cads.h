@@ -21,6 +21,7 @@ namespace cads
     double Width;
     double NaNPercentage;
     double ClipHeight;
+    double PulleyEstimatorInit;
     IIRFilterConfig IIRFilter;
     long long PulleySamplesExtend;
     RevolutionSensorConfig RevolutionSensor;
