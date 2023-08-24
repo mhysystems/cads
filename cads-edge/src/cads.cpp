@@ -29,10 +29,10 @@ using namespace std::chrono;
 namespace cads
 {
 
-coro<cads::msg,cads::msg,1> partition_belt_coro(long long widthn, long long modulo, cads::Io &next)
+coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
   {
     cads::msg empty;
-    double z_resolution = 1, z_offset = 0;
+    auto pulley_estimator = mk_pulleyfitter(1.0);    
 
     for(long cnt = 0;;cnt++){
       
@@ -41,20 +41,17 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(long long widthn, long long modu
       if(terminate) break;
 
       switch(std::get<0>(msg)) {
+          case cads::msgid::gocator_properties: {
+          auto p = std::get<GocatorProperties>(std::get<1>(msg));
+          pulley_estimator = mk_pulleyfitter(p.zResolution);
+        }
+        break;
         
         case msgid::scan: {
-          if(cnt % modulo == 0){
-            auto p = std::get<profile>(std::get<1>(msg));
-            if(p.z.size() > (size_t)widthn) {
-              
-              double nan_cnt = std::count_if(p.z.begin(), p.z.end(), [](z_element z)
-                                { return std::isnan(z); });
-              
-              p.x_off = nan_cnt / p.z.size();
-              p.z = profile_decimate(p.z,widthn);
-              next.enqueue({msgid::caas_msg,cads::CaasMsg{"profile",profile_as_flatbufferstring(p,z_resolution,z_offset)}});
-            }
-          }
+          auto p = std::get<profile>(std::get<1>(msg));
+          auto [pulley_level, pulley_right, ll, lr, cerror] = pulley_levels_clustered(p.z, dbscan,pulley_estimator);    
+          //next.enqueue({msgid::caas_msg,cads::CaasMsg{"profile",profile_as_flatbufferstring(p,z_resolution,z_offset)}});
+
         }
         break;
         default:
@@ -300,12 +297,6 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(long long widthn, long long modu
       if(config.measureConfig.Enable) {
         next.enqueue({msgid::measure,Measure::MeasureMsg{"pulleyspeed",0,date::utc_clock::now(),speed}});
         next.enqueue({msgid::measure,Measure::MeasureMsg{"pulleyoscillation",0,date::utc_clock::now(),amplitude}});
-      }
-
-      if (cnt % (1000 * 60) == 0)
-      {
-        auto belt_level = belt_estimator(z_type(z.begin() + left_edge_index, z.begin() + right_edge_index));
-        spdlog::get("cads")->info("Pulley Level: {} | Belt Level: {} | Height: {}", pulley_level_filtered, belt_level, belt_level - pulley_level_filtered);
       }
 
       pulley_level_compensate(z, -pulley_level_filtered, clip_height);

@@ -89,7 +89,14 @@ namespace cads
 
         if(!m_stopped) m_gocatorFifo.enqueue({msgid::scan, profile{current_time,cnt*y_resolution, p.x_off, z_type(first, last.base())}});
 
-        current_time += pulley_period;
+        if(config.sleep)
+        {
+          current_time += pulley_period;
+        }else{
+          auto sleep = current_time + pulley_period - std::chrono::high_resolution_clock::now();
+          std::this_thread::sleep_for(sleep);
+          current_time = std::chrono::high_resolution_clock::now();
+        }
         cnt++;
                      
         if (m_gocatorFifo.size_approx() > buffer_warning_increment)

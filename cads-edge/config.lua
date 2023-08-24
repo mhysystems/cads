@@ -3,7 +3,7 @@ json = require "json"
 gocatorFps = 984.0
 
 iirfilter = {
-  Skip = 41706,
+  Skip = 10000,
   Delay = 334,
   Sos  = {{ 1.66008519e-07,  1.66008519e-07,  0.00000000e+00, 1.00000000e+00, -9.77361093e-01,  0.00000000e+00},
           { 1.00000000e+00, -1.98638977e+00,  1.00000000e+00, 1.00000000e+00, -1.95693573e+00,  9.57429859e-01},
@@ -63,7 +63,8 @@ sqlitegocatorConfig = {
   Forever = true,
   Delay = 98,
   Source = "../../profiles/rawprofile_cv912.db",
-  TypicalSpeed = conveyor.TypicalSpeed
+  TypicalSpeed = conveyor.TypicalSpeed,
+  Sleep = false
 }
 
 y_res_mm = 1000 * conveyor.TypicalSpeed / gocatorFps -- In mm

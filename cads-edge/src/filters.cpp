@@ -63,6 +63,20 @@ namespace cads
     };
   }
 
+  std::function<cads::z_element(cads::z_element,cads::z_element)> mk_schmitt_trigger(const cads::z_element ref)
+  {
+
+    auto level = true;
+
+    return [=](cads::z_element x, cads::z_element bias) mutable
+    {
+      auto high = x > (bias+ref);
+      auto low =  x < (bias -ref);
+      level = high || (level && !low);
+      return level ? cads::z_element(1) : cads::z_element(-1);
+    };
+  }
+
   std::function<cads::z_element(cads::z_element)> mk_schmitt_trigger(const cads::z_element ref, const cads::z_element bias)
   {
 

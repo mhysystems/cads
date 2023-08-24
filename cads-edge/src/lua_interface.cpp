@@ -846,22 +846,6 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
     bool forever = lua_toboolean(L, -1);
     lua_pop(L, 1);
 
-    if (lua_getfield(L, index, "Delay") == LUA_TNIL)
-    {
-      spdlog::get("cads")->error("{{ func = {},  msg = 'sqlite gocator Config requires {}' }}", __func__, "Delay");
-      return std::nullopt;
-    }
-
-    auto delay_opt = tonumber(L, -1);
-    lua_pop(L, 1);
-
-    if (!delay_opt)
-    {
-      spdlog::get("cads")->error("{{ func = {},  msg = 'delay not a number' }}", __func__);
-      return std::nullopt;
-    }
-
-    
     if (lua_getfield(L, index, "Source") == LUA_TNIL)
     {
       spdlog::get("cads")->error("{{ func = {},  msg = 'sqlite gocator Config requires {}' }}", __func__, "Source");
@@ -892,7 +876,16 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
       return std::nullopt;
     }
 
-    return cads::SqliteGocatorConfig{*range_opt, *fps_opt, forever, *delay_opt, *source_opt, *typical_speed_opt};
+    if (lua_getfield(L, index, "Sleep") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'sqlite gocator Config requires {}' }}", __func__, "Sleep");
+      return std::nullopt;
+    }
+
+    bool Sleep = lua_toboolean(L, -1);
+    lua_pop(L, 1);
+
+    return cads::SqliteGocatorConfig{*range_opt, *fps_opt, forever,*source_opt, *typical_speed_opt,Sleep};
   }
 
   std::optional<cads::GocatorConfig> togocatorconfig(lua_State *L, int index)

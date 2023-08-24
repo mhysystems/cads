@@ -74,7 +74,7 @@ std::function<PulleyRevolution(double)>
     auto cnt_est_threshold = config.skip; //period * constants_gocator.Fps * 0.9;
 
     double schmitt1 = 1.0, schmitt0 = -1.0;
-    auto schmitt_trigger = mk_schmitt_trigger(config.threshold,bias);
+    auto schmitt_trigger = mk_schmitt_trigger(config.threshold);
 
     decltype(cnt_est_threshold) cnt = 0;
     auto avg_max_fn = mk_online_mean(bias);
@@ -102,7 +102,7 @@ std::function<PulleyRevolution(double)>
       
       auto rtn = PulleyRevolution{false, trigger_distance};
 
-      schmitt1 = schmitt_trigger(pulley_height);
+      schmitt1 = schmitt_trigger(pulley_height,bias);
 
       if ((cnt > cnt_est_threshold) && ((std::signbit(schmitt1) == true && std::signbit(schmitt0) == false) || 
          (bidirectional && (std::signbit(schmitt1) == false && std::signbit(schmitt0) == true))))
@@ -242,7 +242,7 @@ std::function<PulleyRevolution(double)>
   {
     using namespace std::placeholders;
 
-    auto T0 = 1000 * pulley_circumfrence / avg_speed; // in milliseconds
+    auto T0 = pulley_circumfrence / avg_speed; // in milliseconds
     auto T1 = 6 * T0;  // in milliseconds
     auto barrel_origin_time = std::chrono::high_resolution_clock::now();
     
@@ -251,7 +251,7 @@ std::function<PulleyRevolution(double)>
     auto adjust = std::bind(pulley_speed_adjustment, _1, T0, T1);
     auto amplitude_extraction = mk_amplitude_extraction();
 
-    double speed = avg_speed / 1000; // m/s
+    double speed = avg_speed; // m/s
     double amplitude = 0;
     double frequency = 0;
 

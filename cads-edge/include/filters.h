@@ -18,6 +18,7 @@ namespace cads
   std::function<double(double)> mk_iirfilterSoS(std::vector<std::vector<double>>);
   std::function<std::tuple<bool, std::tuple<profile,int,int,int,z_type>>(std::tuple<profile,int,int,int,z_type>)> mk_delay(size_t len);
   std::function<cads::z_element(cads::z_element)> mk_schmitt_trigger(const cads::z_element ref, const cads::z_element bias);
+  std::function<cads::z_element(cads::z_element,cads::z_element)> mk_schmitt_trigger(const cads::z_element ref);
   std::function<cads::z_element(cads::z_element,bool)> mk_amplitude_extraction();
   std::function<double(double)> mk_dc_filter();
   void gaussian(z_type& z);

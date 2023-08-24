@@ -16,9 +16,9 @@ namespace cads
     range_type Range;
     double Fps;
     bool Forever;
-    double Delay;
     std::filesystem::path Source;
     double TypicalSpeed;
+    bool sleep;
   };
 
   class SqliteGocatorReader : public GocatorReaderBase
