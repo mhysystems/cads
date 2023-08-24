@@ -223,7 +223,7 @@ coro<remote_msg,bool> remote_control_coro()
 
         auto [sub, head, data] = msg;
 
-        spdlog::get("cads")->debug("{}:natsConnection_PublishString {},{}", __func__, sub.c_str(), data.c_str());
+        spdlog::get("cads")->trace("{}:natsConnection_PublishString {},{}", __func__, sub.c_str(), data.c_str());
 
         natsMsg *nats_msg_raw = nullptr;
  

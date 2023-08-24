@@ -89,7 +89,7 @@ namespace cads
 
         if(!m_stopped) m_gocatorFifo.enqueue({msgid::scan, profile{current_time,cnt*y_resolution, p.x_off, z_type(first, last.base())}});
 
-        if(config.sleep)
+        if(!config.sleep)
         {
           current_time += pulley_period;
         }else{
