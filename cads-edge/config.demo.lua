@@ -24,7 +24,7 @@ conveyor = {
   Name = "belt1",
   Timezone = "Australia/Perth",
   PulleyCircumference = 4197.696,
-  TypicalSpeed = 6.09,
+  TypicalSpeed = 6.187,
   Belt = 1,
   Length = 12556200,
   WidthN = 1890
@@ -58,12 +58,12 @@ revolutionsensor = {
 }
 
 sqlitegocatorConfig = {
-  Range = {0, 153299 + 2001769},
+  Range = {169812, 2166792},
   Fps = gocatorFps,
   Forever = true,
   Source = "../../profiles/rawprofile_cv001_2.db",
   TypicalSpeed = conveyor.TypicalSpeed,
-  Sleep = false
+  Sleep = true
 }
 
 y_res_mm = 1000 * conveyor.TypicalSpeed / gocatorFps -- In mm
@@ -108,7 +108,13 @@ dynamicProcessingConfig = {
 }
 
 function process(width,height)
-  return 0
+  local sum = 0
+  for i = 1+50,width-50 do
+    for j = 0,height-1 do
+      sum = sum + ((win[j*width + i] <= 25 and win[j*width + i] > 10)and 1 or 0)
+    end
+  end
+  return (sum / (width * height)) > 0.001 and sum or 0
 end
 
 function timeToString(time) -- overwritten externally
@@ -202,9 +208,8 @@ function main(sendmsg)
   local luamain = BlockingReaderWriterQueue()
   
   local laser = sqlitegocator(sqlitegocatorConfig,gocator_cads) 
-    --local distance_est = encoder_distance_estimation(origin_dynamic)
   local thread_profile = process_profile(profileConfig,gocator_cads,cads_origin)
-  local thread_origin = window_processing_thread(conveyor,cads_origin,origin_dynamic)
+  local thread_origin = loop_beltlength_thread(conveyor,cads_origin,origin_dynamic)
   local thread_dynamic = dynamic_processing_thread(dynamicProcessingConfig,origin_dynamic,dynamic_savedb)
   local thread_send_save = save_send_thread(conveyor,dynamic_savedb,luamain)
 

@@ -21,7 +21,7 @@
 
   "OriginDetection" : {
     "BeltLength": [12555200,12575200],
-    "cross_correlation_threshold" : 0.15,
+    "cross_correlation_threshold" : 0.21,
     "dump_match" : true
   },
 
