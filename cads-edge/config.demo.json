@@ -14,8 +14,8 @@
   "upload" : {
     "Period" : 2592000,
     "webapi" : {
-      "add_meta" : ["http://localhost:6500/api/meta",false],
-      "add_belt" : ["http://localhost:6500/api/belt",false]
+      "add_meta" : ["http://localhost:6500/api/meta",true],
+      "add_belt" : ["http://localhost:6500/api/belt",true]
     }
   },
 
