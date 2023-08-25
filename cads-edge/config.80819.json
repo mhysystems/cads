@@ -1,0 +1,42 @@
+{
+  "Device" : {
+    "Serial" : 80819
+  },
+
+  "fiducial" : {
+    "fiducial_depth" : 2,
+    "fiducial_x" : 25,
+    "fiducial_y" : 40,
+    "fiducial_gap" : 40,
+    "edge_height" : 30.1
+  },
+
+  "upload" : {
+    "Period" : 120,
+    "webapi" : {
+      "add_meta" : ["https://fmgcads.mhysystems.com/api/meta",true],
+      "add_belt" : ["https://fmgcads.mhysystems.com/api/belt",true]
+    }
+  },
+
+  "OriginDetection" : {
+    "BeltLength": [660,680],
+    "cross_correlation_threshold" : 0.285,
+    "dump_match" : false
+  },
+
+  "profile_db_name" : "profile.db",
+  "state_db_name" : "state.db",
+  "transient_db_name" : "transient.db",
+
+  "communications" : {
+    "NatsUrl" : "10.9.1.1",
+    "UploadRows" : 1024
+  },
+
+  "heartbeat" : {
+    "SendHeartBeat" : true,
+    "Subject" :  "caas.80819.heartbeat",
+    "Period_ms" : 10000
+  }
+}

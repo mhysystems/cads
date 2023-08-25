@@ -35,6 +35,10 @@
     <ProjectReference Include="..\keygen\keygen.csproj" />
   </ItemGroup>
 
-
+  <ItemGroup>
+    <None Update="alignment.lua">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 
 </Project>
