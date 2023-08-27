@@ -96,8 +96,8 @@ function main(sendmsg)
   local cads_origin = BlockingReaderWriterQueue()
   local origin_savedb = BlockingReaderWriterQueue()
   local savedb_luamain = BlockingReaderWriterQueue()
-  local laser = sqlitegocator(sqlitegocatorConfig,gocator_cads) 
-  --local laser = gocator(laserConf,gocator_cads)
+  --local laser = sqlitegocator(sqlitegocatorConfig,gocator_cads) 
+  local laser = gocator(laserConf,gocator_cads)
   
   if laser == nil then
     sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to start gocator")
