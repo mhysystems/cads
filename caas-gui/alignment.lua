@@ -3,12 +3,12 @@ json = require "json"
 gocatorFps = 984.0
 
 sqlitegocatorConfig = {
-  Range = {0,99999999999},
+  Range = {169812, 2166792},
   Fps = gocatorFps,
   Forever = true,
-  Delay = 98,
-  Source = "../../profiles/rawprofile_cv912.db",
-  TypicalSpeed = 6.0
+  Source = "../../profiles/rawprofile_cv001_2.db",
+  TypicalSpeed = 6.187,
+  Sleep = true
 }
 
 laserConf = {
@@ -16,9 +16,6 @@ laserConf = {
   TypicalResolution = 6.0
 }
 
-function timeToString(time) -- overwritten externally
-  return tostring(time)
-end
 
 function main(sendmsg)
 
@@ -28,7 +25,15 @@ function main(sendmsg)
   --local laser = sqlitegocator(sqlitegocatorConfig,decimate) 
   local laser = gocator(laserConf,decimate) 
 
-  laser:Start(gocatorFps)
+  if laser == nil then
+    sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to start gocator")
+    return
+  end
+
+  if laser:Start(gocatorFps) then
+    sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to start gocator")
+    return
+  end
 
   unloop = false
   repeat
@@ -40,6 +45,9 @@ function main(sendmsg)
       elseif msg_id == 10 then
         local m,profile = table.unpack(data)
         sendmsg("caas." .. DeviceSerial .. "." .. m,"",profile)
+      elseif msg_id == 12 then
+        sendmsg("caas." .. DeviceSerial .. "." .. "error","",data)
+      break
       end
     end
 
@@ -47,6 +55,10 @@ function main(sendmsg)
   until unloop
 
   laser:Stop()
+  
+  if laser:Align() then
+    sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to align gocator")
+  end
   
 end
 

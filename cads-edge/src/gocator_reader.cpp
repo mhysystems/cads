@@ -66,12 +66,19 @@ namespace cads
   bool GocatorReader::Start_impl()
   {
     if(!m_stopped) return false;
+    
+    auto status = GoSystem_SetDataHandler(m_system, OnData, this);
+    
+    if (kIsError(status))
+    {
+      return true;
+    }
 
-    auto status = GoSystem_Start(m_system);
+    status = GoSystem_Start(m_system);
 
     if (kIsError(status))
     {
-      throw runtime_error{"GoSensor_Start: "s + to_string(status)};
+      return true;
     }
     else
     {
@@ -136,6 +143,52 @@ namespace cads
     return kIsError(status);
   }
 
+  bool GocatorReader::Align_impl() {
+
+    auto status = GoSystem_SetDataHandler(m_system, kNULL, kNULL);
+    
+    if (kIsError(status))
+    {
+      return true;
+    }
+    
+    status = GoSystem_StartAlignment(m_system);
+
+    if (kIsError(status))
+    {
+      return true;
+    }
+
+    const auto timeout_us = 30000000;
+    GoDataSet dataset = nullptr;
+    if ((status = GoSystem_ReceiveData(m_system, &dataset, timeout_us)) == kOK)
+    {
+      for (kSize i = 0; i < GoDataSet_Count(dataset); ++i)
+      {
+        GoDataMsg message = GoDataSet_At(dataset, i);
+        if (GoDataMsg_Type(message) == GO_DATA_MESSAGE_TYPE_ALIGNMENT)
+        {
+          if ((status = GoAlignMsg_Status(message)) == kOK)
+          {
+            spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__, "Gocator is aligned");
+          }
+          else
+          {
+            spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__, "Gocator is NOT aligned");
+            return true;
+          }
+        }
+      }
+      GoDestroy(dataset);
+    }
+    else
+    {
+      throw runtime_error{"GoSystem_StartAlignment: "s + to_string(status)};
+    }
+
+    return kIsError(status);
+  }
+
   GocatorReader::GocatorReader(GocatorConfig cnf, Io &gocatorFifo) : GocatorReaderBase(gocatorFifo), config(cnf)
   {
     m_assembly = CreateGoSdk();
@@ -197,42 +250,6 @@ namespace cads
       throw runtime_error{"GoSetup_SetAlignmentStationaryTarget: "s + to_string(status)};
     }
 
-    if (kIsError(status = GoSystem_StartAlignment(m_system)))
-    {
-      throw runtime_error{"GoSetup_SetAlignmentStationaryTarget: "s + to_string(status)};
-    }
-
-    const auto timeout_us = 30000000;
-    GoDataSet dataset = nullptr;
-    if ((status = GoSystem_ReceiveData(m_system, &dataset, timeout_us)) == kOK)
-    {
-      for (kSize i = 0; i < GoDataSet_Count(dataset); ++i)
-      {
-        GoDataMsg message = GoDataSet_At(dataset, i);
-        if (GoDataMsg_Type(message) == GO_DATA_MESSAGE_TYPE_ALIGNMENT)
-        {
-          if ((status = GoAlignMsg_Status(message)) == kOK)
-          {
-            spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__, "Gocator is aligned");
-          }
-          else
-          {
-            spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__, "Gocator is NOT aligned");
-            throw runtime_error{"GoSystem_StartAlignment: "s + to_string(status)};
-          }
-        }
-      }
-      GoDestroy(dataset);
-    }
-    else
-    {
-      throw runtime_error{"GoSystem_StartAlignment: "s + to_string(status)};
-    }
-
-    if (kIsError(status = GoSystem_SetDataHandler(m_system, OnData, this)))
-    {
-      throw runtime_error{"GoSensor_SetDataHandler: "s + to_string(status)};
-    }
   }
 
   GocatorReader::~GocatorReader()

@@ -1,6 +1,6 @@
 {
   "Device" : {
-    "Serial" : 12345
+    "Serial" : 80819
   },
 
   "fiducial" : {
@@ -12,17 +12,17 @@
   },
 
   "upload" : {
-    "Period" : 2592000,
+    "Period" : 120,
     "webapi" : {
-      "add_meta" : ["http://localhost:6500/api/meta",false],
-      "add_belt" : ["http://localhost:6500/api/belt",false]
+      "add_meta" : ["https://localhost:5000/api/meta",false],
+      "add_belt" : ["https://localhost:5000/api/belt",false]
     }
   },
 
   "OriginDetection" : {
-    "BeltLength": [12555200,12575200],
-    "cross_correlation_threshold" : 0.21,
-    "dump_match" : true
+    "BeltLength": [660,680],
+    "cross_correlation_threshold" : 0.285,
+    "dump_match" : false
   },
 
   "profile_db_name" : "profile.db",
@@ -35,8 +35,8 @@
   },
 
   "heartbeat" : {
-    "SendHeartBeat" : false,
-    "Subject" :  "caas.12345.heartbeat",
+    "SendHeartBeat" : true,
+    "Subject" :  "caas.80819.heartbeat",
     "Period_ms" : 10000
   }
 }

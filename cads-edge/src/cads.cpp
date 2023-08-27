@@ -29,6 +29,18 @@ using namespace std::chrono;
 namespace cads
 {
 
+msg prs_to_scan(msg m)
+{
+  auto id = std::get<0>(m);
+  if(id == msgid::pulley_revolution_scan)
+  {
+    auto prs = std::get<PulleyRevolutionScan>(std::get<1>(m));
+    return {msgid::scan,std::get<2>(prs)};
+  }else{
+    return m;
+  }
+}
+
 coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
   {
     cads::msg empty;
@@ -320,7 +332,8 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
 
       auto f = z | views::take(left_edge_index_aligned + width_n) | views::drop(left_edge_index_aligned);
 
-      next.enqueue({msgid::scan, cads::profile{delayed_profile.time,y, x + left_edge_index_aligned * x_resolution, {f.begin(), f.end()}}});
+      //next.enqueue({msgid::scan, cads::profile{delayed_profile.time,y, x + left_edge_index_aligned * x_resolution, {f.begin(), f.end()}}});
+      next.enqueue({msgid::pulley_revolution_scan,PulleyRevolutionScan{std::get<0>(ps),std::get<1>(ps), cads::profile{delayed_profile.time,y, x + left_edge_index_aligned * x_resolution, {f.begin(), f.end()}}}});
 
     } while (std::get<0>(m) != msgid::finished);
 

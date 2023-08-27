@@ -139,7 +139,7 @@ std::function<PulleyRevolution(double)>
       double stride;
       std::deque<profile> fifo;
       decltype(next) csp;
-      global_t(decltype(next) i) : csp(i) {}
+      global_t(decltype(next) i) : csp(i){}
     } global(next);
 
     global.stride = stride;
@@ -156,11 +156,14 @@ std::function<PulleyRevolution(double)>
           auto step_size = o.root_distance / global.fifo.size();
           auto decimation_factor = global.stride / step_size;
 
-          for (double i = 0; std::size_t(i) < global.fifo.size(); i+= decimation_factor)
+          for (double i = 0, prev = -1.0; std::size_t(i) < global.fifo.size(); prev = i, i+= decimation_factor)
           {
-            auto e = global.fifo[std::size_t(i)];
-            e.y = global.distance + std::size_t(i) * global.stride;
-            global.csp.enqueue({msgid::scan,e});
+            if(std::size_t(i) != std::size_t(prev))
+            {
+              auto e = global.fifo[std::size_t(i)];
+              e.y = global.distance + std::size_t(i) * global.stride;
+              global.csp.enqueue({msgid::scan,e});
+            }
           }
 
           global.distance += o.root_distance;

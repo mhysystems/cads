@@ -25,6 +25,7 @@ class GocatorReaderBase
 	GocatorReaderBase(GocatorReaderBase&&) = delete;
 	GocatorReaderBase& operator=(GocatorReaderBase&&) = delete;
   virtual bool Start_impl();
+  virtual bool Align_impl();
   virtual void Stop_impl();
   virtual bool SetFrameRate(double);
 
@@ -38,6 +39,7 @@ protected:
 public:
   bool Start(double);
 	void Stop();
+  bool Align();
 
 	GocatorReaderBase(Io&);
   virtual ~GocatorReaderBase() = default;

@@ -131,6 +131,7 @@
         device = d;
         progress = 0;
         deviceStatus = DeviceStateMsg(d.State);
+        alignView.Reset();
         InvokeAsync(StateHasChanged);
       });
 

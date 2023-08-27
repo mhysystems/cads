@@ -26,7 +26,7 @@ conveyor = {
   PulleyCircumference = 4197.696,
   TypicalSpeed = 6.187,
   Belt = 1,
-  Length = 12556200,
+  Length = 12565200,
   WidthN = 1890
 }
 
@@ -37,7 +37,7 @@ belt = {
   CordDiameter = 9.1,
   TopCover = 14.0,
   Width = 1600,
-  Length = 12556200,
+  Length = 12565200,
   LengthN = conveyor.TypicalSpeed / gocatorFps, 
   Splices = 1,
   Conveyor = 1
@@ -108,18 +108,19 @@ dynamicProcessingConfig = {
 }
 
 function process(width,height)
+  return 0
+end
+
+function process2(width,height)
   local sum = 0
   for i = 1+50,width-50 do
     for j = 0,height-1 do
-      sum = sum + ((win[j*width + i] <= 25 and win[j*width + i] > 10)and 1 or 0)
+      sum = sum + ((win[j*width + i] <= 23.5 and win[j*width + i] > 10) and 1 or 0)
     end
   end
-  return (sum / (width * height)) > 0.001 and sum or 0
+  return (sum / (width * height)) > 0.005 and sum or 0
 end
 
-function timeToString(time) -- overwritten externally
-  return tostring(time)
-end
 
 function msgAppendList(root, keys, values)
   
@@ -189,7 +190,7 @@ function send(out,measurements,name,quality,time,...)
       
       msgAppendTable(msg,measurements[name].tags)
       msgAppendList(msg,measurements[name].fields, {...})
-      out(conveyor.Org,measurements[name].category,json.encode(msg))
+      out("demo",measurements[name].category,json.encode(msg))
       m.time0 = time
     end
 
@@ -206,9 +207,15 @@ function main(sendmsg)
   local origin_dynamic = BlockingReaderWriterQueue()
   local dynamic_savedb = BlockingReaderWriterQueue()
   local luamain = BlockingReaderWriterQueue()
-  
+  --local laser = sqlitegocator(sqlitegocatorConfig,decimate) 
   local laser = sqlitegocator(sqlitegocatorConfig,gocator_cads) 
-  local thread_profile = process_profile(profileConfig,gocator_cads,cads_origin)
+
+  if laser == nil then
+    return
+  end
+
+  local ede = encoder_distance_estimation(cads_origin,y_res_mm)
+  local thread_profile = process_profile(profileConfig,gocator_cads,ede)
   local thread_origin = loop_beltlength_thread(conveyor,cads_origin,origin_dynamic)
   local thread_dynamic = dynamic_processing_thread(dynamicProcessingConfig,origin_dynamic,dynamic_savedb)
   local thread_send_save = save_send_thread(conveyor,dynamic_savedb,luamain)

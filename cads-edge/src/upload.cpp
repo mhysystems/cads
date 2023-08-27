@@ -1,6 +1,7 @@
 #include <filesystem>
 #include <tuple>
 #include <algorithm>
+#include <span>
 
 #include <date/date.h>
 #include <date/tz.h>
@@ -68,10 +69,17 @@ namespace
     max.scanned_utc = date::utc_clock::time_point::min();
     max.status = 0;
 
-    for(auto scan : scans) {
+    std::deque<cads::state::scan>::iterator it;
+
+    for(auto i : std::array<int64_t,3>{2,3,1}) {
+      it = std::partition(scans.begin(), scans.end(), [=](cads::state::scan e) {return e.status == i;});
+      if(it != scans.begin()) break;
+    }
+    
+    for(auto scan = scans.begin(); scan < it; ++scan) {
       
-      if(scan.scanned_utc > max.scanned_utc && scan.status >= max.status) {
-        max = scan;
+      if(scan->scanned_utc > max.scanned_utc && scan->status >= max.status) {
+        max = *scan;
       }
     }
 
@@ -182,7 +190,7 @@ void upload_scan_thread(std::atomic<bool> &terminate, UploadConfig config)
             resume_scan(scan,config.urls);
           }
         }
-        else if(scan.scanned_utc < (latest.scanned_utc + config.Period) && scan.status != 2 && scan.status != 0) 
+        else if(scan.db_name != latest.db_name && scan.scanned_utc < (latest.scanned_utc + config.Period) && scan.status != 2 && scan.status != 0) 
         {
           delete_scan(scan);
         }

@@ -19,6 +19,10 @@ namespace cads
   void GocatorReaderBase::Stop_impl() {
   }
 
+  bool GocatorReaderBase::Align_impl() {
+    return false;
+  }
+
   bool GocatorReaderBase::SetFrameRate(double) {
     return false;
   }
@@ -31,6 +35,10 @@ namespace cads
 
   void GocatorReaderBase::Stop() {
     Stop_impl();
+  }
+
+  bool GocatorReaderBase::Align() {
+    return Align_impl();
   }
 
   z_type GocatorReaderBase::k16sToFloat(k16s *z_start, k16s *z_end, double z_resolution, double z_offset)

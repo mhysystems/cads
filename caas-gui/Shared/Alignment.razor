@@ -12,7 +12,7 @@
   </text-mapping>
   <canvas @ref="@jsPlotElement" width="420" height="120"></canvas>
   <bottomrow>
-    <button class="btn btn-primary" @onclick="UserAligned">@(alignmentState == AlignmentState.Cancel ? "Align" : "OK")</button>
+    <button class="btn btn-primary" @onclick="UserAligned">@(alignmentState == AlignmentState.Cancel ? "Laser On" : "Aligned")</button>
     <button class="btn btn-primary" @onclick="CancelClick">Cancel</button>
   </bottomrow>
 </alignment-main>
@@ -60,6 +60,11 @@
       alignmentState = AlignmentState.Cancel;
       await aligned.InvokeAsync(AlignmentState.Aligned);
     }
+  }
+
+  public void Reset()
+  {
+    alignmentState = AlignmentState.Cancel;
   }
 
   private async Task CancelClick(MouseEventArgs e)

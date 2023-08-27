@@ -23,6 +23,12 @@
 
 namespace
 {
+
+  auto TransformMsg(std::function<cads::msg(cads::msg)> fn,cads::Io* io)
+  {
+    return [io,fn](cads::msg m) { return io->enqueue(fn(m));};
+  }
+
   int time_str(lua_State *L) {
     using ds = std::chrono::duration<double>;
     auto time = lua_tonumber(L,1);
@@ -1208,6 +1214,18 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
     return 1;
   }
 
+  int prsToScan(lua_State *L)
+  {
+    auto out = static_cast<cads::Io *>(lua_touserdata(L, -1));
+    new (lua_newuserdata(L, sizeof(cads::AdaptFn))) cads::AdaptFn(TransformMsg(cads::prs_to_scan, out));
+
+    lua_createtable(L, 0, 1);
+    lua_pushcfunction(L, Io_gc);
+    lua_setfield(L, -2, "__gc");
+    lua_setmetatable(L, -2);
+    return 1;
+  }
+
   int BlockingReaderWriterQueue(lua_State *L)
   {
     new (lua_newuserdata(L, sizeof(cads::Adapt<moodycamel::BlockingReaderWriterQueue<cads::msg>>))) cads::Adapt<moodycamel::BlockingReaderWriterQueue<cads::msg>>(moodycamel::BlockingReaderWriterQueue<cads::msg>());
@@ -1243,20 +1261,25 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
     {
       pushcaasmsg(L,std::get<cads::CaasMsg>(std::get<1>(m)));
       return 3;
+    }else if(mid ==  cads::msgid::error) {
+      auto errmsg = std::get<std::string>(std::get<1>(m));
+      lua_pushlstring(L,errmsg.c_str(),errmsg.size());
+      return 3;
     }
 
     return 2;
   }
 
-  int mk_thread(lua_State *L, std::function<void(cads::Io &)> fn)
+  auto thread2_with_catch(std::function<void(cads::Io &, cads::Io &)> fn)
   {
-    auto q = static_cast<cads::Io *>(lua_touserdata(L, -1));
-    new (lua_newuserdata(L, sizeof(std::thread))) std::thread(fn, std::ref(*q));
-    lua_createtable(L, 0, 1);
-    lua_pushcfunction(L, thread_gc);
-    lua_setfield(L, -2, "__gc");
-    lua_setmetatable(L, -2);
-    return 1;
+    return [=](cads::Io &input, cads::Io &output) {
+      try {
+        fn(input,output);
+      }catch(std::exception ex)
+      {
+        output.enqueue({cads::msgid::error,ex.what()});
+      }
+    };
   }
 
   int mk_thread2(lua_State *L, std::function<void(cads::Io &, cads::Io &)> fn)
@@ -1264,7 +1287,7 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
     auto in = static_cast<cads::Io *>(lua_touserdata(L, -2));
     auto out = static_cast<cads::Io *>(lua_touserdata(L, -1));
 
-    new (lua_newuserdata(L, sizeof(std::thread))) std::thread(fn, std::ref(*in), std::ref(*out));
+    new (lua_newuserdata(L, sizeof(std::thread))) std::thread(thread2_with_catch(fn), std::ref(*in), std::ref(*out));
     lua_createtable(L, 0, 1);
     lua_pushcfunction(L, thread_gc);
     lua_setfield(L, -2, "__gc");
@@ -1276,9 +1299,11 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
   {
     auto gocator = static_cast<std::unique_ptr<cads::GocatorReaderBase> *>(lua_touserdata(L, -2));
     auto fps = lua_tonumber(L, -1);
-    (*gocator)->Start(fps);
+    auto err = (*gocator)->Start(fps);
 
-    return 0;
+    lua_pushboolean(L,err);
+
+    return 1;
   }
 
   int gocator_stop(lua_State *L)
@@ -1287,6 +1312,16 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
     (*gocator)->Stop();
 
     return 0;
+  }
+
+  int gocator_align(lua_State *L)
+  {
+    auto gocator = static_cast<std::unique_ptr<cads::GocatorReaderBase> *>(lua_touserdata(L, -1));
+    auto err = (*gocator)->Align();
+
+    lua_pushboolean(L,err);
+
+    return 1;
   }
 
   int gocator_gc(lua_State *L)
@@ -1309,20 +1344,29 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
 
     auto q = static_cast<cads::Io *>(lua_touserdata(L, 2));
     auto p = new (lua_newuserdata(L, sizeof(std::unique_ptr<cads::GocatorReaderBase>))) std::unique_ptr<cads::SqliteGocatorReader>;
-    *p = std::make_unique<cads::SqliteGocatorReader>(*sqlite_gocator_config_opt, *q);
+    
+    try {
+      *p = std::make_unique<cads::SqliteGocatorReader>(*sqlite_gocator_config_opt, *q);
 
-    lua_createtable(L, 0, 1);
-    lua_pushcfunction(L, gocator_gc);
-    lua_setfield(L, -2, "__gc");
-    lua_createtable(L, 0, 2);
-    lua_pushcfunction(L, gocator_start);
-    lua_setfield(L, -2, "Start");
-    lua_pushcfunction(L, gocator_stop);
-    lua_setfield(L, -2, "Stop");
-    lua_setfield(L, -2, "__index");
-    lua_setmetatable(L, -2);
+      lua_createtable(L, 0, 1);
+      lua_pushcfunction(L, gocator_gc);
+      lua_setfield(L, -2, "__gc");
+      lua_createtable(L, 0, 2);
+      lua_pushcfunction(L, gocator_start);
+      lua_setfield(L, -2, "Start");
+      lua_pushcfunction(L, gocator_stop);
+      lua_setfield(L, -2, "Stop");
+      lua_pushcfunction(L, gocator_align);
+      lua_setfield(L, -2, "Align");
+      lua_setfield(L, -2, "__index");
+      lua_setmetatable(L, -2);
+      
+      return 1;
+    }catch(std::exception) {
+      delete p;
+    }
 
-    return 1;
+    return 0;
   }
 
   int gocator(lua_State *L)
@@ -1337,20 +1381,31 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
 
     auto q = static_cast<cads::Io *>(lua_touserdata(L, 2));
     auto p = new (lua_newuserdata(L, sizeof(std::unique_ptr<cads::GocatorReaderBase>))) std::unique_ptr<cads::GocatorReader>;
-    *p = std::make_unique<cads::GocatorReader>(*gocator_config_opt, *q);
+    
+    try 
+    {
+      *p = std::make_unique<cads::GocatorReader>(*gocator_config_opt, *q);
 
-    lua_createtable(L, 0, 1);
-    lua_pushcfunction(L, gocator_gc);
-    lua_setfield(L, -2, "__gc");
-    lua_createtable(L, 0, 2);
-    lua_pushcfunction(L, gocator_start);
-    lua_setfield(L, -2, "Start");
-    lua_pushcfunction(L, gocator_stop);
-    lua_setfield(L, -2, "Stop");
-    lua_setfield(L, -2, "__index");
-    lua_setmetatable(L, -2);
+      lua_createtable(L, 0, 1);
+      lua_pushcfunction(L, gocator_gc);
+      lua_setfield(L, -2, "__gc");
+      lua_createtable(L, 0, 2);
+      lua_pushcfunction(L, gocator_start);
+      lua_setfield(L, -2, "Start");
+      lua_pushcfunction(L, gocator_stop);
+      lua_setfield(L, -2, "Stop");
+      lua_pushcfunction(L, gocator_align);
+      lua_setfield(L, -2, "Align");
+      lua_setfield(L, -2, "__index");
+      lua_setmetatable(L, -2);
 
-    return 1;
+      return 1;
+    }catch(std::exception)
+    {
+      delete p;
+    }
+
+    return 0;
   }
 
   int anomaly_detection_thread(lua_State *L)
@@ -1531,6 +1586,10 @@ namespace cads
 
       lua_pushcfunction(L,profile_decimation);
       lua_setglobal(L,"profile_decimation");
+
+      lua_pushcfunction(L,::prsToScan);
+      lua_setglobal(L,"prsToScan");
+      
 
       return UL;
     }

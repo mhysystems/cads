@@ -32,6 +32,7 @@ namespace cads
     virtual bool SetFrameRate(double);
     virtual bool Start_impl();
     virtual void Stop_impl();
+    virtual bool Align_impl();
 
   protected:
     

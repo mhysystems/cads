@@ -54,4 +54,31 @@ namespace cads
     Adapt& operator=(const Adapt&) = delete;
     T m;
   };
+
+  struct AdaptFn : public Io
+  {
+    AdaptFn(std::function<bool(msg)>&& a) : m(std::move(a)) {} 
+    
+    virtual bool enqueue(msg x) {
+      return m(x);
+    }
+
+    virtual void wait_dequeue(msg&) {
+    }
+
+    virtual size_t size_approx() {
+      return 0;
+    }
+
+    virtual bool wait_dequeue_timed(msg&,std::chrono::seconds) {
+      return false;
+    }
+
+    private:
+    AdaptFn(const AdaptFn&) = delete;
+    AdaptFn() = delete;
+    AdaptFn& operator=(const AdaptFn&) = delete;
+    std::function<bool(msg)> m;
+  };
+
 }
