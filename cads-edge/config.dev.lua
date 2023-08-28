@@ -18,51 +18,50 @@ iirfilter = {
 }
 
 conveyor = {
-  Id = 3,
-  Org  = "FMG",
-  Site = "FMG",
-  Name = "demo",
+  Id = 1,
+  Org  = "MHY",
+  Site = "site1",
+  Name = "belt1",
   Timezone = "Australia/Perth",
-  PulleyCircumference = 670.0,
-  TypicalSpeed = 6.0,
-  Belt = 3,
-  Length = 19900,
-  WidthN = 1880
+  PulleyCircumference = 4197.696,
+  TypicalSpeed = 6.187,
+  Belt = 1,
+  Length = 65200,
+  WidthN = 1890
 }
 
 belt = {
-  Id = 3,
+  Id = 1,
   Installed = "2023-01-14T00:00:00Z",
   PulleyCover = 7.0,
   CordDiameter = 9.1,
   TopCover = 14.0,
-  Width = 1700,
-  Length = 19900,
+  Width = 1600,
+  Length = 65200,
   LengthN = conveyor.TypicalSpeed / gocatorFps, 
   Splices = 1,
-  Conveyor = 3
+  Conveyor = 1
 }
 
 dbscan = {
-  InClusterRadius = 2.5,
-  MinPoints = 11
+  InClusterRadius = 12,
+  MinPoints = 20
 }
 
 revolutionsensor = {
-  Source = "length",
+  Source = "raw",
   TriggerDistance = conveyor.PulleyCircumference / 1,
-  Bias = 0,
+  Bias = -415.0,
   Threshold = 0.05,
   Bidirectional = false,
   Skip = math.floor((conveyor.PulleyCircumference / (1000 * conveyor.TypicalSpeed)) * gocatorFps * 0.9)
 }
 
 sqlitegocatorConfig = {
-  Range = {0,99999999999},
+  Range = {169812, 2166792},
   Fps = gocatorFps,
   Forever = true,
-  Delay = 98,
-  Source = "../../profiles/rawprofile_cv912.db",
+  Source = "../../profiles/rawprofile_cv001_2.db",
   TypicalSpeed = conveyor.TypicalSpeed,
   Sleep = false
 }
@@ -84,7 +83,7 @@ anomaly = {
 }
 
 measures = {
-  Enable = false
+  Enable = true
 }
 
 profileConfig = {
@@ -108,42 +107,133 @@ dynamicProcessingConfig = {
   Entry = "process"  
 }
 
-function timeToString(time) -- overwritten externally
-  return tostring(time)
+function process(width,height)
+  local sum = 0
+  for i = 1+50,width-50 do
+    for j = 0,height-1 do
+      sum = sum + ((win[j*width + i] <= 23.5 and win[j*width + i] > 10) and 1 or 0)
+    end
+  end
+  return (sum / (width * height)) > 0.005 and sum or 0
+end
+
+
+function msgAppendList(root, keys, values)
+  
+  for i,v in ipairs(values) do 
+    root[keys[i]] = (type(v) == "function") and v() or v
+  end
+  
+  return root
+end
+
+function msgAppendTable(root, t)
+  
+  for k,v in pairs(t) do 
+    root[k] = v
+  end
+  
+  return root
+end
+
+function make(now)
+
+  local p = 5
+  local tag = {revision = 0}
+  local field = {"value"}
+  local cat = "all"
+
+  local m = {
+    pulleyspeed = {category = "measure", period = p, time0 = now, tags = tag, fields = field},
+    pulleylevel = {category = cat, period = p, time0 = now, tags = tag, fields = field},
+    beltlength  = {category = "measure", period = p, time0 = now, tags = tag, fields = field},
+    cadstoorigin = {category = "measure", period = p, time0 = now ,tags = tag, fields = field},
+    beltrotationperiod = {category = "measure", period = p, time0 = now ,tags = tag, fields = field},
+    beltedgeposition = {category = cat, period = p, time0 = now, tags = tag, fields = field},
+    pulleyoscillation = {category = "measure", period = p, time0 = now, tags = tag, fields = field},
+    nancount = {category = cat, period = p, time0 = now, tags = tag, fields = field},
+    anomaly = {category = "anomaly", period = 1, time0 = now, tags = tag, fields = {"value", "location"}}
+  }
+
+  local cnt = 0
+  for _ in pairs(m) do cnt = cnt + 1 end
+
+  local s = p / cnt
+  for k,v in pairs(m) do
+    m[k].time0 = m[k].time0 + s * (cnt - 1)
+    cnt = cnt - 1
+  end
+  
+  return m
+end
+
+function send(out,measurements,name,quality,time,...)
+
+  if measurements[name] then
+
+    local m = measurements[name]
+    local elapsedTime = time - m.time0
+    
+    if elapsedTime >= m.period then 
+    
+      local msg = {
+        measurement = name, 
+        site = conveyor.Site, 
+        conveyor = conveyor.Name, 
+        timestamp = timeToString(time),
+        quality = quality
+      }
+      
+      msgAppendTable(msg,measurements[name].tags)
+      msgAppendList(msg,measurements[name].fields, {...})
+      out("demo",measurements[name].category,json.encode(msg))
+      m.time0 = time
+    end
+
+  end
+
 end
 
 function main(sendmsg)
 
-  local gocator_luamain = BlockingReaderWriterQueue()
-  
-  local decimate = profile_decimation(420,10000,gocator_luamain)
-  local laser = sqlitegocator(sqlitegocatorConfig,decimate) 
+  local measurements = make(getNow())
+
+  local gocator_cads = BlockingReaderWriterQueue()
+  local cads_origin = BlockingReaderWriterQueue()
+  local origin_dynamic = BlockingReaderWriterQueue()
+  local dynamic_savedb = BlockingReaderWriterQueue()
+  local luamain = BlockingReaderWriterQueue()
+  --local laser = sqlitegocator(sqlitegocatorConfig,decimate) 
+  local laser = sqlitegocator(sqlitegocatorConfig,gocator_cads) 
+
+  if laser == nil then
+    return
+  end
+
+  local ede = encoder_distance_estimation(cads_origin,y_res_mm)
+  local thread_profile = process_profile(profileConfig,gocator_cads,ede)
+  local thread_origin = loop_beltlength_thread(conveyor,cads_origin,origin_dynamic)
+  local thread_dynamic = dynamic_processing_thread(dynamicProcessingConfig,origin_dynamic,dynamic_savedb)
+  local thread_send_save = save_send_thread(conveyor,dynamic_savedb,luamain)
 
   laser:Start(gocatorFps)
-  local beltprogress = 0
 
   unloop = false
   repeat
-    local is_value,msg_id,data = wait_for(gocator_luamain)
+    local is_value,msg_id,data = wait_for(luamain)
 
     if is_value then
       if msg_id == 2 then break 
-      --elseif msg_id == 5 then break
-      elseif msg_id == 10 then
-        local m,progress = table.unpack(data)
-        if progress ~= beltprogress then
-          print("caas." .. DeviceSerial .. "." .. m,"")
-          sendmsg("caas." .. DeviceSerial .. "." .. m,"",progress)
-          beltprogress = progress
-        end
+      elseif msg_id == 11 then
+        send(sendmsg,measurements,table.unpack(data))
       end
     end
 
     unloop = coroutine.yield(0)
   until unloop
 
-  print("stopping")
   laser:Stop()
+  join_threads({thread_profile,thread_origin,thread_dynamic,thread_send_save})
   
 end
 

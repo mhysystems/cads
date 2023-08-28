@@ -439,6 +439,11 @@ namespace cads
 
             if(valid) {
               
+
+              if(origin_sequence_cnt >= 1) {
+                next_fifo.enqueue({msgid::measure,Measure::MeasureMsg{"cadstoorigin",0,date::utc_clock::now(),op.y}});
+              }
+
               auto scanprogress_now = std::floor(100* estimated_belt_length / conveyor.Length);
 
               if(origin_sequence_cnt > 0 && scanprogress != scanprogress_now) {
@@ -448,13 +453,18 @@ namespace cads
 
               if(op.y == 0) {
                 
+                auto now = std::chrono::high_resolution_clock::now();
+                auto period = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
+                start = now;
+                
                 if(origin_sequence_cnt == 0) {
                   spdlog::get("cads")->debug(R"({{func = '{}', msg = 'Begin Sequence'}})", __func__);
                   next_fifo.enqueue({msgid::begin_sequence, origin_sequence_cnt});
                 }
 
                 if(origin_sequence_cnt > 0) {
-                  spdlog::get("cads")->debug(R"({{func = '{}', msg = 'Estimated belt length {}'}})", __func__,estimated_belt_length);                  
+                  spdlog::get("cads")->debug(R"({{func = '{}', msg = 'Estimated belt length {}'}})", __func__,estimated_belt_length);  
+                  next_fifo.enqueue({msgid::measure,Measure::MeasureMsg{"beltrotationperiod",0,date::utc_clock::now(),(double)period}});
                   next_fifo.enqueue({msgid::measure,Measure::MeasureMsg{"beltlength",0,date::utc_clock::now(),estimated_belt_length}});
                   next_fifo.enqueue({msgid::complete_belt, CompleteBelt{0,scan_cnt}});
                 }
@@ -489,9 +499,6 @@ namespace cads
       }
     }
 
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    auto rate = duration != 0 ? (double)cnt / duration : 0;
     spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Entering Thread");
   }
 
