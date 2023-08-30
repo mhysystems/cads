@@ -25,27 +25,6 @@ namespace {
 
   }
 
-  auto mk_fiducial(nlohmann::json config) {
-
-    double fiducial_depth = config["fiducial"]["fiducial_depth"].get<double>();
-    double fiducial_x = config["fiducial"]["fiducial_x"].get<double>();
-    double fiducial_y = config["fiducial"]["fiducial_y"].get<double>();
-    double fiducial_gap = config["fiducial"]["fiducial_gap"].get<double>();
-    double edge_height = config["fiducial"]["edge_height"].get<double>();
-
-
-    return cads::Fiducial{fiducial_depth,fiducial_x,fiducial_y,fiducial_gap,edge_height};
-  }
-
-  auto mk_origin_detection(nlohmann::json config) {
-
-    auto belt_length = config["OriginDetection"]["BeltLength"].get<cads::OriginDetection::value_type>();
-    auto cross_correlation_threshold = config["OriginDetection"]["cross_correlation_threshold"].get<double>();
-    bool  dump_match = config["OriginDetection"]["dump_match"].get<bool>();
-
-    return cads::OriginDetection{belt_length,cross_correlation_threshold,dump_match};
-  }
-
   auto mk_device(nlohmann::json config) {
     
     auto serial = config["Device"]["Serial"].get<long>();
@@ -93,9 +72,6 @@ namespace cads {
 
   Device constants_device;
   Communications communications_config;
-  Fiducial fiducial_config;
-  OriginDetection config_origin_detection;
-  AnomalyDetection anomalies_config;
   UploadConfig upload_config;
   HeartBeat constants_heartbeat;
 
@@ -116,8 +92,6 @@ namespace cads {
 		auto config = nlohmann::json::parse(json);
     constants_device = mk_device(config);
     communications_config = mk_communications(config);
-    fiducial_config = mk_fiducial(config);
-    config_origin_detection = mk_origin_detection(config);
     upload_config = mk_upload(config);
     constants_heartbeat = mk_heartbeat(config);
     global_config = config;

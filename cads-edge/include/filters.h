@@ -22,4 +22,5 @@ namespace cads
   std::function<cads::z_element(cads::z_element,bool)> mk_amplitude_extraction();
   std::function<double(double)> mk_dc_filter();
   void gaussian(z_type& z);
+  z_type gaussian(z_type&& z);
 } // namespace cads

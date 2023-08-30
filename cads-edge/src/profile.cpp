@@ -317,6 +317,15 @@ namespace cads
   {
  
     auto clusters = dbscan(z,config);
+
+#if 0
+    for(auto c : clusters) {
+      auto a = std::distance(z.begin(),c.front().begin());
+      auto b = std::distance(z.begin(),c.back().end());
+      auto bb = a;
+    }
+#endif
+
     auto avg_l = 0.0;
     auto avg_r = 0.0;
     size_t left_edge = 0;

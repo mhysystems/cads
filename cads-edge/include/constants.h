@@ -25,13 +25,6 @@ namespace cads {
     std::chrono::milliseconds Period;
   };
 
-  struct profile_parameters {
-    int left_edge_nan;
-    int right_edge_nan;
-    int spike_filter;
-    int sobel_filter;
-  };
-
   struct Conveyor {
     int64_t Id;
     std::string Org;
@@ -80,34 +73,6 @@ namespace cads {
     size_t UploadRows;
   };
 
-  struct Fiducial {
-    double fiducial_depth;
-    double fiducial_x;
-    double fiducial_y;
-    double fiducial_gap;
-    double edge_height;
-  };
-
-  struct OriginDetection {
-    using value_type = std::tuple<double,double>;
-    value_type belt_length;
-    double cross_correlation_threshold;
-    bool   dump_match;
-  };
-
-  struct AnomalyDetection {
-    size_t WindowSize;
-    size_t BeltPartitionSize;
-    size_t BeltSize;
-    size_t MinPosition;
-    size_t MaxPosition;
-    std::string ConveyorName;
-  };
-
-  struct GocatorConstants {
-    double Fps;
-  };
-
   struct webapi_urls {
     using value_type = std::tuple<std::string,bool>;
     value_type add_meta;
@@ -119,11 +84,8 @@ namespace cads {
     webapi_urls urls;
   };
 
-
   extern Device constants_device;
   extern Communications communications_config;
-  extern Fiducial fiducial_config;
-  extern OriginDetection config_origin_detection;
   extern UploadConfig upload_config;
   extern HeartBeat constants_heartbeat;
   extern std::atomic<bool> terminate_signal;

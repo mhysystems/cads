@@ -1,6 +1,7 @@
 #include <thread>
 #include <filesystem>
 #include <memory>
+#include <string>
 
 #include <readerwriterqueue.h>
 
@@ -20,9 +21,11 @@
 #include <gocator_reader.h>
 #include <filters.h>
 #include <init.h>
+#include <fiducial.h>
 
 namespace
 {
+  using namespace std::string_literals;
 
   auto TransformMsg(std::function<cads::msg(cads::msg)> fn,cads::Io* io)
   {
@@ -233,7 +236,28 @@ namespace
     return std::make_tuple(a, b);
   }
 
-std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
+
+  std::optional<double> tofieldnumber(lua_State *L, int index, std::string obj_name, std::string field)
+  {
+    if (lua_getfield(L, index, field.c_str()) == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,field);
+      return std::nullopt;
+    }
+
+    auto field_opt = tonumber(L, -1);
+    lua_pop(L, 1);
+
+    if (!field_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} not a number' }}", __func__,field);
+      return std::nullopt;
+    }
+
+    return field_opt;
+  }
+
+  std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
   {
 
     const std::string obj_name = "conveyor";
@@ -440,6 +464,104 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
 
     return cads::Dbscan{*InClusterRadius_opt,*MinPoints_opt};
   }
+
+  std::optional<cads::Fiducial> tofiducial(lua_State *L, int index)
+  {
+    const std::string obj_name = "fiducial";
+
+    if (!lua_istable(L, index))
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} needs to be a table' }}", __func__,obj_name);
+      return std::nullopt;
+    }
+
+    auto fields = std::make_tuple("FiducialDepth"s,"FiducialX"s,"FiducialY"s,"FiducialGap"s,"EdgeHeight"s);
+    auto numbers = std::apply([=](auto&&... args) {return std::make_tuple(tofieldnumber(L,index,obj_name,args)...);}, fields);
+    auto invalids = std::apply([=](auto&&... args) {return std::make_tuple(!args...);}, numbers);
+    auto anyinvalid = std::apply([=](auto&&... args) {return (false || ... || args);}, invalids);
+
+    if(anyinvalid) {
+      return std::nullopt;
+    }else {
+      auto strip_optional = std::apply([=](auto&&... args) {return std::make_tuple(*args...);}, numbers);
+      return std::apply([=](auto&&... args) {return cads::Fiducial{args...};}, strip_optional);
+    }
+  } 
+
+  std::optional<cads::FiducialOriginDetection> tofiducialoriginconfig(lua_State *L, int index)
+  {
+    const std::string obj_name = "fiducialoriginconfig";
+
+    if (!lua_istable(L, index))
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} needs to be a table' }}", __func__,obj_name);
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "BeltLength") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"BeltLength");
+      return std::nullopt;
+    }
+
+    auto BeltLength_opt = topair<long long,long long>(L, -1);
+    lua_pop(L, 1);
+
+    if (!BeltLength_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'BeltLength not a integer' }}", __func__);
+      return std::nullopt;
+    }
+
+    auto CrossCorrelationThreshold_opt = tofieldnumber(L,index,obj_name,"CrossCorrelationThreshold"s);
+
+    if (!CrossCorrelationThreshold_opt)
+    {
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "DumpMatch") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"DumpMatch"s);
+      return std::nullopt;
+    }
+
+    bool DumpMatch = lua_toboolean(L, -1);
+    lua_pop(L, 1);
+
+
+    if (lua_getfield(L, index, "Fiducial") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Fiducial"s);
+      return std::nullopt;
+    }
+
+    auto Fiducial_opt = tofiducial(L,-1);
+    lua_pop(L, 1);
+
+    if (!Fiducial_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'BeltLength not a fiducial' }}", __func__);
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "Conveyor") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name,"Conveyor"s);
+      return std::nullopt;
+    }
+
+    auto conveyor_opt = toconveyor(L, -1);
+    lua_pop(L, 1);
+
+    if (!conveyor_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'Conveyor not a Conveyor' }}", __func__);
+      return std::nullopt;
+    }
+
+    return cads::FiducialOriginDetection{*BeltLength_opt,*CrossCorrelationThreshold_opt,DumpMatch,*Fiducial_opt,*conveyor_opt};
+  } 
 
   std::optional<cads::IIRFilterConfig> toiirfilter(lua_State *L, int index)
   {
@@ -1275,7 +1397,7 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
     return [=](cads::Io &input, cads::Io &output) {
       try {
         fn(input,output);
-      }catch(std::exception ex)
+      }catch(std::exception& ex)
       {
         output.enqueue({cads::msgid::error,ex.what()});
       }
@@ -1362,7 +1484,7 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
       lua_setmetatable(L, -2);
       
       return 1;
-    }catch(std::exception) {
+    }catch(std::exception&) {
       delete p;
     }
 
@@ -1400,7 +1522,7 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
       lua_setmetatable(L, -2);
 
       return 1;
-    }catch(std::exception)
+    }catch(std::exception&)
     {
       delete p;
     }
@@ -1428,15 +1550,16 @@ std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
     return 2;
   }
 
-  int window_processing_thread(lua_State *L)
+  int fiducial_origin_thread(lua_State *L)
   {
     using namespace std::placeholders;
 
-    auto conveyor = toconveyor(L, 1);
-    auto bound = std::bind(cads::window_processing_thread, *conveyor, _1, _2);
+    auto config = tofiducialoriginconfig(L, 1);
+    auto bound = std::bind(cads::fiducial_origin_thread, *config, _1, _2);
     return mk_thread2(L, bound);
   }
 
+  
   int dynamic_processing_thread(lua_State *L)
   {
     using namespace std::placeholders;
@@ -1542,8 +1665,8 @@ namespace cads
       lua_pushcfunction(L, ::save_send_thread);
       lua_setglobal(L, "save_send_thread");
 
-      lua_pushcfunction(L, ::window_processing_thread);
-      lua_setglobal(L, "window_processing_thread");
+      lua_pushcfunction(L, ::fiducial_origin_thread);
+      lua_setglobal(L, "fiducial_origin_thread");
 
       lua_pushcfunction(L, ::loop_beltlength_thread);
       lua_setglobal(L, "loop_beltlength_thread");

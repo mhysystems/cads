@@ -24,9 +24,9 @@ conveyor = {
   Name = "belt1",
   Timezone = "Australia/Perth",
   PulleyCircumference = 4197.696,
-  TypicalSpeed = 6.187,
+  TypicalSpeed = 6.09,
   Belt = 1,
-  Length = 65200,
+  Length = 12565200,
   WidthN = 1890
 }
 
@@ -37,7 +37,7 @@ belt = {
   CordDiameter = 9.1,
   TopCover = 14.0,
   Width = 1600,
-  Length = 65200,
+  Length = 12565200,
   LengthN = conveyor.TypicalSpeed / gocatorFps, 
   Splices = 1,
   Conveyor = 1
@@ -45,23 +45,23 @@ belt = {
 
 dbscan = {
   InClusterRadius = 12,
-  MinPoints = 20
+  MinPoints = 11
 }
 
 revolutionsensor = {
   Source = "raw",
   TriggerDistance = conveyor.PulleyCircumference / 1,
-  Bias = -415.0,
+  Bias = -32.0,
   Threshold = 0.05,
   Bidirectional = false,
   Skip = math.floor((conveyor.PulleyCircumference / (1000 * conveyor.TypicalSpeed)) * gocatorFps * 0.9)
 }
 
 sqlitegocatorConfig = {
-  Range = {169812, 2166792},
+  Range = {86000 - iirfilter.Skip, 99999999999999999},
   Fps = gocatorFps,
   Forever = true,
-  Source = "../../profiles/rawprofile_cv001_2.db",
+  Source = "../../profiles/rawprofile_cv001_2023-08-30.db",
   TypicalSpeed = conveyor.TypicalSpeed,
   Sleep = false
 }
@@ -105,6 +105,20 @@ dynamicProcessingConfig = {
   InitValue = 30.0,
   LuaCode = LuaCodeSelfRef,
   Entry = "process"  
+}
+
+fiducialOriginConfig = {
+  BeltLength = {12555200,12575200},
+  CrossCorrelationThreshold = 0.23,
+  DumpMatch = true,
+  Fiducial = {
+    FiducialDepth = 2,
+    FiducialX = 25,
+    FiducialY = 40,
+    FiducialGap = 40,
+    EdgeHeight = 30.1
+  },
+  Conveyor = conveyor
 }
 
 function process(width,height)
@@ -196,6 +210,7 @@ end
 
 function main(sendmsg)
 
+
   local measurements = make(getNow())
 
   local gocator_cads = BlockingReaderWriterQueue()
@@ -210,9 +225,11 @@ function main(sendmsg)
     return
   end
 
-  local ede = encoder_distance_estimation(cads_origin,y_res_mm)
+  --local ede = encoder_distance_estimation(cads_origin,y_res_mm)
+  local ede = prsToScan(cads_origin)
   local thread_profile = process_profile(profileConfig,gocator_cads,ede)
-  local thread_origin = loop_beltlength_thread(conveyor,cads_origin,origin_dynamic)
+  --local thread_origin = loop_beltlength_thread(conveyor,cads_origin,origin_dynamic)
+  local thread_origin = fiducial_origin_thread(fiducialOriginConfig,cads_origin,origin_dynamic)
   local thread_dynamic = dynamic_processing_thread(dynamicProcessingConfig,origin_dynamic,dynamic_savedb)
   local thread_send_save = save_send_thread(conveyor,dynamic_savedb,luamain)
 

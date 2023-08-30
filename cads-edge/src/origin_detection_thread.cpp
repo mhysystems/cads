@@ -23,8 +23,6 @@
 #pragma GCC diagnostic pop
 
 #include <origin_detection_thread.h>
-#include <fiducial.h>
-#include <constants.h>
 #include <coro.hpp>
 #include <filters.h>
 #include <opencv2/core.hpp>
@@ -247,11 +245,11 @@ namespace cads
     }
   }
 
-  coro<std::tuple<profile,double,bool>,profile,1> origin_detection_coro(double x_resolution, double y_resolution, int width_n, Conveyor conveyor,cads::Io &next)
+  coro<std::tuple<profile,double,bool>,profile,1> fiducial_origin_coro(double x_resolution, double y_resolution, int width_n, FiducialOriginDetection config, cads::Io &next)
   {    
-    auto dump_match = config_origin_detection.dump_match;
+    auto dump_match = config.dump_match;
     cv::Mat fiducial;
-    cv::transpose(make_fiducial(x_resolution, y_resolution),fiducial);
+    cv::transpose(make_fiducial(x_resolution, y_resolution,config.fiducial),fiducial);
     
     if(dump_match) {
       mat_as_image(fiducial,"fid");
@@ -259,13 +257,13 @@ namespace cads
     
     window profile_buffer;
 
-    auto fdepth = fiducial_config.fiducial_depth;
+    auto fdepth = config.fiducial.fiducial_depth;
     double lowest_correlation = std::numeric_limits<double>::max();
-    double belt_crosscorr_threshold = config_origin_detection.cross_correlation_threshold;
+    double belt_crosscorr_threshold = config.cross_correlation_threshold;
 
 
-    auto edge_height = fiducial_config.edge_height;
-    auto avg_threshold_fn = mk_online_mean(edge_height - fiducial_config.fiducial_depth);
+    auto edge_height = config.fiducial.edge_height;
+    auto avg_threshold_fn = mk_online_mean(edge_height - config.fiducial.fiducial_depth);
 
     profile p;
     bool terminate = false;
@@ -289,7 +287,7 @@ namespace cads
     cv::Mat m1(fiducial.rows*2, belt.cols, CV_32F, cv::Scalar::all(0.0f));
     cv::Mat out(m1.rows - fiducial.rows + 1, m1.cols - fiducial.cols + 1, CV_32F, cv::Scalar::all(0.0f));
 
-    auto y_max_length = std::get<1>(config_origin_detection.belt_length);
+    auto y_max_length = std::get<1>(config.belt_length);
     auto trigger_length = std::numeric_limits<y_type>::lowest();
     y_type y_offset = 0;
     double y_lowest_correlation = 0;
@@ -321,7 +319,7 @@ namespace cads
           matrix_correlation = belt.clone();
         }
 
-        if (correlation < belt_crosscorr_threshold && (!(sequence_cnt > 0) || between(config_origin_detection.belt_length,y)))
+        if (correlation < belt_crosscorr_threshold && (!(sequence_cnt > 0) || between(config.belt_length,y)))
         {
           ++sequence_cnt;
           spdlog::get("cads")->info("Correlation : {} at y : {} with threshold: {}", correlation, y, cv_threshhold);
@@ -373,7 +371,6 @@ namespace cads
           }
 
           valid = false;
-          y_max_length = conveyor.Length * 1.02; 
           trigger_length = std::numeric_limits<y_type>::lowest();
           lowest_correlation = std::numeric_limits<double>::max();
         }
@@ -503,7 +500,7 @@ namespace cads
   }
 
 
-  void window_processing_thread(Conveyor conveyor,cads::Io &profile_fifo, cads::Io &next_fifo)
+  void fiducial_origin_thread(FiducialOriginDetection config,cads::Io &profile_fifo, cads::Io &next_fifo)
   {
 
     cads::msg m;
@@ -511,8 +508,8 @@ namespace cads
     auto start = std::chrono::high_resolution_clock::now();
     int64_t cnt = 0;
     auto buffer_size_warning = buffer_warning_increment;
-    double x_resolution = 1.0, y_resolution = conveyor.TypicalSpeed;
-    int width_n = (int)conveyor.WidthN;
+    double x_resolution = 1.0, y_resolution = config.conveyor.TypicalSpeed;
+    int width_n = (int)config.conveyor.WidthN;
 
     profile_fifo.wait_dequeue(m);
     auto m_id = get<0>(m);
@@ -534,7 +531,7 @@ namespace cads
     next_fifo.enqueue(m);
 
 
-    auto origin_detection = origin_detection_coro(x_resolution,y_resolution,width_n,conveyor,next_fifo);
+    auto origin_detection = fiducial_origin_coro(x_resolution,y_resolution,width_n,config,next_fifo);
 
     long origin_sequence_cnt = 0;
     size_t scan_cnt = 0;

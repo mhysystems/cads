@@ -31,11 +31,11 @@ Mat make_fiducial(double x_res, double y_res, double fy_mm, double fx_mm, double
 
 }
 
-Mat make_fiducial(double x_res, double y_res) {
+Mat make_fiducial(double x_res, double y_res, Fiducial config) {
 
-	auto fnrows = fiducial_config.fiducial_y;
-	auto fgap = fiducial_config.fiducial_gap;
-	auto fncols = fiducial_config.fiducial_x;
+	auto fnrows = config.fiducial_y;
+	auto fgap = config.fiducial_gap;
+	auto fncols = config.fiducial_x;
   
 	return make_fiducial(x_res,y_res,fnrows,fncols,fgap);
 
