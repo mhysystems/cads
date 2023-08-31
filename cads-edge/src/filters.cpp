@@ -1,13 +1,13 @@
 #include <algorithm>
 #include <ranges>
 
-
+#if 0 // Ubuntu version too old
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_filter.h>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_vector.h>
-
+#endif
 
 #include <Iir.h>
 
@@ -127,7 +127,7 @@ namespace cads
     };
   }
   
-
+#if 0
   void gaussian(z_type& z) 
   {
     gsl_vector *x = ::gsl_vector_alloc(z.size());
@@ -155,7 +155,7 @@ namespace cads
     gaussian(z);
     return z;
   }
-
+#endif
 } // namespace cads
 
 
