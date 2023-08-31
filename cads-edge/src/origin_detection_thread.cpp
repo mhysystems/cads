@@ -496,16 +496,15 @@ namespace cads
       }
     }
 
-    spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Entering Thread");
+    spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Exiting Thread");
   }
 
 
   void fiducial_origin_thread(FiducialOriginDetection config,cads::Io &profile_fifo, cads::Io &next_fifo)
   {
-
+    spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Entering Thread");
     cads::msg m;
 
-    auto start = std::chrono::high_resolution_clock::now();
     int64_t cnt = 0;
     auto buffer_size_warning = buffer_warning_increment;
     double x_resolution = 1.0, y_resolution = config.conveyor.TypicalSpeed;
@@ -594,10 +593,7 @@ namespace cads
       }
     }
 
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    auto rate = duration != 0 ? (double)cnt / duration : 0;
-    spdlog::get("cads")->info("ORIGIN DETECTION - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, rate);
+    spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Exiting Thread");
   }
 
 

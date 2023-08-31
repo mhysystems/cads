@@ -137,6 +137,7 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
 
   void process_profile(ProfileConfig config, Io& gocatorFifo, Io& next)
   {
+    spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Entering Thread");
 
     const auto x_width = config.Width;
     const auto nan_percentage = config.NaNPercentage;
@@ -171,8 +172,6 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
     auto delay = mk_delay(config.IIRFilter.delay);
 
     int64_t cnt = 0;
-
-    auto start = std::chrono::high_resolution_clock::now();
 
     auto dc_filter = mk_dc_filter();
     auto pulley_speed = mk_pulley_stats(config.conveyor.TypicalSpeed,config.conveyor.PulleyCircumference);
@@ -251,11 +250,20 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
       std::fill(iz.begin(), iz.begin() + ll, pulley_level);
       std::fill(iz.begin() + lr, iz.end(), pulley_right);
 
-      nan_interpolation_mean(iz);
+      auto z_nan_removed = iz | views::filter([](float a){ return !std::isnan(a); });
+      auto bb = select_if(iz,interpolate_to_widthn({z_nan_removed.begin(),z_nan_removed.end()},iz.size()),[](float a){ return std::isnan(a); });
+      iz = bb;
 
       auto pulley_level_filtered = (z_element)iirfilter_left(pulley_level);
       auto pulley_right_filtered = (z_element)iirfilter_right(pulley_right);
       auto left_edge_filtered = (z_element)iirfilter_left_edge(ll);
+
+      // Required for iirfilter stabilisation
+      if (drop_profiles > 0)
+      {
+        --drop_profiles;
+        continue;
+      }
 
       if(config.measureConfig.Enable) {
         next.enqueue({msgid::measure,Measure::MeasureMsg{"pulleylevel",0,date::utc_clock::now(),pulley_level_filtered}});
@@ -269,13 +277,7 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
       if (!delayed)
         continue;
 
-      if (drop_profiles > 0)
-      {
-        --drop_profiles;
-        continue;
-      }
-
-      auto [delayed_profile, left_edge_index_avg, left_edge_index, right_edge_index, raw_z] = dd;
+       auto [delayed_profile, left_edge_index_avg, left_edge_index, right_edge_index, raw_z] = dd;
       auto y = delayed_profile.y;
       auto x = delayed_profile.x_off;
       auto z = delayed_profile.z;
@@ -312,13 +314,7 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
       }
 
       pulley_level_compensate(z, -pulley_level_filtered, clip_height);
-      interpolation_nearest(z.begin() + left_edge_index_avg, z.begin() + right_edge_index, [](float a)
-                            { return a == 0; });
-
-      // if(left_edge_index_avg < left_edge_index) {
-      //   std::fill(z.begin()+left_edge_index_avg,z.begin() + left_edge_index, interquartile_mean(zrange(z.begin()+left_edge_index,z.begin()+left_edge_index+20)));
-      // }
-
+      
       auto left_edge_index_aligned = left_edge_index_avg;
       auto right_edge_index_aligned = right_edge_index;
 
@@ -327,22 +323,18 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
         // spdlog::get("cads")->debug("Belt width({})[la - {}, l- {}, r - {}] less than required. Filled with zeros",z.size(),left_edge_index_aligned,left_edge_index,right_edge_index);
         // store_errored_profile(raw_z);
         const auto cnt = left_edge_index_aligned + width_n - z.size();
-        z.insert(z.end(), cnt, interquartile_mean(zrange(z.begin() + right_edge_index_aligned - 20, z.begin() + right_edge_index_aligned - 1)));
+        z.insert(z.end(), cnt, 0.0);
       }
+      
+      auto z_zero_removed = z | views::filter([](float a){ return a != 0;});
+      auto f = select_if({z.begin()+left_edge_index_aligned,z.begin()+left_edge_index_aligned+width_n},interpolate_to_widthn({z_zero_removed.begin(),z_zero_removed.end()},width_n),[](float a){ return a == 0;});
 
-      auto f = z | views::take(left_edge_index_aligned + width_n) | views::drop(left_edge_index_aligned);
-
-      //next.enqueue({msgid::scan, cads::profile{delayed_profile.time,y, x + left_edge_index_aligned * x_resolution, {f.begin(), f.end()}}});
       next.enqueue({msgid::pulley_revolution_scan,PulleyRevolutionScan{std::get<0>(ps),std::get<1>(ps), cads::profile{delayed_profile.time,y, x + left_edge_index_aligned * x_resolution, {f.begin(), f.end()}}}});
 
     } while (std::get<0>(m) != msgid::finished);
 
 
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-
-    auto rate = duration != 0 ? (double)cnt / duration : 0;
-    spdlog::get("cads")->info("CADS - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, rate);
+    spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Exiting Thread");
 
   }
 
@@ -360,7 +352,7 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
     luafile.replace_extension("lua");
     
     std::atomic<bool> terminate_upload = false;
-    bool terminate_metrics = false;
+    std::atomic<bool> terminate_metrics = false;
     moodycamel::BlockingConcurrentQueue<std::tuple<std::string, std::string, std::string>> queue;
     std::jthread save_send(upload_scan_thread, std::ref(terminate_upload), upload_config);
     std::jthread realtime_metrics(realtime_metrics_thread, std::ref(queue), constants_heartbeat, std::ref(terminate_metrics));
@@ -423,12 +415,13 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
   void cads_remote_main() {
     
     std::atomic<bool> terminate_upload = false;
-    bool terminate_metrics = false;
+    std::atomic<bool> terminate_metrics = false;
+    std::atomic<bool> terminate_remote = false;
     moodycamel::BlockingConcurrentQueue<std::tuple<std::string, std::string, std::string>> queue;
     moodycamel::BlockingConcurrentQueue<remote_msg> remote_queue;
     std::jthread save_send(upload_scan_thread, std::ref(terminate_upload),upload_config);
     std::jthread realtime_metrics(realtime_metrics_thread, std::ref(queue), constants_heartbeat, std::ref(terminate_metrics));
-    std::jthread remote_control(remote_control_thread, std::ref(remote_queue), std::ref(terminate_metrics));
+    std::jthread remote_control(remote_control_thread, std::ref(remote_queue), std::ref(terminate_remote));
    
     while(!terminate_signal)
     {
@@ -514,6 +507,7 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
     queue.enqueue(caasMsg("scancomplete","",""));
     terminate_upload = true; // stops upload thread
     terminate_metrics = true;
+    terminate_remote = true;
   }
 
 

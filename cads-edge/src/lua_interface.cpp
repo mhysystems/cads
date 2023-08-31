@@ -1309,7 +1309,8 @@ namespace
   {
     auto ms = lua_tointeger(L, 1);
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
-    return 0;
+    lua_pushboolean(L,1);
+    return 1;
   }
 
   int join_threads(lua_State *L)

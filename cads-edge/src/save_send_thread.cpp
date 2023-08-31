@@ -26,6 +26,9 @@ namespace cads
 {
   void save_send_thread(Conveyor conveyor, cads::Io &profile_fifo, cads::Io &next)
   {
+    
+    spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Entering Thread");
+
     namespace sml = boost::sml;
 
     auto scan_begin = date::utc_clock::now();
@@ -198,6 +201,6 @@ namespace cads
     global.store_scan.terminate();
     auto scan_filename = fmt::format("scan-{}.sqlite",global.scan_begin.time_since_epoch().count());
     std::filesystem::remove(scan_filename);
-    spdlog::get("cads")->info("Stopping save_send_thread");
+    spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Exiting Thread");
   }
 }

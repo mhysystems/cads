@@ -153,17 +153,14 @@ std::function<PulleyRevolution(double)>
 
         auto drain_action = [](global_t &global, const root_event &o) mutable
         {
-          auto step_size = o.root_distance / global.fifo.size();
-          auto decimation_factor = global.stride / step_size;
+          auto n = std::size_t(o.root_distance / global.stride);
+          auto step_size = global.fifo.size() / n;
 
-          for (double i = 0, prev = -1.0; std::size_t(i) < global.fifo.size(); prev = i, i+= decimation_factor)
+          for(size_t i = 0; i < n; ++i) 
           {
-            if(std::size_t(i) != std::size_t(prev))
-            {
-              auto e = global.fifo[std::size_t(i)];
-              e.y = global.distance + std::size_t(i) * global.stride;
-              global.csp.enqueue({msgid::scan,e});
-            }
+            auto e = global.fifo[std::size_t(i*step_size)];
+            e.y = global.distance + i * global.stride;
+            global.csp.enqueue({msgid::scan,e});
           }
 
           global.distance += o.root_distance;

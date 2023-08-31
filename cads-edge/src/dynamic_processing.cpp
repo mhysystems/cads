@@ -77,6 +77,8 @@ namespace cads
 
   coro<double, msg> lua_processing_coro(DynamicProcessingConfig config, cads::Io &next)
   {
+    spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Entering Thread");
+    
     auto height = config.WindowSize;
     auto width = config.WidthN;
     
@@ -148,7 +150,7 @@ namespace cads
     } while (get<0>(m) != msgid::finished || !terminate);
 
     lua_close(L);
-    spdlog::get("cads")->info("lua_processing_coro finished");
+    spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Exiting Thread");
   }
 
   void dynamic_processing_thread(DynamicProcessingConfig config, cads::Io &profile_fifo, cads::Io &next_fifo)

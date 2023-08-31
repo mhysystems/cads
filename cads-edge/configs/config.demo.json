@@ -3,26 +3,12 @@
     "Serial" : 12345
   },
 
-  "fiducial" : {
-    "fiducial_depth" : 2,
-    "fiducial_x" : 25,
-    "fiducial_y" : 40,
-    "fiducial_gap" : 40,
-    "edge_height" : 30.1
-  },
-
   "upload" : {
     "Period" : 2592000,
     "webapi" : {
       "add_meta" : ["http://localhost:6500/api/meta",true],
       "add_belt" : ["http://localhost:6500/api/belt",true]
     }
-  },
-
-  "OriginDetection" : {
-    "BeltLength": [12555200,12575200],
-    "cross_correlation_threshold" : 0.21,
-    "dump_match" : true
   },
 
   "profile_db_name" : "profile.db",

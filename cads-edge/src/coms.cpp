@@ -153,13 +153,14 @@ coro<remote_msg,bool> remote_control_coro()
     spdlog::get("cads")->error(R"({{ func = '{}' msg = '{}'}})", __func__, "Exiting coroutine");
   }
 
-  void remote_control_thread(moodycamel::BlockingConcurrentQueue<remote_msg> &queue, bool &terminate)
+  void remote_control_thread(moodycamel::BlockingConcurrentQueue<remote_msg> &queue, std::atomic<bool> &terminate)
   {
+    spdlog::get("cads")->error(R"({{ func = '{}' msg = '{}'}})", __func__, "Entering Thread");
 
-    while(!std::atomic_ref<bool>(terminate)) {
+    while(!terminate) {
     auto remote_control = remote_control_coro();
    
-      for(;!std::atomic_ref<bool>(terminate);) {
+      for(;!terminate;) {
         auto [err,msg] = remote_control.resume(terminate);
         
         if(err) {
@@ -170,7 +171,7 @@ coro<remote_msg,bool> remote_control_coro()
       }
     }
 
-    
+    spdlog::get("cads")->error(R"({{ func = '{}' msg = '{}'}})", __func__, "Exiting Thread");
   }
 
   
@@ -250,8 +251,9 @@ coro<remote_msg,bool> remote_control_coro()
     }
   }
 
-  void realtime_metrics_thread(moodycamel::BlockingConcurrentQueue<std::tuple<std::string, std::string, std::string>> &queue, HeartBeat beat, bool &terminate)
+  void realtime_metrics_thread(moodycamel::BlockingConcurrentQueue<std::tuple<std::string, std::string, std::string>> &queue, HeartBeat beat, std::atomic<bool> &terminate)
   {
+    spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Entering Thread");
     std::tuple<std::string, std::string, std::string> m;
     auto realtime_metrics = realtime_metrics_coro();
 
@@ -261,7 +263,7 @@ coro<remote_msg,bool> remote_control_coro()
 
     auto trigger = std::chrono::system_clock::now() + beat.Period;
     
-    for(;!std::atomic_ref<bool>(terminate);) {
+    for(;!terminate;) {
       if(!queue.wait_dequeue_timed(m, std::chrono::milliseconds(500))) {
         auto now = std::chrono::system_clock::now();
         if(beat.SendHeartBeat && now > trigger) {
@@ -275,7 +277,7 @@ coro<remote_msg,bool> remote_control_coro()
       realtime_metrics.resume(m);
     }
 
-
+    spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Exiting Thread");
   }
 
   std::string mk_post_profile_url(date::utc_clock::time_point time, std::string site, std::string conveyor, std::string endpoint_url)
@@ -396,7 +398,7 @@ coro<remote_msg,bool> remote_control_coro()
     http_post_profile_properties_json(params_json.dump(), urls);
   }
 
-  std::tuple<state::scan,bool> post_scan(state::scan scan, webapi_urls urls)
+  std::tuple<state::scan,bool> post_scan(state::scan scan, webapi_urls urls,std::atomic<bool> &terminate)
   {
     using namespace flatbuffers;    
     
@@ -445,7 +447,7 @@ coro<remote_msg,bool> remote_control_coro()
     double belt_z_min = std::numeric_limits<double>::max();
     long cnt = 0;
 
-    while (true)
+    while (!terminate)
     {
       auto [co_terminate, cv] = fetch_profile.resume(0);
       auto [idx, zs_raw] = cv;

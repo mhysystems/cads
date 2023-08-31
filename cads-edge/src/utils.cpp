@@ -27,6 +27,15 @@ namespace {
 
 namespace cads
 {
+  std::vector<float> select_if(std::vector<float> a, std::vector<float> b, std::function<bool(float)> c)
+  {
+    for(size_t i = 0; i < a.size(); ++i)
+    {
+      a[i] = c(a[i]) ? b[i] : a[i];
+    }
+    return a;
+  }
+
   void dumpstack (lua_State *L) {
     int top=lua_gettop(L);
     for (int i=1; i <= top; i++) {

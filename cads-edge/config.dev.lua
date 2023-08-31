@@ -57,8 +57,12 @@ revolutionsensor = {
   Skip = math.floor((conveyor.PulleyCircumference / (1000 * conveyor.TypicalSpeed)) * gocatorFps * 0.9)
 }
 
+y_res_mm = 1000 * conveyor.TypicalSpeed / gocatorFps -- In mm
+
+
 sqlitegocatorConfig = {
-  Range = {86000 - iirfilter.Skip, 99999999999999999},
+  Range = {86300 - iirfilter.Skip - 2*math.floor(revolutionsensor.TriggerDistance / y_res_mm)
+          ,2040734 + 86300 - iirfilter.Skip - 2*math.floor(revolutionsensor.TriggerDistance / y_res_mm)},
   Fps = gocatorFps,
   Forever = true,
   Source = "../../profiles/rawprofile_cv001_2023-08-30.db",
@@ -66,7 +70,7 @@ sqlitegocatorConfig = {
   Sleep = false
 }
 
-y_res_mm = 1000 * conveyor.TypicalSpeed / gocatorFps -- In mm
+
 
 laserConf = {
   Trim = true,
@@ -210,48 +214,56 @@ end
 
 function main(sendmsg)
 
+  local run = true
 
-  local measurements = make(getNow())
+  while run do
+    local measurements = make(getNow())
 
-  local gocator_cads = BlockingReaderWriterQueue()
-  local cads_origin = BlockingReaderWriterQueue()
-  local origin_dynamic = BlockingReaderWriterQueue()
-  local dynamic_savedb = BlockingReaderWriterQueue()
-  local luamain = BlockingReaderWriterQueue()
-  --local laser = sqlitegocator(sqlitegocatorConfig,decimate) 
-  local laser = sqlitegocator(sqlitegocatorConfig,gocator_cads) 
+    local gocator_cads = BlockingReaderWriterQueue()
+    local cads_origin = BlockingReaderWriterQueue()
+    local origin_dynamic = BlockingReaderWriterQueue()
+    local dynamic_savedb = BlockingReaderWriterQueue()
+    local luamain = BlockingReaderWriterQueue()
+    --local laser = sqlitegocator(sqlitegocatorConfig,decimate) 
+    local laser = sqlitegocator(sqlitegocatorConfig,gocator_cads) 
 
-  if laser == nil then
-    return
-  end
-
-  --local ede = encoder_distance_estimation(cads_origin,y_res_mm)
-  local ede = prsToScan(cads_origin)
-  local thread_profile = process_profile(profileConfig,gocator_cads,ede)
-  --local thread_origin = loop_beltlength_thread(conveyor,cads_origin,origin_dynamic)
-  local thread_origin = fiducial_origin_thread(fiducialOriginConfig,cads_origin,origin_dynamic)
-  local thread_dynamic = dynamic_processing_thread(dynamicProcessingConfig,origin_dynamic,dynamic_savedb)
-  local thread_send_save = save_send_thread(conveyor,dynamic_savedb,luamain)
-
-  laser:Start(gocatorFps)
-
-  unloop = false
-  repeat
-    local is_value,msg_id,data = wait_for(luamain)
-
-    if is_value then
-      if msg_id == 2 then break 
-      elseif msg_id == 11 then
-        send(sendmsg,measurements,table.unpack(data))
-      end
+    if laser == nil then
+      return
     end
 
-    unloop = coroutine.yield(0)
-  until unloop
+    local ede = encoder_distance_estimation(cads_origin,y_res_mm)
+    --local ede = prsToScan(cads_origin)
+    local thread_profile = process_profile(profileConfig,gocator_cads,ede)
+    --local thread_origin = loop_beltlength_thread(conveyor,cads_origin,origin_dynamic)
+    local thread_origin = fiducial_origin_thread(fiducialOriginConfig,cads_origin,origin_dynamic)
+    local thread_dynamic = dynamic_processing_thread(dynamicProcessingConfig,origin_dynamic,dynamic_savedb)
+    local thread_send_save = save_send_thread(conveyor,dynamic_savedb,luamain)
 
-  laser:Stop()
-  join_threads({thread_profile,thread_origin,thread_dynamic,thread_send_save})
-  
+    laser:Start(gocatorFps)
+
+    repeat
+      local is_value,msg_id,data = wait_for(luamain)
+
+      if is_value then
+        if msg_id == 2 then 
+          run = false
+          break 
+        elseif msg_id == 7 then break
+        elseif msg_id == 11 then
+          send(sendmsg,measurements,table.unpack(data))
+        end
+      end
+
+      run = not coroutine.yield(0)
+    until not run
+    
+    laser:Stop()
+    join_threads({thread_profile,thread_origin,thread_dynamic,thread_send_save})
+
+    if run then
+      sleep_ms(30000)
+    end
+  end
 end
 
 mainco = coroutine.create(main)
