@@ -3,11 +3,11 @@ json = require "json"
 gocatorFps = 984.0
 
 sqlitegocatorConfig = {
-  Range = {169812, 2166792},
+  Range = {0,99999999999999},
   Fps = gocatorFps,
   Forever = true,
-  Source = "../../profiles/rawprofile_cv001_2.db",
-  TypicalSpeed = 6.187,
+  Source = "../../profiles/rawprofile_cv001_2023-08-30.db",
+  TypicalSpeed = conveyor.TypicalSpeed,
   Sleep = true
 }
 

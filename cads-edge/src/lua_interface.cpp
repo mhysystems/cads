@@ -1485,8 +1485,8 @@ namespace
       lua_setmetatable(L, -2);
       
       return 1;
-    }catch(std::exception&) {
-      delete p;
+    }catch(std::exception& ex) {
+      spdlog::get("cads")->error(R"({{func = '{}', msg = '{}'}})", __func__,ex.what());
     }
 
     return 0;
@@ -1523,9 +1523,9 @@ namespace
       lua_setmetatable(L, -2);
 
       return 1;
-    }catch(std::exception&)
+    }catch(std::exception& ex)
     {
-      delete p;
+      spdlog::get("cads")->error(R"({{func = '{}', msg = '{}'}})", __func__,ex.what());
     }
 
     return 0;

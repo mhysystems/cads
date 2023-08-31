@@ -54,7 +54,7 @@
 			"type": "cppdbg",
 			"request": "launch",
 			"program": "${workspaceFolder}/debug/cads",
-			"args": ["-r","-l","debug","-c", "${workspaceFolder}/config.caasdev.json"],
+			"args": ["-r","-l","debug","-c", "${workspaceFolder}/config.dev.json"],
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}/debug",
 			"environment": [],

@@ -18,40 +18,40 @@ iirfilter = {
 }
 
 conveyor = {
-  Id = 1,
-  Org  = "MHY",
-  Site = "site1",
-  Name = "belt1",
+  Id = 3,
+  Org  = "FMG",
+  Site = "FMG",
+  Name = "Demo",
   Timezone = "Australia/Perth",
-  PulleyCircumference = 4197.696,
-  TypicalSpeed = 6.09,
-  Belt = 1,
-  Length = 12565200,
-  WidthN = 1890
+  PulleyCircumference = 2827.4334,
+  TypicalSpeed = 6.0,
+  Belt = 3,
+  Length = 40000.0,
+  WidthN = 1800
 }
 
 belt = {
-  Id = 1,
+  Id = 3,
   Installed = "2023-01-14T00:00:00Z",
-  PulleyCover = 7.0,
-  CordDiameter = 9.1,
-  TopCover = 14.0,
-  Width = 1600,
-  Length = 12565200,
+  PulleyCover = 6.0,
+  CordDiameter = 5.6,
+  TopCover = 30.0,
+  Width = 1800,
+  Length = 40000.0,
   LengthN = conveyor.TypicalSpeed / gocatorFps, 
   Splices = 1,
-  Conveyor = 1
+  Conveyor = 3
 }
 
 dbscan = {
   InClusterRadius = 12,
-  MinPoints = 11
+  MinPoints = 20
 }
 
 revolutionsensor = {
-  Source = "raw",
+  Source = "length",
   TriggerDistance = conveyor.PulleyCircumference / 1,
-  Bias = -32.0,
+  Bias = 0,
   Threshold = 0.05,
   Bidirectional = false,
   Skip = math.floor((conveyor.PulleyCircumference / (1000 * conveyor.TypicalSpeed)) * gocatorFps * 0.9)
@@ -59,35 +59,13 @@ revolutionsensor = {
 
 y_res_mm = 1000 * conveyor.TypicalSpeed / gocatorFps -- In mm
 
-
-sqlitegocatorConfig = {
-  Range = {86300 - iirfilter.Skip - 2*math.floor(revolutionsensor.TriggerDistance / y_res_mm)
-          ,2040734 + 86300 - iirfilter.Skip - 2*math.floor(revolutionsensor.TriggerDistance / y_res_mm)},
-  Fps = gocatorFps,
-  Forever = true,
-  Source = "../../profiles/rawprofile_cv001_2023-08-30.db",
-  TypicalSpeed = conveyor.TypicalSpeed,
-  Sleep = false
-}
-
-
-
 laserConf = {
   Trim = true,
   TypicalResolution = y_res_mm
 }
 
-anomaly = {
-  WindowSize = 3 * 1000 / y_res_mm,
-  BeltPartitionSize = 1000 * 1000 / y_res_mm,
-  BeltSize = belt.Length / y_res_mm,
-  MinPosition = (belt.Length - 10000) / y_res_mm,
-  MaxPosition = (belt.Length + 10000) / y_res_mm,
-  ConveyorName = conveyor.Name
-}
-
 measures = {
-  Enable = true
+  Enable = false
 }
 
 profileConfig = {
@@ -103,167 +81,66 @@ profileConfig = {
   Measures = measures
 }
 
-dynamicProcessingConfig = {
-  WidthN = conveyor.WidthN,
-  WindowSize = 2,
-  InitValue = 30.0,
-  LuaCode = LuaCodeSelfRef,
-  Entry = "process"  
+sqlitegocatorConfig = {
+  Range = {0,99999999999999},
+  Fps = gocatorFps,
+  Forever = true,
+  Source = "../../profiles/rawprofile_cv001_2023-08-30.db",
+  TypicalSpeed = conveyor.TypicalSpeed,
+  Sleep = false
 }
-
-fiducialOriginConfig = {
-  BeltLength = {12555200,12575200},
-  CrossCorrelationThreshold = 0.23,
-  DumpMatch = true,
-  Fiducial = {
-    FiducialDepth = 2,
-    FiducialX = 25,
-    FiducialY = 40,
-    FiducialGap = 40,
-    EdgeHeight = 30.1
-  },
-  Conveyor = conveyor
-}
-
-function process(width,height)
-  local sum = 0
-  for i = 1+50,width-50 do
-    for j = 0,height-1 do
-      sum = sum + ((win[j*width + i] <= 23.5 and win[j*width + i] > 10) and 1 or 0)
-    end
-  end
-  return (sum / (width * height)) > 0.005 and sum or 0
-end
-
-
-function msgAppendList(root, keys, values)
-  
-  for i,v in ipairs(values) do 
-    root[keys[i]] = (type(v) == "function") and v() or v
-  end
-  
-  return root
-end
-
-function msgAppendTable(root, t)
-  
-  for k,v in pairs(t) do 
-    root[k] = v
-  end
-  
-  return root
-end
-
-function make(now)
-
-  local p = 5
-  local tag = {revision = 0}
-  local field = {"value"}
-  local cat = "all"
-
-  local m = {
-    pulleyspeed = {category = "measure", period = p, time0 = now, tags = tag, fields = field},
-    pulleylevel = {category = cat, period = p, time0 = now, tags = tag, fields = field},
-    beltlength  = {category = "measure", period = p, time0 = now, tags = tag, fields = field},
-    cadstoorigin = {category = "measure", period = p, time0 = now ,tags = tag, fields = field},
-    beltrotationperiod = {category = "measure", period = p, time0 = now ,tags = tag, fields = field},
-    beltedgeposition = {category = cat, period = p, time0 = now, tags = tag, fields = field},
-    pulleyoscillation = {category = "measure", period = p, time0 = now, tags = tag, fields = field},
-    nancount = {category = cat, period = p, time0 = now, tags = tag, fields = field},
-    anomaly = {category = "anomaly", period = 1, time0 = now, tags = tag, fields = {"value", "location"}}
-  }
-
-  local cnt = 0
-  for _ in pairs(m) do cnt = cnt + 1 end
-
-  local s = p / cnt
-  for k,v in pairs(m) do
-    m[k].time0 = m[k].time0 + s * (cnt - 1)
-    cnt = cnt - 1
-  end
-  
-  return m
-end
-
-function send(out,measurements,name,quality,time,...)
-
-  if measurements[name] then
-
-    local m = measurements[name]
-    local elapsedTime = time - m.time0
-    
-    if elapsedTime >= m.period then 
-    
-      local msg = {
-        measurement = name, 
-        site = conveyor.Site, 
-        conveyor = conveyor.Name, 
-        timestamp = timeToString(time),
-        quality = quality
-      }
-      
-      msgAppendTable(msg,measurements[name].tags)
-      msgAppendList(msg,measurements[name].fields, {...})
-      out("demo",measurements[name].category,json.encode(msg))
-      m.time0 = time
-    end
-
-  end
-
-end
 
 function main(sendmsg)
 
-  local run = true
-
-  while run do
-    local measurements = make(getNow())
-
-    local gocator_cads = BlockingReaderWriterQueue()
-    local cads_origin = BlockingReaderWriterQueue()
-    local origin_dynamic = BlockingReaderWriterQueue()
-    local dynamic_savedb = BlockingReaderWriterQueue()
-    local luamain = BlockingReaderWriterQueue()
-    --local laser = sqlitegocator(sqlitegocatorConfig,decimate) 
-    local laser = sqlitegocator(sqlitegocatorConfig,gocator_cads) 
-
-    if laser == nil then
-      return
-    end
-
-    local ede = encoder_distance_estimation(cads_origin,y_res_mm)
-    --local ede = prsToScan(cads_origin)
-    local thread_profile = process_profile(profileConfig,gocator_cads,ede)
-    --local thread_origin = loop_beltlength_thread(conveyor,cads_origin,origin_dynamic)
-    local thread_origin = fiducial_origin_thread(fiducialOriginConfig,cads_origin,origin_dynamic)
-    local thread_dynamic = dynamic_processing_thread(dynamicProcessingConfig,origin_dynamic,dynamic_savedb)
-    local thread_send_save = save_send_thread(conveyor,dynamic_savedb,luamain)
-
-    laser:Start(gocatorFps)
-
-    repeat
-      local is_value,msg_id,data = wait_for(luamain)
-
-      if is_value then
-        if msg_id == 2 then 
-          run = false
-          break 
-        elseif msg_id == 7 then break
-        elseif msg_id == 11 then
-          send(sendmsg,measurements,table.unpack(data))
-        end
-      end
-
-      run = not coroutine.yield(0)
-    until not run
-    
-    laser:Stop()
-    join_threads({thread_profile,thread_origin,thread_dynamic,thread_send_save})
-
-    if run then
-      sleep_ms(30000)
-    end
+  local gocator_cads = BlockingReaderWriterQueue()
+  local cads_origin = BlockingReaderWriterQueue()
+  local origin_savedb = BlockingReaderWriterQueue()
+  local savedb_luamain = BlockingReaderWriterQueue()
+  local laser = sqlitegocator(sqlitegocatorConfig,gocator_cads) 
+  --local laser = gocator(laserConf,gocator_cads)
+  
+  if laser == nil then
+    sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to start gocator")
+    return
   end
+
+  local prs = prsToScan(cads_origin)
+  local thread_process_profile = process_profile(profileConfig,gocator_cads,prs)
+  local belt_loop = loop_beltlength_thread(conveyor,cads_origin,origin_savedb)
+  local thread_send_save = save_send_thread(conveyor,origin_savedb,savedb_luamain)
+
+  if laser:Start(gocatorFps) then
+    sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to start gocator")
+    return
+  end
+
+  local beltprogress = 0
+
+  unloop = false
+  repeat
+    local is_value,msg_id,data = wait_for(savedb_luamain)
+
+    if is_value then
+      if msg_id == 2 then break 
+      elseif msg_id == 5 then break
+      elseif msg_id == 10 then
+        local m,progress = table.unpack(data)
+        if progress ~= beltprogress then
+          sendmsg("caas." .. DeviceSerial .. "." .. m,"",progress)
+          beltprogress = progress
+        end
+      elseif msg_id == 12 then
+        sendmsg("caas." .. DeviceSerial .. "." .. "error","",data)
+        break
+      end
+    end
+
+    unloop = coroutine.yield(0)
+  until unloop
+
+  laser:Stop()
+  join_threads({thread_process_profile,belt_loop,thread_send_save})
+
 end
 
 mainco = coroutine.create(main)

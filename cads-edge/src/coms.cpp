@@ -155,7 +155,7 @@ coro<remote_msg,bool> remote_control_coro()
 
   void remote_control_thread(moodycamel::BlockingConcurrentQueue<remote_msg> &queue, std::atomic<bool> &terminate)
   {
-    spdlog::get("cads")->error(R"({{ func = '{}' msg = '{}'}})", __func__, "Entering Thread");
+    spdlog::get("cads")->debug(R"({{ func = '{}' msg = '{}'}})", __func__, "Entering Thread");
 
     while(!terminate) {
     auto remote_control = remote_control_coro();
@@ -171,7 +171,7 @@ coro<remote_msg,bool> remote_control_coro()
       }
     }
 
-    spdlog::get("cads")->error(R"({{ func = '{}' msg = '{}'}})", __func__, "Exiting Thread");
+    spdlog::get("cads")->debug(R"({{ func = '{}' msg = '{}'}})", __func__, "Exiting Thread");
   }
 
   

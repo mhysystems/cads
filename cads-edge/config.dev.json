@@ -1,6 +1,6 @@
 {
   "Device" : {
-    "Serial" : 12345
+    "Serial" : 80819
   },
 
   "upload" : {
@@ -21,8 +21,8 @@
   },
 
   "heartbeat" : {
-    "SendHeartBeat" : false,
-    "Subject" :  "caas.12345.heartbeat",
+    "SendHeartBeat" : true,
+    "Subject" :  "caas.80819.heartbeat",
     "Period_ms" : 10000
   }
 }
