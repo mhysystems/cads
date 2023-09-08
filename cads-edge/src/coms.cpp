@@ -23,7 +23,7 @@
 #include <nats.h>
 #include <coms.h>
 #include <brotli/encode.h>
-#include <interpolation.h>
+#include <sampling.h>
 
 #pragma GCC diagnostic pop
 

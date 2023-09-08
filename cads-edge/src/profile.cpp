@@ -13,7 +13,7 @@
 #include <regression.h>
 #include <edge_detection.h>
 #include <stats.hpp>
-#include <interpolation.h>
+#include <sampling.h>
 #include <filters.h>
 
 
@@ -22,8 +22,10 @@ namespace cads
   
   z_type profile_decimate(z_type z, size_t width)
   {
+    if(z.size() < width) return z;
+    
     auto linear_section = size_t((double)z.size() * 0.05);
-    auto stride = (z.size() - 2.0 * linear_section) / (width - 2.0 * linear_section) ;
+    auto stride = (z.size() - 2.0 * linear_section) / (width - 2.0 * linear_section);
     auto size = z.size() - linear_section;
 
     size_t c = linear_section;
@@ -33,27 +35,15 @@ namespace cads
       z[c++] = z[std::size_t(i)];
     }
 
-    for (; c < width; c++)
+    for (; c < width; c++,size++)
     {
-      z[c] = z[size++];
+      z[c] = z[size];
     }
 
     z.erase(z.begin()+width,z.end());
     return z;
   }
   
-  z_type decimate(z_type z, double stride) 
-  {
-    auto size = z.size();
-    size_t c = 0;
-    for (double i = 0; std::size_t(i) < size; i+= stride)
-    {
-      z[c++] = z[std::size_t(i)];
-    }
-    z.erase(z.begin()+c,z.end());
-    return z;
-  }
-
   std::string ClusterErrorToString(ClusterError error)
   {
     using namespace std::string_literals;

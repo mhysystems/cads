@@ -16,7 +16,7 @@
 #include <edge_detection.h>
 #include <coro.hpp>
 #include <belt.h>
-#include <interpolation.h>
+#include <sampling.h>
 #include <upload.h>
 #include <utils.hpp>
 
@@ -101,7 +101,7 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
                                 { return std::isnan(z); });
               
               p.x_off = nan_cnt / p.z.size();
-              p.z = profile_decimate(p.z,widthn);
+              p.z = p.z.size() > widthn ? profile_decimate(p.z,widthn) : interpolate_to_widthn(p.z,widthn);
               next.enqueue({msgid::caas_msg,cads::CaasMsg{"profile",profile_as_flatbufferstring(p,z_resolution,z_offset)}});
             }
           }

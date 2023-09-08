@@ -17,7 +17,7 @@ cadsSrc += files(
   'origin_detection_thread.cpp',
   'belt.cpp',
   'lua_interface.cpp',
-  'interpolation.cpp',
+  'sampling.cpp',
   'upload.cpp',
   'utils.cpp'
 )
