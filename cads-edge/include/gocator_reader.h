@@ -40,7 +40,7 @@ namespace cads
   protected:
     GoSystem m_system = nullptr;
     kAssembly m_assembly = nullptr;
-    double m_ActiveAreaLength;
+    double m_ActiveAreaHeight;
 
     GocatorConfig config;
     std::atomic<size_t> m_buffer_size_warning = 4096;

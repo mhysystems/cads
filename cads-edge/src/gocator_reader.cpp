@@ -149,20 +149,20 @@ namespace cads
     auto setup = GoSensor_Setup(sensor);
     auto role = GoSensor_Role(sensor);
 
-    auto max = GoSetup_ActiveAreaWidthLimitMax(setup,role);
-    auto min = GoSetup_ActiveAreaWidthLimitMin(setup,role);
+    auto max = GoSetup_ActiveAreaHeightLimitMax(setup,role);
+    auto min = GoSetup_ActiveAreaHeightLimitMin(setup,role);
 
     if(len < min) len = min;
     if(len > max) len = max;
 
-    auto status = GoSetup_SetActiveAreaLength(setup, role, len);
+    auto status = GoSetup_SetActiveAreaHeight(setup, role, len);
 
     return kIsError(status);
   }
 
   bool GocatorReader::ResetFoV_impl()
   {
-    return SetFoV_impl(m_ActiveAreaLength);
+    return SetFoV_impl(m_ActiveAreaHeight);
   }
 
   bool GocatorReader::Align_impl() {
@@ -214,7 +214,7 @@ namespace cads
   GocatorReader::GocatorReader(GocatorConfig cnf, Io &gocatorFifo) : GocatorReaderBase(gocatorFifo), config(cnf)
   {
     
-    static_assert(std::is_same_v<decltype(m_ActiveAreaLength), k64f> == true);
+    static_assert(std::is_same_v<decltype(m_ActiveAreaHeight), k64f> == true);
 
     m_assembly = CreateGoSdk();
     m_system = CreateGoSystem();
@@ -276,7 +276,7 @@ namespace cads
     }
 
     auto role = GoSensor_Role(sensor);
-    m_ActiveAreaLength = GoSetup_ActiveAreaLength(setup, role);
+    m_ActiveAreaHeight = GoSetup_ActiveAreaHeight(setup, role);
 
   }
 
