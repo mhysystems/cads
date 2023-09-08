@@ -16,7 +16,8 @@
 namespace cads
 {
 
-  struct GocatorConfig {
+  struct GocatorConfig
+  {
     bool Trim;
     double TypicalResolution;
   };
@@ -25,22 +26,25 @@ namespace cads
   {
 
     GocatorReader() = delete;
-    GocatorReader(const GocatorReader&) = delete;
-    GocatorReader& operator=(const GocatorReader&) = delete;
-    GocatorReader(GocatorReader&&) = delete;
-    GocatorReader& operator=(GocatorReader&&) = delete;
+    GocatorReader(const GocatorReader &) = delete;
+    GocatorReader &operator=(const GocatorReader &) = delete;
+    GocatorReader(GocatorReader &&) = delete;
+    GocatorReader &operator=(GocatorReader &&) = delete;
     virtual bool SetFrameRate(double);
     virtual bool Start_impl();
     virtual void Stop_impl();
     virtual bool Align_impl();
+    virtual bool SetFoV_impl(double len);
+    virtual bool ResetFoV_impl();
 
   protected:
-    
     GoSystem m_system = nullptr;
     kAssembly m_assembly = nullptr;
+    double m_ActiveAreaLength;
+
     GocatorConfig config;
     std::atomic<size_t> m_buffer_size_warning = 4096;
-    
+
     static kStatus OnData(kPointer context, GoSensor sensor, GoDataSet dataset);
     static kStatus OnSystem(kPointer context, GoSystem system, GoDataSet data);
     virtual kStatus OnData(GoDataSet dataset);
@@ -49,10 +53,8 @@ namespace cads
   public:
     static void LaserOff();
     void Log();
-    GocatorReader(GocatorConfig,Io&);
+    GocatorReader(GocatorConfig, Io &);
     virtual ~GocatorReader();
   };
 
 }
-
-

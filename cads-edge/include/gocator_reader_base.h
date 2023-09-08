@@ -28,6 +28,8 @@ class GocatorReaderBase
   virtual bool Align_impl();
   virtual void Stop_impl();
   virtual bool SetFrameRate(double);
+  virtual bool SetFoV_impl(double);
+  virtual bool ResetFoV_impl();
 
 protected:
 	Io& m_gocatorFifo;
@@ -40,6 +42,8 @@ public:
   bool Start(double);
 	void Stop();
   bool Align();
+  bool SetFoV(double);
+  bool ResetFoV();
 
 	GocatorReaderBase(Io&);
   virtual ~GocatorReaderBase() = default;

@@ -1447,12 +1447,51 @@ namespace
     return 1;
   }
 
+  int gocator_setfov(lua_State *L)
+  {
+    auto gocator = static_cast<std::unique_ptr<cads::GocatorReaderBase> *>(lua_touserdata(L, -2));
+    auto len = lua_tonumber(L, -1);
+    auto err = (*gocator)->SetFoV(len);
+
+    lua_pushboolean(L,err);
+
+    return 1;
+  }
+
+  int gocator_resetfov(lua_State *L)
+  {
+    auto gocator = static_cast<std::unique_ptr<cads::GocatorReaderBase> *>(lua_touserdata(L, -1));
+    auto err = (*gocator)->ResetFoV();
+
+    lua_pushboolean(L,err);
+
+    return 1;
+  }
+
   int gocator_gc(lua_State *L)
   {
     auto gocator = static_cast<std::unique_ptr<cads::GocatorReaderBase> *>(lua_touserdata(L, -1));
     gocator->~unique_ptr<cads::GocatorReaderBase>();
 
     return 0;
+  }
+
+  void pushgocatormeta(lua_State *L) {
+    lua_createtable(L, 0, 1);
+    lua_pushcfunction(L, gocator_gc);
+    lua_setfield(L, -2, "__gc");
+    lua_createtable(L, 0, 2);
+    lua_pushcfunction(L, gocator_start);
+    lua_setfield(L, -2, "Start");
+    lua_pushcfunction(L, gocator_stop);
+    lua_setfield(L, -2, "Stop");
+    lua_pushcfunction(L, gocator_align);
+    lua_setfield(L, -2, "Align");
+    lua_pushcfunction(L, gocator_setfov);
+    lua_setfield(L, -2, "SetFoV");
+    lua_pushcfunction(L, gocator_resetfov);
+    lua_setfield(L, -2, "ResetFoV");
+    lua_setfield(L, -2, "__index");
   }
 
   int sqlitegocator(lua_State *L)
@@ -1470,18 +1509,7 @@ namespace
     
     try {
       *p = std::make_unique<cads::SqliteGocatorReader>(*sqlite_gocator_config_opt, *q);
-
-      lua_createtable(L, 0, 1);
-      lua_pushcfunction(L, gocator_gc);
-      lua_setfield(L, -2, "__gc");
-      lua_createtable(L, 0, 2);
-      lua_pushcfunction(L, gocator_start);
-      lua_setfield(L, -2, "Start");
-      lua_pushcfunction(L, gocator_stop);
-      lua_setfield(L, -2, "Stop");
-      lua_pushcfunction(L, gocator_align);
-      lua_setfield(L, -2, "Align");
-      lua_setfield(L, -2, "__index");
+      pushgocatormeta(L);
       lua_setmetatable(L, -2);
       
       return 1;
@@ -1508,18 +1536,7 @@ namespace
     try 
     {
       *p = std::make_unique<cads::GocatorReader>(*gocator_config_opt, *q);
-
-      lua_createtable(L, 0, 1);
-      lua_pushcfunction(L, gocator_gc);
-      lua_setfield(L, -2, "__gc");
-      lua_createtable(L, 0, 2);
-      lua_pushcfunction(L, gocator_start);
-      lua_setfield(L, -2, "Start");
-      lua_pushcfunction(L, gocator_stop);
-      lua_setfield(L, -2, "Stop");
-      lua_pushcfunction(L, gocator_align);
-      lua_setfield(L, -2, "Align");
-      lua_setfield(L, -2, "__index");
+      pushgocatormeta(L);
       lua_setmetatable(L, -2);
 
       return 1;

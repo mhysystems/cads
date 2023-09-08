@@ -7,8 +7,8 @@ sqlitegocatorConfig = {
   Fps = gocatorFps,
   Forever = true,
   Source = "../../profiles/rawprofile_cv001_2023-08-30.db",
-  TypicalSpeed = conveyor.TypicalSpeed,
-  Sleep = true
+  TypicalSpeed = 6.0,
+  Sleep = false
 }
 
 laserConf = {
@@ -26,6 +26,11 @@ function main(sendmsg)
   local laser = gocator(laserConf,decimate) 
 
   if laser == nil then
+    sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to start gocator")
+    return
+  end
+
+  if laser:SetFoV(math.huge) then
     sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to start gocator")
     return
   end
@@ -56,6 +61,8 @@ function main(sendmsg)
 
   laser:Stop()
   
+  laser:ResetFoV() 
+
   if laser:Align() then
     sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to align gocator")
   end

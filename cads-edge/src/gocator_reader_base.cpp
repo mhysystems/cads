@@ -27,6 +27,15 @@ namespace cads
     return false;
   }
 
+  bool GocatorReaderBase::SetFoV_impl(double) {
+    return false;
+  }
+
+
+  bool GocatorReaderBase::ResetFoV_impl() {
+    return false;
+  }
+
   bool GocatorReaderBase::Start(double fps) {
     spdlog::get("cads")->debug(R"({{func = '{}', msg = 'Framerate {}'}})", __func__,fps);
     SetFrameRate(fps);
@@ -40,6 +49,15 @@ namespace cads
   bool GocatorReaderBase::Align() {
     return Align_impl();
   }
+
+  bool GocatorReaderBase::SetFoV(double len) {
+    return SetFoV_impl(len);
+  }
+
+
+  bool GocatorReaderBase::ResetFoV() {
+    return ResetFoV_impl();
+  } 
 
   z_type GocatorReaderBase::k16sToFloat(k16s *z_start, k16s *z_end, double z_resolution, double z_offset)
   {

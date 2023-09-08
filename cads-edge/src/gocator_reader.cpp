@@ -73,7 +73,7 @@ namespace cads
     {
       return true;
     }
-
+  
     status = GoSystem_Start(m_system);
 
     if (kIsError(status))
@@ -143,6 +143,28 @@ namespace cads
     return kIsError(status);
   }
 
+  bool GocatorReader::SetFoV_impl(double len)
+  {
+    auto sensor = GoSystem_SensorAt(m_system, 0);
+    auto setup = GoSensor_Setup(sensor);
+    auto role = GoSensor_Role(sensor);
+
+    auto max = GoSetup_ActiveAreaWidthLimitMax(setup,role);
+    auto min = GoSetup_ActiveAreaWidthLimitMin(setup,role);
+
+    if(len < min) len = min;
+    if(len > max) len = max;
+
+    auto status = GoSetup_SetActiveAreaLength(setup, role, len);
+
+    return kIsError(status);
+  }
+
+  bool GocatorReader::ResetFoV_impl()
+  {
+    return SetFoV_impl(m_ActiveAreaLength);
+  }
+
   bool GocatorReader::Align_impl() {
 
     auto status = GoSystem_SetDataHandler(m_system, kNULL, kNULL);
@@ -191,6 +213,9 @@ namespace cads
 
   GocatorReader::GocatorReader(GocatorConfig cnf, Io &gocatorFifo) : GocatorReaderBase(gocatorFifo), config(cnf)
   {
+    
+    static_assert(std::is_same_v<decltype(m_ActiveAreaLength), k64f> == true);
+
     m_assembly = CreateGoSdk();
     m_system = CreateGoSystem();
 
@@ -249,6 +274,9 @@ namespace cads
     {
       throw runtime_error{"GoSetup_SetAlignmentStationaryTarget: "s + to_string(status)};
     }
+
+    auto role = GoSensor_Role(sensor);
+    m_ActiveAreaLength = GoSetup_ActiveAreaLength(setup, role);
 
   }
 
