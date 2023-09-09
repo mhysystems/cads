@@ -158,7 +158,7 @@ namespace cads
     if(len < min) len = min;
     if(len > max) len = max;
 
-    spdlog::get("cads")->debug(R"({{where = '{}', id = '{}', value = '{}', msg = '{}'}})", __func__,"FoV lenght"s,len,"Set gocators field of view"s);
+    spdlog::get("cads")->debug(R"({{where = '{}', id = '{}', value = '{}', msg = '{}'}})", __func__,"FoV length"s,len,"Set gocators field of view"s);
     
     auto status = GoSetup_SetActiveAreaHeight(setup, role, len);
     if(kIsError(status))
@@ -167,11 +167,6 @@ namespace cads
     }
 
     return kIsError(status);
-  }
-
-  bool GocatorReader::ResetFoV_impl()
-  {
-    return SetFoV_impl(m_ActiveAreaHeight);
   }
 
   bool GocatorReader::Align_impl() {
@@ -225,7 +220,7 @@ namespace cads
   GocatorReader::GocatorReader(GocatorConfig cnf, Io &gocatorFifo) : GocatorReaderBase(gocatorFifo), config(cnf)
   {
     
-    static_assert(std::is_same_v<decltype(m_ActiveAreaHeight), k64f> == true);
+    static_assert(std::is_same_v<double, k64f> == true);
 
     m_assembly = CreateGoSdk();
     m_system = CreateGoSystem();
@@ -285,9 +280,6 @@ namespace cads
     {
       throw runtime_error{"GoSetup_SetAlignmentStationaryTarget: "s + to_string(status)};
     }
-
-    auto role = GoSensor_Role(sensor);
-    m_ActiveAreaHeight = GoSetup_ActiveAreaHeight(setup, role);
 
   }
 

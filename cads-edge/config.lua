@@ -231,7 +231,7 @@ function main(sendmsg)
   until unloop
 
   print("stopping")
-  laser:Stop()
+  laser:Stop(true)
   join_threads({thread_process_profile,window_processing,dynamic_processing,upload_scan})
   print("stopped")
   

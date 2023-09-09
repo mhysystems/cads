@@ -258,7 +258,7 @@ function main(sendmsg)
       run = not coroutine.yield(0)
     until not run
     
-    laser:Stop()
+    laser:Stop(true)
     join_threads({thread_profile,thread_origin,thread_dynamic,thread_send_save})
 
     if run then

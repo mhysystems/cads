@@ -36,12 +36,10 @@ namespace cads
     virtual void Stop_impl(bool);
     virtual bool Align_impl();
     virtual bool SetFoV_impl(double len);
-    virtual bool ResetFoV_impl();
 
   protected:
     GoSystem m_system = nullptr;
     kAssembly m_assembly = nullptr;
-    double m_ActiveAreaHeight;
 
     GocatorConfig config;
     std::atomic<size_t> m_buffer_size_warning = 4096;

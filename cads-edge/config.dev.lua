@@ -60,10 +60,8 @@ function main(sendmsg)
     unloop = coroutine.yield(0)
   until unloop
 
-  laser:Stop(false)
+  laser:Stop(true)
   
-  laser:ResetFoV() 
-
   if laser:Align() then
     sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to align gocator")
   end

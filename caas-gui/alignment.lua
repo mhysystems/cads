@@ -31,7 +31,7 @@ function main(sendmsg)
     return
   end
 
-  if laser:SetFoV(math.huge) then
+  if laser:SetFoV(math.integermax) then
     sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to start gocator")
     return
   end
@@ -62,8 +62,6 @@ function main(sendmsg)
 
   laser:Stop()
   
-  laser:ResetFoV() 
-
   if laser:Align() then
     sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to align gocator")
   end

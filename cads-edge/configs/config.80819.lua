@@ -139,7 +139,7 @@ function main(sendmsg)
     unloop = coroutine.yield(0)
   until unloop
 
-  laser:Stop()
+  laser:Stop(true)
   join_threads({thread_process_profile,belt_loop,thread_send_save})
 
 end
