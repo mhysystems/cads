@@ -74,7 +74,8 @@ sqlitegocatorConfig = {
 
 laserConf = {
   Trim = true,
-  TypicalResolution = y_res_mm
+  TypicalResolution = y_res_mm,
+  Fov = 250.0 --mm
 }
 
 anomaly = {

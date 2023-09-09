@@ -13,7 +13,8 @@ sqlitegocatorConfig = {
 
 laserConf = {
   Trim = true,
-  TypicalResolution = 6.0
+  TypicalResolution = 6.0,
+  Fov = 250.0 --mm
 }
 
 

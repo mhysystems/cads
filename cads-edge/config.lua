@@ -71,7 +71,8 @@ y_res_mm = 1000 * conveyor.TypicalSpeed / gocatorFps -- In mm
 
 laserConf = {
   Trim = true,
-  TypicalResolution = y_res_mm
+  TypicalResolution = y_res_mm,
+  Fov = 250.0 --mm
 }
 
 anomaly = {
