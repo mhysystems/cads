@@ -76,7 +76,7 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
   coro<cads::msg,cads::msg,1> profile_decimation_coro(long long widthn, long long modulo, cads::Io &next)
   {
     cads::msg empty;
-    double z_resolution = 1, z_offset = 0;
+    double z_resolution = 1, z_offset = 0, z_min = -750.0, z_max = 1500.0;
 
     for(long cnt = 0;;cnt++){
       
@@ -90,6 +90,12 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
           auto p = std::get<GocatorProperties>(std::get<1>(msg));
           z_offset = p.zOffset;
           z_resolution = p.zResolution;
+          z_min = p.zMin;
+          z_max = p.zMax;
+          spdlog::get("cads")->debug(R"({{where = '{}', id = '{}', value = [{},{},{},{}], msg = 'values are [zOffset,zResolution,zMin,zMax]'}})", 
+            __func__,
+            "gocator properties",
+            z_offset,z_resolution,z_min,z_max);
         }
         break;
         case msgid::scan: {
