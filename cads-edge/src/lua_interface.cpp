@@ -1052,7 +1052,23 @@ namespace
       return std::nullopt;
     }
 
-    return cads::GocatorConfig{trim, *typical_resolution_opt};
+    if (lua_getfield(L, index, "Fov") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name,"Fov");
+      return std::nullopt;
+    }
+
+    lua_getfield(L, index, "Fov");
+    auto Fov_opt = tonumber(L, -1);
+    lua_pop(L, 1);
+
+    if (!typical_resolution_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'Fov not a number' }}", __func__);
+      return std::nullopt;
+    }
+
+    return cads::GocatorConfig{trim, *typical_resolution_opt,*Fov_opt};
   }
 
   std::optional<cads::DynamicProcessingConfig> todynamicprocessingconfig(lua_State *L, int index)
