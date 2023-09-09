@@ -280,7 +280,6 @@ namespace cads
     {
       throw runtime_error{"GoSetup_SetAlignmentStationaryTarget: "s + to_string(status)};
     }
-
   }
 
   GocatorReader::~GocatorReader()
@@ -388,8 +387,14 @@ namespace cads
 
     if (m_first_frame)
     {
+      auto sensor = GoSystem_SensorAt(m_system, 0);
+      auto setup = GoSensor_Setup(sensor);
+      auto role = GoSensor_Role(sensor);
+
+      auto zmax = GoSetup_ActiveAreaHeightLimitMax(setup,role);
+      auto zmin = GoSetup_ActiveAreaHeightLimitMin(setup,role);
       m_first_frame = false;
-      m_gocatorFifo.enqueue({msgid::gocator_properties, GocatorProperties{xResolution, zResolution, zOffset}});
+      m_gocatorFifo.enqueue({msgid::gocator_properties, GocatorProperties{xResolution, zResolution, zOffset, zmin, zmax}});
     }
 
     y = (frame - 1) * yResolution;
