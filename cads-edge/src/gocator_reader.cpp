@@ -408,11 +408,9 @@ namespace cads
 
     auto samples_width = (double)distance(profile, profile_begin);
     auto z = GocatorReaderBase::k16sToFloat(profile_begin, profile_end, zResolution, zOffset);
-    if(z.size() != 0) {
-      m_gocatorFifo.enqueue({msgid::scan, cads::profile{std::chrono::high_resolution_clock::now(), y, xOffset + samples_width * xResolution, std::move(z)}});
-    }else {
-      spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__, "No z samples");
-    }
+
+    m_gocatorFifo.enqueue({msgid::scan, cads::profile{std::chrono::high_resolution_clock::now(), y, xOffset + samples_width * xResolution, std::move(z)}});
+
 
     return kOK;
   }

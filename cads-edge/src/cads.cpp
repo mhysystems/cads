@@ -95,10 +95,13 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
         case msgid::scan: {
           if(cnt % modulo == 0){
             auto p = std::get<profile>(std::get<1>(msg));
+            double nan_cnt = std::count_if(p.z.begin(), p.z.end(), [](z_element z)
+                  { return std::isnan(z); });
+            
+            spdlog::get("cads")->debug(R"({{func = '{}', msg = 'number of profile samples {}'}})", __func__,p.z.size());
+            spdlog::get("cads")->debug(R"({{func = '{}', msg = 'nan count is {}, ratio {}'}})", __func__,nan_cnt, nan_cnt / p.z.size());
+
             if(p.z.size() > (size_t)widthn) {
-              
-              double nan_cnt = std::count_if(p.z.begin(), p.z.end(), [](z_element z)
-                                { return std::isnan(z); });
               
               p.x_off = nan_cnt / p.z.size();
               p.z = p.z.size() > widthn ? profile_decimate(p.z,widthn) : interpolate_to_widthn(p.z,widthn);
