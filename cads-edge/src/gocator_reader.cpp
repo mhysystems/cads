@@ -71,6 +71,7 @@ namespace cads
     
     if (kIsError(status))
     {
+      spdlog::get("cads")->error(R"({{where = '{}', id = '{}', value = {}, msg = '{}'}})", __func__,"GoSystem_SetDataHandler"s,status,"Gocator error");
       return true;
     }
   
@@ -78,12 +79,14 @@ namespace cads
 
     if (kIsError(status))
     {
+      spdlog::get("cads")->error(R"({{where = '{}', id = '{}', value = {}, msg = '{}'}})", __func__,"GoSystem_Start"s,status,"Gocator error");
       return true;
     }
     else
     {
+      m_first_frame = true;
       m_stopped = false;
-      spdlog::get("cads")->info("GoSensor Starting");
+      spdlog::get("cads")->info(R"({{where = '{}', id = '{}', value = '{}', msg = '{}'}})", __func__,"GoSystem_Start"s,"GoSensor Starting","GoSensor Starting");
     }
 
     return false;
@@ -105,6 +108,7 @@ namespace cads
         m_gocatorFifo.enqueue({msgid::finished, 0});
       }
 
+      m_first_frame = true;
       m_stopped = true;
       spdlog::get("cads")->info(R"({{where = '{}', id = '{}', value = '{}', msg = '{}'}})", __func__,"GoSensor Stopped"s,"empty"s,"GoSensor Stopped"s);
     }
