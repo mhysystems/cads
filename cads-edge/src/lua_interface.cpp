@@ -1431,8 +1431,9 @@ namespace
 
   int gocator_stop(lua_State *L)
   {
-    auto gocator = static_cast<std::unique_ptr<cads::GocatorReaderBase> *>(lua_touserdata(L, -1));
-    (*gocator)->Stop();
+    auto gocator = static_cast<std::unique_ptr<cads::GocatorReaderBase> *>(lua_touserdata(L, -2));
+    auto signal_finished = lua_toboolean(L, -1);
+    (*gocator)->Stop(signal_finished);
 
     return 0;
   }

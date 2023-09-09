@@ -30,7 +30,7 @@ namespace cads
     SqliteGocatorReader(SqliteGocatorReader&&) = delete;
     SqliteGocatorReader& operator=(SqliteGocatorReader&&) = delete;
     virtual bool Start_impl();
-    virtual void Stop_impl();
+    virtual void Stop_impl(bool);
 
   protected:
     std::atomic<bool> m_loop = false;

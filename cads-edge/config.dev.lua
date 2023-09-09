@@ -26,12 +26,12 @@ function main(sendmsg)
   --local laser = gocator(laserConf,decimate) 
 
   if laser == nil then
-    sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to start gocator")
+    sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to create gocator")
     return
   end
 
-  if laser:SetFoV(math.huge) then
-    sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to start gocator")
+  if laser:SetFoV(math.maxinteger) then
+    sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to set gocators field of view")
     return
   end
 
@@ -43,7 +43,7 @@ function main(sendmsg)
   unloop = false
   repeat
     local is_value,msg_id,data = wait_for(gocator_luamain)
-
+    break
     if is_value then
       if msg_id == 2 then break 
       --elseif msg_id == 5 then break
@@ -59,7 +59,7 @@ function main(sendmsg)
     unloop = coroutine.yield(0)
   until unloop
 
-  laser:Stop()
+  laser:Stop(false)
   
   laser:ResetFoV() 
 

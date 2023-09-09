@@ -89,7 +89,7 @@ namespace cads
     return false;
   }
 
-  void GocatorReader::Stop_impl()
+  void GocatorReader::Stop_impl(bool signal_finished)
   {
     if(m_stopped) return;
     
@@ -97,13 +97,16 @@ namespace cads
     
     if (kIsError(status))
     {
-      spdlog::get("cads")->error("GoSystem_Stop(m_sensor) -> {}", status);
+      spdlog::get("cads")->error(R"({{where = '{}', id = '{}', value = '{}', msg = '{}'}})", __func__,"GoSystem_Stop"s,status,"Gocator error");
     }
     else
     {
-      m_gocatorFifo.enqueue({msgid::finished, 0});
+      if(signal_finished) {
+        m_gocatorFifo.enqueue({msgid::finished, 0});
+      }
+
       m_stopped = true;
-      spdlog::get("cads")->info("GoSensor Stopped");
+      spdlog::get("cads")->info(R"({{where = '{}', id = '{}', value = '{}', msg = '{}'}})", __func__,"GoSensor Stopped"s,"empty"s,"GoSensor Stopped"s);
     }
   }
 
@@ -155,7 +158,13 @@ namespace cads
     if(len < min) len = min;
     if(len > max) len = max;
 
+    spdlog::get("cads")->debug(R"({{where = '{}', id = '{}', value = '{}', msg = '{}'}})", __func__,"FoV lenght"s,len,"Set gocators field of view"s);
+    
     auto status = GoSetup_SetActiveAreaHeight(setup, role, len);
+    if(kIsError(status))
+    {
+      spdlog::get("cads")->error(R"({{where = '{}', id = '{}', value = '{}', msg = '{}'}})", __func__,"GoSetup_SetActiveAreaHeight"s,status,"Gocator error");
+    }
 
     return kIsError(status);
   }
@@ -171,6 +180,7 @@ namespace cads
     
     if (kIsError(status))
     {
+      spdlog::get("cads")->error(R"({{where = '{}', id = '{}', value = '{}', msg = '{}'}})", __func__,"GoSystem_SetDataHandler"s,status,"Gocator error");
       return true;
     }
     
@@ -178,6 +188,7 @@ namespace cads
 
     if (kIsError(status))
     {
+      spdlog::get("cads")->error(R"({{where = '{}', id = '{}', value = '{}', msg = '{}'}})", __func__,"GoSystem_StartAlignment"s,status,"Gocator error");
       return true;
     }
 
@@ -282,7 +293,7 @@ namespace cads
 
   GocatorReader::~GocatorReader()
   {
-    Stop_impl();
+    Stop_impl(true);
 
     auto status = GoDestroy(m_system);
     if (kIsError(status))

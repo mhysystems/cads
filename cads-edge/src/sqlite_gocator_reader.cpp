@@ -34,19 +34,23 @@ namespace cads
     return false;
   }
 
-  void SqliteGocatorReader::Stop_impl()
+  void SqliteGocatorReader::Stop_impl(bool signal_finished)
   {
     if (!m_stopped)
     {
       m_stopped = true;
       m_thread.join();
+      if(signal_finished)
+      {
+        m_gocatorFifo.enqueue({msgid::finished, 0});
+      }
     }
   }
 
   SqliteGocatorReader::SqliteGocatorReader(SqliteGocatorConfig cnf, Io &gocatorFifo) : GocatorReaderBase(gocatorFifo), config(cnf) {}
 
   SqliteGocatorReader::~SqliteGocatorReader() {
-    Stop_impl();
+    Stop_impl(true);
   }
 
   void SqliteGocatorReader::OnData()
@@ -108,7 +112,6 @@ namespace cads
       }
     } while (config.Forever && !m_stopped);
     
-    m_gocatorFifo.enqueue({msgid::finished, 0});
   }
 
 }

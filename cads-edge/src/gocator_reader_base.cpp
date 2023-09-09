@@ -16,7 +16,7 @@ namespace cads
     return false;
   }
 
-  void GocatorReaderBase::Stop_impl() {
+  void GocatorReaderBase::Stop_impl(bool) {
   }
 
   bool GocatorReaderBase::Align_impl() {
@@ -42,8 +42,8 @@ namespace cads
     return Start_impl();
   }
 
-  void GocatorReaderBase::Stop() {
-    Stop_impl();
+  void GocatorReaderBase::Stop(bool signal_finished) {
+    Stop_impl(signal_finished);
   }
 
   bool GocatorReaderBase::Align() {

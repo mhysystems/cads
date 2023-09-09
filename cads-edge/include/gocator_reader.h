@@ -32,7 +32,7 @@ namespace cads
     GocatorReader &operator=(GocatorReader &&) = delete;
     virtual bool SetFrameRate(double);
     virtual bool Start_impl();
-    virtual void Stop_impl();
+    virtual void Stop_impl(bool);
     virtual bool Align_impl();
     virtual bool SetFoV_impl(double len);
     virtual bool ResetFoV_impl();
