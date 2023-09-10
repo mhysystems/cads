@@ -17,6 +17,23 @@
 #include <filters.h>
 
 
+namespace 
+{
+  double sampling_distribution(double x)
+  {
+    const auto s = 0.05;
+    const auto f = 0.5;
+
+    if(x > 1.0) return 1.0;
+    if(x < 0.0) return 0.0;
+    if(x > (1 - s)) return (x-1.0)*f + 1.0;
+    if(x < s) return f*x;
+    else return 2.0;
+
+  }
+}
+
+
 namespace cads
 {
   
@@ -24,20 +41,10 @@ namespace cads
   {
     if(z.size() < width) return z;
 
-    auto linear_section = size_t((double)z.size() * 0.05);
-    auto stride = (z.size() - 2.0 * linear_section) / (width - 2.0 * linear_section);
-    auto size = z.size() - linear_section;
-
-    size_t c = linear_section;
-
-    for (double i = linear_section; std::size_t(i) < size && std::size_t(i) > 0; i+= stride)
+    for (double i = 0; i < width; i++)
     {
-      z[c++] = z[std::size_t(i)];
-    }
-
-    for (; c < width; c++,size++)
-    {
-      z[c] = z[size];
+      auto x = std::size_t(z.size() * sampling_distribution(i/width));
+      z[std::size_t(i)] = z[x < z.size() ? x : z.size() - 1];
     }
 
     z.erase(z.begin()+width,z.end());

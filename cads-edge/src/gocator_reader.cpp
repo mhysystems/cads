@@ -415,7 +415,6 @@ namespace cads
       auto xorigin = GoSetup_ActiveAreaX(setup,role);
       auto width = GoSetup_ActiveAreaWidth(setup,role);
       m_first_frame = false;
-      spdlog::get("cads")->error(R"({{where = '{}', id = '{}', value = '{}', msg = '{}'}})", __func__,"ProfileNo"s,profileWidth,"Profile number of samples");
       m_gocatorFifo.enqueue({msgid::gocator_properties, GocatorProperties{xResolution, zResolution, zOffset, xorigin, width, zorigin, height}});
     }
 
