@@ -159,12 +159,14 @@ namespace cads
     auto max = GoSetup_ActiveAreaHeightLimitMax(setup,role);
     auto min = GoSetup_ActiveAreaHeightLimitMin(setup,role);
 
-    if(len < min) len = min;
-    if(len > max) len = max;
+    auto alen = len;
 
-    spdlog::get("cads")->debug(R"({{where = '{}', id = '{}', value = '{}', msg = '{}'}})", __func__,"FoV length"s,len,"Set gocators field of view"s);
+    if(len < min) alen = min;
+    if(len > max) alen = max;
+
+    spdlog::get("cads")->debug(R"({{where = '{}', id = '{}', value = [{},{}], msg = '{}'}})", __func__,"FoV length"s,len,alen,"Set gocators field of view [requested,acutal]"s);
     
-    auto status = GoSetup_SetActiveAreaHeight(setup, role, len);
+    auto status = GoSetup_SetActiveAreaHeight(setup, role, alen);
     if(kIsError(status))
     {
       spdlog::get("cads")->error(R"({{where = '{}', id = '{}', value = '{}', msg = '{}'}})", __func__,"GoSetup_SetActiveAreaHeight"s,status,"Gocator error");
@@ -413,6 +415,7 @@ namespace cads
       auto xorigin = GoSetup_ActiveAreaX(setup,role);
       auto width = GoSetup_ActiveAreaWidth(setup,role);
       m_first_frame = false;
+      spdlog::get("cads")->error(R"({{where = '{}', id = '{}', value = '{}', msg = '{}'}})", __func__,"ProfileNo"s,profileWidth,"Profile number of samples");
       m_gocatorFifo.enqueue({msgid::gocator_properties, GocatorProperties{xResolution, zResolution, zOffset, xorigin, width, zorigin, height}});
     }
 

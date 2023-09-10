@@ -89,7 +89,7 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
         case cads::msgid::gocator_properties: {
           auto p = std::get<GocatorProperties>(std::get<1>(msg));
           gp = p;
-          spdlog::get("cads")->debug(R"({{where = '{}', id = '{}', value = [{},{},{},{},{},{},{}], msg = 'values are [xResolution.zOffset,zResolution,x,width,z,height]'}})", 
+          spdlog::get("cads")->debug(R"({{where = '{}', id = '{}', value = [{},{},{},{},{},{},{}], msg = 'values are [xResolution,zOffset,zResolution,x,width,z,height]'}})", 
             __func__,
             "gocator properties",
             p.xResolution,p.zOffset,p.zResolution,p.xOrigin,p.width,p.zOrigin,p.height);
@@ -101,7 +101,7 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
             double nan_cnt = std::count_if(p.z.begin(), p.z.end(), [](z_element z)
                   { return std::isnan(z); });
             
-            spdlog::get("cads")->debug(R"({{func = '{}', msg = 'number of profile samples {}'}})", __func__,p.z.size());
+            spdlog::get("cads")->debug(R"({{func = '{}', msg = 'number of profile samples {}, mid value {}'}})", __func__,p.z.size(),p.z[size_t(p.z.size()/2)]);
             spdlog::get("cads")->debug(R"({{func = '{}', msg = 'nan count is {}, ratio {}'}})", __func__,nan_cnt, nan_cnt / p.z.size());
             
             auto nan_ratio = nan_cnt / p.z.size();
