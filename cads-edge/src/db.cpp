@@ -363,12 +363,14 @@ namespace cads
            sqlite3_column_double(stmt.get(), 1),
            sqlite3_column_double(stmt.get(), 2),
            0.0,
+           0.0,
+           0.0,
            0.0},
           0};
     }
     else
     {
-      rtn = {{1.0, 1.0, 1.0, 0.0, 0.0}, -1};
+      rtn = {cads::GocatorProperties{}, -1};
     }
 
     return rtn;
@@ -885,6 +887,8 @@ namespace cads
           {sqlite3_column_double(stmt.get(), 0),
            sqlite3_column_double(stmt.get(), 1),
            sqlite3_column_double(stmt.get(), 2),
+           0.0,
+           0.0,
            0.0,
            0.0},
           0};

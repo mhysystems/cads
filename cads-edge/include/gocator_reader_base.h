@@ -7,8 +7,6 @@
 
 #include <GoSdk/GoSdkDef.h>
 
-#include <readerwriterqueue.h>
-#include <msg.h>
 #include <profile.h>
 #include <constants.h>
 #include <io.hpp>

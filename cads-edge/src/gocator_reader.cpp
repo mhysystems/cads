@@ -408,10 +408,12 @@ namespace cads
       auto setup = GoSensor_Setup(sensor);
       auto role = GoSensor_Role(sensor);
 
-      auto zmax = GoSetup_ActiveAreaHeightLimitMax(setup,role);
-      auto zmin = GoSetup_ActiveAreaHeightLimitMin(setup,role);
+      auto zorigin = GoSetup_ActiveAreaZ(setup,role);
+      auto height = GoSetup_ActiveAreaHeight(setup,role);
+      auto xorigin = GoSetup_ActiveAreaZ(setup,role);
+      auto width = GoSetup_ActiveAreaHeight(setup,role);
       m_first_frame = false;
-      m_gocatorFifo.enqueue({msgid::gocator_properties, GocatorProperties{xResolution, zResolution, zOffset, zmin, zmax}});
+      m_gocatorFifo.enqueue({msgid::gocator_properties, GocatorProperties{xResolution, zResolution, zOffset, xorigin, width, zorigin, height}});
     }
 
     y = (frame - 1) * yResolution;
