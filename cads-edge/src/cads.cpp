@@ -106,9 +106,9 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
 
             if(p.z.size() > (size_t)widthn) {
               
-              p.x_off = nan_cnt / p.z.size();
+              auto nan_ratio = nan_cnt / p.z.size();
               profile_decimate(p.z,widthn);
-              next.enqueue({msgid::caas_msg,cads::CaasMsg{"profile",profile_as_flatbufferstring(p,g_p)}});
+              next.enqueue({msgid::caas_msg,cads::CaasMsg{"profile",profile_as_flatbufferstring(p,g_p,nan_ratio)}});
             }
           }
         }

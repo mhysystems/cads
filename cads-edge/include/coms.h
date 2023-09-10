@@ -26,5 +26,5 @@ namespace cads
   std::tuple<state::scan,bool> post_scan(state::scan scan,webapi_urls,std::atomic<bool> &terminate) ;
   cads::coro<int, std::tuple<std::string, std::string, std::string>, 1>  realtime_metrics_coro();
   void realtime_metrics_thread(moodycamel::BlockingConcurrentQueue<std::tuple<std::string, std::string, std::string>> &queue, HeartBeat beat, std::atomic<bool> &terminate);
-  std::string profile_as_flatbufferstring(profile p, GocatorProperties);
+  std::string profile_as_flatbufferstring(profile p, GocatorProperties, double);
 }

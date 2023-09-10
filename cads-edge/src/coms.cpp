@@ -511,7 +511,7 @@ coro<remote_msg,bool> remote_control_coro()
     return {scan,failure};
   }
 
-  std::string profile_as_flatbufferstring(profile p, GocatorProperties p_g){
+  std::string profile_as_flatbufferstring(profile p, GocatorProperties p_g, double nan){
     using namespace flatbuffers; 
    
     FlatBufferBuilder builder(4096);
@@ -523,7 +523,7 @@ coro<remote_msg,bool> remote_control_coro()
         p_g.zOrigin, 
         p_g.width, 
         p_g.height,
-        0.0,
+        nan,
         p.x_off,
         p_g.xResolution,
         p_g.zResolution,

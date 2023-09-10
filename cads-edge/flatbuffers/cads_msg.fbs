@@ -6,7 +6,7 @@ table CaasProfile
   z_origin : double;
   width : double;
   height : double;
-  nan_percentage : double;
+  nan_ratio : double;
   x_off : double;
   x_resolution : double;
   z_resolution : double;
