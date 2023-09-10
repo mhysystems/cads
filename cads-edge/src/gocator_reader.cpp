@@ -410,8 +410,8 @@ namespace cads
 
       auto zorigin = GoSetup_ActiveAreaZ(setup,role);
       auto height = GoSetup_ActiveAreaHeight(setup,role);
-      auto xorigin = GoSetup_ActiveAreaZ(setup,role);
-      auto width = GoSetup_ActiveAreaHeight(setup,role);
+      auto xorigin = GoSetup_ActiveAreaX(setup,role);
+      auto width = GoSetup_ActiveAreaWidth(setup,role);
       m_first_frame = false;
       m_gocatorFifo.enqueue({msgid::gocator_properties, GocatorProperties{xResolution, zResolution, zOffset, xorigin, width, zorigin, height}});
     }
