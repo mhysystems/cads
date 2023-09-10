@@ -8,7 +8,7 @@ sqlitegocatorConfig = {
   Forever = true,
   Source = "../../profiles/rawprofile_cv001_2023-08-30.db",
   TypicalSpeed = 6.0,
-  Sleep = false
+  Sleep = true
 }
 
 laserConf = {
@@ -23,16 +23,21 @@ function main(sendmsg)
   local gocator_luamain = BlockingReaderWriterQueue()
   
   local decimate = profile_decimation(420,1000,gocator_luamain)
-  --local laser = sqlitegocator(sqlitegocatorConfig,decimate) 
-  local laser = gocator(laserConf,decimate) 
+  local laser = sqlitegocator(sqlitegocatorConfig,decimate) 
+  --local laser = gocator(laserConf,decimate) 
 
   if laser == nil then
-    sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to start gocator")
+    sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to construct gocator")
+    return
+  end
+
+  if laser:ResetAlign() then
+    sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to reset align")
     return
   end
 
   if laser:SetFoV(math.integermax) then
-    sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to start gocator")
+    sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to set field of view")
     return
   end
 
@@ -60,7 +65,7 @@ function main(sendmsg)
     unloop = coroutine.yield(0)
   until unloop
 
-  laser:Stop()
+  laser:Stop(true)
   
   if laser:Align() then
     sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to align gocator")

@@ -1,4 +1,4 @@
-import { profile_array, ByteBuffer } from './cads-flatbuffers-plot.es.js'
+import { Msg, CaasProfile, MsgContents, ByteBuffer } from './cads-flatbuffers-plot.es.js'
 
 function minmax(array) {
 
@@ -48,13 +48,24 @@ class CanvasPlot {
   }
 
   async updatePlot(bytes) {
+    
+    const cheight = this.ctx.canvas.height;
+    const cwidth = this.ctx.canvas.width;
 
-    const profileDataBuf = profile_array.getRootAsprofile_array(new ByteBuffer(new Uint8Array(bytes,bytes.byteOffset,bytes.byteLength)));
-    const z_resolutiom = profileDataBuf.zRes();
-    const z_Offset = profileDataBuf.zOff();
-    const profile = profileDataBuf.profiles(0);
+    const msgDataBuf = Msg.getRootAsMsg(new ByteBuffer(new Uint8Array(bytes,bytes.byteOffset,bytes.byteLength)));
+    const msgType = msgDataBuf.contentsType();
+
+    if(msgType != MsgContents.CaasProfile) {
+      console.error("msg not a caasProfile type")
+      return;
+    }
+
+    const profile = msgDataBuf.contents(new CaasProfile());
+
+    const z_resolutiom = profile.zResolution();
+    const z_Offset = profile.zOffset();
     const z = array16ToFloat(profile.zSamplesArray(),z_resolutiom,z_Offset);
-    const nanCnt = Math.floor(100*profile.xOff());
+    const nanCnt = Math.floor(100*profile.nanRatio());
     
     if(z.byteLength < Float32Array.BYTES_PER_ELEMENT) 
     {
@@ -62,12 +73,21 @@ class CanvasPlot {
     }
 
     const noise = nanCnt.toLocaleString(undefined, { maximumFractionDigits: 0, minimumFractionDigits: 0 });
+    
+    const xmap = (i) => {
+      const s = i * profile.xResolution() + profile.xOff();
+      return Math.floor((s - profile.xOrigin()) * (cwidth / profile.width()));
+    };
+
+    const zmap = (z) => {
+      return Math.floor((z - profile.zOrigin()) * (cheight / profile.height()));
+    };
+    
     this.noiseValueElement.textContent = noise;
 
     const [zmin,zmax] = minmax(z);
-    const cheight = this.ctx.canvas.height;
-    const cwidth = this.ctx.canvas.width;
-    interpolatetoN(z,cwidth);
+
+    //interpolatetoN(z,cwidth);
 
     const ztoy = (zmax - zmin) < 60 ? (z) => {
       const scale = cheight / ((zmax - zmin) * 2);
@@ -81,10 +101,11 @@ class CanvasPlot {
 
     this.ctx.reset();
     this.ctx.fillStyle = "red";
-    for(let x = 0 ; x < cwidth; ++x) {
-      if(!isNaN(z[x])) {
-        let dbg = Math.floor(ztoy(z[x]));
-        this.ctx.fillRect(x,dbg,2,2);
+    for(let x = 0 ; x < z.length; ++x) {
+      let i = xmap(x);
+      if(i < cwidth && !isNaN(z[x])) {
+        let dbg = zmap(z[x]);
+        this.ctx.fillRect(i,cheight - dbg,2,2);
       }
     }
 

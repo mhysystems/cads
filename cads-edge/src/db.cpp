@@ -362,10 +362,10 @@ namespace cads
           {sqlite3_column_double(stmt.get(), 0),
            sqlite3_column_double(stmt.get(), 1),
            sqlite3_column_double(stmt.get(), 2),
-           0.0,
-           0.0,
-           0.0,
-           0.0},
+           -1000.0,
+           2000.0,
+           -765.0,
+           1500.0},
           0};
     }
     else

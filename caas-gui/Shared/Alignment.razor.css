@@ -1,7 +1,7 @@
 alignment-main {
   display: grid;
   grid-template-columns: 1fr;
-  grid-template-rows: 1fr 1fr 1fr;
+  grid-template-rows: auto 1fr auto;
   height : 100%;
   width : 100%;
   align-items: end;
@@ -17,6 +17,6 @@ bottomrow {
 
 canvas {
   width : 100%;
-  aspect-ratio: 420 / 120;
+  aspect-ratio: 420 / 315;
   background-color: lightgray;
 }

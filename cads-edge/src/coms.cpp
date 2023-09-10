@@ -517,19 +517,25 @@ coro<remote_msg,bool> remote_control_coro()
     FlatBufferBuilder builder(4096);
 
     auto short_z = z_as_int16(p.z,p_g.zResolution,p_g.zOffset);
-    builder.Finish(
-      CadsFlatbuffers::CreateCaasProfileDirect(builder,
-        p_g.xOrigin, 
-        p_g.zOrigin, 
-        p_g.width, 
-        p_g.height,
-        nan,
-        p.x_off,
-        p_g.xResolution,
-        p_g.zResolution,
-        p_g.zOffset,
-        &short_z)
-     );
+  
+    auto caas = CadsFlatbuffers::CreateCaasProfileDirect(builder,
+      p_g.xOrigin, 
+      p_g.zOrigin, 
+      p_g.width, 
+      p_g.height,
+      nan,
+      p.x_off,
+      p_g.xResolution,
+      p_g.zResolution,
+      p_g.zOffset,
+      &short_z);
+
+    auto msg = CadsFlatbuffers::CreateMsg(builder,
+      CadsFlatbuffers::MsgContents_CaasProfile,
+      caas.Union()
+    );
+
+    builder.Finish(msg);
 
     return std::string((char*)builder.GetBufferPointer(),builder.GetSize());
   }

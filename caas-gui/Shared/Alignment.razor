@@ -10,7 +10,7 @@
     <text @ref="@noiseValue">0</text>
     <text>%</text>
   </text-mapping>
-  <canvas @ref="@jsPlotElement" width="420" height="120"></canvas>
+  <canvas @ref="@jsPlotElement" width="420" height="315"></canvas>
   <bottomrow>
     <button class="btn btn-primary" @onclick="UserAligned">@(alignmentState == AlignmentState.Cancel ? "Laser On" : "Aligned")</button>
     <button class="btn btn-primary" @onclick="CancelClick">Cancel</button>

@@ -76,7 +76,7 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
   coro<cads::msg,cads::msg,1> profile_decimation_coro(long long widthn, long long modulo, cads::Io &next)
   {
     cads::msg empty;
-    GocatorProperties g_p;
+    GocatorProperties gp;
 
     for(long cnt = 0;;cnt++){
       
@@ -88,7 +88,7 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
         
         case cads::msgid::gocator_properties: {
           auto p = std::get<GocatorProperties>(std::get<1>(msg));
-          g_p = p;
+          gp = p;
           spdlog::get("cads")->debug(R"({{where = '{}', id = '{}', value = [{},{},{},{},{},{},{}], msg = 'values are [xResolution.zOffset,zResolution,x,width,z,height]'}})", 
             __func__,
             "gocator properties",
@@ -103,13 +103,19 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
             
             spdlog::get("cads")->debug(R"({{func = '{}', msg = 'number of profile samples {}'}})", __func__,p.z.size());
             spdlog::get("cads")->debug(R"({{func = '{}', msg = 'nan count is {}, ratio {}'}})", __func__,nan_cnt, nan_cnt / p.z.size());
+            
+            auto nan_ratio = nan_cnt / p.z.size();
+            
+            auto pwidth = p.z.size() * gp.xResolution;
 
             if(p.z.size() > (size_t)widthn) {
-              
-              auto nan_ratio = nan_cnt / p.z.size();
-              profile_decimate(p.z,widthn);
-              next.enqueue({msgid::caas_msg,cads::CaasMsg{"profile",profile_as_flatbufferstring(p,g_p,nan_ratio)}});
+              p.z = profile_decimate(p.z,widthn);
             }
+
+            auto send_gp = gp;
+            send_gp.xResolution = pwidth / p.z.size();
+            next.enqueue({msgid::caas_msg,cads::CaasMsg{"profile",profile_as_flatbufferstring(p,send_gp,nan_ratio)}});
+
           }
         }
         break;
