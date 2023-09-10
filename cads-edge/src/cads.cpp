@@ -76,7 +76,7 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
   coro<cads::msg,cads::msg,1> profile_decimation_coro(long long widthn, long long modulo, cads::Io &next)
   {
     cads::msg empty;
-    double z_resolution = 1, z_offset = 0, z_origin = -750.0, height = 1500.0, x_origin = -1000.0, width = 2000.0;
+    GocatorProperties g_p;
 
     for(long cnt = 0;;cnt++){
       
@@ -88,16 +88,11 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
         
         case cads::msgid::gocator_properties: {
           auto p = std::get<GocatorProperties>(std::get<1>(msg));
-          z_offset = p.zOffset;
-          z_resolution = p.zResolution;
-          x_origin = p.xOrigin;
-          width = p.width;
-          z_origin = p.zOrigin;
-          height = p.height;
-          spdlog::get("cads")->debug(R"({{where = '{}', id = '{}', value = [{},{},{},{},{},{}], msg = 'values are [zOffset,zResolution,x,width,z,height]'}})", 
+          g_p = p;
+          spdlog::get("cads")->debug(R"({{where = '{}', id = '{}', value = [{},{},{},{},{},{},{}], msg = 'values are [xResolution.zOffset,zResolution,x,width,z,height]'}})", 
             __func__,
             "gocator properties",
-            z_offset,z_resolution,x_origin,width,z_origin,height);
+            p.xResolution,p.zOffset,p.zResolution,p.xOrigin,p.width,p.zOrigin,p.height);
         }
         break;
         case msgid::scan: {
@@ -112,8 +107,8 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
             if(p.z.size() > (size_t)widthn) {
               
               p.x_off = nan_cnt / p.z.size();
-              p.z = p.z.size() > widthn ? profile_decimate(p.z,widthn) : interpolate_to_widthn(p.z,widthn);
-              next.enqueue({msgid::caas_msg,cads::CaasMsg{"profile",profile_as_flatbufferstring(p,z_resolution,z_offset)}});
+              profile_decimate(p.z,widthn);
+              next.enqueue({msgid::caas_msg,cads::CaasMsg{"profile",profile_as_flatbufferstring(p,g_p)}});
             }
           }
         }

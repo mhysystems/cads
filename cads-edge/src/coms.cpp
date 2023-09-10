@@ -511,15 +511,25 @@ coro<remote_msg,bool> remote_control_coro()
     return {scan,failure};
   }
 
-  std::string profile_as_flatbufferstring(profile p, double z_resolution, double z_offset){
+  std::string profile_as_flatbufferstring(profile p, GocatorProperties p_g){
     using namespace flatbuffers; 
    
     FlatBufferBuilder builder(4096);
-    std::vector<flatbuffers::Offset<CadsFlatbuffers::profile>> profiles_flat;
 
-    auto short_z = z_as_int16(p.z,z_resolution,z_offset);
-    profiles_flat.push_back(CadsFlatbuffers::CreateprofileDirect(builder, p.y, p.x_off, &short_z));
-    builder.Finish(CadsFlatbuffers::Createprofile_array(builder, z_resolution, z_offset, 0, profiles_flat.size(), builder.CreateVector(profiles_flat)));
+    auto short_z = z_as_int16(p.z,p_g.zResolution,p_g.zOffset);
+    builder.Finish(
+      CadsFlatbuffers::CreateCaasProfileDirect(builder,
+        p_g.xOrigin, 
+        p_g.zOrigin, 
+        p_g.width, 
+        p_g.height,
+        0.0,
+        p.x_off,
+        p_g.xResolution,
+        p_g.zResolution,
+        p_g.zOffset,
+        &short_z)
+     );
 
     return std::string((char*)builder.GetBufferPointer(),builder.GetSize());
   }

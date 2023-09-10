@@ -2,9 +2,13 @@ namespace CadsFlatbuffers;
 
 table CaasProfile
 {
+  x_origin : double;
+  z_origin : double;
   width : double;
   height : double;
-  nan_count : int;
+  nan_percentage : double;
+  x_off : double;
+  x_resolution : double;
   z_resolution : double;
   z_offset : double;
 	z_samples : [short];
