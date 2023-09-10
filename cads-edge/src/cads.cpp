@@ -101,12 +101,13 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
             double nan_cnt = std::count_if(p.z.begin(), p.z.end(), [](z_element z)
                   { return std::isnan(z); });
             
-            spdlog::get("cads")->debug(R"({{func = '{}', msg = 'number of profile samples {}, mid value {}'}})", __func__,p.z.size(),p.z[size_t(p.z.size()/2)]);
-            spdlog::get("cads")->debug(R"({{func = '{}', msg = 'nan count is {}, ratio {}'}})", __func__,nan_cnt, nan_cnt / p.z.size());
-            
             auto nan_ratio = nan_cnt / p.z.size();
-            
             auto pwidth = p.z.size() * gp.xResolution;
+
+            spdlog::get("cads")->debug(R"({{where = '{}', id = '{}', value = [{},{},{}], msg = 'values are [nan_cnt,size,nan_ratio]'}})", 
+            __func__,
+            "gocator caas profile",
+            nan_cnt,p.z.size(),nan_ratio);
 
             if(p.z.size() > (size_t)widthn) {
               p.z = profile_decimate(p.z,widthn);
