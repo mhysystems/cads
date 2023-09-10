@@ -23,6 +23,7 @@ public struct Msg : IFlatbufferObject
   public TTable? Contents<TTable>() where TTable : struct, IFlatbufferObject { int o = __p.__offset(6); return o != 0 ? (TTable?)__p.__union<TTable>(o + __p.bb_pos) : null; }
   public CadsFlatbuffers.Start ContentsAsStart() { return Contents<CadsFlatbuffers.Start>().Value; }
   public CadsFlatbuffers.Stop ContentsAsStop() { return Contents<CadsFlatbuffers.Stop>().Value; }
+  public CadsFlatbuffers.Profile ContentsAsProfile() { return Contents<CadsFlatbuffers.Profile>().Value; }
 
   public static Offset<CadsFlatbuffers.Msg> CreateMsg(FlatBufferBuilder builder,
       CadsFlatbuffers.MsgContents contents_type = CadsFlatbuffers.MsgContents.NONE,

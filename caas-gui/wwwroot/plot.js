@@ -55,7 +55,6 @@ class CanvasPlot {
     const profile = profileDataBuf.profiles(0);
     const z = array16ToFloat(profile.zSamplesArray(),z_resolutiom,z_Offset);
     const nanCnt = Math.floor(100*profile.xOff());
-    // Need to slice buffer as byteOffset is sometimes not a multiple of Float32 needed for memeory alignment.
     
     if(z.byteLength < Float32Array.BYTES_PER_ELEMENT) 
     {

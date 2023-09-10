@@ -31,6 +31,10 @@ namespace cads
     return false;
   }
 
+  bool GocatorReaderBase::ResetAlign_impl() {
+    return false;
+  }
+
 
   bool GocatorReaderBase::Start(double fps) {
     spdlog::get("cads")->debug(R"({{func = '{}', msg = 'Framerate {}'}})", __func__,fps);
@@ -50,9 +54,13 @@ namespace cads
     return SetFoV_impl(len);
   }
 
+  bool GocatorReaderBase::ResetAlign() {
+    return ResetAlign_impl();
+  }
+
   z_type GocatorReaderBase::k16sToFloat(k16s *z_start, k16s *z_end, double z_resolution, double z_offset)
   {
-    z_type rtn;
+    z_type rtn(std::distance(z_start,z_end));
     std::transform(z_start, z_end, std::back_inserter(rtn), [=](k16s e)
                    { return e != k16S_NULL ? e * z_resolution + z_offset : std::numeric_limits<z_element>::quiet_NaN(); });
 

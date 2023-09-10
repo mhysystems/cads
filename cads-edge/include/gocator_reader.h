@@ -36,6 +36,7 @@ namespace cads
     virtual void Stop_impl(bool);
     virtual bool Align_impl();
     virtual bool SetFoV_impl(double len);
+    virtual bool ResetAlign_impl();
 
   protected:
     GoSystem m_system = nullptr;

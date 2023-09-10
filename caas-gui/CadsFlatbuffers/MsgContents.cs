@@ -10,6 +10,7 @@ public enum MsgContents : byte
   NONE = 0,
   Start = 1,
   Stop = 2,
+  Profile = 3,
 };
 
 

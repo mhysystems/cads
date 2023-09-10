@@ -221,6 +221,19 @@ namespace cads
     return kIsError(status);
   }
 
+  bool GocatorReader::ResetAlign_impl()
+  {
+    auto sensor = GoSystem_SensorAt(m_system, 0);
+    auto role = GoSensor_Role(sensor);
+    auto transform = GoSensor_Transform(sensor);
+
+    auto transforms = std::make_tuple(GoTransform_SetX,GoTransform_SetY,GoTransform_SetZ,GoTransform_SetXAngle,GoTransform_SetYAngle,GoTransform_SetZAngle);
+    auto status = std::apply([=](auto&&... args) {return std::make_tuple((kStatus)args(transform,role,0)...);}, transforms);
+    auto anyerrors = std::apply([=](auto&&... args) {return (false || ... || kIsError(args));}, status);
+
+    return anyerrors;
+  }
+
   GocatorReader::GocatorReader(GocatorConfig cnf, Io &gocatorFifo) : GocatorReaderBase(gocatorFifo), config(cnf)
   {
     

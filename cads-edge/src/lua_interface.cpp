@@ -1475,6 +1475,16 @@ namespace
     return 1;
   }
 
+  int gocator_reset_align(lua_State *L)
+  {
+    auto gocator = static_cast<std::unique_ptr<cads::GocatorReaderBase> *>(lua_touserdata(L, -1));
+    auto err = (*gocator)->ResetAlign();
+
+    lua_pushboolean(L,err);
+
+    return 1;
+  }
+
   int gocator_gc(lua_State *L)
   {
     auto gocator = static_cast<std::unique_ptr<cads::GocatorReaderBase> *>(lua_touserdata(L, -1));
@@ -1496,6 +1506,9 @@ namespace
     lua_setfield(L, -2, "Align");
     lua_pushcfunction(L, gocator_setfov);
     lua_setfield(L, -2, "SetFoV");
+    lua_pushcfunction(L, gocator_reset_align);
+    lua_setfield(L, -2, "ResetAlign");
+    
     lua_setfield(L, -2, "__index");
   }
 

@@ -1,5 +1,15 @@
 namespace CadsFlatbuffers;
 
+table CaasProfile
+{
+  width : double;
+  height : double;
+  nan_count : int;
+  z_resolution : double;
+  z_offset : double;
+	z_samples : [short];
+}
+
 table Start
 {
   lua_code : string;
@@ -10,7 +20,7 @@ table Stop
 
 }
 
-union MsgContents {Start, Stop}
+union MsgContents {Start, Stop, CaasProfile}
 
 table Msg
 {
