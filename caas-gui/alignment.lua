@@ -36,7 +36,7 @@ function main(sendmsg)
     return
   end
 
-  if laser:SetFoV(math.integermax) then
+  if laser:SetFoV(math.maxinteger) then
     sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to set field of view")
     return
   end

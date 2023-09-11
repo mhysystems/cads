@@ -23,12 +23,13 @@ namespace
   {
     const auto s = 0.05;
     const auto f = 0.5;
+    const auto mf =  (1.0 - 2.0*f*s) / (1.0 - 2.0*s);
 
     if(x > 1.0) return 1.0;
     if(x < 0.0) return 0.0;
     if(x > (1 - s)) return (x-1.0)*f + 1.0;
     if(x < s) return f*x;
-    else return 2.0;
+    else return (x - s)*mf + s*f;
 
   }
 }
