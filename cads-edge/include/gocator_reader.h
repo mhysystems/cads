@@ -20,7 +20,6 @@ namespace cads
   {
     bool Trim;
     double TypicalResolution;
-    double Fov;
   };
 
   class GocatorReader : public GocatorReaderBase

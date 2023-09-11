@@ -22,7 +22,7 @@ function main(sendmsg)
 
   local gocator_luamain = BlockingReaderWriterQueue()
   
-  local decimate = profile_decimation(420,1000,gocator_luamain)
+  local decimate = profile_decimation(420,666,gocator_luamain) -- 420 should be the same as caas gui width
   local laser = sqlitegocator(sqlitegocatorConfig,decimate) 
   --local laser = gocator(laserConf,decimate) 
 
