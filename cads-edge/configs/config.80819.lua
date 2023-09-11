@@ -103,7 +103,7 @@ function main(sendmsg)
     return
   end
 
-  local belt_loop = loop_beltlength_thread(conveyor,cads_origin,origin_savedb)
+  local belt_loop = loop_beltlength_thread(conveyor,gocator_origin,origin_savedb)
   local thread_send_save = save_send_thread(conveyor,origin_savedb,savedb_luamain)
 
   if laser:Start(gocatorFps) then

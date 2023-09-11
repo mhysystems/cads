@@ -13,8 +13,7 @@ sqlitegocatorConfig = {
 
 laserConf = {
   Trim = true,
-  TypicalResolution = 6.0,
-  Fov = 250.0 --mm
+  TypicalResolution = 6.0
 }
 
 
@@ -67,6 +66,11 @@ function main(sendmsg)
 
   laser:Stop(true)
   
+  if laser:SetFoV(250.0) then
+    sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to set field of view")
+    return
+  end
+
   if laser:Align() then
     sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to align gocator")
   end
