@@ -61,8 +61,7 @@ y_res_mm = 1000 * conveyor.TypicalSpeed / gocatorFps -- In mm
 
 laserConf = {
   Trim = true,
-  TypicalResolution = y_res_mm,
-  Fov = 250.0 --mm
+  TypicalResolution = y_res_mm
 }
 
 measures = {
@@ -93,20 +92,17 @@ sqlitegocatorConfig = {
 
 function main(sendmsg)
 
-  local gocator_cads = BlockingReaderWriterQueue()
-  local cads_origin = BlockingReaderWriterQueue()
+  local gocator_origin = BlockingReaderWriterQueue()
   local origin_savedb = BlockingReaderWriterQueue()
   local savedb_luamain = BlockingReaderWriterQueue()
   --local laser = sqlitegocator(sqlitegocatorConfig,gocator_cads) 
-  local laser = gocator(laserConf,gocator_cads)
+  local laser = gocator(laserConf,gocator_origin)
   
   if laser == nil then
     sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to start gocator")
     return
   end
 
-  local prs = prsToScan(cads_origin)
-  local thread_process_profile = process_profile(profileConfig,gocator_cads,prs)
   local belt_loop = loop_beltlength_thread(conveyor,cads_origin,origin_savedb)
   local thread_send_save = save_send_thread(conveyor,origin_savedb,savedb_luamain)
 
@@ -140,7 +136,7 @@ function main(sendmsg)
   until unloop
 
   laser:Stop(true)
-  join_threads({thread_process_profile,belt_loop,thread_send_save})
+  join_threads({belt_loop,thread_send_save})
 
 end
 

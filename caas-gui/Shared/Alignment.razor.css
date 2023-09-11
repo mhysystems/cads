@@ -19,8 +19,9 @@ bottomrow {
 }
 
 canvas {
-  width : auto;
+  width : 100%;
   height : 100%;
   justify-self: center;
+  border-radius: 0.25rem;
   background-color: lightgray;
 }
