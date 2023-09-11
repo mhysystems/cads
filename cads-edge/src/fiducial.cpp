@@ -41,7 +41,7 @@ Mat make_fiducial(double x_res, double y_res, Fiducial config) {
 
 }
 
-bool mat_as_image(Mat m, std::string suf) {
+bool mat_as_image(Mat m, std::string pre) {
   auto now = fmt::format("{:%Y%m%d%H%M%S}",chrono::system_clock::now());
   auto mc = m.clone();
   patchNaNs(mc);
@@ -57,7 +57,7 @@ bool mat_as_image(Mat m, std::string suf) {
     }
   }
 
-  return imwrite("fiducial"+now+suf+".png", mc);
+  return imwrite(pre+"_"+now+".png", mc);
 }
 
 bool mat_as_image(Mat m, double z_threshold) {

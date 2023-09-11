@@ -203,3 +203,73 @@ void upload_scan_thread(std::atomic<bool> &terminate, UploadConfig config)
 }
 
 }
+
+#if 0
+
+  std::vector<std::deque<cads::state::scan>> partition_scans(std::deque<cads::state::scan> scans, std::function<bool(cads::state::scan)> partion)
+  {
+    if(scans.size() < 2) return {scans};
+
+    auto it = std::partition(scans.begin(), scans.end(), partion);
+
+    if(it == scans.begin() || it == scans.end())
+    {
+      return {scans};
+    }
+    else
+    {
+      return {{std::begin(scans),it},{it,std::end(scans)}};
+    }
+  }
+
+  std::deque<cads::state::scan> choose(std::vector<std::deque<cads::state::scan>> partitioned_scans, std::function<bool(cads::state::scan)> choice)
+  {
+    for(auto scan : partitioned_scans) {
+      if(!scan.empty() && choice(scan.front())) return scan;
+    }
+
+    return {};
+  }
+
+  std::vector<std::deque<cads::state::scan>> partiton_status_1(std::deque<cads::state::scan> scans, date::utc_clock::time_point start, std::chrono::seconds period) 
+  {
+    namespace views = std::ranges::views;
+
+    if(scans.size() < 2 ) return {scans};
+
+    auto status_1 = scans | views::filter([](cads::state::scan e){ return e.status == 1;});
+
+    auto parts = partition_scans({status_1.begin(), status_1.end()}, [=](cads::state::scan e) {return e.scanned_utc < start;});
+
+    std::vector<std::deque<cads::state::scan>> rtn;
+
+    if(parts.size() == 2)
+    {
+      rtn.push_back(parts[0]);
+      auto remainder = partiton_status_1(parts[1],start+period,period);
+      rtn.insert(rtn.end(), remainder.begin(),remainder.end());
+      return rtn;
+    }else {
+      rtn.push_back(parts[0]);
+      return rtn; 
+    }
+
+  }
+
+  void delete_old_scans_status03(std::deque<cads::state::scan> partition_conveyor_ids)
+  {
+    using namespace std;
+
+    for(auto c : std::array<bool(cads::state::scan),2>{[](cads::state::scan e) {return e.status == 0;},[](cads::state::scan e) {return e.status == 3;}}) {
+      auto scans_status_0 = ::choose(partition_conveyor_ids,[](cads::state::scan e) {return e.status == 0;});
+      auto scans_status_0_latest = max_element(begin(scans_status_0),end(scans_status_0),[](cads::state::scan a,cads::state::scan b){ return a.scanned_utc > b.scanned_utc;});
+
+      erase(scans_status_0,scans_status_0_latest);
+
+      for(auto scan : scans_status_0) {
+        ::delete_scan(scan);
+      }
+    }
+
+  }
+#endif

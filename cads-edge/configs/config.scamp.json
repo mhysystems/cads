@@ -1,0 +1,28 @@
+{
+  "Device" : {
+    "Serial" : 12345
+  },
+
+  "upload" : {
+    "Period" : 86400,
+    "webapi" : {
+      "add_meta" : ["https://bhpcads.mhysystems.com/api/meta",true],
+      "add_belt" : ["https://bhpcads.mhysystems.com/api/belt",true]
+    }
+  },
+
+  "profile_db_name" : "profile.db",
+  "state_db_name" : "state.db",
+  "transient_db_name" : "transient.db",
+
+  "communications" : {
+    "NatsUrl" : "10.9.1.1",
+    "UploadRows" : 1024
+  },
+
+  "heartbeat" : {
+    "SendHeartBeat" : false,
+    "Subject" :  "caas.12345.heartbeat",
+    "Period_ms" : 10000
+  }
+}
