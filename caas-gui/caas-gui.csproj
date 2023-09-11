@@ -35,7 +35,8 @@
     <Exec Command="npm run build" WorkingDirectory="..\flatbuffers-typescript" Outputs="wwwroot\cads-flatbuffers-plot.es.js">
       <Output ItemName="FlatbufferGeneratedJavascript" TaskParameter="Outputs" />
     </Exec>
-    
+
+    <Copy SourceFiles="..\flatbuffers-typescript\wwwroot\cads-flatbuffers-plot.es.js" DestinationFiles="wwwroot\what.js" />
   </Target>
 
   <ItemGroup>
