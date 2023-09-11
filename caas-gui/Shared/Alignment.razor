@@ -45,7 +45,7 @@
 
   public async Task UpdateProfileData(byte[] z) {
     // 32 is primitive sanity check for minimum number of bytes
-    if(jsPlot is not null && (z.Length > 32)) {
+    if(jsPlot is not null && (z.Length > 32) && alignmentState != AlignmentState.Cancel) {
       await jsPlot.InvokeVoidAsync("updatePlot",z);
     }
   }
