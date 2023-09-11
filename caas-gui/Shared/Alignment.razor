@@ -69,6 +69,9 @@
 
   private async Task CancelClick(MouseEventArgs e)
   {
+    if(jsPlot is not null) {
+      await jsPlot.InvokeVoidAsync("clearPlot");
+    }
     alignmentState = AlignmentState.Cancel;
     await aligned.InvokeAsync(AlignmentState.Cancel);
   }

@@ -47,6 +47,12 @@ class CanvasPlot {
 
   }
 
+  async clearPlot() {
+    this.ctx.reset();
+    this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
+    this.ctx.beginPath();
+  }
+
   async updatePlot(bytes) {
     
     const cheight = this.ctx.canvas.height;
@@ -89,17 +95,20 @@ class CanvasPlot {
 
     //interpolatetoN(z,cwidth);
 
-    const ztoy = (zmax - zmin) < 60 ? (z) => {
-      const scale = cheight / ((zmax - zmin) * 2);
+    this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
+    this.ctx.beginPath();
+    this.ctx.moveTo(0, cheight);
+    this.ctx.lineTo(cwidth / 2, 0);
+    this.ctx.lineTo(cwidth, cheight);
+    this.ctx.clip();
 
-      return 0.75*cheight - (z - zmin)*scale;
-    } : (z) => {
-      const scale = cheight / (zmax - zmin);
+    const grd = this.ctx.createLinearGradient(0, 0, 0, cheight);
+    grd.addColorStop(0, "red");
+    grd.addColorStop(1 - (250 / profile.height()), "white");
+    this.ctx.fillStyle = grd;
+    this.ctx.fillRect(0, 0, cwidth, cheight);
 
-      return cheight - (z - zmin)*scale;
-    }
 
-    this.ctx.reset();
     this.ctx.fillStyle = "red";
     for(let x = 0 ; x < z.length; ++x) {
       let i = xmap(x);
@@ -109,14 +118,14 @@ class CanvasPlot {
       }
     }
 
+    
     this.ctx.lineWidth = 1;
-    this.ctx.strokeStyle = "white";
+    this.ctx.strokeStyle = "green";
     this.ctx.beginPath();
-    for(const off of [0.25,0.75]) {
-      this.ctx.moveTo(0,Math.floor(cheight*off));
-      this.ctx.lineTo(cwidth,Math.floor(cheight*off));
-    }
+    this.ctx.moveTo(0,cheight - zmap(profile.zOrigin()+250));
+    this.ctx.lineTo(cwidth,cheight - zmap(profile.zOrigin()+250));
     this.ctx.stroke();
+    
   }
 }
 

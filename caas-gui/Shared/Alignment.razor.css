@@ -1,11 +1,13 @@
 alignment-main {
   display: grid;
   grid-template-columns: 1fr;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto minmax(0,1fr) auto;
   height : 100%;
   width : 100%;
-  align-items: end;
-  padding : 0 0.25rem 0 0.25rem
+  align-items: center;
+  padding : 0 0.25rem 0 0.25rem;
+  min-height: 0;
+  min-width : 0;
 }
 
 bottomrow {
@@ -13,10 +15,12 @@ bottomrow {
   grid-template-columns: 1fr;
   grid-template-rows: 1fr 1fr;
   gap : 0.25rem;
+  padding : 0.1rem;
 }
 
 canvas {
-  width : 100%;
-  aspect-ratio: 420 / 315;
+  width : auto;
+  height : 100%;
+  justify-self: center;
   background-color: lightgray;
 }
