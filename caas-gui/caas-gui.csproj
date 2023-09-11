@@ -36,7 +36,7 @@
       <Output ItemName="FlatbufferGeneratedJavascript" TaskParameter="Outputs" />
     </Exec>
 
-    <Copy SourceFiles="..\flatbuffers-typescript\wwwroot\cads-flatbuffers-plot.es.js" DestinationFiles="wwwroot\what.js" />
+    <Copy SourceFiles="..\flatbuffers-typescript\wwwroot\cads-flatbuffers-plot.es.js" DestinationFiles="wwwroot\cads-flatbuffers-plot.es.js" />
   </Target>
 
   <ItemGroup>
