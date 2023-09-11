@@ -21,6 +21,6 @@ namespace cads {
   bool mat_as_image(cv::Mat m, double z_threshold);
   double search_for_fiducial(cv::Mat belt, cv::Mat fiducial, double z_threshold);
   std::tuple<double,cv::Point> search_for_fiducial(cv::Mat belt, cv::Mat fiducial, cv::Mat& black_belt,cv::Mat& out, double z_threshold);
-  bool mat_as_image(cv::Mat m, std::string suf = "f");
+  bool mat_as_image(cv::Mat m, std::string suf = "belt");
 
 }

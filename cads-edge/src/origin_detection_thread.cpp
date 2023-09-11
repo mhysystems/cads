@@ -90,7 +90,7 @@ namespace
       using namespace std;
 
       assert(begin <= end);
-      assert(timeseries_a.size() < timeseries_b.size());
+      assert(timeseries_b.size() < timeseries_a.size());
       assert(timeseries_a.size() <= end);
 
       auto args = scamp_impl(timeseries_a,timeseries_b.size(),timeseries_b);
@@ -105,6 +105,31 @@ namespace
       return make_tuple(d,*min); 
 
     }
+  
+  cv::Mat window_to_mat(const std::deque<cads::z_type>& win) {
+
+    if(win.size() < 1) return cv::Mat(0,0,CV_32F);
+
+    const int n_cols = (int)win[0].size();
+    const int n_rows = (int)win.size();
+    
+    cv::Mat mat(n_rows,n_cols,CV_32F,cv::Scalar::all(0.0f));
+    
+    int i = 0;
+    for(auto zs : win) {
+
+      auto m = mat.ptr<float>(i++);
+
+      int j = 0;
+      
+      for(auto z : zs) {
+        m[j++] = (float)z;
+      }
+    }
+
+    return mat;
+  }
+
 }
 
 
@@ -670,7 +695,7 @@ coro<std::tuple<bool,size_t,size_t,double>,profile,1> anomaly_detection_coro(Ano
             auto [done,ret] = find_dischord_motif.resume(belt_thickness_estimate);
 
             if(done) {
-            
+              spdlog::get("cads")->info("{{func = {}, msg = 'Detect first motif'}}");
               std::tie(index,distance,motif) = ret;
               //store_motif_state({date::utc_clock::now(),motif});
               state = State::foundMotif;
@@ -692,6 +717,7 @@ coro<std::tuple<bool,size_t,size_t,double>,profile,1> anomaly_detection_coro(Ano
           }
 
           case State::foundMotif: {
+            spdlog::get("cads")->info("{{func = {}, msg = 'Found motif'}}");
             y_pos = y_position[index];
             index += anomaly.WindowSize;
             
@@ -748,11 +774,11 @@ coro<std::tuple<bool,size_t,size_t,double>,profile,1> anomaly_detection_coro(Ano
             if(valid) {
               auto estimated_belt_length = pos - last_splice_position;
               if(origin_sequence_cnt > 0) {
-                  spdlog::get("cads")->info("Estimated Belt Length(m): {}", estimated_belt_length / 1000);
-                  next_fifo.enqueue({msgid::measure,Measure::MeasureMsg{"beltlength",0,date::utc_clock::now(),estimated_belt_length}});
-                  next_fifo.enqueue({msgid::complete_belt, CompleteBelt{last_splice_index,index}});
-                  last_splice_position = pos;
-                  last_splice_index = 0;
+                spdlog::get("cads")->info("Estimated Belt Length(m): {}", estimated_belt_length / 1000);
+                next_fifo.enqueue({msgid::measure,Measure::MeasureMsg{"beltlength",0,date::utc_clock::now(),estimated_belt_length}});
+                next_fifo.enqueue({msgid::complete_belt, CompleteBelt{last_splice_index,index}});
+                last_splice_position = pos;
+                last_splice_index = 0;
               }else {
                 spdlog::get("cads")->info("distance:{}", p.y - pos);
                 last_splice_position = pos;
@@ -764,7 +790,19 @@ coro<std::tuple<bool,size_t,size_t,double>,profile,1> anomaly_detection_coro(Ano
               next_fifo.enqueue({msgid::select,Select{&rows,anomaly_index,anomaly.WindowSize}});
 
               rows.wait_dequeue(msg);
-              msg = msg;
+
+              std::deque<cads::z_type> win;
+              for(auto e : msg) {
+                win.push_back(get<1>(e));
+              }
+              
+              auto mat = window_to_mat(win);
+              mat_as_image(mat,fmt::format("splice{}",origin_sequence_cnt));
+              
+              //testing remove it 
+              if(origin_sequence_cnt > 1) {
+                next_fifo.enqueue({msgid::stopped,0});
+              }
             }
           }else 
           {
@@ -799,19 +837,5 @@ coro<std::tuple<bool,size_t,size_t,double>,profile,1> anomaly_detection_coro(Ano
     auto rate = duration != 0 ? (double)cnt / duration : 0;
     spdlog::get("cads")->info("ORIGIN DETECTION - CNT: {}, DUR: {}, RATE(ms):{} ", cnt, duration, rate);
   }
-
- 
-
-
-
-
-
-
-
-
-
-
-
-
 
 }
