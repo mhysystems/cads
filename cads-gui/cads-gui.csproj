@@ -32,8 +32,8 @@
     <PackageReference Include="TimeZoneConverter" Version="6.0.1" />
   </ItemGroup>
   <ItemGroup>
-    <FlatbufferSchemasCsharp Include="$(MSBuildProjectDirectory)\..\flatbuffers-schema\z-data.fbs $(MSBuildProjectDirectory)\..\flatbuffers-schema\plot-data.fbs" />
-    <FlatbufferSchemasTypescript Include="$(MSBuildProjectDirectory)\..\flatbuffers-schema\plot-data.fbs" />
+    <FlatbufferSchemasCsharp Include="$(MSBuildProjectDirectory)\..\cads-edge\flatbuffers\z_data.fbs $(MSBuildProjectDirectory)\..\cads-edge\flatbuffers\plot_data.fbs" />
+    <FlatbufferSchemasTypescript Include="$(MSBuildProjectDirectory)\..\cads-edge\flatbuffers\plot_data.fbs $(MSBuildProjectDirectory)\..\cads-edge\flatbuffers\cads_msg.fbs" />
   </ItemGroup>
 
   <Target Name="Flatbuffers" BeforeTargets="BeforeBuild" Outputs="$(MSBuildProjectDirectory)\CadsFlatbuffers\*.cs" Inputs="@(FlatbufferSchemasCsharp)">
@@ -47,9 +47,10 @@
 
   <Target Name="FlatbuffersJavascript" BeforeTargets="BeforeBuild" Outputs="$(MSBuildProjectDirectory)\wwwroot\cads-flatbuffers-plot.es.js" Inputs="@(FlatbufferSchemasTypescript)">
     
-    <Exec Command="$(MSBuildProjectDirectory)\..\bin\flatc -o flatbuffers-typescript --ts @(FlatbufferSchemasTypescript)" />
-    <Exec Command="npm run build" WorkingDirectory="flatbuffers-typescript" />
-    <Delete Files="flatbuffers-typescript\plot_data_generated.ts" />
+    <Exec Command="$(MSBuildProjectDirectory)\..\bin\flatc --ts @(FlatbufferSchemasTypescript)" WorkingDirectory="..\flatbuffers-typescript"/>
+    <Exec Command="npm run build" WorkingDirectory="..\flatbuffers-typescript" Outputs="wwwroot\cads-flatbuffers-plot.es.js">
+      <Output ItemName="FlatbufferGeneratedJavascript" TaskParameter="Outputs" />
+    </Exec>
 
   </Target>
 
