@@ -18,25 +18,30 @@
     <PackageReference Include="System.Reactive" Version="5.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <FlatbufferSchemas Include="$(MSBuildProjectDirectory)\..\cads-edge\flatbuffers\plot_data.fbs $(MSBuildProjectDirectory)\..\cads-edge\flatbuffers\cads_msg.fbs" />
+    <FlatbufferSchemas Include="$(MSBuildProjectDirectory)\..\cads-edge\flatbuffers\plot_data.fbs" />
+    <FlatbufferSchemas Include="$(MSBuildProjectDirectory)\..\cads-edge\flatbuffers\cads_msg.fbs" />
+
+    <FlatbufferJs Include="$(MSBuildProjectDirectory)\wwwroot\cads-flatbuffers-plot.es.js" />
+    <FlatbufferJsInt Include="$(MSBuildProjectDirectory)\..\flatbuffers-typescript\wwwroot\cads-flatbuffers-plot.es.js" />
   </ItemGroup>
 
   <Target Name="Flatbuffers" BeforeTargets="BeforeBuild" Outputs="$(MSBuildProjectDirectory)\CadsFlatbuffers\*.cs" Inputs="@(FlatbufferSchemas)">
+    <PropertyGroup>
+      <MyItemsString>@(FlatbufferSchemas -> ':%(Identity)',' ')</MyItemsString>
+    </PropertyGroup>
 
-    <Exec Command="$(MSBuildProjectDirectory)\..\bin\flatc --csharp @(FlatbufferSchemas)" Outputs="CadsFlatbuffers\*.cs">
+    <Exec Command="$(MSBuildProjectDirectory)\..\bin\flatc --csharp @(FlatbufferSchemas,' ')" Outputs="CadsFlatbuffers\*.cs">
       <Output ItemName="FlatbufferGeneratedCsharp" TaskParameter="Outputs" />
     </Exec>
 
   </Target>
 
-  <Target Name="FlatbuffersJavascript" BeforeTargets="BeforeBuild" Outputs="$(MSBuildProjectDirectory)\wwwroot\cads-flatbuffers-plot.es.js" Inputs="@(FlatbufferSchemas)">
+  <Target Name="FlatbuffersJavascript" BeforeTargets="BeforeBuild" Outputs="@(FlatbufferJs)" Inputs="@(FlatbufferSchemas)">
     
-    <Exec Command="$(MSBuildProjectDirectory)\..\bin\flatc --ts @(FlatbufferSchemas)" WorkingDirectory="..\flatbuffers-typescript"/>
-    <Exec Command="npm run build" WorkingDirectory="..\flatbuffers-typescript" Outputs="wwwroot\cads-flatbuffers-plot.es.js">
-      <Output ItemName="FlatbufferGeneratedJavascript" TaskParameter="Outputs" />
-    </Exec>
-
-    <Copy SourceFiles="..\flatbuffers-typescript\wwwroot\cads-flatbuffers-plot.es.js" DestinationFiles="wwwroot\cads-flatbuffers-plot.es.js" />
+    <Exec Command="$(MSBuildProjectDirectory)\..\bin\flatc --ts @(FlatbufferSchemas,' ')" WorkingDirectory="..\flatbuffers-typescript" />
+    <Exec Command="npm run build" WorkingDirectory="..\flatbuffers-typescript" Outputs="@(FlatbufferJsInt)" />
+     
+    <Copy SourceFiles="@(FlatbufferJsInt)" DestinationFiles="@(FlatbufferJs)" />
   </Target>
 
   <ItemGroup>

@@ -1,6 +1,6 @@
 project('cads', ['c','cpp'],
   version : '1.0',
-  default_options : ['warning_level=3','cpp_std=c++20'])
+  default_options : ['warning_level=3','cpp_std=c++20','default_library=static','prefer_static=true'])
 
 message('Host system type: ' + host_machine.system())
 
@@ -44,7 +44,7 @@ fmt_dep = subproject('fmt').get_variable('fmt_dep')
 date_dep = subproject('hinnant-date', default_options : ['warning_level=0']).get_variable('date_dep')
 tz_dep = subproject('hinnant-date').get_variable('tz_dep')
 nlohmann_json_dep = subproject('nlohmann_json').get_variable('nlohmann_json_dep')
-iir1_dep = subproject('iir').get_variable('libiir_dep')
+iir1_dep = subproject('iir', default_options : ['default_library=static','prefer_static=true']).get_variable('libiir_dep')
 lua_dep = subproject('lua').get_variable('lua_dep')
 eigen_dep = subproject('eigen').get_variable('eigen_dep')
 natsc_dep = subproject('nats.c').get_variable('natsc_dep')
