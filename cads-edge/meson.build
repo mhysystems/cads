@@ -22,12 +22,12 @@ add_project_arguments(cxx.get_supported_arguments('-march=native'), language: 'c
 add_project_arguments(cxx.get_supported_arguments('-mno-outline-atomics'), language: 'cpp')
 add_project_arguments(cxx.get_supported_arguments('-fconcepts-diagnostics-depth=4'), language: 'cpp')
 
-thread = dependency('threads')
-boost = dependency('boost', modules : ['program_options'])
+thread = dependency('threads', static : false)
+boost = dependency('boost', modules : ['program_options'], static : false)
 sqlite = dependency('sqlite3')
-opencv = dependency('opencv4', required:false, include_type:'system')
-tbb = dependency('tbb')
-gsl = dependency('gsl')
+opencv = dependency('opencv4', required:false, include_type:'system', static : false)
+tbb = dependency('tbb', static : false)
+gsl = dependency('gsl', static : false)
 
 
 if not opencv.found()

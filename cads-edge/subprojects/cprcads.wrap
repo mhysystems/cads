@@ -1,12 +1,10 @@
 [wrap-file]
 directory = cpr-1.9.3
+patch_directory = cpr-1.9.3
 source_url = https://github.com/libcpr/cpr/archive/1.9.3.tar.gz
 source_filename = cpr-1.9.3.tar.gz
 source_hash = df53e7213d80fdc24583528521f7d3349099f5bb4ed05ab05206091a678cc53c
-patch_filename = cpr_1.9.3-1_patch.zip
-patch_url = https://wrapdb.mesonbuild.com/v2/cpr_1.9.3-1/get_patch
-patch_hash = 41c91ec104ec8da7b576672601c072c3c35d604d0f4a9fad639b316d3c9cd436
-wrapdb_version = 1.9.3-1
+
 
 [provide]
 cpr = cpr_dep

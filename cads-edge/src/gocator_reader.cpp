@@ -226,12 +226,26 @@ namespace cads
   bool GocatorReader::ResetAlign_impl()
   {
     auto sensor = GoSystem_SensorAt(m_system, 0);
+
+    auto reset_status = GoSensor_Reset(sensor,true);
+    if(kIsError(reset_status)) 
+    {
+      spdlog::get("cads")->error(R"({{where = '{}', id = '{}', value = {}, msg = '{}'}})", __func__,"GoSensor_Reset"s,reset_status,"Returned status");
+      return true;
+    }
+
     auto role = GoSensor_Role(sensor);
     auto transform = GoSensor_Transform(sensor);
 
     auto transforms = std::make_tuple(GoTransform_SetX,GoTransform_SetY,GoTransform_SetZ,GoTransform_SetXAngle,GoTransform_SetYAngle,GoTransform_SetZAngle);
     auto status = std::apply([=](auto&&... args) {return std::make_tuple((kStatus)args(transform,role,0)...);}, transforms);
     auto anyerrors = std::apply([=](auto&&... args) {return (false || ... || kIsError(args));}, status);
+
+    if(anyerrors) 
+    {
+      spdlog::get("cads")->error(R"({{where = '{}', id = '{}', value = {}, msg = '{}'}})", __func__,"GoTransform_"s,true,"One of the set functions failed");
+      return true;
+    }
 
     return anyerrors;
   }
