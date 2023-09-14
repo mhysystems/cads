@@ -8,5 +8,5 @@ sourceFiles = []
 includeDirectories = []
 subdir('src')
 
-libnatsc = static_library('nats.c', sourceFiles, dependencies : [protobufc], include_directories: includeDirectories)
+libnatsc = library('nats.c', sourceFiles, dependencies : [protobufc], include_directories: includeDirectories)
 natsc_dep = declare_dependency(include_directories: includeDirectories, link_with: libnatsc)
