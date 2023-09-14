@@ -15,8 +15,8 @@ subdir('cpr')
 cpr_lib = library(
   'cpr',
   include_directories: includes,
-  sources: cpr_src,
-  dependencies: [curl_dep, thread_dep],
+  sources: cpr_src#,
+  #dependencies: [curl_dep, thread_dep],
 )
 
 cpr_dep = declare_dependency(
