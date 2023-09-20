@@ -18,10 +18,10 @@ iirfilter = {
 }
 
 conveyor = {
-  Id = 2,
+  Id = 3,
   Org  = "bhp",
   Site = "jimblebar",
-  Name = "cv001",
+  Name = "cv101",
   Timezone = "Australia/Perth",
   PulleyCircumference = 4197.696,
   TypicalSpeed = 6.09,
@@ -255,7 +255,7 @@ function main(sendmsg)
       run = not coroutine.yield(0)
     until not run
     
-    laser:Stop()
+    laser:Stop(true)
     join_threads({thread_profile,thread_origin,thread_dynamic,thread_send_save})
 
     if run then
