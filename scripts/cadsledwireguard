@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+nc -dzw1 10.9.1.1 22
+./cadsled --wireguard $?
