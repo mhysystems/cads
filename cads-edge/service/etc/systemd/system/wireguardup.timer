@@ -1,0 +1,7 @@
+[Unit]
+Description=Indicates Cads connection to MHY server 
+
+[Timer]
+OnBootSec=10sec
+OnUnitActiveSec=10sec
+RemainAfterElapse=no

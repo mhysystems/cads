@@ -1,0 +1,11 @@
+[Unit]
+Description=Indicates Cads connection to MHY server 
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=macro
+Group=macro
+WorkingDirectory=/home/macro/cads/scripts
+ExecStart=/home/macro/cads/scripts/wireguardup
