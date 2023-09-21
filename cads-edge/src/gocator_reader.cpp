@@ -226,14 +226,14 @@ namespace cads
   bool GocatorReader::ResetAlign_impl()
   {
     auto sensor = GoSystem_SensorAt(m_system, 0);
-
+/*
     auto reset_status = GoSensor_Reset(sensor,true);
     if(kIsError(reset_status)) 
     {
       spdlog::get("cads")->error(R"({{where = '{}', id = '{}', value = {}, msg = '{}'}})", __func__,"GoSensor_Reset"s,reset_status,"Returned status");
       return true;
     }
-
+*/
     auto role = GoSensor_Role(sensor);
     auto transform = GoSensor_Transform(sensor);
 
