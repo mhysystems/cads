@@ -4,8 +4,9 @@ import argparse
 
 def wireguard(up):
     GPIO.setmode(GPIO.BCM)
-    GPIO.setup(18, GPIO.OUT)
-    GPIO.output(GPIO_PIN, GPIO.HIGH if up else GPIO.LOW)
+    GPIO.setup(21, GPIO.OUT)
+    GPIO.output(21, GPIO.HIGH if up else GPIO.LOW)
+    GPIO.cleanup()
 
 parser = argparse.ArgumentParser(description='Control Cads LEDs')
 parser.add_argument("--wireguard", type=int, help="Wireguard Connection") 
