@@ -2,6 +2,10 @@
 Description=Indicates Cads connection to MHY server 
 
 [Timer]
-OnBootSec=10sec
-OnUnitActiveSec=10sec
+OnBootSec=10s
+OnUnitActiveSec=10s
 RemainAfterElapse=no
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

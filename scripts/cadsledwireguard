@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 
-nc -dzw1 10.9.1.1 22
-./cadsled --wireguard $?
+fping -H 1 -c 1 -t500 -q 10.9.1.1 2> /dev/null
+./cadsled.py --wireguard $? 2>/dev/null 1>/dev/null

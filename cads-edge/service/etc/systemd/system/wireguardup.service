@@ -8,4 +8,5 @@ Type=oneshot
 User=macro
 Group=macro
 WorkingDirectory=/home/macro/cads/scripts
-ExecStart=/home/macro/cads/scripts/wireguardup
+ExecStart=/home/macro/cads/scripts/cadsledwireguard
+TimeoutStartSec=5s
