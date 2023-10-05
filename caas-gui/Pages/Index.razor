@@ -5,6 +5,7 @@
 
 @inject MsgPublishService MsgService
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JS
 
 @implements IAsyncDisposable
 
@@ -205,9 +206,13 @@
 
   public async ValueTask DisposeAsync()
   {
-    if (hubConnection is not null)
+    try 
     {
-      await hubConnection.DisposeAsync();
+      if (hubConnection is not null)
+      {
+        await hubConnection.DisposeAsync();
+      }
     }
+    catch(Microsoft.JSInterop.JSDisconnectedException) {}
   }
 }
