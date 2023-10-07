@@ -1,0 +1,5 @@
+[Unit]
+Description=Socket to communicate with Cads Led
+
+[Socket]
+ListenStream=/run/cadsled.socket

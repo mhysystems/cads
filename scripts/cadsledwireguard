@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
 fping -H 1 -c 1 -t500 -q 10.9.1.1 2> /dev/null
-systemctl kill -s $(if [ 0 == $? ]; then echo USR1; else echo USR2; fi) cadsled.service
+echo $? | socat - UNIX-CONNECT:/run/cadsled.socket
+#systemctl kill -s $(if [ 0 == $? ]; then echo USR1; else echo USR2; fi) cadsled.service
 #./cadsled.py --wireguard $? 2>/dev/null 1>/dev/null

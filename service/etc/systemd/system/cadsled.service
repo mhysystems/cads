@@ -1,0 +1,9 @@
+[Unit]
+Description=Control a LED via Jetson GPIO
+Requires=cadsled.socket
+After=cadsled.socket
+
+[Service]
+ExecStart=/opt/cadsled.py
+StandardInput=socket
+StandardOutput=journal
