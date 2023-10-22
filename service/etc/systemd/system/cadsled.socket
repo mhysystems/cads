@@ -1,5 +1,10 @@
 [Unit]
 Description=Socket to communicate with Cads Led
+After=network-online.target
+Wants=network-online.target
 
 [Socket]
 ListenStream=/run/cadsled.socket
+
+[Install]
+WantedBy=sockets.target

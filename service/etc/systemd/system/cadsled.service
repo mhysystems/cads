@@ -7,3 +7,6 @@ After=cadsled.socket
 ExecStart=/opt/cadsled.py
 StandardInput=socket
 StandardOutput=journal
+
+[Install]
+WantedBy=multi-user.target
