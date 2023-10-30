@@ -7,18 +7,12 @@ import socket
 cnt = 5
 
 def wireguard(up):
-    GPIO.setwarnings(False)
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setup(21, GPIO.OUT)
     GPIO.output(21, GPIO.HIGH if up else GPIO.LOW)
-    if not up:
-        GPIO.cleanup(21)
 
 def up():
     global cnt
     cnt = 5
     wireguard(True)
-#    GPIO.output(21, GPIO.HIGH )
 
 def down():
     global cnt
@@ -37,16 +31,24 @@ parser.add_argument("--wireguard", type=int, help="Wireguard Connection")
 
 args = parser.parse_args()
 
+GPIO.setwarnings(False)
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(21, GPIO.OUT)
+
 if args.wireguard is not None:
     wireguard(args.wireguard == 0)
 else:
-
-    sysd = socket.socket(fileno=sys.stdin.fileno())
-
     while True:
-        (conn,address) = sysd.accept()
-        i = conn.recv(8).decode('utf-8').strip()
-        up() if '0' == i else down()
+        try:
+            sysd = socket.socket(fileno=sys.stdin.fileno())
 
+            while True:
+                (conn,address) = sysd.accept()
+                i = conn.recv(8).decode('utf-8').strip()
+                up() if '0' == i else down()
+                sys.stdout.flush()
+        except Exception as e:
+            print(e) 
         
 
+GPIO.cleanup(21)

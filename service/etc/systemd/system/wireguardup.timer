@@ -1,5 +1,7 @@
 [Unit]
-Description=Indicates Cads connection to MHY server 
+Description=Indicates Cads connection to MHY server
+Requires=cadsled.service
+After=cadsled.service
 
 [Timer]
 OnBootSec=10s

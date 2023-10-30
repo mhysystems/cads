@@ -1,12 +1,14 @@
 [Unit]
 Description=Control a LED via Jetson GPIO
-Requires=cadsled.socket
-After=cadsled.socket
+Requires=network-online.target cadsled.socket
+After=network-online.target cadsled.socket
 
 [Service]
 ExecStart=/opt/cadsled.py
 StandardInput=socket
 StandardOutput=journal
+Restart=always
+RestartSec=60
 
 [Install]
 WantedBy=multi-user.target
