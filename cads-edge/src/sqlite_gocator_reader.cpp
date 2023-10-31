@@ -47,7 +47,7 @@ namespace cads
     }
   }
 
-  SqliteGocatorReader::SqliteGocatorReader(SqliteGocatorConfig cnf, Io &gocatorFifo) : GocatorReaderBase(gocatorFifo), config(cnf) {}
+  SqliteGocatorReader::SqliteGocatorReader(SqliteGocatorConfig cnf, Io<msg> &gocatorFifo) : GocatorReaderBase(gocatorFifo), config(cnf) {}
 
   SqliteGocatorReader::~SqliteGocatorReader() {
     Stop_impl(true);

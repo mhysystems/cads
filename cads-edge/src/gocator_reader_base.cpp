@@ -8,7 +8,7 @@
 
 namespace cads
 {
-  GocatorReaderBase::GocatorReaderBase(Io& fifo) : m_gocatorFifo(fifo)
+  GocatorReaderBase::GocatorReaderBase(Io<msg>& fifo) : m_gocatorFifo(fifo)
   {
   }
 

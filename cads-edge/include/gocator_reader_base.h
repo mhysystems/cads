@@ -30,7 +30,7 @@ class GocatorReaderBase
   virtual bool ResetAlign_impl();
 
 protected:
-	Io& m_gocatorFifo;
+	Io<msg>& m_gocatorFifo;
   std::atomic<bool> m_stopped = true;
   std::atomic<bool> m_first_frame = true;
   
@@ -43,7 +43,7 @@ public:
   bool SetFoV(double);
   bool ResetAlign();
 
-	GocatorReaderBase(Io&);
+	GocatorReaderBase(Io<msg>&);
   virtual ~GocatorReaderBase() = default;
 };
 

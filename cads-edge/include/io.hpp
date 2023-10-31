@@ -15,12 +15,12 @@ namespace cads
     {io.size_approx()} -> std::same_as<size_t>;
   };
 
-  struct Io {
+  template<class T> struct Io {
     Io() = default;
     virtual ~Io() = default;
-    virtual bool enqueue(msg) = 0;
-    virtual void wait_dequeue(msg&) = 0;
-    virtual bool wait_dequeue_timed(msg& x, std::chrono::seconds s) = 0;
+    virtual bool enqueue(T) = 0;
+    virtual void wait_dequeue(T&) = 0;
+    virtual bool wait_dequeue_timed(T& x, std::chrono::seconds s) = 0;
     virtual size_t size_approx() = 0;
     
     private:
@@ -28,7 +28,7 @@ namespace cads
     Io& operator=(const Io&) = delete;
 };
 
-  template<IO<msg> T> struct Adapt : public Io
+  template<IO<msg> T> struct Adapt : public Io<msg>
   {
     Adapt(T&& a) : m(std::move(a)) {} 
     
@@ -55,7 +55,7 @@ namespace cads
     T m;
   };
 
-  struct AdaptFn : public Io
+  struct AdaptFn : public Io<msg>
   {
     AdaptFn(std::function<bool(msg)>&& a) : m(std::move(a)) {} 
     

@@ -52,7 +52,7 @@ namespace cads
   public:
     static void LaserOff();
     void Log();
-    GocatorReader(GocatorConfig, Io &);
+    GocatorReader(GocatorConfig, Io<msg> &);
     virtual ~GocatorReader();
   };
 

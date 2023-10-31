@@ -3,10 +3,11 @@
 #include <algorithm>
 #include <numeric>
 #include <fstream>
+#include <ranges>
 
 #include <utils.hpp>
 #include <stats.hpp>
-
+#include <coro.hpp>
 
 namespace {
 
@@ -27,6 +28,33 @@ namespace {
 
 namespace cads
 {
+  
+   coro<int64_t,std::vector<float>,1> file_csv_coro(std::string filename) {
+    
+    using namespace std::ranges;
+
+    std::fstream file(filename);
+    int64_t len = 0;
+
+    while(true) {
+      auto [data,terminate] = co_yield len;
+
+      if(terminate) break;
+      
+      for(auto v : data | views::drop(1)) {
+        file << v << ',';
+      }
+
+      file << data.back() << '\n';
+
+      len += (int64_t)data.size();
+    }
+
+    co_return 0;
+
+  }
+  
+  
   std::vector<float> select_if(std::vector<float> a, std::vector<float> b, std::function<bool(float)> c)
   {
     for(size_t i = 0; i < a.size(); ++i)

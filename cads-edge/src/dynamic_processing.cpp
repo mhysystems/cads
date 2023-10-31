@@ -75,7 +75,7 @@ namespace cads
     return rtn;
   }
 
-  coro<double, msg> lua_processing_coro(DynamicProcessingConfig config, cads::Io &next)
+  coro<double, msg> lua_processing_coro(DynamicProcessingConfig config, cads::Io<msg> &next)
   {
     spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Entering Thread");
     
@@ -153,7 +153,7 @@ namespace cads
     spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Exiting Thread");
   }
 
-  void dynamic_processing_thread(DynamicProcessingConfig config, cads::Io &profile_fifo, cads::Io &next_fifo)
+  void dynamic_processing_thread(DynamicProcessingConfig config, cads::Io<msg> &profile_fifo, cads::Io<msg> &next_fifo)
   {
 
     int64_t cnt = 0;

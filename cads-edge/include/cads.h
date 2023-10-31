@@ -36,9 +36,9 @@ namespace cads
   bool direct_process();
   void generate_signal();
   void stop_gocator();
-  void process_profile(ProfileConfig, Io& gocatorFifo, Io& next);
-  void process_identity(Io& gocatorFifo, Io& next);
-  cads::coro<cads::msg,cads::msg,1> profile_decimation_coro(long long, long long, cads::Io &next);
+  void process_profile(ProfileConfig, Io<msg>& gocatorFifo, Io<msg>& next);
+  void process_identity(Io<msg>& gocatorFifo, Io<msg>& next);
+  cads::coro<cads::msg,cads::msg,1> profile_decimation_coro(long long, long long, cads::Io<msg> &next);
   msg prs_to_scan(msg);
   std::tuple<std::string,std::string,std::string> caasMsg(std::string sub,std::string head, std::string data);
 }

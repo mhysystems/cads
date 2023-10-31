@@ -24,7 +24,7 @@ using namespace std::chrono;
 
 namespace cads
 {
-  void save_send_thread(Conveyor conveyor, cads::Io &profile_fifo, cads::Io &next)
+  void save_send_thread(Conveyor conveyor, cads::Io<msg> &profile_fifo, cads::Io<msg> &next)
   {
     
     spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Entering Thread");
@@ -43,9 +43,9 @@ namespace cads
       GocatorProperties gocator_properties;
       Conveyor conveyor;
       date::utc_clock::time_point scan_begin;
-      cads::Io & cps;
+      cads::Io<msg> & cps;
 
-      global_t(cads::Io &m, Conveyor c, date::utc_clock::time_point sb, std::string s) : store_scan(store_scan_coro(s)), conveyor(c),scan_begin(sb), cps(m){};
+      global_t(cads::Io<msg> &m, Conveyor c, date::utc_clock::time_point sb, std::string s) : store_scan(store_scan_coro(s)), conveyor(c),scan_begin(sb), cps(m){};
 
     } global(next,conveyor,scan_begin,scan_filename_init);
 
@@ -82,8 +82,8 @@ namespace cads
           cads::state::scan scan = {
             global.scan_begin,
             scan_filename,
-            e.start_value,
-            e.length,
+            int64_t(e.start_value),
+            int64_t(e.length),
             0,
             1,
             global.conveyor.Id

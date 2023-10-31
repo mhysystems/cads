@@ -26,7 +26,7 @@ namespace cads
     std::string ConveyorName;
   };
 
-  void fiducial_origin_thread(FiducialOriginDetection config,cads::Io &profile_fifo, cads::Io &next_fifo);
-  void splice_detection_thread(cads::AnomalyDetection anomaly, cads::Io &profile_fifo, cads::Io &next_fifo);
-  void loop_beltlength_thread(Conveyor conveyor, cads::Io &profile_fifo, cads::Io &next_fifo);
+  void fiducial_origin_thread(FiducialOriginDetection config,cads::Io<cads::msg> &profile_fifo, cads::Io<cads::msg> &next_fifo);
+  void splice_detection_thread(cads::AnomalyDetection anomaly, cads::Io<cads::msg> &profile_fifo, cads::Io<cads::msg> &next_fifo);
+  void loop_beltlength_thread(Conveyor conveyor, cads::Io<cads::msg> &profile_fifo, cads::Io<cads::msg> &next_fifo);
 }

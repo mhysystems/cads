@@ -13,5 +13,5 @@ namespace cads
     std::string Entry;
   };
 
-  void dynamic_processing_thread(DynamicProcessingConfig, cads::Io &profile_fifo, cads::Io &next_fifo);
+  void dynamic_processing_thread(DynamicProcessingConfig, cads::Io<msg> &profile_fifo, cads::Io<msg> &next_fifo);
 }

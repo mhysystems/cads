@@ -5,5 +5,5 @@
 
 namespace cads
 {
-  void save_send_thread(cads::Conveyor, cads::Io &, cads::Io& );
+  void save_send_thread(cads::Conveyor, cads::Io<msg> &, cads::Io<msg>& );
 }

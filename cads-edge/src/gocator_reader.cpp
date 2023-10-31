@@ -250,7 +250,7 @@ namespace cads
     return anyerrors;
   }
 
-  GocatorReader::GocatorReader(GocatorConfig cnf, Io &gocatorFifo) : GocatorReaderBase(gocatorFifo), config(cnf)
+  GocatorReader::GocatorReader(GocatorConfig cnf, Io<msg> &gocatorFifo) : GocatorReaderBase(gocatorFifo), config(cnf)
   {
     
     static_assert(std::is_same_v<double, k64f> == true);

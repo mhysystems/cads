@@ -41,7 +41,7 @@ namespace cads
 
   public:
 
-    SqliteGocatorReader(SqliteGocatorConfig,Io&);
+    SqliteGocatorReader(SqliteGocatorConfig,Io<msg>&);
     virtual ~SqliteGocatorReader();
   };
 

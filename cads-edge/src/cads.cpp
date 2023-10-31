@@ -41,7 +41,7 @@ msg prs_to_scan(msg m)
   }
 }
 
-coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
+coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io<msg> &next)
   {
     cads::msg empty;
     auto pulley_estimator = mk_pulleyfitter(1.0);    
@@ -73,7 +73,7 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
   }
 
 
-  coro<cads::msg,cads::msg,1> profile_decimation_coro(long long widthn, long long modulo, cads::Io &next)
+  coro<cads::msg,cads::msg,1> profile_decimation_coro(long long widthn, long long modulo, cads::Io<msg> &next)
   {
     cads::msg empty;
     GocatorProperties gp;
@@ -126,7 +126,7 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
     }
   }
 
-  void process_identity(Io& gocatorFifo, Io& next) {
+  void process_identity(Io<msg>& gocatorFifo, Io<msg>& next) {
     msg m;
     do
     {
@@ -148,7 +148,7 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io &next)
     } while (std::get<0>(m) != msgid::finished);
   }
 
-  void process_profile(ProfileConfig config, Io& gocatorFifo, Io& next)
+  void process_profile(ProfileConfig config, Io<msg>& gocatorFifo, Io<msg>& next)
   {
     spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Entering Thread");
 

@@ -270,7 +270,7 @@ namespace cads
     }
   }
 
-  coro<std::tuple<profile,double,bool>,profile,1> fiducial_origin_coro(double x_resolution, double y_resolution, int width_n, FiducialOriginDetection config, cads::Io &next)
+  coro<std::tuple<profile,double,bool>,profile,1> fiducial_origin_coro(double x_resolution, double y_resolution, int width_n, FiducialOriginDetection config, cads::Io<msg> &next)
   {    
     auto dump_match = config.dump_match;
     cv::Mat fiducial;
@@ -414,7 +414,7 @@ namespace cads
     }
   }
 
-  void loop_beltlength_thread(Conveyor conveyor, cads::Io &profile_fifo, cads::Io &next_fifo)
+  void loop_beltlength_thread(Conveyor conveyor, cads::Io<msg> &profile_fifo, cads::Io<msg> &next_fifo)
   {
     spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Entering Thread");
     cads::msg m;
@@ -525,7 +525,7 @@ namespace cads
   }
 
 
-  void fiducial_origin_thread(FiducialOriginDetection config,cads::Io &profile_fifo, cads::Io &next_fifo)
+  void fiducial_origin_thread(FiducialOriginDetection config,cads::Io<msg> &profile_fifo, cads::Io<msg> &next_fifo)
   {
     spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Entering Thread");
     cads::msg m;
@@ -741,7 +741,7 @@ coro<std::tuple<bool,size_t,size_t,double>,profile,1> anomaly_detection_coro(Ano
     }
   }
 
-  void splice_detection_thread(cads::AnomalyDetection anomaly, cads::Io &profile_fifo,cads::Io &next_fifo)
+  void splice_detection_thread(cads::AnomalyDetection anomaly, cads::Io<msg> &profile_fifo,cads::Io<msg> &next_fifo)
   {
 
     cads::msg m;

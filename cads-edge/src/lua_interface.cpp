@@ -27,7 +27,7 @@ namespace
 {
   using namespace std::string_literals;
 
-  auto TransformMsg(std::function<cads::msg(cads::msg)> fn,cads::Io* io)
+  auto TransformMsg(std::function<cads::msg(cads::msg)> fn,cads::Io<cads::msg>* io)
   {
     return [io,fn](cads::msg m) { return io->enqueue(fn(m));};
   }
@@ -1291,7 +1291,7 @@ namespace
 
   int Io_gc(lua_State *L)
   {
-    auto q = static_cast<cads::Io *>(lua_touserdata(L, 1));
+    auto q = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, 1));
     q->~Io();
     return 0;
   }
@@ -1339,7 +1339,7 @@ namespace
 
   int prsToScan(lua_State *L)
   {
-    auto out = static_cast<cads::Io *>(lua_touserdata(L, -1));
+    auto out = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, -1));
     new (lua_newuserdata(L, sizeof(cads::AdaptFn))) cads::AdaptFn(TransformMsg(cads::prs_to_scan, out));
 
     lua_createtable(L, 0, 1);
@@ -1363,7 +1363,7 @@ namespace
 
   int wait_for(lua_State *L)
   {
-    auto io = static_cast<cads::Io *>(lua_touserdata(L, 1));
+    auto io = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, 1));
     auto s = lua_tointeger(L, 2);
 
     cads::msg m;
@@ -1393,9 +1393,9 @@ namespace
     return 2;
   }
 
-  auto thread2_with_catch(std::function<void(cads::Io &, cads::Io &)> fn)
+  auto thread2_with_catch(std::function<void(cads::Io<cads::msg> &, cads::Io<cads::msg> &)> fn)
   {
-    return [=](cads::Io &input, cads::Io &output) {
+    return [=](cads::Io<cads::msg> &input, cads::Io<cads::msg> &output) {
       try {
         fn(input,output);
       }catch(std::exception& ex)
@@ -1405,10 +1405,10 @@ namespace
     };
   }
 
-  int mk_thread2(lua_State *L, std::function<void(cads::Io &, cads::Io &)> fn)
+  int mk_thread2(lua_State *L, std::function<void(cads::Io<cads::msg> &, cads::Io<cads::msg> &)> fn)
   {
-    auto in = static_cast<cads::Io *>(lua_touserdata(L, -2));
-    auto out = static_cast<cads::Io *>(lua_touserdata(L, -1));
+    auto in = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, -2));
+    auto out = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, -1));
 
     new (lua_newuserdata(L, sizeof(std::thread))) std::thread(thread2_with_catch(fn), std::ref(*in), std::ref(*out));
     lua_createtable(L, 0, 1);
@@ -1506,7 +1506,7 @@ namespace
       return 1;
     }
 
-    auto q = static_cast<cads::Io *>(lua_touserdata(L, 2));
+    auto q = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, 2));
     auto p = new (lua_newuserdata(L, sizeof(std::unique_ptr<cads::GocatorReaderBase>))) std::unique_ptr<cads::SqliteGocatorReader>;
     
     try {
@@ -1532,7 +1532,7 @@ namespace
       return 1;
     }
 
-    auto q = static_cast<cads::Io *>(lua_touserdata(L, 2));
+    auto q = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, 2));
     auto p = new (lua_newuserdata(L, sizeof(std::unique_ptr<cads::GocatorReaderBase>))) std::unique_ptr<cads::GocatorReader>;
     
     try 
@@ -1624,7 +1624,7 @@ namespace
   int encoder_distance_estimation(lua_State *L)
   {
 
-    auto next = static_cast<cads::Io *>(lua_touserdata(L, 1));
+    auto next = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, 1));
     double stride = lua_tonumber(L, 2);
     new (lua_newuserdata(L, sizeof(cads::Adapt<decltype(cads::encoder_distance_estimation(std::ref(*next), stride))>))) cads::Adapt<decltype(cads::encoder_distance_estimation(std::ref(*next), stride))>(cads::encoder_distance_estimation(std::ref(*next), stride));
 
@@ -1640,7 +1640,7 @@ namespace
    
     auto widthn = tointeger(L, 1);
     double modulo = lua_tointeger(L, 2);
-    auto next = static_cast<cads::Io *>(lua_touserdata(L, 3));
+    auto next = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, 3));
 
     using user_type = cads::Adapt<decltype(cads::profile_decimation_coro(*widthn,modulo,std::ref(*next)))>;
 
