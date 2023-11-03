@@ -55,22 +55,22 @@ namespace cads
     T m;
   };
 
-  struct AdaptFn : public Io<msg>
+  template<class T,class R> struct AdaptFn : public Io<T>
   {
-    AdaptFn(std::function<bool(msg)>&& a) : m(std::move(a)) {} 
+    AdaptFn(std::function<R(T)>&& a) : m(std::move(a)) {} 
     
-    virtual bool enqueue(msg x) {
+    virtual R enqueue(T x) {
       return m(x);
     }
 
-    virtual void wait_dequeue(msg&) {
+    virtual void wait_dequeue(T&) {
     }
 
     virtual size_t size_approx() {
       return 0;
     }
 
-    virtual bool wait_dequeue_timed(msg&,std::chrono::seconds) {
+    virtual bool wait_dequeue_timed(T&,std::chrono::seconds) {
       return false;
     }
 
@@ -78,7 +78,7 @@ namespace cads
     AdaptFn(const AdaptFn&) = delete;
     AdaptFn() = delete;
     AdaptFn& operator=(const AdaptFn&) = delete;
-    std::function<bool(msg)> m;
+    std::function<bool(T)> m;
   };
 
 }

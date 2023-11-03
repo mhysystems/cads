@@ -73,6 +73,12 @@ namespace cads {
     size_t UploadRows;
   };
 
+  struct Databases {
+    std::string profile_db_name;
+    std::string state_db_name;
+    std::string transient_db_name;
+  };
+
   struct webapi_urls {
     using value_type = std::tuple<std::string,bool>;
     value_type add_meta;
@@ -87,8 +93,10 @@ namespace cads {
   extern Device constants_device;
   extern Communications communications_config;
   extern UploadConfig upload_config;
+  extern Databases database_names;
   extern HeartBeat constants_heartbeat;
   extern std::atomic<bool> terminate_signal;
+  extern std::optional<std::string> luascript_name;
   
   void init_config(std::string f);
   void drop_config();

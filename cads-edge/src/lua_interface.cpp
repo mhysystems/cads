@@ -22,15 +22,28 @@
 #include <filters.h>
 #include <init.h>
 #include <fiducial.h>
+#include <utils.hpp>
 
 namespace
 {
   using namespace std::string_literals;
 
-  auto TransformMsg(std::function<cads::msg(cads::msg)> fn,cads::Io<cads::msg>* io)
+  template<typename R, typename T> auto TransformMsg(std::function<R(T)> fn,cads::Io<R>* io)
   {
-    return [io,fn](cads::msg m) { return io->enqueue(fn(m));};
+    return [io,fn](T m) { return io->enqueue(fn(m));};
   }
+
+  auto FilterMsg(cads::msgid id,cads::Io<cads::msg>* io) {
+    return [io,id](cads::msg m) { 
+        auto m_id = get<0>(m);
+        if(m_id == id) {
+          return io->enqueue(m);
+        }else {
+          return true;
+        }
+    };
+  }
+
 
   int time_str(lua_State *L) {
     using ds = std::chrono::duration<double>;
@@ -1340,7 +1353,37 @@ namespace
   int prsToScan(lua_State *L)
   {
     auto out = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, -1));
-    new (lua_newuserdata(L, sizeof(cads::AdaptFn))) cads::AdaptFn(TransformMsg(cads::prs_to_scan, out));
+    std::function<cads::msg(cads::msg)> fn(cads::prs_to_scan);
+
+    new (lua_newuserdata(L, sizeof(cads::AdaptFn<cads::msg,bool>))) cads::AdaptFn<cads::msg,bool>(TransformMsg(fn, out));
+
+    lua_createtable(L, 0, 1);
+    lua_pushcfunction(L, Io_gc);
+    lua_setfield(L, -2, "__gc");
+    lua_setmetatable(L, -2);
+    return 1;
+  }
+
+  int scanZ(lua_State *L)
+  {
+    auto out = static_cast<cads::Io<cads::z_type> *>(lua_touserdata(L, -1));
+    std::function<cads::z_type(cads::msg)> fn = [](cads::msg m){ return std::get<cads::profile>(std::get<1>(m)).z;};
+    new (lua_newuserdata(L, sizeof(cads::AdaptFn<cads::msg,bool>))) cads::AdaptFn<cads::msg,bool>(TransformMsg(fn, out));
+
+    lua_createtable(L, 0, 1);
+    lua_pushcfunction(L, Io_gc);
+    lua_setfield(L, -2, "__gc");
+    lua_setmetatable(L, -2);
+    return 1;
+  }
+
+  int filterMsgs(lua_State *L)
+  {
+    auto out = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, -2));
+    auto mid = lua_tointeger(L, -1);
+    auto id = cads::i_msgid(mid);
+    
+    new (lua_newuserdata(L, sizeof(cads::AdaptFn<cads::msg,bool>))) cads::AdaptFn<cads::msg,bool>(FilterMsg(id, out));
 
     lua_createtable(L, 0, 1);
     lua_pushcfunction(L, Io_gc);
@@ -1732,6 +1775,12 @@ namespace cads
 
       lua_pushcfunction(L,::prsToScan);
       lua_setglobal(L,"prsToScan");
+
+      lua_pushcfunction(L,::scanZ);
+      lua_setglobal(L,"scanZ");
+
+      lua_pushcfunction(L,::filterMsgs);
+      lua_setglobal(L,"filterMsgs");
       
 
       return UL;
@@ -1761,8 +1810,13 @@ namespace cads
   {
     namespace fs = std::filesystem;
 
-    fs::path luafile{f};
-    luafile.replace_extension("lua");
+    fs::path luafile;
+    if(luascript_name) {
+      luafile = luascript_name.value();
+    }else {
+      luafile = f;
+      luafile.replace_extension("lua");
+    }
 
     return run_lua_code(slurpfile(luafile.string()));
   }

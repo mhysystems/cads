@@ -28,8 +28,26 @@ namespace {
 
 namespace cads
 {
+  msgid i_msgid(int i) {
+    switch(i) {
+      case 0 : return msgid::gocator_properties;
+      case 1 : return msgid::scan;
+      case 2 : return msgid::finished;
+      case 3 : return msgid::begin_sequence;
+      case 4 : return msgid::end_sequence;
+      case 5 : return msgid::complete_belt;
+      case 6 : return msgid::pulley_revolution_scan;
+      case 7 : return msgid::stopped;
+      case 8 : return msgid::nothing;
+      case 9 : return msgid::select;
+      case 10 : return msgid::caas_msg;
+      case 11 : return msgid::measure;
+      case 12 : return msgid::error;
+    }
+    return msgid::error;
+  }
   
-   coro<int64_t,std::vector<float>,1> file_csv_coro(std::string filename) {
+  coro<int64_t,std::vector<float>,1> file_csv_coro(std::string filename) {
     
     using namespace std::ranges;
 

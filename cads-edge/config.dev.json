@@ -11,9 +11,11 @@
     }
   },
 
-  "profile_db_name" : "profile.db",
-  "state_db_name" : "state.db",
-  "transient_db_name" : "transient.db",
+  "databases" : {
+    "profile_db_name" : "profile.db",
+    "state_db_name" : "state.db",
+    "transient_db_name" : "transient.db"
+  },
 
   "communications" : {
     "NatsUrl" : "127.0.0.1",
@@ -24,5 +26,7 @@
     "SendHeartBeat" : true,
     "Subject" :  "caas.80819.heartbeat",
     "Period_ms" : 10000
-  }
+  },
+
+  "luascript" : "config.dev.lua"
 }

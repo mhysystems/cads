@@ -10,8 +10,11 @@
 #include <date/date.h>
 #include <date/tz.h>
 
+#include <msg.h>
+
 namespace cads
 {
+  cads::msgid i_msgid(int);
   void write_vector(std::vector<double> xs,std::string name);
   std::string to_str(date::utc_clock::time_point);
   date::utc_clock::time_point to_clk(std::string);

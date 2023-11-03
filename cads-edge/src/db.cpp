@@ -180,7 +180,7 @@ namespace cads
 {
   void create_profile_db(std::string name = ""s)
   {
-    auto db_name = name.empty() ? global_config["profile_db_name"].get<std::string>() : name;
+    auto db_name = name.empty() ? database_names.profile_db_name : name;
 
     std::vector<std::string> tables{
         R"(PRAGMA journal_mode=WAL)"s,
@@ -209,7 +209,7 @@ namespace cads
     using namespace date;
     using namespace std::chrono;
 
-    auto db_name = name.empty() ? global_config["state_db_name"].get<std::string>() : name;
+    auto db_name = name.empty() ? database_names.state_db_name : name;
     
     std::vector<std::string> tables{
       R"(PRAGMA journal_mode=WAL)"s,
@@ -238,7 +238,7 @@ namespace cads
     using namespace date;
     using namespace std::chrono;
 
-    auto db_name = name.empty() ? global_config["transient_db_name"].get<std::string>() : name;
+    auto db_name = name.empty() ? database_names.transient_db_name : name;
     
     std::vector<std::string> tables{
       R"(PRAGMA journal_mode=WAL)"s,
@@ -265,7 +265,7 @@ namespace cads
   int store_profile_parameters(GocatorProperties params, std::string name)
   {
     auto query = R"(INSERT OR REPLACE INTO PARAMETERS (rowid,x_res,z_res,z_off) VALUES (1,?,?,?))"s;
-    auto db_config_name = name.empty() ? global_config["profile_db_name"].get<std::string>() : name;
+    auto db_config_name = name.empty() ? database_names.profile_db_name : name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
 
     auto err = sqlite3_bind_double(stmt.get(), 1, params.xResolution);
@@ -287,7 +287,7 @@ namespace cads
   {
 
     auto query =  R"(UPDATE Transients set LastY = ? where rowid = 1)"s;
-    auto db_config_name = name.empty() ? global_config["transient_db_name"].get<std::string>() : name;
+    auto db_config_name = name.empty() ? database_names.transient_db_name : name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
 
     char *errmsg = nullptr;
@@ -332,7 +332,7 @@ namespace cads
   void store_errored_profile(const cads::z_type &z, std::string id, std::string name)
   {
     auto query = R"(INSERT INTO ErroredProfile (Id,z) VALUES (?,?))"s;
-    auto db_config_name = name.empty() ? global_config["transient_db_name"].get<std::string>() : name;
+    auto db_config_name = name.empty() ? database_names.transient_db_name : name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
     
     sqlite3_exec(db.get(), R"(PRAGMA synchronous=OFF)"s.c_str(), nullptr, nullptr, nullptr);
@@ -348,7 +348,7 @@ namespace cads
   {
 
     auto query = R"(SELECT x_res,z_res,z_off FROM PARAMETERS WHERE ROWID = 1)"s;
-    auto db_config_name = name.empty() ? global_config["profile_db_name"].get<std::string>() : name;
+    auto db_config_name = name.empty() ? database_names.profile_db_name : name;
     auto [stmt,db] = prepare_query(db_config_name, query);
     auto err = SQLITE_OK;
 
@@ -381,7 +381,7 @@ namespace cads
   {
 
     auto query = R"(SELECT MIN(Y),MAX(Y),COUNT(Y),LENGTH(Z) FROM PROFILE WHERE REVID = ? AND IDX < ? LIMIT 1)"s;
-    auto db_config_name = name.empty() ? global_config["profile_db_name"].get<std::string>() : name;
+    auto db_config_name = name.empty() ? database_names.profile_db_name : name;
     auto [stmt,db] = prepare_query(db_config_name, query);
 
     auto err = sqlite3_bind_int(stmt.get(), 1, revid);
@@ -415,7 +415,7 @@ namespace cads
 
   long count_with_width_n(std::string name, int revid, int width_n) {
     auto query = fmt::format(R"(SELECT count(idx) FROM PROFILE WHERE REVID = {} AND LENGTH(z) = ?)", revid);
-    auto db_config_name = name.empty() ? global_config["profile_db_name"].get<std::string>() : name;
+    auto db_config_name = name.empty() ? database_names.profile_db_name : name;
     auto [stmt,db] = prepare_query(db_config_name, query);
     auto err = sqlite3_bind_int(stmt.get(), 1, width_n);
 
@@ -434,7 +434,7 @@ namespace cads
   {
 
     auto query = R"(INSERT OR REPLACE INTO PROFILE (revid,idx,y,x_off,z) VALUES (?,?,?,?,?))"s;
-    auto db_config_name = name.empty() ? global_config["profile_db_name"].get<std::string>() : name;
+    auto db_config_name = name.empty() ? database_names.profile_db_name : name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
 
     char *errmsg = nullptr;
@@ -611,7 +611,7 @@ namespace cads
   coro<std::tuple<int, profile>> fetch_belt_coro(int revid, long last_idx, long first_index, int size, std::string name)
   {
     auto query = fmt::format(R"(SELECT idx,y,x_off,z FROM PROFILE WHERE REVID = {} AND IDX >= ? AND IDX < ?)", revid);
-    auto db_config_name = name.empty() ? global_config["profile_db_name"].get<std::string>() : name;
+    auto db_config_name = name.empty() ? database_names.profile_db_name : name;
     auto [stmt,db] = prepare_query(db_config_name, query);
 
     for (long i = first_index; i < last_idx; i += size)
@@ -665,7 +665,7 @@ namespace cads
   {
 
     auto query = R"(SELECT date, motif FROM MOTIFS order by rowid desc limit 1)"s;
-    auto db_config_name = name.empty() ? global_config["state_db_name"].get<std::string>() : name;
+    auto db_config_name = name.empty() ? database_names.state_db_name : name;
     auto [stmt,db] = prepare_query(db_config_name, query);
     
     std::tuple<date::utc_clock::time_point,std::vector<double>>  rtn;
@@ -698,7 +698,7 @@ namespace cads
   {
     using namespace std;
     auto query = R"(INSERT INTO MOTIFS (date,motif) VALUES(?,?))"s;
-    auto db_config_name = db_name.empty() ? global_config["state_db_name"].get<std::string>() : db_name;
+    auto db_config_name = db_name.empty() ? database_names.state_db_name : db_name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
     
     auto date = to_str(get<0>(row));
@@ -744,7 +744,7 @@ namespace cads
       ,status 
       ,conveyor_id 
       FROM Scans)"s;
-    auto db_config_name = name.empty() ? global_config["state_db_name"].get<std::string>() : name;
+    auto db_config_name = name.empty() ? database_names.state_db_name : name;
     auto [stmt,db] = prepare_query(db_config_name, query);
     
     std::deque<state::scan>  rtn;
@@ -787,7 +787,7 @@ namespace cads
       ,status
       ,conveyor_id 
       ) = (?,?,?,?,?,?,?) where db_name=?;)"s;
-    auto db_config_name = db_name.empty() ? global_config["state_db_name"].get<std::string>() : db_name;
+    auto db_config_name = db_name.empty() ? database_names.state_db_name : db_name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
     
     auto scanned_utc = to_str(scan.scanned_utc);
@@ -818,7 +818,7 @@ namespace cads
       ,status
       ,conveyor_id
       ) VALUES(?,?,?,?,?,?,?))"s;
-    auto db_config_name = db_name.empty() ? global_config["state_db_name"].get<std::string>() : db_name;
+    auto db_config_name = db_name.empty() ? database_names.state_db_name : db_name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
     
     auto scanned_utc = to_str(scan.scanned_utc);
@@ -839,7 +839,7 @@ namespace cads
   bool delete_scan_state(cads::state::scan scan, std::string db_name)
   {
     auto query = R"(DELETE FROM Scans WHERE db_name = ?)"s;
-    auto db_config_name = db_name.empty() ? global_config["state_db_name"].get<std::string>() : db_name;
+    auto db_config_name = db_name.empty() ? database_names.state_db_name : db_name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
     
     auto err = sqlite3_bind_text(stmt.get(), 1, scan.db_name.c_str(), scan.db_name.size(),nullptr);

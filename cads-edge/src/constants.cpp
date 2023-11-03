@@ -49,6 +49,14 @@ namespace {
     return cads::UploadConfig{std::chrono::seconds(period),webapi};
   }
 
+  auto mk_databases(nlohmann::json config) {
+    auto profile_db_name = config["databases"]["profile_db_name"].get<std::string>();
+    auto state_db_name = config["databases"]["state_db_name"].get<std::string>();
+    auto transient_db_name = config["databases"]["transient_db_name"].get<std::string>();
+
+    return cads::Databases{profile_db_name,state_db_name,transient_db_name};
+  }
+
   auto mk_heartbeat(nlohmann::json config) {
 
     if(!config.contains("heartbeat"))
@@ -74,6 +82,8 @@ namespace cads {
   Communications communications_config;
   UploadConfig upload_config;
   HeartBeat constants_heartbeat;
+  Databases database_names;
+  std::optional<std::string> luascript_name(std::nullopt);
 
   std::atomic<bool> terminate_signal = false;
 
@@ -93,7 +103,13 @@ namespace cads {
     constants_device = mk_device(config);
     communications_config = mk_communications(config);
     upload_config = mk_upload(config);
+    database_names = mk_databases(config);
     constants_heartbeat = mk_heartbeat(config);
+
+    if(config.contains("luascript") && !config["luascript"].get<std::string>().empty()) {
+      luascript_name = config["luascript"].get<std::string>();
+    }
+
     global_config = config;
   }
 
