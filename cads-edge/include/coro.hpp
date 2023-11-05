@@ -150,7 +150,7 @@ namespace cads
       std::tie(i,fc) = resume(tc);
     }
 
-    bool wait_dequeue_timed(msg& x, [[maybe_unused]]std::chrono::seconds s) {
+    bool wait_dequeue_timed(FC& x, [[maybe_unused]]std::chrono::seconds s) {
       wait_dequeue(x);
       return true;
     }

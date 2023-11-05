@@ -39,6 +39,7 @@ namespace cads
   void process_profile(ProfileConfig, Io<msg>& gocatorFifo, Io<msg>& next);
   void process_identity(Io<msg>& gocatorFifo, Io<msg>& next);
   cads::coro<cads::msg,cads::msg,1> profile_decimation_coro(long long, long long, cads::Io<msg> &next);
+  coro<cads::msg,cads::msg,1> pulley_values_coro(Dbscan config, double init, bool left, cads::Io<msg> &next);
   msg prs_to_scan(msg);
   std::tuple<std::string,std::string,std::string> caasMsg(std::string sub,std::string head, std::string data);
 }

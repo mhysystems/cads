@@ -1377,10 +1377,25 @@ namespace
     return 1;
   }
 
+  int fileCSV(lua_State *L)
+  {
+    auto filename = tostring(L, 1);
+
+    using user_type = cads::Adapt<cads::z_type,decltype(cads::file_csv_coro(*filename))>;
+
+    new (lua_newuserdata(L, sizeof(user_type))) user_type(cads::file_csv_coro(*filename));
+
+    lua_createtable(L, 0, 1);
+    lua_pushcfunction(L, Io_gc);
+    lua_setfield(L, -2, "__gc");
+    lua_setmetatable(L, -2);
+    return 1;
+  }
+
   int filterMsgs(lua_State *L)
   {
-    auto out = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, -2));
-    auto mid = lua_tointeger(L, -1);
+    auto out = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, -1));
+    auto mid = lua_tointeger(L, -2);
     auto id = cads::i_msgid(mid);
     
     new (lua_newuserdata(L, sizeof(cads::AdaptFn<cads::msg,bool>))) cads::AdaptFn<cads::msg,bool>(FilterMsg(id, out));
@@ -1392,9 +1407,24 @@ namespace
     return 1;
   }
 
+  int teeMsg(lua_State *L) {
+    auto out0 = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, -2));
+    auto out1 = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, -1));
+
+    std::function<bool(cads::msg)> fn = [out0,out1](cads::msg m){ (out0 ? out0->enqueue(m) : true); return (out1 ? out1->enqueue(m) : true);};
+    
+    new (lua_newuserdata(L, sizeof(cads::AdaptFn<cads::msg,bool>))) cads::AdaptFn<cads::msg,bool>(std::move(fn));
+
+    lua_createtable(L, 0, 1);
+    lua_pushcfunction(L, Io_gc);
+    lua_setfield(L, -2, "__gc");
+    lua_setmetatable(L, -2);
+    return 1;
+  }
+
   int BlockingReaderWriterQueue(lua_State *L)
   {
-    new (lua_newuserdata(L, sizeof(cads::Adapt<moodycamel::BlockingReaderWriterQueue<cads::msg>>))) cads::Adapt<moodycamel::BlockingReaderWriterQueue<cads::msg>>(moodycamel::BlockingReaderWriterQueue<cads::msg>());
+    new (lua_newuserdata(L, sizeof(cads::Adapt<cads::msg,moodycamel::BlockingReaderWriterQueue<cads::msg>>))) cads::Adapt<cads::msg, moodycamel::BlockingReaderWriterQueue<cads::msg>>(moodycamel::BlockingReaderWriterQueue<cads::msg>());
 
     lua_createtable(L, 0, 1);
     lua_pushcfunction(L, Io_gc);
@@ -1636,9 +1666,15 @@ namespace
   int save_send_thread(lua_State *L)
   {
     using namespace std::placeholders;
+    auto arg_cnt = lua_gettop(L);
+
+    if(arg_cnt > 4) {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'More than 4 arguemtns'}}", __func__);
+    }
 
     auto conveyor = toconveyor(L, 1);
-    auto bound = std::bind(cads::save_send_thread, *conveyor, _1, _2);
+    auto remote_reg = arg_cnt == 4 ? lua_toboolean(L,2) : true;
+    auto bound = std::bind(cads::save_send_thread, *conveyor, remote_reg, _1, _2);
     return mk_thread2(L, bound);
   }
 
@@ -1669,7 +1705,24 @@ namespace
 
     auto next = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, 1));
     double stride = lua_tonumber(L, 2);
-    new (lua_newuserdata(L, sizeof(cads::Adapt<decltype(cads::encoder_distance_estimation(std::ref(*next), stride))>))) cads::Adapt<decltype(cads::encoder_distance_estimation(std::ref(*next), stride))>(cads::encoder_distance_estimation(std::ref(*next), stride));
+
+     using user_type = cads::Adapt<cads::msg,decltype(cads::encoder_distance_estimation(std::ref(*next), stride))>;
+     
+    new (lua_newuserdata(L, sizeof(user_type))) user_type(cads::encoder_distance_estimation(std::ref(*next), stride));
+
+    lua_createtable(L, 0, 1);
+    lua_pushcfunction(L, Io_gc);
+    lua_setfield(L, -2, "__gc");
+    lua_setmetatable(L, -2);
+    return 1;
+  }
+
+  int voidMsg(lua_State *L)
+  {
+
+    using user_type = cads::Adapt<cads::msg,decltype(cads::void_msg())>;
+     
+    new (lua_newuserdata(L, sizeof(user_type))) user_type(cads::void_msg());
 
     lua_createtable(L, 0, 1);
     lua_pushcfunction(L, Io_gc);
@@ -1685,9 +1738,28 @@ namespace
     double modulo = lua_tointeger(L, 2);
     auto next = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, 3));
 
-    using user_type = cads::Adapt<decltype(cads::profile_decimation_coro(*widthn,modulo,std::ref(*next)))>;
+    using user_type = cads::Adapt<cads::msg,decltype(cads::profile_decimation_coro(*widthn,modulo,std::ref(*next)))>;
 
     new (lua_newuserdata(L, sizeof(user_type))) user_type(cads::profile_decimation_coro(*widthn,modulo,std::ref(*next)));
+
+    lua_createtable(L, 0, 1);
+    lua_pushcfunction(L, Io_gc);
+    lua_setfield(L, -2, "__gc");
+    lua_setmetatable(L, -2);
+    return 1;
+  }
+
+  int pulleyValues(lua_State *L)
+  {
+   
+    auto config = todbscan(L, 1);
+    auto init = tonumber(L,2);
+    bool left = lua_toboolean(L, 3);
+    auto next = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, 4));
+
+    using user_type = cads::Adapt<cads::msg,decltype(cads::pulley_values_coro(*config,*init,left,std::ref(*next)))>;
+
+    new (lua_newuserdata(L, sizeof(user_type))) user_type(cads::pulley_values_coro(*config,*init,left,std::ref(*next)));
 
     lua_createtable(L, 0, 1);
     lua_pushcfunction(L, Io_gc);
@@ -1782,6 +1854,18 @@ namespace cads
       lua_pushcfunction(L,::filterMsgs);
       lua_setglobal(L,"filterMsgs");
       
+      lua_pushcfunction(L,::fileCSV);
+      lua_setglobal(L,"fileCSV");
+
+      lua_pushcfunction(L,::pulleyValues);
+      lua_setglobal(L,"pulleyValues");
+
+      lua_pushcfunction(L,::teeMsg);
+      lua_setglobal(L,"teeMsg");
+
+      lua_pushcfunction(L,::voidMsg);
+      lua_setglobal(L,"voidMsg");
+
 
       return UL;
     }

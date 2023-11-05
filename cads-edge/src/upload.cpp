@@ -41,13 +41,16 @@ namespace
     return 0;
   }
 
-  std::vector<std::deque<cads::state::scan>> partiton(std::deque<cads::state::scan> scans) {
+  std::vector<std::deque<cads::state::scan>> partiton(std::deque<cads::state::scan> scans, std::function<bool(cads::state::scan,cads::state::scan)> part = [](cads::state::scan e,cads::state::scan t) {return e.conveyor_id == t.conveyor_id;}) {
+
+    using namespace std::placeholders;
 
     if(scans.size() < 2) return {scans};
 
     auto first = scans.front();
+    auto pred = std::bind(part, first, _1);
     
-    auto it = std::partition(scans.begin(), scans.end(), [=](cads::state::scan e) {return e.conveyor_id == first.conveyor_id;});
+    auto it = std::partition(scans.begin(), scans.end(), pred);
 
     std::vector<std::deque<cads::state::scan>> rtn{{std::begin(scans),it}};
 
@@ -150,9 +153,11 @@ void upload_scan_thread(std::atomic<bool> &terminate, UploadConfig config)
 
     if(scans.size() == 0) continue;
 
-    auto partitioned_scans = ::remove_all_incomplete(::partiton(scans));
+    for(auto rscans : ::partiton(scans,[](state::scan a,state::scan b){return a.remote_reg == b.remote_reg;})) 
+    {
+      auto partitioned_scans = ::remove_all_incomplete(::partiton(rscans));
 
-    for(auto pscans : partitioned_scans) {
+      for(auto pscans : partitioned_scans) {
       auto [latest,valid] = ::latest_scan(pscans);
 
       if(!valid) {
@@ -196,7 +201,7 @@ void upload_scan_thread(std::atomic<bool> &terminate, UploadConfig config)
         }
       }
     }
-
+    }
   }while(!terminate);
 
   spdlog::get("cads")->info("{{func = {}, msg = 'Exiting'}}", __func__);

@@ -28,15 +28,15 @@ namespace cads
     Io& operator=(const Io&) = delete;
 };
 
-  template<IO<msg> T> struct Adapt : public Io<msg>
+  template<class B, IO<B> T> struct Adapt : public Io<B>
   {
     Adapt(T&& a) : m(std::move(a)) {} 
     
-    virtual bool enqueue(msg x) {
+    virtual bool enqueue(B x) {
       return m.enqueue(x);
     }
 
-    virtual void wait_dequeue(msg& x) {
+    virtual void wait_dequeue(B& x) {
       return m.wait_dequeue(x);
     }
 
@@ -44,7 +44,7 @@ namespace cads
       return m.size_approx();
     }
 
-    virtual bool wait_dequeue_timed(msg& x, std::chrono::seconds s) {
+    virtual bool wait_dequeue_timed(B& x, std::chrono::seconds s) {
       return m.wait_dequeue_timed(x,s);
     }
 

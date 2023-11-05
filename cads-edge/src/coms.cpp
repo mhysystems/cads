@@ -455,7 +455,7 @@ coro<remote_msg,bool> remote_control_coro()
       if (!co_terminate)
       {
         namespace sr = std::ranges;
-        auto zs = interpolate_to_widthn(zs_raw,conveyor.WidthN);
+        auto zs = scan.remote_reg ? interpolate_to_widthn(zs_raw,conveyor.WidthN) : zs_raw;
         idx -= scan.begin_index; cnt++;
         auto y = (idx - 1) * y_step; // Sqlite rowid starts a 1
         auto [pmin,pmax] = sr::minmax(zs | sr::views::filter([](float e) { return !std::isnan(e);}));
@@ -503,7 +503,7 @@ coro<remote_msg,bool> remote_control_coro()
     }
 
     bool failure = scan.uploaded != YmaxN;
-    if (!failure)
+    if (!failure && scan.remote_reg == 1)
     {
       http_post_profile_properties2(scan.scanned_utc, YmaxN, y_step, belt_z_min, belt_z_max, conveyor, gocator, urls.add_meta);
     }

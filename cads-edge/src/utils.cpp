@@ -7,7 +7,6 @@
 
 #include <utils.hpp>
 #include <stats.hpp>
-#include <coro.hpp>
 
 namespace {
 
@@ -47,31 +46,46 @@ namespace cads
     return msgid::error;
   }
   
-  coro<int64_t,std::vector<float>,1> file_csv_coro(std::string filename) {
+  coro<std::vector<float>,std::vector<float>,1> file_csv_coro(std::string filename) {
     
     using namespace std::ranges;
 
-    std::fstream file(filename);
-    int64_t len = 0;
+    std::ofstream file(filename);
+    std::vector<float> len;
+    len.push_back(0);
 
     while(true) {
       auto [data,terminate] = co_yield len;
 
       if(terminate) break;
+
+      if(data.size() < 1) continue;
       
       for(auto v : data | views::drop(1)) {
         file << v << ',';
       }
 
       file << data.back() << '\n';
-
-      len += (int64_t)data.size();
+      file.flush();
+      len[0] += (float)data.size();
     }
 
-    co_return 0;
+    co_return len;
 
   }
   
+  coro<cads::msg,cads::msg,1> void_msg() {
+    
+    cads::msg empty;
+
+    for(;;)
+    {
+      auto [msg,terminate] = co_yield empty;  
+      if(terminate) break;
+    }
+
+    co_return empty;
+  }
   
   std::vector<float> select_if(std::vector<float> a, std::vector<float> b, std::function<bool(float)> c)
   {

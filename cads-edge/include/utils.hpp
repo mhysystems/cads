@@ -10,11 +10,14 @@
 #include <date/date.h>
 #include <date/tz.h>
 
+#include <coro.hpp>
 #include <msg.h>
 
 namespace cads
 {
   cads::msgid i_msgid(int);
+  coro<cads::msg,cads::msg,1> void_msg();
+  coro<std::vector<float>,std::vector<float>,1> file_csv_coro(std::string); 
   void write_vector(std::vector<double> xs,std::string name);
   std::string to_str(date::utc_clock::time_point);
   date::utc_clock::time_point to_clk(std::string);

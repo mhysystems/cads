@@ -23,10 +23,10 @@
   },
 
   "heartbeat" : {
-    "SendHeartBeat" : true,
+    "SendHeartBeat" : false,
     "Subject" :  "caas.80819.heartbeat",
     "Period_ms" : 10000
   },
 
-  "luascript" : "config.dev.lua"
+  "luascript" : "../config.dev.lua"
 }

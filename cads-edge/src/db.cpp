@@ -221,7 +221,9 @@ namespace cads
         ,cardinality INTEGER NOT NULL
         ,uploaded INTEGER NOT NULL
         ,status INTEGER NOT NULL
-        ,conveyor_id INTEGER NOT NULL))",
+        ,conveyor_id INTEGER NOT NULL
+        ,remote_reg INTEGER NOT NULL
+        ))",
       R"(VACUUM)"
     };
 
@@ -504,21 +506,21 @@ namespace cads
       
       if (err != SQLITE_OK)
       {
-         spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = {}, msg = ''}})", __func__,"sqlite3_bind_blob",err);
+         spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = {}, msg = '{}'}})", __func__,"sqlite3_bind_blob",err,db_config_name);
       }
 
       // Run once, retrying not effective, too slow and causes buffers to fill
       err = sqlite3_step(stmt.get());
 
       if(err != SQLITE_DONE) {
-        spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = {}, msg = ''}})", __func__,"sqlite3_step",err);
+        spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = {}, msg = '{}'}})", __func__,"sqlite3_step",err,db_config_name);
       }
 
       err = sqlite3_reset(stmt.get());
 
       if (err != SQLITE_OK)
       {
-         spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = {}, msg = ''}})", __func__,"sqlite3_reset",err);
+         spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = {}, msg = '{}'}})", __func__,"sqlite3_reset",err,db_config_name);
       }
     }
 
@@ -742,7 +744,8 @@ namespace cads
       ,cardinality
       ,uploaded
       ,status 
-      ,conveyor_id 
+      ,conveyor_id
+      ,remote_reg 
       FROM Scans)"s;
     auto db_config_name = name.empty() ? database_names.state_db_name : name;
     auto [stmt,db] = prepare_query(db_config_name, query);
@@ -765,7 +768,8 @@ namespace cads
           int64_t(sqlite3_column_int64(stmt.get(), 3)),
           int64_t(sqlite3_column_int64(stmt.get(), 4)),
           int64_t(sqlite3_column_int64(stmt.get(), 5)),
-          int64_t(sqlite3_column_int64(stmt.get(), 6))
+          int64_t(sqlite3_column_int64(stmt.get(), 6)),
+          int64_t(sqlite3_column_int64(stmt.get(), 7))
         };
 
         rtn.push_back(tmp); 
@@ -785,8 +789,9 @@ namespace cads
       ,cardinality
       ,uploaded
       ,status
-      ,conveyor_id 
-      ) = (?,?,?,?,?,?,?) where db_name=?;)"s;
+      ,conveyor_id
+      ,remote_reg 
+      ) = (?,?,?,?,?,?,?,?) where db_name=?;)"s;
     auto db_config_name = db_name.empty() ? database_names.state_db_name : db_name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
     
@@ -799,7 +804,8 @@ namespace cads
     err = sqlite3_bind_int64(stmt.get(), 5, scan.uploaded);
     err = sqlite3_bind_int64(stmt.get(), 6, scan.status); 
     err = sqlite3_bind_int64(stmt.get(), 7, scan.conveyor_id); 
-    err = sqlite3_bind_text(stmt.get(), 8, scan.db_name.c_str(), scan.db_name.size(),nullptr);
+    err = sqlite3_bind_int64(stmt.get(), 8, scan.remote_reg);
+    err = sqlite3_bind_text(stmt.get(), 9, scan.db_name.c_str(), scan.db_name.size(),nullptr); 
 
     tie(err, stmt) = db_step(move(stmt));
 
@@ -817,7 +823,8 @@ namespace cads
       ,uploaded
       ,status
       ,conveyor_id
-      ) VALUES(?,?,?,?,?,?,?))"s;
+      ,remote_reg
+      ) VALUES(?,?,?,?,?,?,?,?))"s;
     auto db_config_name = db_name.empty() ? database_names.state_db_name : db_name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
     
@@ -830,6 +837,7 @@ namespace cads
     err = sqlite3_bind_int64(stmt.get(), 5, scan.uploaded);
     err = sqlite3_bind_int64(stmt.get(), 6, scan.status); 
     err = sqlite3_bind_int64(stmt.get(), 7, scan.conveyor_id); 
+    err = sqlite3_bind_int64(stmt.get(), 8, scan.remote_reg); 
  
     tie(err, stmt) = db_step(move(stmt));
 

@@ -22,9 +22,41 @@
 using namespace moodycamel;
 using namespace std::chrono;
 
+
+namespace {
+  cads::coro<int, std::tuple<int, int, cads::profile>, 1> null_profile_coro()
+  {
+
+    while (true)
+    {
+      auto [data, terminate] = co_yield 0;
+
+      if (terminate)
+        break;
+    }
+
+    co_return 0;
+  }
+
+  cads::coro<int, double,1> null_last_y_coro()
+  {
+
+    while (true)
+    {
+      auto [data, terminate] = co_yield 0;
+
+      if (terminate)
+        break;
+    }
+
+    co_return 0;
+  }
+}
+
+
 namespace cads
 {
-  void save_send_thread(Conveyor conveyor, cads::Io<msg> &profile_fifo, cads::Io<msg> &next)
+  void save_send_thread(Conveyor conveyor, bool remote_reg, cads::Io<msg> &profile_fifo, cads::Io<msg> &next)
   {
     
     spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Entering Thread");
@@ -36,18 +68,26 @@ namespace cads
     
     struct global_t
     {
-      cads::coro<int, std::tuple<int, int, cads::profile>, 1> store_profile = store_profile_coro();
+      cads::coro<int, std::tuple<int, int, cads::profile>, 1> store_profile;
       long idx = 0;
-      coro<int, double,1> store_last_y = store_last_y_coro();
+      coro<int, double,1> store_last_y;
       coro<int, z_type, 1> store_scan;
       GocatorProperties gocator_properties;
       Conveyor conveyor;
       date::utc_clock::time_point scan_begin;
       cads::Io<msg> & cps;
+      bool remote_reg;
 
-      global_t(cads::Io<msg> &m, Conveyor c, date::utc_clock::time_point sb, std::string s) : store_scan(store_scan_coro(s)), conveyor(c),scan_begin(sb), cps(m){};
+      global_t(cads::Io<msg> &m, Conveyor c, date::utc_clock::time_point sb, std::string s, bool rg) : 
+        store_profile(rg ? store_profile_coro() : ::null_profile_coro()), 
+        store_last_y(rg ? store_last_y_coro() : ::null_last_y_coro()), 
+        store_scan(store_scan_coro(s)), 
+        conveyor(c),
+        scan_begin(sb),
+        cps(m), 
+        remote_reg(rg){};
 
-    } global(next,conveyor,scan_begin,scan_filename_init);
+    } global(next,conveyor,scan_begin,scan_filename_init,remote_reg);
 
 
     struct transitions
@@ -86,7 +126,8 @@ namespace cads
             int64_t(e.length),
             0,
             1,
-            global.conveyor.Id
+            global.conveyor.Id,
+            global.remote_reg
           };
         
           global.store_scan = store_scan_coro(new_scan_filename);
@@ -100,7 +141,8 @@ namespace cads
             0,
             0,
             0,
-            global.conveyor.Id
+            global.conveyor.Id,
+            global.remote_reg
           };
 
           store_scan_state(scan2);  
@@ -129,7 +171,8 @@ namespace cads
             0,
             0,
             0,
-            global.conveyor.Id
+            global.conveyor.Id,
+            global.remote_reg
           };
 
           store_scan_state(scan2);  
