@@ -6,6 +6,7 @@
 #include <string>
 #include <atomic>
 #include <filesystem>
+#include <optional>
 
 #include <date/date.h>
 #include <nlohmann/json.hpp>
