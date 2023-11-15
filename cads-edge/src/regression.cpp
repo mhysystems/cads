@@ -39,9 +39,9 @@ namespace cads
   void regression_compensate(z_type &z, int left_edge_index, int right_edge_index, double gradient)
   {
     namespace sr = std::ranges;
-
+    double i = 0;
     auto f = z | sr::views::take(right_edge_index) | sr::views::drop(left_edge_index);
-    std::transform(f.begin(), f.end(), f.begin(), [gradient, i = 0](z_element v) mutable -> z_element
+    std::transform(f.begin(), f.end(), f.begin(), [gradient, i](z_element v) mutable -> z_element
                    { return v != std::numeric_limits<z_element>::quiet_NaN() ? v - (gradient * i++) : std::numeric_limits<z_element>::quiet_NaN(); });
   }
 

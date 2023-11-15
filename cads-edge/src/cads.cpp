@@ -293,7 +293,7 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io<msg> &ne
 
       auto iy = p.y;
       auto ix = p.x_off;
-      auto iz = p.z;
+      decltype(p.z) iz(p.z.begin()+220,p.z.begin()+2270);
 
       auto [pulley_level, pulley_right, ll, lr, cerror] = pulley_levels_clustered(iz, config.dbscan,pulley_estimator);
 
@@ -343,7 +343,7 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io<msg> &ne
       auto x = delayed_profile.x_off;
       auto z = delayed_profile.z;
 
-      auto gradient = (pulley_right_filtered - pulley_level_filtered) / (double)z.size();
+      auto gradient = (pulley_right_filtered - pulley_level_filtered) / double(right_edge_index - left_edge_index);
       regression_compensate(z, 0, z.size(), gradient);
 
       PulleyRevolution ps;

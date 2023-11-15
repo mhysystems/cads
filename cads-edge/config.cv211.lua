@@ -18,29 +18,30 @@ iirfilter = {
 }
 
 conveyor = {
-  Id = 7,
+  Id = 55,
   Org  = "FMG",
   Site = "FMG",
-  Name = "BF306",
+  Name = "CV211",
   Timezone = "Australia/Perth",
-  PulleyCircumference = 2530.84,
-  TypicalSpeed = 0.7,
-  Belt =  6,
-  Length = 41200.0,
-  WidthN = 1500.0
+  PulleyCircumference = 660 * math.pi,
+  TypicalSpeed = 2.91,
+  Belt =  54,
+  Length = 76890.0,
+--  Length = 484230.0,
+  WidthN = 1850.0
 }
 
 belt = {
-  Id = 6,
+  Id = 54,
   Installed = "2023-01-14T00:00:00Z",
   PulleyCover = 7.0,
   CordDiameter = 5.6,
-  TopCover = 21.0,
+  TopCover = 20.0,
   Width = 1500.0,
   Length = conveyor.Length,
   LengthN = conveyor.TypicalSpeed / gocatorFps, 
   Splices = 1,
-  Conveyor = 7
+  Conveyor = 54
 }
 
 dbscan = {
@@ -82,13 +83,14 @@ profileConfig = {
 }
 
 sqlitegocatorConfig = {
-  Range = {0,99999999999999},
-  Fps = gocatorFps,
-  Forever = false,
-  Source = "../../profiles/rawprofile_cv001_2023-08-30.db",
-  TypicalSpeed = 6.0,
-  Sleep = false
-}
+    Range = {0,99999999999999},
+    Fps = gocatorFps,
+    Forever = false,
+    Source = "../../profiles/rawprofile_cv211_2023-11-08.db",
+    TypicalSpeed = 6.0,
+    Sleep = false
+  }
+
 
 function timeToString(time) -- overwritten externally
   return tostring(time)
@@ -100,13 +102,9 @@ function main(sendmsg)
   local cads_origin = BlockingReaderWriterQueue()
   local origin_savedb = BlockingReaderWriterQueue()
   local savedb_luamain = BlockingReaderWriterQueue()
-  local gocator_cads2 = BlockingReaderWriterQueue()
-  local origin_savedb2 = BlockingReaderWriterQueue()
   
-  local tea = teeMsg(gocator_cads,gocator_cads2)
-  local laser = gocator(laserConf,tea)
-
-  --local laser = sqlitegocator(sqlitegocatorConfig,tea) 
+  -- local laser = gocator(laserConf,gocator_cads)
+  local laser = sqlitegocator(sqlitegocatorConfig,gocator_cads) 
 
   if laser == nil then
     sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to start gocator")
@@ -116,10 +114,7 @@ function main(sendmsg)
   local type_conversion = prsToScan(cads_origin)
   local thread_process_profile = process_profile(profileConfig,gocator_cads,type_conversion)
   local belt_loop = loop_beltlength_thread(conveyor,cads_origin,origin_savedb)
-  local belt_loop2 = loop_beltlength_thread(conveyor,gocator_cads2,origin_savedb2)
   local thread_send_save = save_send_thread(conveyor,origin_savedb,savedb_luamain)
-  local sink = voidMsg()
-  local thread_send_save2 = save_send_thread(conveyor,false,origin_savedb2,sink)
 
   if laser:Start(gocatorFps) then
     sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to start gocator")
@@ -135,23 +130,14 @@ function main(sendmsg)
     if is_value then
       if msg_id == 2 then break 
       elseif msg_id == 5 then break
-      elseif msg_id == 100 then
-        local m,progress = table.unpack(data)
-        if progress ~= beltprogress then
-          sendmsg("caas." .. DeviceSerial .. "." .. m,"",progress)
-          beltprogress = progress
-        end
-      elseif msg_id == 12 then
-        sendmsg("caas." .. DeviceSerial .. "." .. "error","",data)
-        break
       end
     end
 
     unloop = coroutine.yield(0)
   until unloop
-  print("kdkdkdkd")
+
   laser:Stop(true)
-  join_threads({thread_process_profile,belt_loop,thread_send_save,belt_loop2,thread_send_save2})
+  join_threads({thread_process_profile,belt_loop,thread_send_save})
 
 end
 
