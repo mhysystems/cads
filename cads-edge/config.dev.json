@@ -7,7 +7,7 @@
     "Period" : 2592000,
     "webapi" : {
       "add_meta" : ["https://fmgcads.mhysystems.com/api/meta",false],
-      "add_belt" : ["https://fmgcads.mhysystems.com/api/belt",true]
+      "add_belt" : ["https://fmgcads.mhysystems.com/api/belt",false]
     }
   },
 
@@ -28,5 +28,5 @@
     "Period_ms" : 10000
   },
 
-  "luascript" : "../config.cv211.lua"
+  "luascript" : "../config.cv311.lua"
 }

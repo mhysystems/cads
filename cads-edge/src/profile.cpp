@@ -32,6 +32,98 @@ namespace
     else return (x - s)*mf + s*f;
 
   }
+
+  auto distance(cads::zrange z) {
+    using namespace std;
+    auto d = 0;
+    
+    for(auto i = begin(z); i < end(z); ++i)
+    {
+      d += !std::isnan(*i);
+    }
+
+    return d;
+  }
+
+  // Return sequence of clustered z values and offset into profile
+  // Input is a slice of profile, hence tracking offset
+  cads::zrange cluster1D(cads::zrange z, cads::z_element max_diff)
+  {
+
+    using namespace std;
+
+    if (empty(z))
+    {
+      return {z,0};
+    }
+
+    auto i = begin(z);
+
+    for(;std::isnan(*i) && i < end(z); ++i);
+
+    auto s = i;
+
+    for(; i < end(z); ++i)
+    {
+      if(std::isnan(*i)) continue;
+      
+      cads::z_element sum = 0;
+      // sum 2nd order difference, skipping NaNs
+      auto j = i+1;
+      for(auto d = 0; j < end(z) && d < 2 && sum <= max_diff; ++j) {
+        if(std::isnan(*j)) continue;
+        sum += std::abs(*j - *i);
+        ++d;
+      }
+      
+      if( sum > max_diff )
+      { 
+        // Edge of belt will be an NaN
+        for(++i; !std::isnan(*i) && i < end(z); ++i);
+        break;
+      }
+    }
+
+    return {s,i};
+  }
+
+  void cluster_merge1D(cads::z_cluster& group, cads::zrange c, double in_cluster) 
+  {
+
+    if(group.size() < 1) {
+      group.push_back({c});
+      return;
+    }
+    
+    auto& x = group.back();
+    
+    if(std::abs(*c.begin() - *(x.end()-1)) < in_cluster ) {
+        x = {begin(x),end(c)};
+      
+    }else {
+      group.push_back({c});      
+    }
+
+  }
+
+  cads::z_cluster dbscan1D(cads::zrange z, cads::z_cluster &&group, cads::Dbscan config)
+  {
+    using namespace std;
+
+    auto a_cluster = cluster1D(z,config.InClusterRadius);
+    auto d = distance(a_cluster);
+
+    if( d > config.MinPoints) {
+      cluster_merge1D(group,a_cluster,config.InClusterRadius / 4);
+    }
+
+    if (end(a_cluster) < end(z))
+    {
+      group = dbscan1D({end(a_cluster), end(z)}, std::move(group),config);
+    }
+
+    return group;
+  }
 }
 
 
@@ -115,7 +207,7 @@ namespace cads
     return zrange{c.front().begin(),c.back().end()};
   }
 
-  auto average_zrange(zrange r) {
+  double average_zrange(zrange r) {
     
     double size = 0;
     double sum = 0;
@@ -309,6 +401,64 @@ namespace cads
 
     auto const count = static_cast<float>(v.size());
     return std::reduce(v.begin(), v.end()) / count;
+  }
+
+  std::vector<size_t> cluster_distance(z_type &z, z_type &zz, z_cluster l, z_cluster r) {
+    std::vector<size_t> rtn;
+    
+    for(auto range : l) {
+      rtn.push_back(zz.size() - std::distance(zz.begin(),std::end(range)));
+    }
+
+    for(auto range : r) {
+      rtn.push_back(std::distance(z.begin(),std::end(range)));
+    }
+
+    return rtn;
+  }
+
+  std::tuple<double,double,size_t,size_t,ClusterError> pulley_levels_clustered2(z_type &z, Dbscan config, std::function<double(const z_type &)> estimator )
+  {
+    auto partition = (size_t)std::floor(z.size() / 2);
+
+    z_type rz(z.rbegin() + partition, z.rend());
+    auto clusters_left = dbscan1D(zrange{rz.begin(),rz.end()},{},config);
+    auto clusters_right = dbscan1D(zrange{z.begin()+partition,z.end()},{},config);
+
+    auto avg_l = 0.0;
+    auto avg_r = 0.0;
+    size_t left_edge = 0;
+    size_t right_edge = z.size();
+    ClusterError error = ClusterError::None;
+
+    if(clusters_left.size() < 1 || clusters_right.size() < 1 )
+    {
+      error = ClusterError::NoClusters;
+      return {avg_l,avg_r,left_edge,right_edge,error};
+    }
+    
+    left_edge = rz.size() - std::distance(rz.begin(),std::end(clusters_left[0]));
+    right_edge = std::distance(z.begin(),std::end(clusters_right[0]));    
+    
+    if(clusters_left.size() == 1 && clusters_right.size() == 1 )
+    {
+      error = ClusterError::NoPulleyFound;
+    }else if(clusters_left.size() == 1 && clusters_right.size() > 1 )
+    {
+      avg_r = estimator(construct_ztype(clusters_right[1]));
+      error = ClusterError::RightPulleyOnly;
+    }else if(clusters_left.size() > 1 && clusters_right.size() == 1 )
+    {
+      avg_l = estimator(construct_ztype(clusters_left[1]));
+      error = ClusterError::LeftPulleyOnly;
+    }else
+    {
+      avg_r = estimator(construct_ztype(clusters_right[1]));
+      avg_l = estimator(construct_ztype(clusters_left[1]));
+    }
+
+    return {avg_l,avg_r,left_edge,right_edge,error};
+
   }
 
   std::tuple<double,double,size_t,size_t,ClusterError> pulley_levels_clustered(z_type &z, Dbscan config, std::function<double(const z_type &)> estimator )

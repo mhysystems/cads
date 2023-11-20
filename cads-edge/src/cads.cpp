@@ -293,14 +293,32 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io<msg> &ne
 
       auto iy = p.y;
       auto ix = p.x_off;
-      decltype(p.z) iz(p.z.begin()+220,p.z.begin()+2270);
+      auto iz = p.z;
 
-      auto [pulley_level, pulley_right, ll, lr, cerror] = pulley_levels_clustered(iz, config.dbscan,pulley_estimator);
+      //auto [pulley_level, pulley_right, ll, lr, cerror] = pulley_levels_clustered(iz, config.dbscan,pulley_estimator);
+      auto [pulley_level, pulley_right, ll, lr, cerror] = pulley_levels_clustered2(iz, config.dbscan,pulley_estimator);
 
       if (cerror != ClusterError::None)
       {
         spdlog::get("cads")->debug("Clustering error : {}", ClusterErrorToString(cerror));
         // store_errored_profile(p.z,ClusterErrorToString(cerror));
+      }
+
+      if(cerror == ClusterError::NoPulleyFound) 
+      {
+        next.enqueue({msgid::finished,0});
+      }
+      
+      if(cerror == ClusterError::LeftPulleyOnly) {
+        auto avg_left = average_zrange(zrange{iz.begin()+ll,iz.begin()+ll+config.dbscan.MinPoints}); 
+        auto avg_right = average_zrange(zrange{iz.begin()+lr-config.dbscan.MinPoints,iz.begin()+lr}); 
+        pulley_right = avg_right - (avg_left - pulley_level);
+      }
+
+      if(cerror == ClusterError::RightPulleyOnly) {
+        auto avg_left = average_zrange(zrange{iz.begin()+ll,iz.begin()+ll+config.dbscan.MinPoints}); 
+        auto avg_right = average_zrange(zrange{iz.begin()+lr-config.dbscan.MinPoints,iz.begin()+lr}); 
+        pulley_level = avg_left - (avg_right - pulley_right);
       }
 
       iz.insert(iz.begin(), filter_window_len, (float)pulley_level);
@@ -311,9 +329,9 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io<msg> &ne
       std::fill(iz.begin(), iz.begin() + ll, pulley_level);
       std::fill(iz.begin() + lr, iz.end(), pulley_right);
 
-      auto z_nan_removed = iz | views::filter([](float a){ return !std::isnan(a); });
-      auto bb = select_if(iz,interpolate_to_widthn({z_nan_removed.begin(),z_nan_removed.end()},iz.size()),[](float a){ return std::isnan(a); });
-      iz = bb;
+    //  auto z_nan_removed = iz | views::filter([](float a){ return !std::isnan(a); });
+    //  auto bb = select_if(iz,interpolate_to_widthn({z_nan_removed.begin(),z_nan_removed.end()},iz.size()),[](float a){ return std::isnan(a); });
+    //  iz = bb;
 
       auto pulley_level_filtered = (z_element)iirfilter_left(pulley_level);
       auto pulley_right_filtered = (z_element)iirfilter_right(pulley_right);
@@ -338,13 +356,13 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io<msg> &ne
       if (!delayed)
         continue;
 
-       auto [delayed_profile, left_edge_index_avg, left_edge_index, right_edge_index, raw_z] = dd;
+      auto [delayed_profile, left_edge_index_avg, left_edge_index, right_edge_index, raw_z] = dd;
       auto y = delayed_profile.y;
       auto x = delayed_profile.x_off;
       auto z = delayed_profile.z;
 
       auto gradient = (pulley_right_filtered - pulley_level_filtered) / double(right_edge_index - left_edge_index);
-      regression_compensate(z, 0, z.size(), gradient);
+      regression_compensate(z, left_edge_index, z.size(), gradient);
 
       PulleyRevolution ps;
       if (config.RevolutionSensor.source == RevolutionSensorConfig::Source::height_raw)
