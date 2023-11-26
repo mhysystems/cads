@@ -1,7 +1,5 @@
 #include <ranges>
 
-#include <spline.h>
-
 #include <sampling.h>
 #include <utils.hpp>
 
@@ -78,57 +76,6 @@ namespace cads
         i += 1*inc;
         n -= 1*dec;
       }
-    }
-  }
-
-  zrange nan_interpolation_spline(zrange z)
-  {
-    std::vector<double> x, y;
-
-    double cnt = 0;
-    for (auto i : z)
-    {
-      if (!std::isnan(i))
-      {
-        x.push_back(cnt);
-        y.push_back(i);
-      }
-
-      ++cnt;
-    }
-
-    tk::spline s(x, y);
-
-    for (double i = 0; i < (double)z.size(); ++i)
-    {
-      *(z.begin() + (int)i) = s(i);
-    }
-
-    return z;
-  }
-
-  void nan_interpolation_spline(z_type &z)
-  {
-
-    std::vector<double> x, y;
-
-    double cnt = 0;
-    for (auto i : z)
-    {
-      if (!std::isnan(i))
-      {
-        x.push_back(cnt);
-        y.push_back(i);
-      }
-
-      ++cnt;
-    }
-
-    tk::spline s(x, y);
-
-    for (double i = 0; i < (double)z.size(); ++i)
-    {
-      z[(int)i] = s(i);
     }
   }
 

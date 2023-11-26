@@ -13,7 +13,7 @@
 
 #pragma GCC diagnostic pop
 
-#include <profile.h>
+#include <profile_t.h>
 #include <constants.h>
 #include <coro.hpp>
 #include <db.h>

@@ -1,12 +1,25 @@
-#include <fiducial.h>
+#include <cmath>
+#include <chrono>
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuseless-cast"
+#pragma GCC diagnostic ignored "-Wshadow"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wconversion"
+#pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
+#pragma GCC diagnostic ignored "-Wreorder"
+#pragma GCC diagnostic ignored "-Wuseless-cast"
+#pragma GCC diagnostic ignored "-Wdangling-reference"
+
+#include <fmt/chrono.h>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
 
-#include <cmath>
-#include <chrono>
-#include <fmt/chrono.h>
+#pragma GCC diagnostic pop
 
 #include <constants.h>
+#include <fiducial.h>
+
 
 using namespace std;
 using namespace cv;

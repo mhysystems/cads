@@ -3,6 +3,8 @@
 #include <variant>
 #include <tuple>
 #include <string>
+#include <deque>
+#include <functional>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wuseless-cast"

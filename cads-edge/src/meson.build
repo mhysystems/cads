@@ -19,7 +19,8 @@ cadsSrc += files(
   'lua_interface.cpp',
   'sampling.cpp',
   'upload.cpp',
-  'utils.cpp'
+  'utils.cpp',
+  'vec_nan_free.cpp'
 )
 
 cadsEntry += files('main.cpp')

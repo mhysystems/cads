@@ -26,4 +26,5 @@ namespace cads
   void dumpstack (lua_State *L);
   std::array<size_t,2> minmin_element(const std::vector<double> & xs);
   std::vector<float> select_if(std::vector<float> a, std::vector<float> b, std::function<bool(float)> c);
+
 }

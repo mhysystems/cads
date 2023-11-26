@@ -7,7 +7,7 @@
 
 #include <GoSdk/GoSdkDef.h>
 
-#include <profile.h>
+#include <profile_t.h>
 #include <constants.h>
 #include <io.hpp>
 

@@ -10,69 +10,8 @@
 #include <regression.h>
 #include <constants.h>
 
-namespace cads
+namespace
 {
-
-  std::tuple<double, double> linear_regression(const z_type &yy, int left_edge_index, int right_edge_index) {
-    
-    namespace sr = std::ranges;
-    using namespace Eigen;
-
-    auto r = yy | sr::views::take(right_edge_index) | sr::views::drop(left_edge_index) | sr::views::filter([](float a)
-                                                                                                           { return !std::isnan(a); });
-
-    std::vector<double> yr(r.begin(), r.end());
-    auto y = Map<VectorXd>(yr.data(), yr.size());
-
-    MatrixXd A(y.size(),2);
-    A.setOnes();
-    A.col(1) = ArrayXd::LinSpaced(y.size(), 0, y.size()-1);
-    MatrixXd s = A.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(y); 
-    
-    return {s(0,0),s(1,0)};
-  }
-
-  std::tuple<double, double> linear_regression(const z_type &yy) {
-    return linear_regression(yy,0,yy.size());
-  }
-
-  void regression_compensate(z_type &z, int left_edge_index, int right_edge_index, double gradient)
-  {
-    namespace sr = std::ranges;
-    double i = 0;
-    auto f = z | sr::views::take(right_edge_index) | sr::views::drop(left_edge_index);
-    std::transform(f.begin(), f.end(), f.begin(), [gradient, i](z_element v) mutable -> z_element
-                   { return v != std::numeric_limits<z_element>::quiet_NaN() ? v - (gradient * i++) : std::numeric_limits<z_element>::quiet_NaN(); });
-  }
-
-
-  int correlation_lowest(float *a, size_t al, float *b, size_t bl)
-  {
-
-    using namespace Eigen;
-
-    auto va = Map<VectorXf>(a, al);
-    auto vb = Map<VectorXf>(b, bl);
-
-    auto bs = bl - 1;
-    auto ds = al - bl;
-    auto c = 0;
-    auto r = std::numeric_limits<float>::max();
-
-    for (size_t i = 0; i <= ds; ++i)
-    {
-      auto cr = std::abs((va(seq(i, i + bs)) - vb).sum());
-      if (cr < r)
-      {
-        r = cr;
-        c = i;
-      }
-    }
-
-    return c;
-  }
-
-
 void belt_model(Eigen::VectorXf &z, float height, float x_offset, float z_offset,const long width_n, const float x_res) {
     
     z.fill(z_offset);
@@ -87,8 +26,71 @@ void belt_model(Eigen::VectorXf &z, float height, float x_offset, float z_offset
       z(i) = height + z_offset;
     } 
   }
+}
 
-  
+namespace cads
+{
+
+  linear_params linear_regression(std::tuple<vector_NaN_free,vector_NaN_free> args) {
+    
+    namespace sr = std::ranges;
+    using namespace Eigen;
+    auto [yy,xx] = std::move(args);
+
+    auto vec = []()
+    {
+      if constexpr(std::is_same<decltype(vector_NaN_free::data)::value_type,float>::value)
+      {
+        return Eigen::Map<VectorXf>((float*)nullptr,size_t(0));
+      }else {
+        return Eigen::Map<VectorXd>((double*)nullptr,size_t(0));
+      }
+    };
+
+    auto mat = []()
+    {
+      if constexpr(std::is_same<decltype(vector_NaN_free::data)::value_type,float>::value)
+      {
+        return Eigen::MatrixXf();
+      }else {
+        return Eigen::MatrixXd();
+      }
+    };
+
+    auto y = decltype(vec())(yy.data.data(), yy.data.size());
+
+    decltype(mat()) A(y.size(),2);
+    A.setOnes();
+    A.col(1) = decltype(vec())(xx.data.data(),xx.data.size());
+    decltype(mat()) s = A.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(y); 
+    
+    return {.gradient = s(1,0),.intercept = s(0,0)};
+  }
+
+  void regression_compensate(z_type &z, int left_edge_index, int right_edge_index, double gradient)
+  {
+    namespace sr = std::ranges;
+    double i = 0;
+    auto f = z | sr::views::take(right_edge_index) | sr::views::drop(left_edge_index);
+    std::transform(f.begin(), f.end(), f.begin(), [gradient, i](z_element v) mutable -> z_element
+                   { return v != std::numeric_limits<z_element>::quiet_NaN() ? v - (gradient * i++) : std::numeric_limits<z_element>::quiet_NaN(); });
+  }
+
+  void regression_compensate(z_type& z, size_t left_edge_index, size_t right_edge_index, double gradient, double intercept)
+  {
+    namespace sr = std::ranges;
+    double i = double(left_edge_index);
+
+    std::transform(z.begin()+left_edge_index, z.begin()+right_edge_index, z.begin()+left_edge_index, [intercept, gradient, i](z_element v) mutable -> z_element
+                   { return v != std::numeric_limits<z_element>::quiet_NaN() ? v - ((gradient * i++) + intercept) : std::numeric_limits<z_element>::quiet_NaN(); });
+  }
+
+  void regression_compensate(z_type& z,double gradient, double intercept)
+  {
+    regression_compensate(z,0,z.size(),gradient,intercept);
+  }
+
+
   std::function<std::tuple<double,double,double>(z_type)>  mk_curvefitter(float init_height, float init_x_offset, float init_z_offset, const int width_n, const double x_res, const double z_res) {
     
     const auto belt_height = 0;

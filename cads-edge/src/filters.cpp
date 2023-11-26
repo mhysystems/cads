@@ -1,18 +1,12 @@
-#include <algorithm>
+#include <limits>
+#include <deque>
+#include <tuple>
 #include <ranges>
-
-#if 0 // Ubuntu version too old
-#include <gsl/gsl_math.h>
-#include <gsl/gsl_filter.h>
-#include <gsl/gsl_rng.h>
-#include <gsl/gsl_randist.h>
-#include <gsl/gsl_vector.h>
-#endif
 
 #include <Iir.h>
 
 #include <filters.h>
-#include <constants.h>
+
 
 
 namespace cads
@@ -43,17 +37,17 @@ namespace cads
     };
   }
 
-  std::function<std::tuple<bool, std::tuple<profile,int,int,int,z_type>>(std::tuple<profile,int,int,int,z_type>)> mk_delay(size_t len)
+  std::function<std::tuple<bool, std::tuple<profile,int,int,int,int>>(std::tuple<profile,int,int,int,int>)> mk_delay(size_t len)
   {
 
-    std::deque<std::tuple<profile,int,int,int,z_type>> delay;
-    return [=](std::tuple<profile,int,int,int,z_type> p) mutable
+    std::deque<std::tuple<profile,int,int,int,int>> delay;
+    return [=](std::tuple<profile,int,int,int,int> p) mutable
     {
       delay.push_back(p);
 
       if (delay.size() < len)
       {
-        return std::tuple{false, std::tuple<profile,int,int,int,z_type>()};
+        return std::tuple{false, std::tuple<profile,int,int,int,int>()};
       }
 
       auto rn = delay.front();
@@ -127,35 +121,6 @@ namespace cads
     };
   }
   
-#if 0
-  void gaussian(z_type& z) 
-  {
-    gsl_vector *x = ::gsl_vector_alloc(z.size());
-    gsl_vector *yv = ::gsl_vector_alloc(z.size());
-    gsl_filter_gaussian_workspace *gauss_p = ::gsl_filter_gaussian_alloc(51);
-
-    for(auto i=0; i < z.size(); i++) {
-      gsl_vector_set(x, i,z[i]);
-    }
-
-    ::gsl_filter_gaussian(GSL_FILTER_END_PADVALUE, 10.0, 0, x, yv, gauss_p);
-
-    for(auto i=0; i < z.size(); i++) {
-      //if(!std::isnan(z[i])) {
-        z[i] = gsl_vector_get(yv, i);
-      //}
-    }
-
-    gsl_vector_free(x);
-    gsl_vector_free(yv);
-    gsl_filter_gaussian_free(gauss_p);
-  }
-
-  z_type gaussian(z_type&& z) {
-    gaussian(z);
-    return z;
-  }
-#endif
 } // namespace cads
 
 

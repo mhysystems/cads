@@ -45,7 +45,9 @@ belt = {
 
 dbscan = {
   InClusterRadius = 12,
-  MinPoints = 20
+  MinPoints = 20,
+  MergeRadius = 3,
+  MaxClusters = 2
 }
 
 revolutionsensor = {
@@ -70,8 +72,8 @@ measures = {
 
 profileConfig = {
   Width = belt.Width,
-  NaNPercentage = 0.15,
-  ClipHeight = 35.0,
+  NaNPercentage = 1,
+  ClipHeight = 1000.0,
   PulleyEstimatorInit = -15.0,
   IIRFilter = iirfilter,
   PulleySamplesExtend = 10,
@@ -85,7 +87,8 @@ sqlitegocatorConfig = {
     Range = {0,99999999999999},
     Fps = gocatorFps,
     Forever = true,
-    Source = "../../profiles/rawprofile_cv311_2023-11-08.db",
+    --Source = "../../profiles/rawprofile_cv311_2023-11-08.db",
+    Source = "../../profiles/rawprofile_cv000_2023-11-20.db",
     TypicalSpeed = conveyor.TypicalSpeed,
     Sleep = false
   }

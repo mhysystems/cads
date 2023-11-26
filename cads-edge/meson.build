@@ -5,10 +5,10 @@ project('cads', ['c','cpp'],
 message('Host system type: ' + host_machine.system())
 
 add_project_arguments(
-#  '-Wextra',
+  '-Wextra',
 #  '-Wconversion',
 #  '-Wsign-conversion', #too many warnings related to size_t
-#  '-Wnull-dereference',
+  '-Wnull-dereference',
 #  '-Wuseless-cast',
 #  '-Wdouble-promotion',
 #  '-Wshadow',

@@ -7,6 +7,7 @@
 #include <numeric>
 #include <bit>
 #include <cassert>
+#include <iterator>
 
 #include <profile.h>
 #include <constants.h>
@@ -15,6 +16,7 @@
 #include <stats.hpp>
 #include <sampling.h>
 #include <filters.h>
+#include <utils.hpp>
 
 
 namespace 
@@ -32,104 +34,12 @@ namespace
     else return (x - s)*mf + s*f;
 
   }
-
-  auto distance(cads::zrange z) {
-    using namespace std;
-    auto d = 0;
-    
-    for(auto i = begin(z); i < end(z); ++i)
-    {
-      d += !std::isnan(*i);
-    }
-
-    return d;
-  }
-
-  // Return sequence of clustered z values and offset into profile
-  // Input is a slice of profile, hence tracking offset
-  cads::zrange cluster1D(cads::zrange z, cads::z_element max_diff)
-  {
-
-    using namespace std;
-
-    if (empty(z))
-    {
-      return {z,0};
-    }
-
-    auto i = begin(z);
-
-    for(;std::isnan(*i) && i < end(z); ++i);
-
-    auto s = i;
-
-    for(; i < end(z); ++i)
-    {
-      if(std::isnan(*i)) continue;
-      
-      cads::z_element sum = 0;
-      // sum 2nd order difference, skipping NaNs
-      auto j = i+1;
-      for(auto d = 0; j < end(z) && d < 2 && sum <= max_diff; ++j) {
-        if(std::isnan(*j)) continue;
-        sum += std::abs(*j - *i);
-        ++d;
-      }
-      
-      if( sum > max_diff )
-      { 
-        // Edge of belt will be an NaN
-        for(++i; !std::isnan(*i) && i < end(z); ++i);
-        break;
-      }
-    }
-
-    return {s,i};
-  }
-
-  void cluster_merge1D(cads::z_cluster& group, cads::zrange c, double in_cluster) 
-  {
-
-    if(group.size() < 1) {
-      group.push_back({c});
-      return;
-    }
-    
-    auto& x = group.back();
-    
-    if(std::abs(*c.begin() - *(x.end()-1)) < in_cluster ) {
-        x = {begin(x),end(c)};
-      
-    }else {
-      group.push_back({c});      
-    }
-
-  }
-
-  cads::z_cluster dbscan1D(cads::zrange z, cads::z_cluster &&group, cads::Dbscan config)
-  {
-    using namespace std;
-
-    auto a_cluster = cluster1D(z,config.InClusterRadius);
-    auto d = distance(a_cluster);
-
-    if( d > config.MinPoints) {
-      cluster_merge1D(group,a_cluster,config.InClusterRadius / 4);
-    }
-
-    if (end(a_cluster) < end(z))
-    {
-      group = dbscan1D({end(a_cluster), end(z)}, std::move(group),config);
-    }
-
-    return group;
-  }
 }
 
 
 namespace cads
 {
-  
+
   z_type profile_decimate(z_type z, size_t width)
   {
     if(z.size() < width) return z;
@@ -142,22 +52,6 @@ namespace cads
 
     z.erase(z.begin()+width,z.end());
     return z;
-  }
-  
-  std::string ClusterErrorToString(ClusterError error)
-  {
-    using namespace std::string_literals;
-    switch (error)
-    {
-    case ClusterError::NoClusters:
-      return "NoClusters"s;
-    case ClusterError::ExcessiveClusters:
-      return "ExcessiveClusters"s;
-    case ClusterError::ExcessiveNeigbours:
-      return "ExcessiveNeigbours"s;
-    default:
-      return "None"s;
-    }
   }
   
   std::tuple<z_element, z_element> find_minmax_z(const z_type &ps)
@@ -198,202 +92,6 @@ namespace cads
     return hist;
   }
 
-
-  auto mk_zrange(z_type &z) {
-    return zrange{z.begin(),z.end()};
-  }
-
-  auto mk_zrange(z_cluster &c) {
-    return zrange{c.front().begin(),c.back().end()};
-  }
-
-  double average_zrange(zrange r) {
-    
-    double size = 0;
-    double sum = 0;
-    
-    for(auto i = begin(r); i < end(r); ++i)
-    {
-      if(!std::isnan(*i)){
-        sum += *i;
-        size++;
-      };
-    }
-
-    return sum / size;
-  }
-
-  auto sumr(zrange r) {
-    
-    double size = 0;
-    double sum = 0;
-    
-    for(auto i = begin(r); i < end(r); ++i)
-    {
-      if(!std::isnan(*i)){
-        sum += *i;
-        size++;
-      };
-    }
-
-    return std::make_tuple(sum,size);
-  }
-
- 
-  auto average_cluster(const z_cluster& a) {
-    
-    double size = 0;
-    double sum = 0;
-    for(auto r : a) {
-      auto [s,l] = sumr(r);
-      sum += s;
-      size += l;
-    }
-
-    return sum / size;
-
-  }
-
-  auto construct_ztype(const z_cluster& zv) {
-    
-    if(zv.size() < 1) {
-      return z_type();
-    }
-    
-    z_type out;
-
-    for(auto r : zv) {
-      std::copy(begin(r),end(r),std::back_inserter(out));
-    }
-
-    return out;
-  }
-
-  auto construct_ztype(zrange zv) {
-    
-    if(zv.size() < 1) {
-      return z_type();
-    }
-    
-    z_type out;
-
-    std::copy(begin(zv),end(zv),std::back_inserter(out));
-
-    return out;
-  }
-
-  // Return sequence of clustered z values and offset into profile
-  // Input is a slice of profile, hence tracking offset
-  std::tuple<zrange,size_t> cluster(zrange z, z_element origin, z_element max_diff, z_element dis )
-  {
-
-    namespace sr = std::ranges;
-
-    if (empty(z))
-    {
-      return {z,0};
-    }
-
-    auto i = begin(z);
-    z_element e = *i;
-    size_t d = 0;
-    for(; i < end(z); ++i)
-    {
-      if(std::isnan(*i)) continue;
-
-      if(std::abs(*i - origin) < max_diff) {
-        e = *i;
-        ++d;
-      } 
-      else {
-        break;
-      }
-    }
-
-    if (d > dis)
-    {
-      auto [c,cd] = cluster({i,end(z)},e,max_diff,dis);
-      if(cd > 0) {
-        return {{begin(z),end(c)},d + cd};
-      }else{
-        return {{begin(z),i},d};
-      }
-    }else {
-      return {{i,i},0};
-    }
-  }
-  
-  
-  void cluster_merge(z_clusters& group, zrange c, double in_cluster) 
-  {
-
-    if(group.size() < 1) {
-      group.push_back({c});
-      return;
-    }
-    
-    auto c_avg =  average_zrange(c);
-
-    auto& x = group.back().back();
-    auto group_avg = average_zrange(x);
-    
-    if(std::abs(c_avg - group_avg) < in_cluster ) {
-        x = {begin(x),end(c)};
-      
-    }else {
-      group.push_back({c});      
-    }
-
-  }
-
-  z_clusters dbscan(zrange z, std::vector<z_cluster> &&group, Dbscan config)
-  {
-
-    auto [a,d] = cluster(z,*begin(z),config.InClusterRadius,config.MinPoints);
-
-    if(d > config.MinPoints) {
-      cluster_merge(group,a,config.InClusterRadius);
-    }
-
-    if (end(a) != end(z))
-    {
-      group = dbscan({end(a), end(z)}, std::move(group),config);
-    }
-
-    return group;
-  }
-
-  z_clusters dbscan(z_type &z, Dbscan config)
-  {
-    return dbscan(mk_zrange(z),{},config);
-
-  }
-
-  void recontruct_z(z_type & z,const z_clusters& group) {
-
-    auto i = z.begin();
-    for(const auto &g : group) {
-      
-      for(auto r : g) {
-
-        for(; i < begin(r); ++i) {
-          *i = std::numeric_limits<z_element>::quiet_NaN();
-        }
-        
-        auto re = std::bit_cast<z_type::iterator>(end(r));
-        nan_interpolation_last(i,re);
-        i = re;
-
-      }
-    }
-
-    for(;i < z.end();++i) {
-      *i = std::numeric_limits<z_element>::quiet_NaN();
-    }
-
-  }
-
-
   double average(z_type & v){
     if(v.empty()){
         return 0;
@@ -402,132 +100,6 @@ namespace cads
     auto const count = static_cast<float>(v.size());
     return std::reduce(v.begin(), v.end()) / count;
   }
-
-  std::vector<size_t> cluster_distance(z_type &z, z_type &zz, z_cluster l, z_cluster r) {
-    std::vector<size_t> rtn;
-    
-    for(auto range : l) {
-      rtn.push_back(zz.size() - std::distance(zz.begin(),std::end(range)));
-    }
-
-    for(auto range : r) {
-      rtn.push_back(std::distance(z.begin(),std::end(range)));
-    }
-
-    return rtn;
-  }
-
-  std::tuple<double,double,size_t,size_t,ClusterError> pulley_levels_clustered2(z_type &z, Dbscan config, std::function<double(const z_type &)> estimator )
-  {
-    auto partition = (size_t)std::floor(z.size() / 2);
-
-    z_type rz(z.rbegin() + partition, z.rend());
-    auto clusters_left = dbscan1D(zrange{rz.begin(),rz.end()},{},config);
-    auto clusters_right = dbscan1D(zrange{z.begin()+partition,z.end()},{},config);
-
-    auto avg_l = 0.0;
-    auto avg_r = 0.0;
-    size_t left_edge = 0;
-    size_t right_edge = z.size();
-    ClusterError error = ClusterError::None;
-
-    if(clusters_left.size() < 1 || clusters_right.size() < 1 )
-    {
-      error = ClusterError::NoClusters;
-      return {avg_l,avg_r,left_edge,right_edge,error};
-    }
-    
-    left_edge = rz.size() - std::distance(rz.begin(),std::end(clusters_left[0]));
-    right_edge = std::distance(z.begin(),std::end(clusters_right[0]));    
-    
-    if(clusters_left.size() == 1 && clusters_right.size() == 1 )
-    {
-      error = ClusterError::NoPulleyFound;
-    }else if(clusters_left.size() == 1 && clusters_right.size() > 1 )
-    {
-      avg_r = estimator(construct_ztype(clusters_right[1]));
-      error = ClusterError::RightPulleyOnly;
-    }else if(clusters_left.size() > 1 && clusters_right.size() == 1 )
-    {
-      avg_l = estimator(construct_ztype(clusters_left[1]));
-      error = ClusterError::LeftPulleyOnly;
-    }else
-    {
-      avg_r = estimator(construct_ztype(clusters_right[1]));
-      avg_l = estimator(construct_ztype(clusters_left[1]));
-    }
-
-    return {avg_l,avg_r,left_edge,right_edge,error};
-
-  }
-
-  std::tuple<double,double,size_t,size_t,ClusterError> pulley_levels_clustered(z_type &z, Dbscan config, std::function<double(const z_type &)> estimator )
-  {
- 
-    auto clusters = dbscan(z,config);
-
-#if 0
-    for(auto c : clusters) {
-      auto a = std::distance(z.begin(),c.front().begin());
-      auto b = std::distance(z.begin(),c.back().end());
-      auto bb = a;
-    }
-#endif
-
-    auto avg_l = 0.0;
-    auto avg_r = 0.0;
-    size_t left_edge = 0;
-    size_t right_edge = z.size();
-    ClusterError error = ClusterError::None;
-
-    if(clusters.size() < 2) {
-      error = ClusterError::NoClusters;
-    }else if(clusters.size() == 2) {
-      // Only one side of pulley detected.
-      // Check heights. Assumes belt is higher than pulley.
-      // Pulley found on left of belt if index is 1 else right
-      auto pulley = (*begin(clusters[0][0]) < *begin(clusters[1][0])) ? 0 : 1;
-      auto belt = -1*pulley + 1;
-
-      auto b = mk_zrange(clusters[pulley]);
-      auto avg = estimator(construct_ztype(b));
-      avg_l = avg;
-      avg_r = avg;
- 
-      left_edge = std::distance(z.begin(),clusters[belt].front().begin());
-      right_edge = std::distance(z.begin(),clusters[belt].back().end());
-
-      if(clusters[pulley].size() > 1) {
-        error = ClusterError::ExcessiveNeigbours;
-      }
-
-    }else if(clusters.size() == 3){
-
-      auto size = clusters[1].size();
-      left_edge = std::distance(z.begin(),clusters[1].front().begin());
-      right_edge = std::distance(z.begin(),clusters[1].back().end());
-      
-      avg_l = estimator(construct_ztype(mk_zrange(clusters.front())));
-      avg_r = estimator(construct_ztype(mk_zrange(clusters.back())));
-
-      if(size > 1) {
-        error = ClusterError::ExcessiveNeigbours;
-      }
-
-    }else {
-      error = ClusterError::ExcessiveClusters;
-
-      auto cluster_size = clusters.size();
-
-      left_edge = std::distance(z.begin(),clusters[1].front().end());
-      right_edge = std::distance(z.begin(),clusters[cluster_size - 2].back().end());
-      avg_l = estimator(construct_ztype(mk_zrange(clusters.front())));
-      avg_r = estimator(construct_ztype(mk_zrange(clusters.back())));
-    }
-    
-    return {avg_l,avg_r,left_edge,right_edge,error};
-  }
-
 
   bool operator==(const profile &a, const profile &b)
   {
@@ -548,17 +120,99 @@ namespace cads
     return {left, right.base()};
   }
 
-  void constraint_substitute(z_type &z, z_element z_min, z_element z_max, z_element sub)
+/*
+  coro<cads::msg,cads::msg,1> profile_alignment_coro(long long widthn, long long modulo, cads::Io<msg> &next)
   {
-    for (auto &e : z)
-    {
-      if (!std::isnan(e))
+    cads::msg empty;
+    GocatorProperties gp;
+
+    for(long cnt = 0;;cnt++){
+      
+      auto [msg,terminate] = co_yield empty;  
+      
+      if(terminate) break;
+
+      switch(std::get<0>(msg))
       {
-        if (e < z_min || e > z_max)
-        {
-          e = sub;
+        
+        case msgid::scan: {
+
         }
+        break;
+        default:
+          next.enqueue(msg);
       }
     }
+  }  
+*/
+
+  z_type x_pos_skipNaN(const z_type &z, std::tuple<size_t,size_t> range)
+  {
+    if(z.size() < 1) {
+      return z_type();
+    }
+    
+    z_type rtn;
+
+    for(size_t i = std::get<0>(range); i < std::get<1>(range);++i) {
+      if(!std::isnan(z[i])) rtn.push_back(float(i));
+    } 
+
+    return rtn;
   }
+
+  std::tuple<vector_NaN_free,vector_NaN_free> 
+  extract_pulley_coords(const z_type &z, ConveyorProfile conveyor)
+  {
+    
+    return {
+      vector_NaN_free(conveyor.contains(ProfileSection::Left) ? 
+        z_type(z.begin()+std::get<0>(conveyor[ProfileSection::Left]),z.begin()+std::get<1>(conveyor[ProfileSection::Left])) 
+        : z_type())
+      + 
+      vector_NaN_free(conveyor.contains(ProfileSection::Right) ? 
+        z_type(z.begin()+std::get<0>(conveyor[ProfileSection::Right]),z.begin()+std::get<1>(conveyor[ProfileSection::Right])) 
+        : z_type()),
+
+      vector_NaN_free(conveyor.contains(ProfileSection::Left) ?  x_pos_skipNaN(z,conveyor[ProfileSection::Left]) : z_type())
+      + vector_NaN_free(conveyor.contains(ProfileSection::Right) ?  x_pos_skipNaN(z,conveyor[ProfileSection::Right]) : z_type())
+    };
+
+  }
+
+  ConveyorProfile conveyor_profile_detection(const z_type &z, Dbscan config)
+  {
+    ConveyorProfile rtn = {};
+    
+    auto partition = (size_t)std::floor(z.size() / 2);
+
+    z_type rz(z.rbegin() + partition, z.rend());
+    auto clusters_left = dbscan(zrange{rz.begin(),rz.end()},config);
+    auto clusters_right = dbscan(zrange{z.begin()+partition,z.end()},config);
+
+    if(clusters_left.size() > 0 && clusters_right.size() > 0 )
+    {
+      auto left_edge = rz.size() - std::distance(rz.cbegin(),std::end(clusters_left[0]));
+      auto right_edge = std::distance(z.cbegin(),std::end(clusters_right[0]));  
+      rtn.insert({ProfileSection::Belt,{left_edge,right_edge}});
+    }
+
+    if(clusters_left.size() > 1 && clusters_right.size() > 0 )
+    {
+      auto left_edge = rz.size() - std::distance(rz.cbegin(),std::end(clusters_left[1]));
+      auto right_edge = rz.size() - std::distance(rz.cbegin(),std::begin(clusters_left[1]));
+      rtn.insert({ProfileSection::Left,{left_edge,right_edge}});
+    }
+
+    if(clusters_left.size() > 0 && clusters_right.size() > 1 )
+    {
+      auto left_edge = std::distance(z.cbegin(),std::begin(clusters_right[1]));  
+      auto right_edge = std::distance(z.cbegin(),std::end(clusters_right[1]));  
+      rtn.insert({ProfileSection::Right,{left_edge,right_edge}});
+    }
+
+    return rtn;
+  }
+
+
 } // namespace cads

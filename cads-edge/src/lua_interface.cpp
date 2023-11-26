@@ -475,7 +475,31 @@ namespace
       return std::nullopt;
     }
 
-    return cads::Dbscan{*InClusterRadius_opt,*MinPoints_opt};
+    if (lua_getfield(L, index, "MergeRadius") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"MergeRadius");
+      return std::nullopt;
+    }
+
+    auto MergeRadius_opt = tonumber(L, -1);
+    lua_pop(L, 1);
+
+    if (lua_getfield(L, index, "MaxClusters") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"MaxClusters");
+      return std::nullopt;
+    }
+
+    auto MaxClusters_opt = tointeger(L, -1);
+    lua_pop(L, 1);
+
+    if (!MaxClusters_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'MaxClusters not a number' }}", __func__);
+      return std::nullopt;
+    }
+
+    return cads::Dbscan{*InClusterRadius_opt,*MinPoints_opt,*MergeRadius_opt,*MaxClusters_opt};
   }
 
   std::optional<cads::Fiducial> tofiducial(lua_State *L, int index)

@@ -27,6 +27,7 @@ namespace {
 
 namespace cads
 {
+
   msgid i_msgid(int i) {
     switch(i) {
       case 0 : return msgid::gocator_properties;

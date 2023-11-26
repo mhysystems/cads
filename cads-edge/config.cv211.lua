@@ -46,7 +46,9 @@ belt = {
 
 dbscan = {
   InClusterRadius = 12,
-  MinPoints = 20
+  MinPoints = 20,
+  MergeRadius = 3,
+  MaxClusters = 2
 }
 
 revolutionsensor = {

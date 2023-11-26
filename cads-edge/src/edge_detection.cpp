@@ -1,118 +1,101 @@
+#include <cmath>
+#include <tuple>
+
 #include <edge_detection.h>
-#include <algorithm>
-#include <limits>
-#include <constants.h>
-#include <ranges>
+
+namespace 
+{
+  // Return sequence of clustered z values and offset into profile
+  // Input is a slice of profile, hence tracking offset
+  std::tuple<cads::zrange,size_t> cluster1D(cads::zrange z, cads::z_element max_diff)
+  {
+
+    using namespace std;
+
+    if (empty(z))
+    {
+      return {z,0};
+    }
+
+    auto i = begin(z);
+
+    for(;std::isnan(*i) && i < end(z); ++i);
+
+    auto s = i;
+    size_t cnt = 0;
+
+    for(; i < end(z); ++i)
+    {
+      if(std::isnan(*i)) continue;
+      
+      cads::z_element sum = 0;
+      // sum 2nd order difference, skipping NaNs
+      auto j = i+1;
+      for(auto d = 0; j < end(z) && d < 2 && sum <= max_diff; ++j) {
+        if(std::isnan(*j)) continue;
+        sum += std::abs(*j - *i);
+        ++d;
+      }
+      
+      if( sum > max_diff )
+      { 
+        // Edge of belt will be an NaN
+        for(++i; !std::isnan(*i) && i < end(z); ++i);
+        break;
+      }
+
+      cnt++;
+    }
+
+    return {{s,i},cnt};
+  }
+
+  void cluster_merge1D(cads::z_cluster& group, cads::zrange c, const double in_cluster) 
+  {
+
+    if(group.size() < 1) {
+      group.push_back({c});
+      return;
+    }
+    
+    auto& x = group.back();
+    
+    if(std::abs(*c.begin() - *(x.end()-1)) < in_cluster ) {
+        x = {begin(x),end(c)};
+      
+    }else {
+      group.push_back({c});      
+    }
+
+  }
+
+  cads::z_cluster dbscan1D(cads::zrange z, cads::z_cluster &&group, const cads::Dbscan config)
+  {
+    using namespace std;
+    auto a_cluster = z;
+    size_t cnt = 0;
+    do {
+      std::tie(a_cluster,cnt) = cluster1D(z,config.InClusterRadius);
+
+      if( cnt > config.MinPoints) {
+        cluster_merge1D(group,a_cluster,config.MergeRadius);
+      }
+
+      z = {end(a_cluster), end(z)};
+
+    }while(end(a_cluster) < end(z) && group.size() <= config.MaxClusters);
+
+    return group;
+  }
+
+}
 
 
 namespace cads 
 {
-
-template<typename T> int edge(T s, T e,int len);
-
-template<typename T> int belt(T s, T e,int len) {
-
-  namespace sr = std::ranges;
-
-  auto r = sr::find_if(s,e,[](z_element z) {return std::isnan(z);} );
-  auto d = sr::distance(s,r);
-  if(r == e) return d;
-  else return d + edge(r,e,len);
-
-}
-
-template<typename T> int edge(T s, T e,int len) {
-
-  namespace sr = std::ranges;
-
-  auto r = sr::find_if(s,e,[](z_element z) {return !std::isnan(z);} );
-  auto d = sr::distance(s,r);
-
-  if(r == e) {
-    return 0;
+  z_cluster dbscan(cads::zrange z, const cads::Dbscan config)
+  {
+    return ::dbscan1D({std::begin(z),std::end(z)},{},config);
   }
-  else if(d >= len) {
-    return d;
-  }
-  else{
-    auto window_len = s + len > e ? sr::distance(s,e) : len;
-    auto nan_count = (double)sr::count_if(s,s + window_len, [](z_element e) {return std::isnan(e);});
-    if(nan_count / window_len > 0.9) return 0;
-    else return d + belt(r,e,len);
-  }
-
-}
-
-
-std::tuple<int,int> find_profile_edges_nans(const z_type& z, int len) {
-
-  auto mid = int(z.size() / 2);
-  auto r = mid + belt(z.begin()+mid,z.end(),len) - 1;
-  auto l = z.size() - mid - belt(z.rbegin() + mid ,z.rend(),len);
-  return std::tuple<int,int>{l, r};
-}
-
-std::tuple<int,int> find_profile_edges_zero(const z_type& z) {
-
-  auto mid = int(z.size() / 2);
-  auto r  = mid + std::count_if(z.begin()+mid, z.end(), [](auto e) {return e > 0;});
-  auto l = z.size() - mid - std::count_if(z.rbegin() + mid ,z.rend(),[](auto e) {return e > 0;});
-  return std::tuple<int,int>{l, r};
-}
-
-
-std::tuple<int,int> find_profile_edges_nans_outer(const z_type& z, int len) {
-  
-  auto l = belt(z.begin(),z.end(),len) ;
-  auto cl = std::find_if(z.begin()+l,z.end(),[](z_element z) {return !std::isnan(z);});
-  l = std::distance(z.begin(),cl);
-
-  if(l >= (int)z.size() / 2) {
-    l = 0;
-  }
-
-  auto r = belt(z.rbegin(),z.rend(),len);
-  auto rl = std::find_if(z.rbegin()+r,z.rend(),[](z_element z) {return !std::isnan(z);});
-  r = z.size() - std::distance(z.rbegin(),rl);
-  
-  if(r >= (int)z.size()) {
-    r = z.size();
-  }
-
-  return std::tuple<int,int>{l, r};
-}
-
-
-std::tuple<int,int> find_profile_edges_sobel(const z_type& z, int len) {
-
-  std::vector<double> win(len*2 + 1,0.0);
-  std::fill(win.begin(),win.begin()+len,-1.0);
-  std::fill(win.rbegin(),win.rbegin()+len,1.0);
-	
-  auto min = std::numeric_limits<double>::max();
-	auto max = std::numeric_limits<double>::lowest();
-  int left = 0; // Left edge of belt
-  int right = 0; // Right edge of belt
-
-  for(int i = 0; i < (int)(z.size() - win.size()); i++) {
-
-    double sum = 0.0;
-    for(int j = 0; j < (int)win.size(); j++) {
-      sum += win[j] * z[i+j];
-    }
-
-    if(sum > max) {
-      max = sum;
-      left = i+len; 
-    }
-    
-    if(sum < min) {
-      min = sum;
-      right = i+len; 
-    }
-  }
-  
-  return std::tuple<int,int>{left, right};
-}
 
 } // namespace cads

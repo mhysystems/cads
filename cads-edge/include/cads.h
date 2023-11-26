@@ -1,13 +1,14 @@
 #pragma once
 
 #include <string>
-#include <memory>
 
-#include <gocator_reader_base.h>
 #include <msg.h>
 #include <io.hpp>
 #include <filters.h>
 #include <coro.hpp>
+
+#include <edge_detection.h>
+#include <constants.h>
 
 namespace cads
 {
@@ -38,8 +39,24 @@ namespace cads
   void stop_gocator();
   void process_profile(ProfileConfig, Io<msg>& gocatorFifo, Io<msg>& next);
   void process_identity(Io<msg>& gocatorFifo, Io<msg>& next);
-  cads::coro<cads::msg,cads::msg,1> profile_decimation_coro(long long, long long, cads::Io<msg> &next);
+
   coro<cads::msg,cads::msg,1> pulley_values_coro(Dbscan config, double init, bool left, cads::Io<msg> &next);
   msg prs_to_scan(msg);
   std::tuple<std::string,std::string,std::string> caasMsg(std::string sub,std::string head, std::string data);
+
+
+
+
+  /** @brief Decimates the number z samples for the Caas alignment screen.
+
+  @note Subsamples the profile to fit required number of samples.
+
+  @param width_n vector of samples representing a profile
+  @param modulo blah
+  @return set of pointer pairs pointing into z.
+
+  */
+
+  cads::coro<cads::msg,cads::msg,1> profile_decimation_coro(long long, long long, cads::Io<msg> &next);
+
 }

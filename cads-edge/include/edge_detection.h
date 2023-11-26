@@ -1,40 +1,29 @@
 #pragma once
 
-#include <profile.h>
-#include <tuple>
-#include <constants.h>
+#include <profile_t.h>
 
 namespace cads 
 {
-  /** @brief Searches for belt edge using NaN.
 
-  Uses the fact the greatest consecutive sequence of NaNs are generally found at the edge of the belt.
-  Starts from the middile of the profile and searches outwards.
+  struct Dbscan {
+    double InClusterRadius;
+    size_t MinPoints;
+    double MergeRadius;
+    size_t MaxClusters;
+  };
 
-  @note Profile needs to be filtered of spikes and is not reliable with noisy data as NaNs appear though the belt.
 
-  @param z vector of samples representing a profile
-  @param len Number of consecutive NaN
-  @return Left and Right index of an edge in z
+  /** @brief Searches for belt edge using dbScan clustering.
 
-  */
-  std::tuple<int,int> find_profile_edges_nans(const z_type& z, int len);
-
-  /** @brief Searches for belt edge using NaN.
-
-  Like find_profile_edges_nans() but starts from the boundaries.
+  aaa
 
   @note Profile needs to be filtered of spikes and is not reliable with noisy data as NaNs appear though the belt.
 
   @param z vector of samples representing a profile
-  @param len Number of consecutive NaN
-  @return Left and Right index of an edge in z
+  @param config DbScan configuration
+  @return set of pointer pairs pointing into z.
 
   */
-  std::tuple<int,int> find_profile_edges_nans_outer(const z_type& z, int len );
-
-  std::tuple<int,int> find_profile_edges_sobel(const z_type& z, int len);
-
-  std::tuple<int,int> find_profile_edges_zero(const z_type& z);
+  z_cluster dbscan(cads::zrange z, const cads::Dbscan config);
 
 } // namespace cads

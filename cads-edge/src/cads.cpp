@@ -4,6 +4,7 @@
 #include <tuple>
 #include <thread>
 #include <algorithm>
+#include <unordered_map>
 
 #include <spdlog/spdlog.h>
 #include <lua_script.h>
@@ -28,6 +29,10 @@ using namespace std::chrono;
 
 namespace cads
 {
+  
+
+
+
 
 msg prs_to_scan(msg m)
 {
@@ -61,7 +66,7 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io<msg> &ne
         
         case msgid::scan: {
           auto p = std::get<profile>(std::get<1>(msg));
-          auto [pulley_level, pulley_right, ll, lr, cerror] = pulley_levels_clustered(p.z, dbscan,pulley_estimator);    
+          //auto [pulley_level, pulley_right, ll, lr, cerror] = pulley_levels_clustered(p.z, dbscan,pulley_estimator);    
           //next.enqueue({msgid::caas_msg,cads::CaasMsg{"profile",profile_as_flatbufferstring(p,z_resolution,z_offset)}});
 
         }
@@ -91,7 +96,7 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io<msg> &ne
           pulley_estimator = mk_pulleyfitter(p.zResolution, init);
         }
         break;
-        case msgid::scan: {
+        case msgid::scan: {/*
           auto p = std::get<profile>(std::get<1>(msg));
           auto [pulley_level, pulley_right, ll, lr, cerror] = pulley_levels_clustered(p.z, config, pulley_estimator);
 
@@ -112,7 +117,7 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io<msg> &ne
             p.z = cads::z_type{p.z.begin()+lr,p.z.end()};
           }
 
-          next.enqueue({msgid::scan,p});
+          next.enqueue({msgid::scan,p});*/
         }
         break;
         default:
@@ -226,9 +231,10 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io<msg> &ne
 
     next.enqueue(m);
 
-    auto iirfilter_left = mk_iirfilterSoS(config.IIRFilter.sos);
-    auto iirfilter_right = mk_iirfilterSoS(config.IIRFilter.sos);
+    auto iirfilter_pulley_left = mk_iirfilterSoS(config.IIRFilter.sos);
+    auto iirfilter_pulley_right = mk_iirfilterSoS(config.IIRFilter.sos);
     auto iirfilter_left_edge = mk_iirfilterSoS(config.IIRFilter.sos);
+    auto iirfilter_right_edge = mk_iirfilterSoS(config.IIRFilter.sos);
 
     auto delay = mk_delay(config.IIRFilter.delay);
 
@@ -294,48 +300,26 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io<msg> &ne
       auto iy = p.y;
       auto ix = p.x_off;
       auto iz = p.z;
+/*
+      auto g = conveyor_profile_detection(iz,config.dbscan);
+      auto ggg = extract_pulley_coords(iz,g);
+      auto kj = linear_regression(std::move(ggg));
+      regression_compensate(iz,kj.gradient);
 
-      //auto [pulley_level, pulley_right, ll, lr, cerror] = pulley_levels_clustered(iz, config.dbscan,pulley_estimator);
-      auto [pulley_level, pulley_right, ll, lr, cerror] = pulley_levels_clustered2(iz, config.dbscan,pulley_estimator);
 
-      if (cerror != ClusterError::None)
-      {
-        spdlog::get("cads")->debug("Clustering error : {}", ClusterErrorToString(cerror));
-        // store_errored_profile(p.z,ClusterErrorToString(cerror));
-      }
-
-      if(cerror == ClusterError::NoPulleyFound) 
-      {
-        next.enqueue({msgid::finished,0});
-      }
-      
-      if(cerror == ClusterError::LeftPulleyOnly) {
-        auto avg_left = average_zrange(zrange{iz.begin()+ll,iz.begin()+ll+config.dbscan.MinPoints}); 
-        auto avg_right = average_zrange(zrange{iz.begin()+lr-config.dbscan.MinPoints,iz.begin()+lr}); 
-        pulley_right = avg_right - (avg_left - pulley_level);
-      }
-
-      if(cerror == ClusterError::RightPulleyOnly) {
-        auto avg_left = average_zrange(zrange{iz.begin()+ll,iz.begin()+ll+config.dbscan.MinPoints}); 
-        auto avg_right = average_zrange(zrange{iz.begin()+lr-config.dbscan.MinPoints,iz.begin()+lr}); 
-        pulley_level = avg_left - (avg_right - pulley_right);
-      }
-
-      iz.insert(iz.begin(), filter_window_len, (float)pulley_level);
+      iz.insert(iz.begin(), filter_window_len, (float)pulley_left);
       iz.insert(iz.end(), filter_window_len, (float)pulley_right);
       ll += filter_window_len;
       lr += filter_window_len;
 
-      std::fill(iz.begin(), iz.begin() + ll, pulley_level);
+      std::fill(iz.begin(), iz.begin() + ll, pulley_left);
       std::fill(iz.begin() + lr, iz.end(), pulley_right);
 
-    //  auto z_nan_removed = iz | views::filter([](float a){ return !std::isnan(a); });
-    //  auto bb = select_if(iz,interpolate_to_widthn({z_nan_removed.begin(),z_nan_removed.end()},iz.size()),[](float a){ return std::isnan(a); });
-    //  iz = bb;
 
-      auto pulley_level_filtered = (z_element)iirfilter_left(pulley_level);
-      auto pulley_right_filtered = (z_element)iirfilter_right(pulley_right);
+      auto pulley_left_filtered = (z_element)iirfilter_pulley_left(pulley_left);
+      auto pulley_right_filtered = (z_element)iirfilter_pulley_right(pulley_right);
       auto left_edge_filtered = (z_element)iirfilter_left_edge(ll);
+      auto right_edge_filtered = (z_element)iirfilter_right_edge(lr);
 
       // Required for iirfilter stabilisation
       if (drop_profiles > 0)
@@ -345,29 +329,29 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io<msg> &ne
       }
 
       if(config.measureConfig.Enable) {
-        next.enqueue({msgid::measure,Measure::MeasureMsg{"pulleylevel",0,date::utc_clock::now(),pulley_level_filtered}});
+        next.enqueue({msgid::measure,Measure::MeasureMsg{"pulleylevel",0,date::utc_clock::now(),pulley_left_filtered}});
         next.enqueue({msgid::measure,Measure::MeasureMsg{"beltedgeposition",0,date::utc_clock::now(),double(ix + left_edge_filtered * x_resolution)}});
       }
 
-      auto pulley_level_unbias = dc_filter(pulley_level_filtered);
+      auto pulley_level_unbias = dc_filter(pulley_left_filtered);
 
-      auto [delayed, dd] = delay({{p.time,iy,ix,iz}, (int)left_edge_filtered, (int)ll, (int)lr, p.z});
+      auto [delayed, dd] = delay({{p.time,iy,ix,iz}, (int)left_edge_filtered, (int)ll, (int)lr, (int)right_edge_filtered});
 
       if (!delayed)
         continue;
 
-      auto [delayed_profile, left_edge_index_avg, left_edge_index, right_edge_index, raw_z] = dd;
+      auto [delayed_profile, left_edge_index_avg, left_edge_index, right_edge_index, right_edge_index_avg] = dd;
       auto y = delayed_profile.y;
       auto x = delayed_profile.x_off;
       auto z = delayed_profile.z;
 
-      auto gradient = (pulley_right_filtered - pulley_level_filtered) / double(right_edge_index - left_edge_index);
-      regression_compensate(z, left_edge_index, z.size(), gradient);
+      auto gradient = (pulley_right_filtered - pulley_left_filtered) / double(right_edge_index - left_edge_index);
+      //regression_compensate(z, left_edge_index, z.size(), gradient);
 
       PulleyRevolution ps;
       if (config.RevolutionSensor.source == RevolutionSensorConfig::Source::height_raw)
       {
-        ps = pulley_rev(pulley_level);
+        ps = pulley_rev(pulley_left_filtered);
       }
       else if(config.RevolutionSensor.source == RevolutionSensorConfig::Source::length) 
       {
@@ -392,23 +376,23 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io<msg> &ne
         next.enqueue({msgid::measure,Measure::MeasureMsg{"pulleyoscillation",0,date::utc_clock::now(),amplitude}});
       }
 
-      pulley_level_compensate(z, -pulley_level_filtered, clip_height);
-      
-      auto left_edge_index_aligned = left_edge_index_avg;
-      auto right_edge_index_aligned = right_edge_index;
-
-      if (z.size() < size_t(left_edge_index_aligned + width_n))
-      {
+      pulley_level_compensate(z, -pulley_left_filtered, clip_height);
+      */
+      //if (z.size() < size_t(left_edge_index_aligned + width_n))
+      //{
         // spdlog::get("cads")->debug("Belt width({})[la - {}, l- {}, r - {}] less than required. Filled with zeros",z.size(),left_edge_index_aligned,left_edge_index,right_edge_index);
         // store_errored_profile(raw_z);
-        const auto cnt = left_edge_index_aligned + width_n - z.size();
-        z.insert(z.end(), cnt, 0.0);
-      }
+      //  const auto cnt = left_edge_index_aligned + width_n - z.size();
+      //  z.insert(z.end(), cnt, 0.0);
+     // }
       
-      auto z_zero_removed = z | views::filter([](float a){ return a != 0;});
-      auto f = select_if({z.begin()+left_edge_index_aligned,z.begin()+left_edge_index_aligned+width_n},interpolate_to_widthn({z_zero_removed.begin(),z_zero_removed.end()},width_n),[](float a){ return a == 0;});
+      //auto z_zero_removed = z | views::filter([](float a){ return a != 0;});
+      //auto z_zero_removedd = z_type{z_zero_removed.begin(),z_zero_removed.end()};
+      //auto from = z_type{z.begin()+left_edge_index_avg,z.begin()+right_edge_index_avg};
+      //auto qaz = interpolate_to_widthn(from,width_n);
+      //auto f = select_if(from,qaz,[](float a){ return a == 0;});
 
-      next.enqueue({msgid::pulley_revolution_scan,PulleyRevolutionScan{std::get<0>(ps),std::get<1>(ps), cads::profile{delayed_profile.time,y, x + left_edge_index_aligned * x_resolution, {f.begin(), f.end()}}}});
+      //next.enqueue({msgid::pulley_revolution_scan,PulleyRevolutionScan{std::get<0>(ps),std::get<1>(ps), cads::profile{delayed_profile.time,y, x + left_edge_index_avg * x_resolution, {f.begin(), f.end()}}}});
 
     } while (std::get<0>(m) != msgid::finished);
 

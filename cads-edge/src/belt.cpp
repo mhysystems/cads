@@ -9,7 +9,7 @@
 #include <belt.h>
 #include <filters.h>
 #include <constants.h>
-#include <profile.h>
+#include <profile_t.h>
 #include <regression.h>
 #include <edge_detection.h>
 #include <utils.hpp>
@@ -283,31 +283,4 @@ std::function<PulleyRevolution(double)>
       return {speed * (cnt > 1 ? speed_mask: 1.0), frequency, amplitude};
     };
   }
-
-  std::function<int(z_type &, int, int)> mk_profiles_align(int width_n)
-  {
-    namespace sr = std::ranges;
-
-    z_type prev_z;
-
-    return [=](z_type &z, int left_edge_index, int right_edge_index) mutable
-    {
-      if (prev_z.size() != 0)
-      {
-
-        auto dbg = correlation_lowest(prev_z, z | sr::views::take(right_edge_index) | sr::views::drop(left_edge_index));
-        left_edge_index -= dbg;
-        auto f = z | sr::views::take(left_edge_index + width_n) | sr::views::drop(left_edge_index);
-        prev_z = {f.begin(), f.end()};
-        return left_edge_index;
-      }
-      else
-      {
-        auto f = z | sr::views::take(left_edge_index + width_n) | sr::views::drop(left_edge_index);
-        prev_z = {f.begin(), f.end()};
-        return left_edge_index;
-      }
-    };
-  }
-
 }
