@@ -17,6 +17,7 @@ var connectionString = builder.Configuration.GetSection("webgui").GetValue<strin
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddSignalR();
+builder.Services.AddHttpContextAccessor(); // To get Authelia session cookies
 
 builder.Services.AddDbContextFactory<SQLiteDBContext>(options =>
   options.UseSqlite(connectionString)

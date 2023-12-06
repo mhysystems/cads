@@ -4,6 +4,7 @@
 @inject BeltService beltservice
 @inject NavigationManager NavigationManager
 @inject IOptions<AppSettings> _appsettings
+@inject IHttpContextAccessor _httpContext
 
 @implements IAsyncDisposable
 
@@ -88,16 +89,24 @@
             }
         }
         
-        if(string.IsNullOrWhiteSpace(_appsettings.Value.Authorization))
-        {
-          hubConnection = new HubConnectionBuilder()
-          .WithUrl(NavigationManager.ToAbsoluteUri("/realtime"))
+        hubConnection = new HubConnectionBuilder()
+          .WithUrl(NavigationManager.ToAbsoluteUri("/realtime"), options => 
+            {
+              var cookies = _httpContext?.HttpContext?.Request.Cookies;
+              if(cookies is not null)
+              {
+                foreach(var c in cookies )
+                {
+                  var uri = new UriBuilder(NavigationManager.Uri);
+                  options.Cookies.Add(new System.Net.Cookie(c.Key,c.Value)
+                  {
+                    Domain = uri.Host
+                  });
+                }
+              }
+            })
           .Build();
-        } else {
-          hubConnection = new HubConnectionBuilder()
-            .WithUrl(NavigationManager.ToAbsoluteUri("/realtime"), options => {options.Headers.Add("authorization",_appsettings.Value.Authorization);})
-            .Build();
-        }
+
 
         hubConnection.On<MeasureMsg>("ReceiveMessage", (message) =>
         {

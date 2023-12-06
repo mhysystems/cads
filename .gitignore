@@ -34,3 +34,4 @@ caas-gui/CadsFlatbuffers/*.*
 !cads-gui/wwwroot/cads-gui.lib.module.js
 scripts/__pycache__
 scripts/CadsFlatbuffers/__pycache__
+cads-gui/Caddyfile

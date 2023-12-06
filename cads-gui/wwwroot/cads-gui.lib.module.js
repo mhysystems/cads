@@ -10,8 +10,3 @@ export function getBoundingClientRect(element) {
   const o = element.getBoundingClientRect();
   return {x:o.left, y:o.top, right:o.right, bottom:o.bottom};
 }
-
-export function getBoundingClientRect2(elementId) {
-  const o = document.querySelector(elementId).getBoundingClientRect();
-  return {x:o.left, y:o.top, right:o.right, bottom:o.bottom};
-}

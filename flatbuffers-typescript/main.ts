@@ -1,3 +1,4 @@
+export * from './cads-flatbuffers/plot-data'
 export * from './cads-flatbuffers/caas-profile'
 export * from './cads-flatbuffers/msg-contents'
 export * from './cads-flatbuffers/msg'

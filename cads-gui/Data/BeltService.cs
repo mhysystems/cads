@@ -183,7 +183,7 @@ namespace cads_gui.Data
       using var context = dBContext.CreateDbContext();
       var data = from a in context.Conveyors where a.Site == site && a.Name == conveyor select a;
 
-      return data.First().Timezone;
+      return data.Any() ? data.First().Timezone : TimeZoneInfo.Local;
     }
 
     public IEnumerable<Scan> GetScans(string site, string belt)

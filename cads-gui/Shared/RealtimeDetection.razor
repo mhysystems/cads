@@ -1,9 +1,11 @@
 @using Microsoft.AspNetCore.SignalR.Client
 @using Microsoft.Extensions.Options
 
+@inject IJSRuntime JS
 @inject NavigationManager NavigationManager
 @inject IOptions<AppSettings> _appsettings
 @inject BeltService beltservice
+@inject IHttpContextAccessor _httpContext
 
 @implements IAsyncDisposable
 
@@ -45,18 +47,25 @@
 
   protected override async Task OnInitializedAsync()
   {
-      messages = await beltservice.GetAnomalies(Site,Conveyor);
-      if(string.IsNullOrWhiteSpace(_appsettings.Value.Authorization))
-      {
-        hubConnection = new HubConnectionBuilder()
-        .WithUrl(NavigationManager.ToAbsoluteUri("/realtime"))
-        .Build();
-      } else {
-        hubConnection = new HubConnectionBuilder()
-          .WithUrl(NavigationManager.ToAbsoluteUri("/realtime"), options => {options.Headers.Add("authorization",_appsettings.Value.Authorization);})
-          .Build();
-      }
-      
+    messages = await beltservice.GetAnomalies(Site,Conveyor);
+    hubConnection = new HubConnectionBuilder()
+      .WithUrl(NavigationManager.ToAbsoluteUri("/realtime"), options => 
+        {
+          var cookies = _httpContext?.HttpContext?.Request.Cookies;
+          if(cookies is not null)
+          {
+            foreach(var c in cookies )
+            {
+              var uri = new UriBuilder(NavigationManager.Uri);
+              options.Cookies.Add(new System.Net.Cookie(c.Key,c.Value)
+              {
+                Domain = uri.Host
+              });
+            }
+          }
+        })
+      .Build();
+
       var timezone = beltservice.GetConveyorTimezone(Site,Conveyor);
       hubConnection.On<AnomalyMsg>("ReceiveMessage", (message) =>
       {
@@ -85,8 +94,6 @@
         await hubConnection.DisposeAsync();
       }
   }
-
-
 
   protected async Task RowClickEventAsync(TableRowClickEventArgs<AnomalyMsg> tableRowClickEventArgs)
   {

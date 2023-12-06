@@ -1,7 +1,5 @@
 
 using Microsoft.AspNetCore.SignalR;
-using System.Threading.Tasks;
-
 namespace cads_gui.Data;
 
 public class RealtimeHub : Hub
