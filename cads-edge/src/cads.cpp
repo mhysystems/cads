@@ -77,55 +77,6 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io<msg> &ne
     }
   }
 
-  coro<cads::msg,cads::msg,1> pulley_values_coro(Dbscan config, double init, bool left, cads::Io<msg> &next)
-  {
-    cads::msg empty;
-    
-    auto pulley_estimator = mk_pulleyfitter(1.0); 
-
-    for(long cnt = 0;;cnt++){
-      
-      auto [msg,terminate] = co_yield empty;  
-      
-      if(terminate) break;
-
-      switch(std::get<0>(msg)) {
-        
-        case cads::msgid::gocator_properties: {
-          auto p = std::get<GocatorProperties>(std::get<1>(msg));
-          pulley_estimator = mk_pulleyfitter(p.zResolution, init);
-        }
-        break;
-        case msgid::scan: {/*
-          auto p = std::get<profile>(std::get<1>(msg));
-          auto [pulley_level, pulley_right, ll, lr, cerror] = pulley_levels_clustered(p.z, config, pulley_estimator);
-
-          if (cerror != ClusterError::None)
-          {
-            spdlog::get("cads")->debug("Clustering error : {}", ClusterErrorToString(cerror));
-            continue;
-          }
-
-          if(ll < 1) {
-            spdlog::get("cads")->debug("Left less than one");
-            continue;
-          }
-          
-          if(left) {
-            p.z = cads::z_type{p.z.begin(),p.z.begin()+ll};
-          }else {
-            p.z = cads::z_type{p.z.begin()+lr,p.z.end()};
-          }
-
-          next.enqueue({msgid::scan,p});*/
-        }
-        break;
-        default:
-          next.enqueue(msg);
-      }
-    }
-  }
-
   coro<cads::msg,cads::msg,1> profile_decimation_coro(long long widthn, long long modulo, cads::Io<msg> &next)
   {
     cads::msg empty;

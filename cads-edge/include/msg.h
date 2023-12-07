@@ -24,7 +24,21 @@ namespace cads
   }
 
   using PulleyRevolutionScan = std::tuple<bool, double, cads::profile>;
-  enum msgid{gocator_properties,scan,finished,begin_sequence,end_sequence,complete_belt,pulley_revolution_scan,stopped,nothing,select,caas_msg,measure,error};
+  enum msgid {
+    gocator_properties,
+    scan,
+    finished,
+    begin_sequence,
+    end_sequence,
+    complete_belt,
+    pulley_revolution_scan,
+    stopped,
+    nothing,
+    select,
+    caas_msg,
+    measure,
+    error
+  };
   
   struct GocatorProperties {
     double xResolution; 

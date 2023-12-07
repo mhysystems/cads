@@ -21,6 +21,7 @@ function main(sendmsg)
 
   local gocator_luamain = BlockingReaderWriterQueue()
   local scan_only = teeMsg(
+    --todo
     filterMsgs(1,pulleyValues(dbscan,-30.0,true,scanZ(fileCSV("fileL.csv")))),
     filterMsgs(1,pulleyValues(dbscan,-30.0,false,scanZ(fileCSV("fileR.csv"))))
   )

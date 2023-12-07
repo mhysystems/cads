@@ -475,6 +475,12 @@ namespace
       return std::nullopt;
     }
 
+    if (*MinPoints_opt < 0)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'MinPoints is less than zero' }}", __func__);
+      return std::nullopt;
+    }
+
     if (lua_getfield(L, index, "MergeRadius") == LUA_TNIL)
     {
       spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"MergeRadius");
@@ -499,7 +505,13 @@ namespace
       return std::nullopt;
     }
 
-    return cads::Dbscan{*InClusterRadius_opt,*MinPoints_opt,*MergeRadius_opt,*MaxClusters_opt};
+    if(*MaxClusters_opt < 0)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'MaxClusters less than zero' }}", __func__);
+      return std::nullopt;
+    }
+
+    return cads::Dbscan{*InClusterRadius_opt,(size_t)*MinPoints_opt,*MergeRadius_opt,(size_t)*MaxClusters_opt};
   }
 
   std::optional<cads::Fiducial> tofiducial(lua_State *L, int index)
@@ -1773,25 +1785,6 @@ namespace
     return 1;
   }
 
-  int pulleyValues(lua_State *L)
-  {
-   
-    auto config = todbscan(L, 1);
-    auto init = tonumber(L,2);
-    bool left = lua_toboolean(L, 3);
-    auto next = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, 4));
-
-    using user_type = cads::Adapt<cads::msg,decltype(cads::pulley_values_coro(*config,*init,left,std::ref(*next)))>;
-
-    new (lua_newuserdata(L, sizeof(user_type))) user_type(cads::pulley_values_coro(*config,*init,left,std::ref(*next)));
-
-    lua_createtable(L, 0, 1);
-    lua_pushcfunction(L, Io_gc);
-    lua_setfield(L, -2, "__gc");
-    lua_setmetatable(L, -2);
-    return 1;
-  }
-
   int get_serial(lua_State *L)
   {
     lua_pushinteger(L, cads::constants_device.Serial);
@@ -1880,9 +1873,6 @@ namespace cads
       
       lua_pushcfunction(L,::fileCSV);
       lua_setglobal(L,"fileCSV");
-
-      lua_pushcfunction(L,::pulleyValues);
-      lua_setglobal(L,"pulleyValues");
 
       lua_pushcfunction(L,::teeMsg);
       lua_setglobal(L,"teeMsg");
