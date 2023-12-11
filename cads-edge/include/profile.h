@@ -5,11 +5,13 @@
 #include <unordered_map>
 
 #include <profile_t.h>
+#include <edge_detection.h>
+#include <vec_nan_free.h>
 
 namespace cads
 {
   enum class ProfileSection {Left,Belt,Right};
-  using ConveyorProfile = std::unordered_map<ProfileSection,std::tuple<size_t,size_t>>;
+  using ProfilePartitions = std::unordered_map<ProfileSection,std::tuple<size_t,size_t>>;
 
   bool operator==(const profile &, const profile &);
 
@@ -26,5 +28,8 @@ namespace cads
   double average(const z_type &);
 
   z_type profile_decimate(z_type z, size_t width);
+  ProfilePartitions conveyor_profile_detection(const profile &, Dbscan config);
+  std::tuple<vector_NaN_free,vector_NaN_free> 
+  extract_pulley_coords(const z_type &z, ProfilePartitions conveyor);
 
 }

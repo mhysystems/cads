@@ -37,7 +37,8 @@ namespace cads
     select,
     caas_msg,
     measure,
-    error
+    error,
+    profile_partitioned
   };
   
   struct GocatorProperties {
@@ -65,11 +66,25 @@ namespace cads
     size_t size;
   };
 
+  struct ProfilePartitioned { ProfilePartitions partitions; profile scan; };
+
   struct CompleteBelt {size_t start_value; size_t length;};
-  using msg = std::tuple<msgid,std::variant<cads::GocatorProperties,cads::profile,std::string,long,double,cads::PulleyRevolutionScan,cads::CompleteBelt, Select, CaasMsg, Measure::MeasureMsg>>;
+  using msg = std::tuple<msgid,std::variant<
+    cads::GocatorProperties,
+    cads::profile,
+    std::string,
+    long,
+    double,
+    cads::PulleyRevolutionScan,
+    cads::CompleteBelt,
+    Select,
+    CaasMsg,
+    Measure::MeasureMsg,
+    ProfilePartitioned >>;
 
   using Timeout = struct Timeout_s{};
   using Start = struct Start_s {std::string lua_code;};
   using Stop = struct Stop_s{};
   using remote_msg = std::variant<Start,Stop,Timeout>;
+
 }

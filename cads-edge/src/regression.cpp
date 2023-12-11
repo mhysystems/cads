@@ -35,7 +35,13 @@ namespace cads
     
     namespace sr = std::ranges;
     using namespace Eigen;
+    
     auto [yy,xx] = std::move(args);
+
+    if(yy.data.size() < 1 || xx.data.size() < 1 || yy.data.size() != xx.data.size())
+    {
+      return {.gradient = 1.0,.intercept = 0.0};
+    }
 
     auto vec = []()
     {

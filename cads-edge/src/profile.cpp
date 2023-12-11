@@ -8,15 +8,17 @@
 #include <bit>
 #include <cassert>
 #include <iterator>
+#include <system_error>
+#include <expected>
 
 #include <profile.h>
 #include <constants.h>
 #include <regression.h>
-#include <edge_detection.h>
 #include <stats.hpp>
 #include <sampling.h>
 #include <filters.h>
 #include <utils.hpp>
+#include <err.h>
 
 
 namespace 
@@ -34,6 +36,30 @@ namespace
     else return (x - s)*mf + s*f;
 
   }
+
+  enum class ProfileErrors{not_alignable = 1};
+
+  struct ProfileErrorCategory : std::error_category
+  {
+    
+    
+    virtual const char* name() const noexcept 
+    {
+      return __FILE__;
+    }
+
+    virtual std::string message( int condition ) const 
+    {
+      switch(static_cast<ProfileErrors>(condition))
+      {
+        case ProfileErrors::not_alignable:
+          return "";
+        default:
+          return "";
+      }
+    }
+
+  };
 }
 
 
@@ -120,32 +146,6 @@ namespace cads
     return {left, right.base()};
   }
 
-/*
-  coro<cads::msg,cads::msg,1> profile_alignment_coro(long long widthn, long long modulo, cads::Io<msg> &next)
-  {
-    cads::msg empty;
-    GocatorProperties gp;
-
-    for(long cnt = 0;;cnt++){
-      
-      auto [msg,terminate] = co_yield empty;  
-      
-      if(terminate) break;
-
-      switch(std::get<0>(msg))
-      {
-        
-        case msgid::scan: {
-
-        }
-        break;
-        default:
-          next.enqueue(msg);
-      }
-    }
-  }  
-*/
-
   z_type x_pos_skipNaN(const z_type &z, std::tuple<size_t,size_t> range)
   {
     if(z.size() < 1) {
@@ -162,9 +162,8 @@ namespace cads
   }
 
   std::tuple<vector_NaN_free,vector_NaN_free> 
-  extract_pulley_coords(const z_type &z, ConveyorProfile conveyor)
+  extract_pulley_coords(const z_type &z, ProfilePartitions conveyor)
   {
-    
     return {
       vector_NaN_free(conveyor.contains(ProfileSection::Left) ? 
         z_type(z.begin()+std::get<0>(conveyor[ProfileSection::Left]),z.begin()+std::get<1>(conveyor[ProfileSection::Left])) 
@@ -177,13 +176,30 @@ namespace cads
       vector_NaN_free(conveyor.contains(ProfileSection::Left) ?  x_pos_skipNaN(z,conveyor[ProfileSection::Left]) : z_type())
       + vector_NaN_free(conveyor.contains(ProfileSection::Right) ?  x_pos_skipNaN(z,conveyor[ProfileSection::Right]) : z_type())
     };
-
   }
 
-  ConveyorProfile conveyor_profile_detection(const z_type &z, Dbscan config)
+  struct aa {
+
+  };
+
+  std::expected<bool,errors::Err> is_alignable(const ProfilePartitions &part)
   {
-    ConveyorProfile rtn = {};
-    
+    if(!part.contains(ProfileSection::Left) || !part.contains(ProfileSection::Right))
+    {
+      auto gg = std::error_code((int)ProfileErrors::not_alignable,ProfileErrorCategory());
+      gg.category().message(gg.value());
+      errors::Err (__FILE__,__func__,__LINE__);
+      return std::unexpected(errors::Err (__FILE__,__func__,__LINE__));
+    }
+
+    return true;
+  }
+
+
+  ProfilePartitions conveyor_profile_detection(const profile &profile, Dbscan config)
+  {
+    ProfilePartitions rtn = {};
+    auto& z = profile.z;
     auto partition = (size_t)std::floor(z.size() / 2);
 
     z_type rz(z.rbegin() + partition, z.rend());

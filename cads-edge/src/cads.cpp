@@ -5,6 +5,7 @@
 #include <thread>
 #include <algorithm>
 #include <unordered_map>
+#include <expected>
 
 #include <spdlog/spdlog.h>
 #include <lua_script.h>
@@ -30,8 +31,47 @@ using namespace std::chrono;
 namespace cads
 {
   
+msg partition_profile(msg m, Dbscan dbscan)
+{
+  auto id = std::get<0>(m);
+  if(id != msgid::scan)
+  {
+    return m;
+  }
+  
+  auto profile = std::get<cads::profile>(std::get<1>(m));
+  auto partitions = conveyor_profile_detection(profile,dbscan);
+  
+  return {msgid::profile_partitioned,cads::ProfilePartitioned{.partitions = std::move(partitions), .scan = std::move(profile)}}; 
+}
 
+enum class Hell{A,B};
+msg align_profile(msg m, std::function<double(cads::z_type)> pulley_estimator, std::function<bool()> is_alignable)
+{
+  auto id = std::get<0>(m);
+  if(id != msgid::profile_partitioned)
+  {
+    return m;
+  }
 
+  auto profile_partitioned = std::get<cads::ProfilePartitioned>(std::get<1>(m));
+  std::error_code a(Hell);
+  auto pulley = extract_pulley_coords(profile_partitioned.scan.z,profile_partitioned.partitions);
+  //regression_compensate(profile_partitioned.scan.z,linear_regression(pulley).gradient);
+/*
+
+  auto pulley_left = pulley_estimator(std::get<0>(extract_pulley_coords(p.z,profile_partitioned.partitions)).data);
+  auto pulley_right = pulley_estimator(std::get<1>(extract_pulley_coords(p.z,profile_partitioned.partitions)).data);
+
+      iz.insert(iz.begin(), filter_window_len, (float)pulley_left);
+      iz.insert(iz.end(), filter_window_len, (float)pulley_right);
+      ll += filter_window_len;
+      lr += filter_window_len;
+
+      std::fill(iz.begin(), iz.begin() + ll, pulley_left);
+      std::fill(iz.begin() + lr, iz.end(), pulley_right);*/
+  return m; //{msgid::profile_partitioned,cads::ProfilePartitioned{.partitions = std::move(partitions), .scan = std::move(profile)}}; 
+}
 
 
 msg prs_to_scan(msg m)
@@ -45,37 +85,6 @@ msg prs_to_scan(msg m)
     return m;
   }
 }
-
-coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io<msg> &next)
-  {
-    cads::msg empty;
-    auto pulley_estimator = mk_pulleyfitter(1.0);    
-
-    for(long cnt = 0;;cnt++){
-      
-      auto [msg,terminate] = co_yield empty;  
-      
-      if(terminate) break;
-
-      switch(std::get<0>(msg)) {
-          case cads::msgid::gocator_properties: {
-          auto p = std::get<GocatorProperties>(std::get<1>(msg));
-          pulley_estimator = mk_pulleyfitter(p.zResolution);
-        }
-        break;
-        
-        case msgid::scan: {
-          auto p = std::get<profile>(std::get<1>(msg));
-          //auto [pulley_level, pulley_right, ll, lr, cerror] = pulley_levels_clustered(p.z, dbscan,pulley_estimator);    
-          //next.enqueue({msgid::caas_msg,cads::CaasMsg{"profile",profile_as_flatbufferstring(p,z_resolution,z_offset)}});
-
-        }
-        break;
-        default:
-          next.enqueue(msg);
-      }
-    }
-  }
 
   coro<cads::msg,cads::msg,1> profile_decimation_coro(long long widthn, long long modulo, cads::Io<msg> &next)
   {
@@ -197,7 +206,6 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io<msg> &ne
     long drop_profiles = config.IIRFilter.skip; // Allow for iir fillter too stablize
 
     auto pulley_estimator = mk_pulleyfitter(z_resolution, config.PulleyEstimatorInit);
-    auto belt_estimator = mk_pulleyfitter(z_resolution, 0.0);
 
     auto filter_window_len = config.PulleySamplesExtend;
 
@@ -209,7 +217,7 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io<msg> &ne
       gocatorFifo.wait_dequeue(m);
       auto m_id = get<0>(m);
 
-      if (m_id != cads::msgid::scan)
+      if (m_id != cads::msgid::profile_partitioned)
       {
         next.enqueue(m);
         break;
@@ -217,7 +225,9 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io<msg> &ne
 
       ++cnt;
 
-      auto p = get<profile>(get<1>(m));
+      
+      auto profile_partitioned = get<ProfilePartitioned>(get<1>(m));
+      auto p = profile_partitioned.scan;
 
       if (p.z.size() * x_resolution < x_width * 0.75)
       {
@@ -248,15 +258,13 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io<msg> &ne
         break;
       }
 
+     // regression_compensate(p.z,linear_regression(extract_pulley_coords(p.z,profile_partitioned.partitions)).gradient);
       auto iy = p.y;
       auto ix = p.x_off;
       auto iz = p.z;
 /*
-      auto g = conveyor_profile_detection(iz,config.dbscan);
-      auto ggg = extract_pulley_coords(iz,g);
-      auto kj = linear_regression(std::move(ggg));
-      regression_compensate(iz,kj.gradient);
-
+      auto pulley_left = pulley_estimator(std::get<0>(extract_pulley_coords(p.z,profile_partitioned.partitions)).data);
+      auto pulley_right = pulley_estimator(std::get<1>(extract_pulley_coords(p.z,profile_partitioned.partitions)).data);
 
       iz.insert(iz.begin(), filter_window_len, (float)pulley_left);
       iz.insert(iz.end(), filter_window_len, (float)pulley_right);
@@ -326,9 +334,9 @@ coro<cads::msg,cads::msg,1> partition_belt_coro(Dbscan dbscan, cads::Io<msg> &ne
         next.enqueue({msgid::measure,Measure::MeasureMsg{"pulleyspeed",0,date::utc_clock::now(),speed}});
         next.enqueue({msgid::measure,Measure::MeasureMsg{"pulleyoscillation",0,date::utc_clock::now(),amplitude}});
       }
-
-      pulley_level_compensate(z, -pulley_left_filtered, clip_height);
-      */
+*/
+//      pulley_level_compensate(z, -pulley_left_filtered, clip_height);
+      
       //if (z.size() < size_t(left_edge_index_aligned + width_n))
       //{
         // spdlog::get("cads")->debug("Belt width({})[la - {}, l- {}, r - {}] less than required. Filled with zeros",z.size(),left_edge_index_aligned,left_edge_index,right_edge_index);

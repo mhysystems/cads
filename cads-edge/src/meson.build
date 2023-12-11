@@ -20,7 +20,8 @@ cadsSrc += files(
   'sampling.cpp',
   'upload.cpp',
   'utils.cpp',
-  'vec_nan_free.cpp'
+  'vec_nan_free.cpp',
+  'err.cpp'
 )
 
 cadsEntry += files('main.cpp')

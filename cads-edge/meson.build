@@ -1,6 +1,6 @@
 project('cads', ['c','cpp'],
   version : '1.0',
-  default_options : ['warning_level=3','cpp_std=c++20','default_library=static','prefer_static=true'])
+  default_options : ['warning_level=3','cpp_std=c++23','default_library=static','prefer_static=true'])
 
 message('Host system type: ' + host_machine.system())
 
@@ -75,6 +75,15 @@ subdir('src')
 
 
 fs.copyfile('json.lua')
+
+linkArgs = []
+# scamp uses the cuda compiler and for some reason meson uses nvcc to link the whole program because of this.
+# Without using the nvcc argument ccbin, nvcc will use link against an old versions of standards libs, even though the
+# program is compiled with later versions of gcc. Note compiling cuda with new versions of gcc returns an error but linking
+# is ok.
+if add_languages('cuda', required: false)
+  linkArgs += ['-ccbin=' + find_program(cxx.cmd_array()[0]).full_path()] 
+endif
 
 cads = executable(
 	'cads', 
