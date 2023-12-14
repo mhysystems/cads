@@ -95,7 +95,8 @@
     "*.txx": "cpp",
     "format": "cpp",
     "stdfloat": "cpp",
-    "filesystem": "cpp"
+    "filesystem": "cpp",
+    "expected": "cpp"
   },
   "cmake.configureOnOpen": false
 }

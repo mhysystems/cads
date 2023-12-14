@@ -5,6 +5,7 @@
 #include <string>
 #include <deque>
 #include <functional>
+#include <memory>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wuseless-cast"
@@ -16,6 +17,7 @@
 
 #include <profile.h>
 #include <readerwriterqueue.h>
+#include <err.h>
 
 namespace cads
 { 
@@ -80,7 +82,8 @@ namespace cads
     Select,
     CaasMsg,
     Measure::MeasureMsg,
-    ProfilePartitioned >>;
+    ProfilePartitioned,
+    std::shared_ptr<errors::Err>> >;
 
   using Timeout = struct Timeout_s{};
   using Start = struct Start_s {std::string lua_code;};

@@ -18,7 +18,6 @@
 #include <sampling.h>
 #include <filters.h>
 #include <utils.hpp>
-#include <err.h>
 
 
 namespace 
@@ -36,30 +35,6 @@ namespace
     else return (x - s)*mf + s*f;
 
   }
-
-  enum class ProfileErrors{not_alignable = 1};
-
-  struct ProfileErrorCategory : std::error_category
-  {
-    
-    
-    virtual const char* name() const noexcept 
-    {
-      return __FILE__;
-    }
-
-    virtual std::string message( int condition ) const 
-    {
-      switch(static_cast<ProfileErrors>(condition))
-      {
-        case ProfileErrors::not_alignable:
-          return "";
-        default:
-          return "";
-      }
-    }
-
-  };
 }
 
 
@@ -178,23 +153,35 @@ namespace cads
     };
   }
 
-  struct aa {
 
-  };
+  size_t distance(std::tuple<size_t, size_t> x)
+  {
+    return std::get<1>(x) > std::get<0>(x) ? std::get<1>(x) - std::get<0>(x) : std::get<0>(x) - std::get<1>(x);
+  }
 
-  std::expected<bool,errors::Err> is_alignable(const ProfilePartitions &part)
+  errors::ErrCode is_alignable(const ProfilePartitions &part)
   {
     if(!part.contains(ProfileSection::Left) || !part.contains(ProfileSection::Right))
     {
-      auto gg = std::error_code((int)ProfileErrors::not_alignable,ProfileErrorCategory());
-      gg.category().message(gg.value());
-      errors::Err (__FILE__,__func__,__LINE__);
-      return std::unexpected(errors::Err (__FILE__,__func__,__LINE__));
+      return errors::ErrCode (__FILE__,__func__,__LINE__,1);
+    }else if(part.contains(ProfileSection::Left) && !part.contains(ProfileSection::Right))
+    {
+      if(distance(part.at(ProfileSection::Left)) > 100) {
+        return errors::ErrCode ();
+      }else {
+        return errors::ErrCode (__FILE__,__func__,__LINE__,1);
+      }
+    }else if(part.contains(ProfileSection::Right) && !part.contains(ProfileSection::Left))
+    {
+      if(distance(part.at(ProfileSection::Right)) > 100) {
+        return errors::ErrCode ();
+      }else {
+        return errors::ErrCode (__FILE__,__func__,__LINE__,1);
+      }
     }
 
-    return true;
+    return errors::ErrCode ();
   }
-
 
   ProfilePartitions conveyor_profile_detection(const profile &profile, Dbscan config)
   {

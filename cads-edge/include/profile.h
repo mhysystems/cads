@@ -7,6 +7,7 @@
 #include <profile_t.h>
 #include <edge_detection.h>
 #include <vec_nan_free.h>
+#include <err.h>
 
 namespace cads
 {
@@ -31,5 +32,6 @@ namespace cads
   ProfilePartitions conveyor_profile_detection(const profile &, Dbscan config);
   std::tuple<vector_NaN_free,vector_NaN_free> 
   extract_pulley_coords(const z_type &z, ProfilePartitions conveyor);
+  errors::ErrCode is_alignable(const ProfilePartitions &part);
 
 }

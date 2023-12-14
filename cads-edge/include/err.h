@@ -9,17 +9,40 @@ namespace cads
 
     struct Err
     {
+      Err(const char*,const char*,int, const Err&);
       Err(const char*,const char*,int);
-      Err(const Err&);
-      virtual ~Err();
+      Err() = default;
+      Err(const Err&) = default;
+      virtual ~Err() = default;
+
+      std::shared_ptr<Err> clone() const;
 
       private:
       struct Impl;
-      Err() = delete;
       Err& operator=(const Err&) = delete;
+      virtual Err* clone_impl() const;
 
-      std::unique_ptr<Impl> pImpl;
+      const std::shared_ptr<Impl> pImpl = nullptr;
 
+    };
+
+    struct ErrCode : errors::Err
+    {
+      ErrCode(const char*,const char*,int,int);
+      ErrCode() = default;
+      virtual ~ErrCode() = default;
+
+      operator bool();
+
+      std::shared_ptr<ErrCode> clone() const;
+
+      private:
+      struct Impl;
+
+      ErrCode& operator=(const ErrCode&) = delete;
+      virtual ErrCode* clone_impl() const override;
+
+      const std::shared_ptr<Impl> pImpl = nullptr;
     };
   }
 }

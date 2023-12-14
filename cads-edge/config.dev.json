@@ -4,10 +4,10 @@
   },
 
   "upload" : {
-    "Period" : 2592000,
+    "Period" : 5,
     "webapi" : {
-      "add_meta" : ["https://fmgcads.mhysystems.com/api/meta",false],
-      "add_belt" : ["https://fmgcads.mhysystems.com/api/belt",false]
+      "add_meta" : ["https://dev.noxmlhere.com/api/meta",true],
+      "add_belt" : ["https://dev.noxmlhere.com/api/belt",true]
     }
   },
 

@@ -23,8 +23,8 @@ namespace cads
     double NaNPercentage;
     double ClipHeight;
     double PulleyEstimatorInit;
+    double ClampToZeroHeight;
     IIRFilterConfig IIRFilter;
-    long long PulleySamplesExtend;
     RevolutionSensorConfig RevolutionSensor;
     Conveyor conveyor;
     Dbscan dbscan;
@@ -57,5 +57,8 @@ namespace cads
   */
 
   cads::coro<cads::msg,cads::msg,1> profile_decimation_coro(long long, long long, cads::Io<msg> &next);
+
+  std::function<msg(msg)> mk_align_profile();
+  msg partition_profile(msg m, Dbscan dbscan);
 
 }

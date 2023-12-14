@@ -21,12 +21,12 @@ conveyor = {
   Id = 54,
   Org  = "FMG",
   Site = "FMG",
-  Name = "CV311",
+  Name = "CV912",
   Timezone = "Australia/Perth",
   PulleyCircumference = 624 * math.pi,
   TypicalSpeed = 2.63,
   Belt =  53,
-  Length = 391960.0,
+  Length = 39190.0,
   WidthN = 1500.0
 }
 
@@ -73,10 +73,10 @@ measures = {
 profileConfig = {
   Width = belt.Width,
   NaNPercentage = 1,
-  ClipHeight = 1000.0,
+  ClipHeight = 35.0,
+  ClampToZeroHeight = 10.0,
   PulleyEstimatorInit = -15.0,
   IIRFilter = iirfilter,
-  PulleySamplesExtend = 10,
   RevolutionSensor = revolutionsensor,
   Conveyor = conveyor,
   Dbscan = dbscan,
@@ -105,8 +105,10 @@ function main(sendmsg)
   local origin_savedb = BlockingReaderWriterQueue()
   local savedb_luamain = BlockingReaderWriterQueue()
   
+  local align_profile = alignProfile(gocator_cads)
+  local partition_profile = partitionProfile(dbscan,align_profile)
   -- local laser = gocator(laserConf,gocator_cads)
-  local laser = sqlitegocator(sqlitegocatorConfig,gocator_cads) 
+  local laser = sqlitegocator(sqlitegocatorConfig,partition_profile) 
 
   if laser == nil then
     sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to start gocator")

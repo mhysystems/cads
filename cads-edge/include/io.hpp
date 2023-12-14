@@ -55,11 +55,11 @@ namespace cads
     T m;
   };
 
-  template<class T,class R> struct AdaptFn : public Io<T>
+  template<class T> struct AdaptFn : public Io<T>
   {
-    AdaptFn(std::function<R(T)>&& a) : m(std::move(a)) {} 
+    AdaptFn(std::function<bool(T)>&& a) : m(std::move(a)) {} 
     
-    virtual R enqueue(T x) {
+    virtual bool enqueue(T x) {
       return m(x);
     }
 

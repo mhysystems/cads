@@ -1,4 +1,5 @@
 #include <ranges>
+#include <cmath>
 
 #include <sampling.h>
 #include <utils.hpp>
@@ -76,6 +77,35 @@ namespace cads
         i += 1*inc;
         n -= 1*dec;
       }
+    }
+  }
+
+  void interpolation_linear(z_type::iterator begin, z_type::iterator end, std::function<bool(z_element)> is)
+  {
+
+    if (begin >= end) return;
+
+    for (auto i = begin; i < end;)
+    {
+      i = std::find_if(i, end, is);
+      if(i == end) break;
+
+      auto n = std::find_if_not(i,end,is);
+
+      auto iv = i == begin ? *i : *(i - 1); 
+      auto nv = n == end ? *(n - 1) : *n;
+
+      if(is(iv) && is(nv)) break;
+      if(is(iv)) iv = nv;
+      if(is(nv)) nv = iv;
+
+      z_type::iterator::value_type step = 1.0 / (z_type::iterator::value_type)std::distance(i,n);
+      
+      for(z_type::iterator::value_type t = 0.0; t < 1.0; t += step)
+      {
+        *i++ = std::lerp(iv,nv,t);
+      }
+
     }
   }
 

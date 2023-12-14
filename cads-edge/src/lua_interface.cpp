@@ -28,30 +28,37 @@ namespace
 {
   using namespace std::string_literals;
 
-  template<typename R, typename T> auto TransformMsg(std::function<R(T)> fn,cads::Io<R>* io)
+  template <typename R, typename T>
+  auto TransformMsg(std::function<R(T)> fn, cads::Io<R> *io)
   {
-    return [io,fn](T m) { return io->enqueue(fn(m));};
+    return [io, fn](T m)
+    { return io->enqueue(fn(m)); };
   }
 
-  auto FilterMsg(cads::msgid id,cads::Io<cads::msg>* io) {
-    return [io,id](cads::msg m) { 
-        auto m_id = get<0>(m);
-        if(m_id == id) {
-          return io->enqueue(m);
-        }else {
-          return true;
-        }
+  auto FilterMsg(cads::msgid id, cads::Io<cads::msg> *io)
+  {
+    return [io, id](cads::msg m)
+    {
+      auto m_id = get<0>(m);
+      if (m_id == id)
+      {
+        return io->enqueue(m);
+      }
+      else
+      {
+        return true;
+      }
     };
   }
 
-
-  int time_str(lua_State *L) {
+  int time_str(lua_State *L)
+  {
     using ds = std::chrono::duration<double>;
-    auto time = lua_tonumber(L,1);
+    auto time = lua_tonumber(L, 1);
     ds ddd(time);
     auto tp = date::utc_time(ddd);
     auto str = date::format("%FT%TZ", tp);
-    lua_pushstring(L,str.c_str());
+    lua_pushstring(L, str.c_str());
     return 1;
   }
 
@@ -63,34 +70,41 @@ namespace
     return 1;
   }
 
-  int send_external_msg(lua_State *L) {   
+  int send_external_msg(lua_State *L)
+  {
     auto p = (moodycamel::BlockingConcurrentQueue<std::tuple<std::string, std::string, std::string>> *)lua_topointer(L, lua_upvalueindex(1));
     size_t strlen = 0;
-    auto str = lua_tolstring(L,1,&strlen);
-    std::string sub(str,strlen);
-    str = lua_tolstring(L,2,&strlen);
-    std::string cat(str,strlen);
-    str = lua_tolstring(L,3,&strlen);
-    std::string msg(str,strlen);
-    p->enqueue({sub,cat,msg});
+    auto str = lua_tolstring(L, 1, &strlen);
+    std::string sub(str, strlen);
+    str = lua_tolstring(L, 2, &strlen);
+    std::string cat(str, strlen);
+    str = lua_tolstring(L, 3, &strlen);
+    std::string msg(str, strlen);
+    p->enqueue({sub, cat, msg});
     return 0;
   }
-  
-  int execute_func(lua_State *L) {
+
+  int execute_func(lua_State *L)
+  {
     auto p = (std::function<double()> *)lua_topointer(L, lua_upvalueindex(1));
     auto r = (*p)();
-    lua_pushnumber(L,r);
+    lua_pushnumber(L, r);
     return 1;
   }
 
-  template<class T>int execute_func2(lua_State *L) {
+  template <class T>
+  int execute_func2(lua_State *L)
+  {
     auto p = (std::function<T()> *)lua_topointer(L, lua_upvalueindex(1));
     auto r = (*p)();
-    
-    if constexpr (std::is_same<double,T>::value) {
-      lua_pushnumber(L,r);    
-    }else{
-      lua_pushstring(L,r.c_str()); 
+
+    if constexpr (std::is_same<double, T>::value)
+    {
+      lua_pushnumber(L, r);
+    }
+    else
+    {
+      lua_pushstring(L, r.c_str());
     }
 
     return 1;
@@ -153,14 +167,16 @@ namespace
     for (decltype(array_length) i = 1; i <= array_length; i++)
     {
       lua_rawgeti(L, -1, i);
-      auto num_opt = tonumber(L,-1);
+      auto num_opt = tonumber(L, -1);
       lua_pop(L, 1);
-      
+
       if (!num_opt)
       {
-        spdlog::get("cads")->error("{{ func = {},  msg = 'Index {} not a number' }}", __func__,i);
+        spdlog::get("cads")->error("{{ func = {},  msg = 'Index {} not a number' }}", __func__, i);
         return std::nullopt;
-      }else {
+      }
+      else
+      {
         lua_array.push_back(*num_opt);
       }
     }
@@ -182,14 +198,16 @@ namespace
     for (decltype(array_length) i = 1; i <= array_length; i++)
     {
       lua_rawgeti(L, -1, i);
-      auto vec = tonumbervector(L,-1);
+      auto vec = tonumbervector(L, -1);
       lua_pop(L, 1);
-      
+
       if (!vec)
       {
-        spdlog::get("cads")->error("{{ func = {},  msg = 'Index {} not an array' }}", __func__,i);
+        spdlog::get("cads")->error("{{ func = {},  msg = 'Index {} not an array' }}", __func__, i);
         return std::nullopt;
-      }else {
+      }
+      else
+      {
         lua_array.push_back(*vec);
       }
     }
@@ -197,9 +215,11 @@ namespace
     return lua_array;
   }
 
-  template<typename T1, typename T2> std::optional<std::tuple<T1,T2>> topair(lua_State *L, int index);
+  template <typename T1, typename T2>
+  std::optional<std::tuple<T1, T2>> topair(lua_State *L, int index);
 
-  template<> std::optional<std::tuple<long long,long long>> topair(lua_State *L, int index)
+  template <>
+  std::optional<std::tuple<long long, long long>> topair(lua_State *L, int index)
   {
     if (!lua_istable(L, index))
     {
@@ -249,12 +269,11 @@ namespace
     return std::make_tuple(a, b);
   }
 
-
   std::optional<double> tofieldnumber(lua_State *L, int index, std::string obj_name, std::string field)
   {
     if (lua_getfield(L, index, field.c_str()) == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,field);
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, field);
       return std::nullopt;
     }
 
@@ -263,7 +282,7 @@ namespace
 
     if (!field_opt)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} not a number' }}", __func__,field);
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} not a number' }}", __func__, field);
       return std::nullopt;
     }
 
@@ -277,13 +296,13 @@ namespace
 
     if (!lua_istable(L, index))
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} needs to be a table' }}", __func__,obj_name);
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} needs to be a table' }}", __func__, obj_name);
       return std::nullopt;
     }
 
     if (lua_getfield(L, index, "Id") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Id");
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "Id");
       return std::nullopt;
     }
 
@@ -298,7 +317,7 @@ namespace
 
     if (lua_getfield(L, index, "Org") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Org");
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "Org");
       return std::nullopt;
     }
 
@@ -313,7 +332,7 @@ namespace
 
     if (lua_getfield(L, index, "Site") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Site");
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "Site");
       return std::nullopt;
     }
 
@@ -328,7 +347,7 @@ namespace
 
     if (lua_getfield(L, index, "Name") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Name");
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "Name");
       return std::nullopt;
     }
 
@@ -343,7 +362,7 @@ namespace
 
     if (lua_getfield(L, index, "Timezone") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Timezone");
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "Timezone");
       return std::nullopt;
     }
 
@@ -358,7 +377,7 @@ namespace
 
     if (lua_getfield(L, index, "PulleyCircumference") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"PulleyCircumference");
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "PulleyCircumference");
       return std::nullopt;
     }
 
@@ -373,7 +392,7 @@ namespace
 
     if (lua_getfield(L, index, "TypicalSpeed") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"TypicalSpeed");
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "TypicalSpeed");
       return std::nullopt;
     }
 
@@ -386,10 +405,9 @@ namespace
       return std::nullopt;
     }
 
-
     if (lua_getfield(L, index, "Belt") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Belt");
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "Belt");
       return std::nullopt;
     }
 
@@ -404,7 +422,7 @@ namespace
 
     if (lua_getfield(L, index, "Length") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Length");
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "Length");
       return std::nullopt;
     }
 
@@ -419,7 +437,7 @@ namespace
 
     if (lua_getfield(L, index, "WidthN") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"WidthN");
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "WidthN");
       return std::nullopt;
     }
 
@@ -432,22 +450,22 @@ namespace
       return std::nullopt;
     }
 
-    return  cads::Conveyor{*id_opt,*org_opt,*site_opt,*name_opt,*Timezone_opt,*PulleyCircumference_opt,*TypicalSpeed_opt,*Belt_opt,*Length_opt,*WidthN_opt};
+    return cads::Conveyor{*id_opt, *org_opt, *site_opt, *name_opt, *Timezone_opt, *PulleyCircumference_opt, *TypicalSpeed_opt, *Belt_opt, *Length_opt, *WidthN_opt};
   }
-  
+
   std::optional<cads::Dbscan> todbscan(lua_State *L, int index)
   {
     const std::string obj_name = "dbscan";
 
     if (!lua_istable(L, index))
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} needs to be a table' }}", __func__,obj_name);
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} needs to be a table' }}", __func__, obj_name);
       return std::nullopt;
     }
 
     if (lua_getfield(L, index, "InClusterRadius") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"InClusterRadius");
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "InClusterRadius");
       return std::nullopt;
     }
 
@@ -462,7 +480,7 @@ namespace
 
     if (lua_getfield(L, index, "MinPoints") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"MinPoints");
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "MinPoints");
       return std::nullopt;
     }
 
@@ -483,7 +501,7 @@ namespace
 
     if (lua_getfield(L, index, "MergeRadius") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"MergeRadius");
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "MergeRadius");
       return std::nullopt;
     }
 
@@ -492,7 +510,7 @@ namespace
 
     if (lua_getfield(L, index, "MaxClusters") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"MaxClusters");
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "MaxClusters");
       return std::nullopt;
     }
 
@@ -505,13 +523,13 @@ namespace
       return std::nullopt;
     }
 
-    if(*MaxClusters_opt < 0)
+    if (*MaxClusters_opt < 0)
     {
       spdlog::get("cads")->error("{{ func = {},  msg = 'MaxClusters less than zero' }}", __func__);
       return std::nullopt;
     }
 
-    return cads::Dbscan{*InClusterRadius_opt,(size_t)*MinPoints_opt,*MergeRadius_opt,(size_t)*MaxClusters_opt};
+    return cads::Dbscan{*InClusterRadius_opt, (size_t)*MinPoints_opt, *MergeRadius_opt, (size_t)*MaxClusters_opt};
   }
 
   std::optional<cads::Fiducial> tofiducial(lua_State *L, int index)
@@ -520,22 +538,35 @@ namespace
 
     if (!lua_istable(L, index))
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} needs to be a table' }}", __func__,obj_name);
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} needs to be a table' }}", __func__, obj_name);
       return std::nullopt;
     }
 
-    auto fields = std::make_tuple("FiducialDepth"s,"FiducialX"s,"FiducialY"s,"FiducialGap"s,"EdgeHeight"s);
-    auto numbers = std::apply([=](auto&&... args) {return std::make_tuple(tofieldnumber(L,index,obj_name,args)...);}, fields);
-    auto invalids = std::apply([=](auto&&... args) {return std::make_tuple(!args...);}, numbers);
-    auto anyinvalid = std::apply([=](auto&&... args) {return (false || ... || args);}, invalids);
+    auto fields = std::make_tuple("FiducialDepth"s, "FiducialX"s, "FiducialY"s, "FiducialGap"s, "EdgeHeight"s);
+    auto numbers = std::apply([=](auto &&...args)
+                              { return std::make_tuple(tofieldnumber(L, index, obj_name, args)...); },
+                              fields);
+    auto invalids = std::apply([=](auto &&...args)
+                               { return std::make_tuple(!args...); },
+                               numbers);
+    auto anyinvalid = std::apply([=](auto &&...args)
+                                 { return (false || ... || args); },
+                                 invalids);
 
-    if(anyinvalid) {
+    if (anyinvalid)
+    {
       return std::nullopt;
-    }else {
-      auto strip_optional = std::apply([=](auto&&... args) {return std::make_tuple(*args...);}, numbers);
-      return std::apply([=](auto&&... args) {return cads::Fiducial{args...};}, strip_optional);
     }
-  } 
+    else
+    {
+      auto strip_optional = std::apply([=](auto &&...args)
+                                       { return std::make_tuple(*args...); },
+                                       numbers);
+      return std::apply([=](auto &&...args)
+                        { return cads::Fiducial{args...}; },
+                        strip_optional);
+    }
+  }
 
   std::optional<cads::FiducialOriginDetection> tofiducialoriginconfig(lua_State *L, int index)
   {
@@ -543,17 +574,17 @@ namespace
 
     if (!lua_istable(L, index))
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} needs to be a table' }}", __func__,obj_name);
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} needs to be a table' }}", __func__, obj_name);
       return std::nullopt;
     }
 
     if (lua_getfield(L, index, "BeltLength") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"BeltLength");
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "BeltLength");
       return std::nullopt;
     }
 
-    auto BeltLength_opt = topair<long long,long long>(L, -1);
+    auto BeltLength_opt = topair<long long, long long>(L, -1);
     lua_pop(L, 1);
 
     if (!BeltLength_opt)
@@ -562,7 +593,7 @@ namespace
       return std::nullopt;
     }
 
-    auto CrossCorrelationThreshold_opt = tofieldnumber(L,index,obj_name,"CrossCorrelationThreshold"s);
+    auto CrossCorrelationThreshold_opt = tofieldnumber(L, index, obj_name, "CrossCorrelationThreshold"s);
 
     if (!CrossCorrelationThreshold_opt)
     {
@@ -571,21 +602,20 @@ namespace
 
     if (lua_getfield(L, index, "DumpMatch") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"DumpMatch"s);
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "DumpMatch"s);
       return std::nullopt;
     }
 
     bool DumpMatch = lua_toboolean(L, -1);
     lua_pop(L, 1);
 
-
     if (lua_getfield(L, index, "Fiducial") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Fiducial"s);
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "Fiducial"s);
       return std::nullopt;
     }
 
-    auto Fiducial_opt = tofiducial(L,-1);
+    auto Fiducial_opt = tofiducial(L, -1);
     lua_pop(L, 1);
 
     if (!Fiducial_opt)
@@ -596,7 +626,7 @@ namespace
 
     if (lua_getfield(L, index, "Conveyor") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name,"Conveyor"s);
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "Conveyor"s);
       return std::nullopt;
     }
 
@@ -609,8 +639,8 @@ namespace
       return std::nullopt;
     }
 
-    return cads::FiducialOriginDetection{*BeltLength_opt,*CrossCorrelationThreshold_opt,DumpMatch,*Fiducial_opt,*conveyor_opt};
-  } 
+    return cads::FiducialOriginDetection{*BeltLength_opt, *CrossCorrelationThreshold_opt, DumpMatch, *Fiducial_opt, *conveyor_opt};
+  }
 
   std::optional<cads::IIRFilterConfig> toiirfilter(lua_State *L, int index)
   {
@@ -624,7 +654,7 @@ namespace
 
     if (lua_getfield(L, index, "Skip") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Skip");
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "Skip");
       return std::nullopt;
     }
 
@@ -639,7 +669,7 @@ namespace
 
     if (lua_getfield(L, index, "Delay") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Delay");
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "Delay");
       return std::nullopt;
     }
 
@@ -654,7 +684,7 @@ namespace
 
     if (lua_getfield(L, index, "Sos") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Sos");
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "Sos");
       return std::nullopt;
     }
 
@@ -667,19 +697,22 @@ namespace
       return std::nullopt;
     }
 
-    if((*sos_opt).size() != 10) {
+    if ((*sos_opt).size() != 10)
+    {
       spdlog::get("cads")->error("{{ func = {},  msg = 'Sos array requires 10 sub arrays' }}", __func__);
       return std::nullopt;
     }
 
-    for(auto e : *sos_opt) {
-      if(e.size() != 6) {
+    for (auto e : *sos_opt)
+    {
+      if (e.size() != 6)
+      {
         spdlog::get("cads")->error("{{ func = {},  msg = 'Sos sub array requires 6 numbers' }}", __func__);
-        return std::nullopt;       
+        return std::nullopt;
       }
     }
 
-    return cads::IIRFilterConfig{*skip_opt,*delay_opt,*sos_opt};
+    return cads::IIRFilterConfig{*skip_opt, *delay_opt, *sos_opt};
   }
 
   std::optional<cads::RevolutionSensorConfig> torevolutionsensor(lua_State *L, int index)
@@ -688,13 +721,13 @@ namespace
 
     if (!lua_istable(L, index))
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} needs to be a table' }}", __func__,obj_name);
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} needs to be a table' }}", __func__, obj_name);
       return std::nullopt;
     }
 
     if (lua_getfield(L, index, "Source") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Source");
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "Source");
       return std::nullopt;
     }
 
@@ -709,7 +742,7 @@ namespace
 
     if (lua_getfield(L, index, "TriggerDistance") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"TriggerDistance");
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "TriggerDistance");
       return std::nullopt;
     }
 
@@ -724,7 +757,7 @@ namespace
 
     if (lua_getfield(L, index, "Bias") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Bias");
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "Bias");
       return std::nullopt;
     }
 
@@ -739,7 +772,7 @@ namespace
 
     if (lua_getfield(L, index, "Threshold") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Threshold");
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "Threshold");
       return std::nullopt;
     }
 
@@ -754,7 +787,7 @@ namespace
 
     if (lua_getfield(L, index, "Bidirectional") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Bidirectional");
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "Bidirectional");
       return std::nullopt;
     }
 
@@ -763,7 +796,7 @@ namespace
 
     if (lua_getfield(L, index, "Skip") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__,obj_name,"Skip");
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "Skip");
       return std::nullopt;
     }
 
@@ -777,15 +810,20 @@ namespace
     }
 
     cads::RevolutionSensorConfig::Source source;
-    if(*source_opt == "raw") {
+    if (*source_opt == "raw")
+    {
       source = cads::RevolutionSensorConfig::Source::height_raw;
-    }else if(*source_opt  == "length") {
+    }
+    else if (*source_opt == "length")
+    {
       source = cads::RevolutionSensorConfig::Source::length;
-    }else {
-      source = cads::RevolutionSensorConfig::Source::height_filtered;  
+    }
+    else
+    {
+      source = cads::RevolutionSensorConfig::Source::height_filtered;
     }
 
-    return cads::RevolutionSensorConfig{source,*trigger_dis_opt,*bias_opt,*theshold_opt,bidirectional,*skip_opt};
+    return cads::RevolutionSensorConfig{source, *trigger_dis_opt, *bias_opt, *theshold_opt, bidirectional, *skip_opt};
   }
 
   std::optional<cads::MeasureConfig> tomeasureconfig(lua_State *L, int index)
@@ -794,7 +832,7 @@ namespace
     {
       spdlog::get("cads")->error("{{ func = {},  msg = 'measure config needs to be a table' }}", __func__);
       return std::nullopt;
-    } 
+    }
 
     if (lua_getfield(L, index, "Enable") == LUA_TNIL)
     {
@@ -802,7 +840,7 @@ namespace
       return std::nullopt;
     }
 
-    auto Enable = (bool)lua_toboolean(L,-1);
+    auto Enable = (bool)lua_toboolean(L, -1);
     lua_pop(L, 1);
 
     return cads::MeasureConfig{Enable};
@@ -891,18 +929,18 @@ namespace
       return std::nullopt;
     }
 
-    if (lua_getfield(L, index, "PulleySamplesExtend") == LUA_TNIL)
+    if (lua_getfield(L, index, "ClampToZeroHeight") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = 'profile config requires {}' }}", __func__, "PulleySamplesExtend");
+      spdlog::get("cads")->error("{{ func = {},  msg = 'profile config requires {}' }}", __func__, "ClampToZeroHeight");
       return std::nullopt;
     }
 
-    auto pulley_sample_extend_opt = tointeger(L, -1);
+    auto ClampToZeroHeight_opt = tonumber(L, -1);
     lua_pop(L, 1);
 
-    if (!pulley_sample_extend_opt)
+    if (!ClampToZeroHeight_opt)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = 'PulleySamplesExtend not a integer' }}", __func__);
+      spdlog::get("cads")->error("{{ func = {},  msg = 'ClampToZeroHeight not a number' }}", __func__);
       return std::nullopt;
     }
 
@@ -920,7 +958,6 @@ namespace
       spdlog::get("cads")->error("{{ func = {},  msg = 'RevolutionSensor not a RevolutionSensorConfig' }}", __func__);
       return std::nullopt;
     }
-
 
     if (lua_getfield(L, index, "Conveyor") == LUA_TNIL)
     {
@@ -967,7 +1004,7 @@ namespace
       return std::nullopt;
     }
 
-    return cads::ProfileConfig{*width_opt,*nanpercentage_opt,*clipheight_opt,*PulleyEstimatorInit_opt,*iirfilter_opt,*pulley_sample_extend_opt,*revolution_sensor_opt,*conveyor_opt,*Dbscan_opt,*Measures_opt};
+    return cads::ProfileConfig{*width_opt, *nanpercentage_opt, *clipheight_opt,*PulleyEstimatorInit_opt,  *ClampToZeroHeight_opt, *iirfilter_opt, *revolution_sensor_opt, *conveyor_opt, *Dbscan_opt, *Measures_opt};
   }
 
   std::optional<cads::SqliteGocatorConfig> tosqlitegocatorconfig(lua_State *L, int index)
@@ -984,7 +1021,7 @@ namespace
       return std::nullopt;
     }
 
-    auto range_opt = topair<long long,long long>(L, -1);
+    auto range_opt = topair<long long, long long>(L, -1);
     lua_pop(L, 1);
 
     if (!range_opt)
@@ -1038,7 +1075,6 @@ namespace
       return std::nullopt;
     }
 
-
     if (lua_getfield(L, index, "TypicalSpeed") == LUA_TNIL)
     {
       spdlog::get("cads")->error("{{ func = {},  msg = 'sqlite gocator Config requires {}' }}", __func__, "TypicalSpeed");
@@ -1062,7 +1098,7 @@ namespace
     bool Sleep = lua_toboolean(L, -1);
     lua_pop(L, 1);
 
-    return cads::SqliteGocatorConfig{*range_opt, *fps_opt, forever,*source_opt, *typical_speed_opt,Sleep};
+    return cads::SqliteGocatorConfig{*range_opt, *fps_opt, forever, *source_opt, *typical_speed_opt, Sleep};
   }
 
   std::optional<cads::GocatorConfig> togocatorconfig(lua_State *L, int index)
@@ -1071,13 +1107,13 @@ namespace
 
     if (!lua_istable(L, index))
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} needs to be a lua table' }}", __func__,obj_name);
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} needs to be a lua table' }}", __func__, obj_name);
       return std::nullopt;
     }
 
     if (lua_getfield(L, index, "Trim") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name,"Trim");
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "Trim");
       return std::nullopt;
     }
 
@@ -1087,7 +1123,7 @@ namespace
 
     if (lua_getfield(L, index, "TypicalResolution") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name,"TypicalResolution");
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "TypicalResolution");
       return std::nullopt;
     }
 
@@ -1110,7 +1146,7 @@ namespace
 
     if (!lua_istable(L, index))
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} needs to be a lua table' }}", __func__,obj_name);
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} needs to be a lua table' }}", __func__, obj_name);
       return std::nullopt;
     }
 
@@ -1128,7 +1164,7 @@ namespace
       spdlog::get("cads")->error("{{ func = {},  msg = 'WidthN not a integer' }}", __func__);
       return std::nullopt;
     }
-      
+
     if (lua_getfield(L, index, "WindowSize") == LUA_TNIL)
     {
       spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "WindowSize");
@@ -1189,81 +1225,80 @@ namespace
       return std::nullopt;
     }
 
-    return cads::DynamicProcessingConfig{*WidthN_opt,*WindowSize_opt,*InitValue_opt,*LuaCode_opt,*Entry_opt};
+    return cads::DynamicProcessingConfig{*WidthN_opt, *WindowSize_opt, *InitValue_opt, *LuaCode_opt, *Entry_opt};
   }
 
-  void pushmetric(lua_State *L, cads::Measure::MeasureMsg m) 
+  void pushmetric(lua_State *L, cads::Measure::MeasureMsg m)
   {
-      auto [sub,quality,time,value] = m;
+    auto [sub, quality, time, value] = m;
 
-      lua_newtable(L);
-      lua_pushnumber(L, 1); 
-      lua_pushstring(L,sub.c_str());
-      lua_settable(L,-3);
+    lua_newtable(L);
+    lua_pushnumber(L, 1);
+    lua_pushstring(L, sub.c_str());
+    lua_settable(L, -3);
 
-      lua_pushnumber(L, 2); 
-      lua_pushnumber(L,quality);
-      lua_settable(L,-3);
-      
-      lua_pushnumber(L, 3); 
-      auto tp = std::chrono::duration<double>(get<2>(m).time_since_epoch());
-      lua_pushnumber(L, tp.count());
-      lua_settable(L,-3);
-            
-      switch (value.index()) {
-        case 0:
-          lua_pushnumber(L, 4); 
-          lua_pushnumber(L, get<double>(value)); 
-          lua_settable(L,-3);     
-          break;
-        case 1:
-          lua_pushnumber(L, 4);
-          lua_pushstring(L, get<std::string>(value).c_str());
-          lua_settable(L,-3);
-          break;
-        case 2: 
-          lua_pushnumber(L, 4);
-          lua_pushlightuserdata(L, &value);
-          lua_pushcclosure(L, execute_func2<double>, 1);
-          lua_settable(L,-3);
-          break;
-        case 3: 
-          lua_pushnumber(L, 4);
-          lua_pushlightuserdata(L, &value);
-          lua_pushcclosure(L, execute_func2<std::string>, 1);
-          lua_settable(L,-3);
-          break;
-        case 4: {
-          auto [v,location] = get<std::tuple<double,double>>(value);
-          lua_pushnumber(L, 4);
-          lua_pushnumber(L, v);
-          lua_settable(L,-3);
-          lua_pushnumber(L, 5); 
-          lua_pushnumber(L, location); 
-          lua_settable(L,-3);
-          break;
-          
-        }
-        default: break;
-      }
+    lua_pushnumber(L, 2);
+    lua_pushnumber(L, quality);
+    lua_settable(L, -3);
 
+    lua_pushnumber(L, 3);
+    auto tp = std::chrono::duration<double>(get<2>(m).time_since_epoch());
+    lua_pushnumber(L, tp.count());
+    lua_settable(L, -3);
+
+    switch (value.index())
+    {
+    case 0:
+      lua_pushnumber(L, 4);
+      lua_pushnumber(L, get<double>(value));
+      lua_settable(L, -3);
+      break;
+    case 1:
+      lua_pushnumber(L, 4);
+      lua_pushstring(L, get<std::string>(value).c_str());
+      lua_settable(L, -3);
+      break;
+    case 2:
+      lua_pushnumber(L, 4);
+      lua_pushlightuserdata(L, &value);
+      lua_pushcclosure(L, execute_func2<double>, 1);
+      lua_settable(L, -3);
+      break;
+    case 3:
+      lua_pushnumber(L, 4);
+      lua_pushlightuserdata(L, &value);
+      lua_pushcclosure(L, execute_func2<std::string>, 1);
+      lua_settable(L, -3);
+      break;
+    case 4:
+    {
+      auto [v, location] = get<std::tuple<double, double>>(value);
+      lua_pushnumber(L, 4);
+      lua_pushnumber(L, v);
+      lua_settable(L, -3);
+      lua_pushnumber(L, 5);
+      lua_pushnumber(L, location);
+      lua_settable(L, -3);
+      break;
+    }
+    default:
+      break;
+    }
   }
 
-  void pushcaasmsg(lua_State *L, cads::CaasMsg m) 
+  void pushcaasmsg(lua_State *L, cads::CaasMsg m)
   {
-      auto [sub,data] = m;
+    auto [sub, data] = m;
 
-      lua_newtable(L);
-      lua_pushnumber(L, 1); 
-      lua_pushlstring(L,sub.c_str(),sub.size());
-      lua_settable(L,-3);
+    lua_newtable(L);
+    lua_pushnumber(L, 1);
+    lua_pushlstring(L, sub.c_str(), sub.size());
+    lua_settable(L, -3);
 
-      lua_pushnumber(L, 2); 
-      lua_pushlstring(L,data.c_str(),data.size());
-      lua_settable(L,-3);
+    lua_pushnumber(L, 2);
+    lua_pushlstring(L, data.c_str(), data.size());
+    lua_settable(L, -3);
   }
-
-
 
   std::optional<cads::AnomalyDetection> mk_anomaly(lua_State *L, int index)
   {
@@ -1358,7 +1393,7 @@ namespace
   {
     auto ms = lua_tointeger(L, 1);
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
-    lua_pushboolean(L,1);
+    lua_pushboolean(L, 1);
     return 1;
   }
 
@@ -1386,12 +1421,51 @@ namespace
     return 1;
   }
 
+  int partitionProfile(lua_State *L)
+  {
+    using namespace std::placeholders;
+    auto Dbscan_opt = todbscan(L, 1);
+
+    if (!Dbscan_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'First argument not a dbscan' }}", __func__);
+      lua_pushnil(L);
+      lua_pushboolean(L, 1);
+      return 2;
+    }
+
+    auto out = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, 2));
+    std::function<cads::msg(cads::msg)> fn(std::bind(cads::partition_profile, _1, *Dbscan_opt));
+
+    new (lua_newuserdata(L, sizeof(cads::AdaptFn<cads::msg>))) cads::AdaptFn<cads::msg>(TransformMsg(fn, out));
+
+    lua_createtable(L, 0, 1);
+    lua_pushcfunction(L, Io_gc);
+    lua_setfield(L, -2, "__gc");
+    lua_setmetatable(L, -2);
+    return 1;
+  }
+
+  int alignProfile(lua_State *L)
+  {
+    auto out = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, -1));
+    std::function<cads::msg(cads::msg)> fn(cads::mk_align_profile());
+
+    new (lua_newuserdata(L, sizeof(cads::AdaptFn<cads::msg>))) cads::AdaptFn<cads::msg>(TransformMsg(fn, out));
+
+    lua_createtable(L, 0, 1);
+    lua_pushcfunction(L, Io_gc);
+    lua_setfield(L, -2, "__gc");
+    lua_setmetatable(L, -2);
+    return 1;
+  }
+
   int prsToScan(lua_State *L)
   {
     auto out = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, -1));
     std::function<cads::msg(cads::msg)> fn(cads::prs_to_scan);
 
-    new (lua_newuserdata(L, sizeof(cads::AdaptFn<cads::msg,bool>))) cads::AdaptFn<cads::msg,bool>(TransformMsg(fn, out));
+    new (lua_newuserdata(L, sizeof(cads::AdaptFn<cads::msg>))) cads::AdaptFn<cads::msg>(TransformMsg(fn, out));
 
     lua_createtable(L, 0, 1);
     lua_pushcfunction(L, Io_gc);
@@ -1403,8 +1477,9 @@ namespace
   int scanZ(lua_State *L)
   {
     auto out = static_cast<cads::Io<cads::z_type> *>(lua_touserdata(L, -1));
-    std::function<cads::z_type(cads::msg)> fn = [](cads::msg m){ return std::get<cads::profile>(std::get<1>(m)).z;};
-    new (lua_newuserdata(L, sizeof(cads::AdaptFn<cads::msg,bool>))) cads::AdaptFn<cads::msg,bool>(TransformMsg(fn, out));
+    std::function<cads::z_type(cads::msg)> fn = [](cads::msg m)
+    { return std::get<cads::profile>(std::get<1>(m)).z; };
+    new (lua_newuserdata(L, sizeof(cads::AdaptFn<cads::msg>))) cads::AdaptFn<cads::msg>(TransformMsg(fn, out));
 
     lua_createtable(L, 0, 1);
     lua_pushcfunction(L, Io_gc);
@@ -1417,7 +1492,7 @@ namespace
   {
     auto filename = tostring(L, 1);
 
-    using user_type = cads::Adapt<cads::z_type,decltype(cads::file_csv_coro(*filename))>;
+    using user_type = cads::Adapt<cads::z_type, decltype(cads::file_csv_coro(*filename))>;
 
     new (lua_newuserdata(L, sizeof(user_type))) user_type(cads::file_csv_coro(*filename));
 
@@ -1433,8 +1508,8 @@ namespace
     auto out = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, -1));
     auto mid = lua_tointeger(L, -2);
     auto id = cads::i_msgid(mid);
-    
-    new (lua_newuserdata(L, sizeof(cads::AdaptFn<cads::msg,bool>))) cads::AdaptFn<cads::msg,bool>(FilterMsg(id, out));
+
+    new (lua_newuserdata(L, sizeof(cads::AdaptFn<cads::msg>))) cads::AdaptFn<cads::msg>(FilterMsg(id, out));
 
     lua_createtable(L, 0, 1);
     lua_pushcfunction(L, Io_gc);
@@ -1443,13 +1518,15 @@ namespace
     return 1;
   }
 
-  int teeMsg(lua_State *L) {
+  int teeMsg(lua_State *L)
+  {
     auto out0 = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, -2));
     auto out1 = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, -1));
 
-    std::function<bool(cads::msg)> fn = [out0,out1](cads::msg m){ (out0 ? out0->enqueue(m) : true); return (out1 ? out1->enqueue(m) : true);};
-    
-    new (lua_newuserdata(L, sizeof(cads::AdaptFn<cads::msg,bool>))) cads::AdaptFn<cads::msg,bool>(std::move(fn));
+    std::function<bool(cads::msg)> fn = [out0, out1](cads::msg m)
+    { (out0 ? out0->enqueue(m) : true); return (out1 ? out1->enqueue(m) : true); };
+
+    new (lua_newuserdata(L, sizeof(cads::AdaptFn<cads::msg>))) cads::AdaptFn<cads::msg>(std::move(fn));
 
     lua_createtable(L, 0, 1);
     lua_pushcfunction(L, Io_gc);
@@ -1460,7 +1537,7 @@ namespace
 
   int BlockingReaderWriterQueue(lua_State *L)
   {
-    new (lua_newuserdata(L, sizeof(cads::Adapt<cads::msg,moodycamel::BlockingReaderWriterQueue<cads::msg>>))) cads::Adapt<cads::msg, moodycamel::BlockingReaderWriterQueue<cads::msg>>(moodycamel::BlockingReaderWriterQueue<cads::msg>());
+    new (lua_newuserdata(L, sizeof(cads::Adapt<cads::msg, moodycamel::BlockingReaderWriterQueue<cads::msg>>))) cads::Adapt<cads::msg, moodycamel::BlockingReaderWriterQueue<cads::msg>>(moodycamel::BlockingReaderWriterQueue<cads::msg>());
 
     lua_createtable(L, 0, 1);
     lua_pushcfunction(L, Io_gc);
@@ -1479,23 +1556,28 @@ namespace
     auto have_value = io->wait_dequeue_timed(m, std::chrono::seconds(s));
     lua_pushboolean(L, have_value);
 
-    if(!have_value) {
+    if (!have_value)
+    {
       return 1;
     }
 
     auto mid = std::get<0>(m);
     lua_pushinteger(L, mid);
 
-    if(mid == cads::msgid::measure) {
-      pushmetric(L,std::get<cads::Measure::MeasureMsg>(std::get<1>(m)));
-      return 3;
-    }else if(mid == cads::msgid::caas_msg)
+    if (mid == cads::msgid::measure)
     {
-      pushcaasmsg(L,std::get<cads::CaasMsg>(std::get<1>(m)));
+      pushmetric(L, std::get<cads::Measure::MeasureMsg>(std::get<1>(m)));
       return 3;
-    }else if(mid ==  cads::msgid::error) {
+    }
+    else if (mid == cads::msgid::caas_msg)
+    {
+      pushcaasmsg(L, std::get<cads::CaasMsg>(std::get<1>(m)));
+      return 3;
+    }
+    else if (mid == cads::msgid::error)
+    {
       auto errmsg = std::get<std::string>(std::get<1>(m));
-      lua_pushlstring(L,errmsg.c_str(),errmsg.size());
+      lua_pushlstring(L, errmsg.c_str(), errmsg.size());
       return 3;
     }
 
@@ -1504,12 +1586,15 @@ namespace
 
   auto thread2_with_catch(std::function<void(cads::Io<cads::msg> &, cads::Io<cads::msg> &)> fn)
   {
-    return [=](cads::Io<cads::msg> &input, cads::Io<cads::msg> &output) {
-      try {
-        fn(input,output);
-      }catch(std::exception& ex)
+    return [=](cads::Io<cads::msg> &input, cads::Io<cads::msg> &output)
+    {
+      try
       {
-        output.enqueue({cads::msgid::error,ex.what()});
+        fn(input, output);
+      }
+      catch (std::exception &ex)
+      {
+        output.enqueue({cads::msgid::error, ex.what()});
       }
     };
   }
@@ -1533,7 +1618,7 @@ namespace
     auto fps = lua_tonumber(L, -1);
     auto err = (*gocator)->Start(fps);
 
-    lua_pushboolean(L,err);
+    lua_pushboolean(L, err);
 
     return 1;
   }
@@ -1552,7 +1637,7 @@ namespace
     auto gocator = static_cast<std::unique_ptr<cads::GocatorReaderBase> *>(lua_touserdata(L, -1));
     auto err = (*gocator)->Align();
 
-    lua_pushboolean(L,err);
+    lua_pushboolean(L, err);
 
     return 1;
   }
@@ -1563,7 +1648,7 @@ namespace
     auto len = lua_tonumber(L, -1);
     auto err = (*gocator)->SetFoV(len);
 
-    lua_pushboolean(L,err);
+    lua_pushboolean(L, err);
 
     return 1;
   }
@@ -1573,7 +1658,7 @@ namespace
     auto gocator = static_cast<std::unique_ptr<cads::GocatorReaderBase> *>(lua_touserdata(L, -1));
     auto err = (*gocator)->ResetAlign();
 
-    lua_pushboolean(L,err);
+    lua_pushboolean(L, err);
 
     return 1;
   }
@@ -1586,7 +1671,8 @@ namespace
     return 0;
   }
 
-  void pushgocatormeta(lua_State *L) {
+  void pushgocatormeta(lua_State *L)
+  {
     lua_createtable(L, 0, 1);
     lua_pushcfunction(L, gocator_gc);
     lua_setfield(L, -2, "__gc");
@@ -1601,7 +1687,7 @@ namespace
     lua_setfield(L, -2, "SetFoV");
     lua_pushcfunction(L, gocator_reset_align);
     lua_setfield(L, -2, "ResetAlign");
-    
+
     lua_setfield(L, -2, "__index");
   }
 
@@ -1617,15 +1703,18 @@ namespace
 
     auto q = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, 2));
     auto p = new (lua_newuserdata(L, sizeof(std::unique_ptr<cads::GocatorReaderBase>))) std::unique_ptr<cads::SqliteGocatorReader>;
-    
-    try {
+
+    try
+    {
       *p = std::make_unique<cads::SqliteGocatorReader>(*sqlite_gocator_config_opt, *q);
       pushgocatormeta(L);
       lua_setmetatable(L, -2);
-      
+
       return 1;
-    }catch(std::exception& ex) {
-      spdlog::get("cads")->error(R"({{func = '{}', msg = '{}'}})", __func__,ex.what());
+    }
+    catch (std::exception &ex)
+    {
+      spdlog::get("cads")->error(R"({{func = '{}', msg = '{}'}})", __func__, ex.what());
     }
 
     return 0;
@@ -1643,17 +1732,18 @@ namespace
 
     auto q = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, 2));
     auto p = new (lua_newuserdata(L, sizeof(std::unique_ptr<cads::GocatorReaderBase>))) std::unique_ptr<cads::GocatorReader>;
-    
-    try 
+
+    try
     {
       *p = std::make_unique<cads::GocatorReader>(*gocator_config_opt, *q);
       pushgocatormeta(L);
       lua_setmetatable(L, -2);
 
       return 1;
-    }catch(std::exception& ex)
+    }
+    catch (std::exception &ex)
     {
-      spdlog::get("cads")->error(R"({{func = '{}', msg = '{}'}})", __func__,ex.what());
+      spdlog::get("cads")->error(R"({{func = '{}', msg = '{}'}})", __func__, ex.what());
     }
 
     return 0;
@@ -1688,7 +1778,6 @@ namespace
     return mk_thread2(L, bound);
   }
 
-  
   int dynamic_processing_thread(lua_State *L)
   {
     using namespace std::placeholders;
@@ -1704,12 +1793,13 @@ namespace
     using namespace std::placeholders;
     auto arg_cnt = lua_gettop(L);
 
-    if(arg_cnt > 4) {
+    if (arg_cnt > 4)
+    {
       spdlog::get("cads")->error("{{ func = {},  msg = 'More than 4 arguemtns'}}", __func__);
     }
 
     auto conveyor = toconveyor(L, 1);
-    auto remote_reg = arg_cnt == 4 ? lua_toboolean(L,2) : true;
+    auto remote_reg = arg_cnt == 4 ? lua_toboolean(L, 2) : true;
     auto bound = std::bind(cads::save_send_thread, *conveyor, remote_reg, _1, _2);
     return mk_thread2(L, bound);
   }
@@ -1726,7 +1816,7 @@ namespace
   int process_profile(lua_State *L)
   {
     using namespace std::placeholders;
-    auto profile_config = toprofileconfig(L,1);
+    auto profile_config = toprofileconfig(L, 1);
     auto bound = std::bind(cads::process_profile, *profile_config, _1, _2);
     return mk_thread2(L, bound);
   }
@@ -1742,8 +1832,8 @@ namespace
     auto next = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, 1));
     double stride = lua_tonumber(L, 2);
 
-     using user_type = cads::Adapt<cads::msg,decltype(cads::encoder_distance_estimation(std::ref(*next), stride))>;
-     
+    using user_type = cads::Adapt<cads::msg, decltype(cads::encoder_distance_estimation(std::ref(*next), stride))>;
+
     new (lua_newuserdata(L, sizeof(user_type))) user_type(cads::encoder_distance_estimation(std::ref(*next), stride));
 
     lua_createtable(L, 0, 1);
@@ -1756,8 +1846,8 @@ namespace
   int voidMsg(lua_State *L)
   {
 
-    using user_type = cads::Adapt<cads::msg,decltype(cads::void_msg())>;
-     
+    using user_type = cads::Adapt<cads::msg, decltype(cads::void_msg())>;
+
     new (lua_newuserdata(L, sizeof(user_type))) user_type(cads::void_msg());
 
     lua_createtable(L, 0, 1);
@@ -1769,14 +1859,14 @@ namespace
 
   int profile_decimation(lua_State *L)
   {
-   
+
     auto widthn = tointeger(L, 1);
     double modulo = lua_tointeger(L, 2);
     auto next = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, 3));
 
-    using user_type = cads::Adapt<cads::msg,decltype(cads::profile_decimation_coro(*widthn,modulo,std::ref(*next)))>;
+    using user_type = cads::Adapt<cads::msg, decltype(cads::profile_decimation_coro(*widthn, modulo, std::ref(*next)))>;
 
-    new (lua_newuserdata(L, sizeof(user_type))) user_type(cads::profile_decimation_coro(*widthn,modulo,std::ref(*next)));
+    new (lua_newuserdata(L, sizeof(user_type))) user_type(cads::profile_decimation_coro(*widthn, modulo, std::ref(*next)));
 
     lua_createtable(L, 0, 1);
     lua_pushcfunction(L, Io_gc);
@@ -1802,11 +1892,11 @@ namespace cads
     {
       auto L = UL.get();
 
-      lua_pushinteger(L,serial);
-      lua_setglobal(L,"DeviceSerial");
+      lua_pushinteger(L, serial);
+      lua_setglobal(L, "DeviceSerial");
 
-      lua_pushstring(L,lua_code.c_str());
-      lua_setglobal(L,"LuaCodeSelfRef");
+      lua_pushstring(L, lua_code.c_str());
+      lua_setglobal(L, "LuaCodeSelfRef");
 
       lua_pushcfunction(L, ::BlockingReaderWriterQueue);
       lua_setglobal(L, "BlockingReaderWriterQueue");
@@ -1853,33 +1943,38 @@ namespace cads
       lua_pushcfunction(L, ::get_serial);
       lua_setglobal(L, "get_serial");
 
-      lua_pushcfunction(L,time_str);
-      lua_setglobal(L,"timeToString");
+      lua_pushcfunction(L, time_str);
+      lua_setglobal(L, "timeToString");
 
-      lua_pushcfunction(L,get_now);
-      lua_setglobal(L,"getNow");
+      lua_pushcfunction(L, get_now);
+      lua_setglobal(L, "getNow");
 
-      lua_pushcfunction(L,profile_decimation);
-      lua_setglobal(L,"profile_decimation");
+      lua_pushcfunction(L, profile_decimation);
+      lua_setglobal(L, "profile_decimation");
 
-      lua_pushcfunction(L,::prsToScan);
-      lua_setglobal(L,"prsToScan");
-
-      lua_pushcfunction(L,::scanZ);
-      lua_setglobal(L,"scanZ");
-
-      lua_pushcfunction(L,::filterMsgs);
-      lua_setglobal(L,"filterMsgs");
+      lua_pushcfunction(L, ::alignProfile);
+      lua_setglobal(L, "alignProfile");
       
-      lua_pushcfunction(L,::fileCSV);
-      lua_setglobal(L,"fileCSV");
+      lua_pushcfunction(L, ::partitionProfile);
+      lua_setglobal(L, "partitionProfile");
+      
+      lua_pushcfunction(L, ::prsToScan);
+      lua_setglobal(L, "prsToScan");
 
-      lua_pushcfunction(L,::teeMsg);
-      lua_setglobal(L,"teeMsg");
+      lua_pushcfunction(L, ::scanZ);
+      lua_setglobal(L, "scanZ");
 
-      lua_pushcfunction(L,::voidMsg);
-      lua_setglobal(L,"voidMsg");
+      lua_pushcfunction(L, ::filterMsgs);
+      lua_setglobal(L, "filterMsgs");
 
+      lua_pushcfunction(L, ::fileCSV);
+      lua_setglobal(L, "fileCSV");
+
+      lua_pushcfunction(L, ::teeMsg);
+      lua_setglobal(L, "teeMsg");
+
+      lua_pushcfunction(L, ::voidMsg);
+      lua_setglobal(L, "voidMsg");
 
       return UL;
     }
@@ -1892,7 +1987,7 @@ namespace cads
     auto L = Lua{luaL_newstate(), lua_close};
     luaL_openlibs(L.get());
 
-    L = lua::init(std::move(L),constants_device.Serial,lua_code);
+    L = lua::init(std::move(L), constants_device.Serial, lua_code);
     auto lua_status = luaL_dostring(L.get(), lua_code.c_str());
 
     if (lua_status != LUA_OK)
@@ -1909,9 +2004,12 @@ namespace cads
     namespace fs = std::filesystem;
 
     fs::path luafile;
-    if(luascript_name) {
+    if (luascript_name)
+    {
       luafile = luascript_name.value();
-    }else {
+    }
+    else
+    {
       luafile = f;
       luafile.replace_extension("lua");
     }

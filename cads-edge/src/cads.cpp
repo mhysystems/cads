@@ -21,12 +21,34 @@
 #include <sampling.h>
 #include <upload.h>
 #include <utils.hpp>
+#include <err.h>
 
 
 
 using namespace std;
 using namespace moodycamel;
 using namespace std::chrono;
+
+
+namespace 
+{
+  struct ProfileError : cads::errors::Err
+  {
+    
+    ProfileError(const char* file, const char* func, int line, const Err& child) : 
+      Err(file,func,line,child){}
+    
+    std::shared_ptr<ProfileError> clone() const {
+      return std::shared_ptr<ProfileError>(clone_impl());
+    }
+
+    ProfileError* clone_impl() const
+    {
+      return new ProfileError(*this);
+    }
+  };
+}
+
 
 namespace cads
 {
@@ -45,34 +67,30 @@ msg partition_profile(msg m, Dbscan dbscan)
   return {msgid::profile_partitioned,cads::ProfilePartitioned{.partitions = std::move(partitions), .scan = std::move(profile)}}; 
 }
 
-enum class Hell{A,B};
-msg align_profile(msg m, std::function<double(cads::z_type)> pulley_estimator, std::function<bool()> is_alignable)
-{
-  auto id = std::get<0>(m);
-  if(id != msgid::profile_partitioned)
+
+std::function<msg(msg)> 
+  mk_align_profile()
   {
-    return m;
+    return [=](msg m) mutable -> msg
+    {
+      auto id = std::get<0>(m);
+      if(id == msgid::profile_partitioned)
+      {
+        auto profile_part = std::get<ProfilePartitioned>(std::get<1>(m));
+        auto status = is_alignable(profile_part.partitions);
+        if(status)
+        {
+          regression_compensate(profile_part.scan.z,linear_regression(extract_pulley_coords(profile_part.scan.z,profile_part.partitions)).gradient);
+          return {id,profile_part};
+        }else {
+          return {msgid::error,::ProfileError(__FILE__,__func__,__LINE__,status).clone()}; 
+        }
+
+      }else{
+        return m;
+      }
+    };
   }
-
-  auto profile_partitioned = std::get<cads::ProfilePartitioned>(std::get<1>(m));
-  std::error_code a(Hell);
-  auto pulley = extract_pulley_coords(profile_partitioned.scan.z,profile_partitioned.partitions);
-  //regression_compensate(profile_partitioned.scan.z,linear_regression(pulley).gradient);
-/*
-
-  auto pulley_left = pulley_estimator(std::get<0>(extract_pulley_coords(p.z,profile_partitioned.partitions)).data);
-  auto pulley_right = pulley_estimator(std::get<1>(extract_pulley_coords(p.z,profile_partitioned.partitions)).data);
-
-      iz.insert(iz.begin(), filter_window_len, (float)pulley_left);
-      iz.insert(iz.end(), filter_window_len, (float)pulley_right);
-      ll += filter_window_len;
-      lr += filter_window_len;
-
-      std::fill(iz.begin(), iz.begin() + ll, pulley_left);
-      std::fill(iz.begin() + lr, iz.end(), pulley_right);*/
-  return m; //{msgid::profile_partitioned,cads::ProfilePartitioned{.partitions = std::move(partitions), .scan = std::move(profile)}}; 
-}
-
 
 msg prs_to_scan(msg m)
 {
@@ -169,6 +187,7 @@ msg prs_to_scan(msg m)
     const auto nan_percentage = config.NaNPercentage;
     const auto width_n = (int)config.conveyor.WidthN; // gcc-11 on ubuntu cannot compile doubles in ranges expression
     const auto clip_height = (z_element)config.ClipHeight;
+    const auto clamp_zero = (z_element)config.ClampToZeroHeight;
     double x_resolution = 1.0;
     double z_resolution = 1.0;
 
@@ -191,8 +210,7 @@ msg prs_to_scan(msg m)
 
     next.enqueue(m);
 
-    auto iirfilter_pulley_left = mk_iirfilterSoS(config.IIRFilter.sos);
-    auto iirfilter_pulley_right = mk_iirfilterSoS(config.IIRFilter.sos);
+    auto iirfilter_pulley_level = mk_iirfilterSoS(config.IIRFilter.sos);
     auto iirfilter_left_edge = mk_iirfilterSoS(config.IIRFilter.sos);
     auto iirfilter_right_edge = mk_iirfilterSoS(config.IIRFilter.sos);
 
@@ -206,8 +224,6 @@ msg prs_to_scan(msg m)
     long drop_profiles = config.IIRFilter.skip; // Allow for iir fillter too stablize
 
     auto pulley_estimator = mk_pulleyfitter(z_resolution, config.PulleyEstimatorInit);
-
-    auto filter_window_len = config.PulleySamplesExtend;
 
     auto pulley_rev = config.RevolutionSensor.source == RevolutionSensorConfig::Source::length ? mk_pseudo_revolution(config.conveyor.PulleyCircumference) : mk_pulley_revolution(config.RevolutionSensor);
 
@@ -258,27 +274,24 @@ msg prs_to_scan(msg m)
         break;
       }
 
-     // regression_compensate(p.z,linear_regression(extract_pulley_coords(p.z,profile_partitioned.partitions)).gradient);
       auto iy = p.y;
       auto ix = p.x_off;
       auto iz = p.z;
-/*
-      auto pulley_left = pulley_estimator(std::get<0>(extract_pulley_coords(p.z,profile_partitioned.partitions)).data);
-      auto pulley_right = pulley_estimator(std::get<1>(extract_pulley_coords(p.z,profile_partitioned.partitions)).data);
 
-      iz.insert(iz.begin(), filter_window_len, (float)pulley_left);
-      iz.insert(iz.end(), filter_window_len, (float)pulley_right);
-      ll += filter_window_len;
-      lr += filter_window_len;
+      auto gg = extract_pulley_coords(p.z,profile_partitioned.partitions);
+      auto pulley_level = pulley_estimator(std::get<0>(extract_pulley_coords(p.z,profile_partitioned.partitions)).data);
 
-      std::fill(iz.begin(), iz.begin() + ll, pulley_left);
-      std::fill(iz.begin() + lr, iz.end(), pulley_right);
+      auto left_edge = profile_partitioned.partitions.contains(ProfileSection::Belt) ? 
+        std::get<0>(profile_partitioned.partitions[ProfileSection::Belt])
+        : size_t(0);
+      
+      auto right_edge = profile_partitioned.partitions.contains(ProfileSection::Belt) ? 
+        std::get<1>(profile_partitioned.partitions[ProfileSection::Belt])
+        : iz.size();
 
-
-      auto pulley_left_filtered = (z_element)iirfilter_pulley_left(pulley_left);
-      auto pulley_right_filtered = (z_element)iirfilter_pulley_right(pulley_right);
-      auto left_edge_filtered = (z_element)iirfilter_left_edge(ll);
-      auto right_edge_filtered = (z_element)iirfilter_right_edge(lr);
+      auto pulley_filtered = (z_element)iirfilter_pulley_level(pulley_level);
+      auto left_edge_filtered = (z_element)iirfilter_left_edge(left_edge);
+      auto right_edge_filtered = (z_element)iirfilter_right_edge(right_edge);
 
       // Required for iirfilter stabilisation
       if (drop_profiles > 0)
@@ -288,13 +301,13 @@ msg prs_to_scan(msg m)
       }
 
       if(config.measureConfig.Enable) {
-        next.enqueue({msgid::measure,Measure::MeasureMsg{"pulleylevel",0,date::utc_clock::now(),pulley_left_filtered}});
+        next.enqueue({msgid::measure,Measure::MeasureMsg{"pulleylevel",0,date::utc_clock::now(),pulley_filtered}});
         next.enqueue({msgid::measure,Measure::MeasureMsg{"beltedgeposition",0,date::utc_clock::now(),double(ix + left_edge_filtered * x_resolution)}});
       }
 
-      auto pulley_level_unbias = dc_filter(pulley_left_filtered);
+      auto pulley_level_unbias = dc_filter(pulley_filtered);
 
-      auto [delayed, dd] = delay({{p.time,iy,ix,iz}, (int)left_edge_filtered, (int)ll, (int)lr, (int)right_edge_filtered});
+      auto [delayed, dd] = delay({{p.time,iy,ix,iz}, (int)left_edge_filtered, (int)left_edge, (int)right_edge, (int)right_edge_filtered});
 
       if (!delayed)
         continue;
@@ -304,13 +317,10 @@ msg prs_to_scan(msg m)
       auto x = delayed_profile.x_off;
       auto z = delayed_profile.z;
 
-      auto gradient = (pulley_right_filtered - pulley_left_filtered) / double(right_edge_index - left_edge_index);
-      //regression_compensate(z, left_edge_index, z.size(), gradient);
-
       PulleyRevolution ps;
       if (config.RevolutionSensor.source == RevolutionSensorConfig::Source::height_raw)
       {
-        ps = pulley_rev(pulley_left_filtered);
+        ps = pulley_rev(pulley_filtered);
       }
       else if(config.RevolutionSensor.source == RevolutionSensorConfig::Source::length) 
       {
@@ -334,24 +344,13 @@ msg prs_to_scan(msg m)
         next.enqueue({msgid::measure,Measure::MeasureMsg{"pulleyspeed",0,date::utc_clock::now(),speed}});
         next.enqueue({msgid::measure,Measure::MeasureMsg{"pulleyoscillation",0,date::utc_clock::now(),amplitude}});
       }
-*/
-//      pulley_level_compensate(z, -pulley_left_filtered, clip_height);
-      
-      //if (z.size() < size_t(left_edge_index_aligned + width_n))
-      //{
-        // spdlog::get("cads")->debug("Belt width({})[la - {}, l- {}, r - {}] less than required. Filled with zeros",z.size(),left_edge_index_aligned,left_edge_index,right_edge_index);
-        // store_errored_profile(raw_z);
-      //  const auto cnt = left_edge_index_aligned + width_n - z.size();
-      //  z.insert(z.end(), cnt, 0.0);
-     // }
-      
-      //auto z_zero_removed = z | views::filter([](float a){ return a != 0;});
-      //auto z_zero_removedd = z_type{z_zero_removed.begin(),z_zero_removed.end()};
-      //auto from = z_type{z.begin()+left_edge_index_avg,z.begin()+right_edge_index_avg};
-      //auto qaz = interpolate_to_widthn(from,width_n);
-      //auto f = select_if(from,qaz,[](float a){ return a == 0;});
 
-      //next.enqueue({msgid::pulley_revolution_scan,PulleyRevolutionScan{std::get<0>(ps),std::get<1>(ps), cads::profile{delayed_profile.time,y, x + left_edge_index_avg * x_resolution, {f.begin(), f.end()}}}});
+      pulley_level_compensate(z, -pulley_filtered, clip_height, clamp_zero);
+      interpolation_linear(z.begin()+left_edge_index, z.begin()+right_edge_index, [](float a){ return std::isnan(a) || a == 0;});
+      
+      auto interpolated = interpolate_to_widthn({z.begin()+left_edge_index_avg,z.begin()+right_edge_index_avg},width_n);
+
+      next.enqueue({msgid::pulley_revolution_scan,PulleyRevolutionScan{std::get<0>(ps),std::get<1>(ps), cads::profile{delayed_profile.time,y, x + left_edge_index_avg * x_resolution, interpolated}}});
 
     } while (std::get<0>(m) != msgid::finished);
 
