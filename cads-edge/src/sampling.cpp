@@ -21,6 +21,8 @@ namespace cads
   decltype(cads::profile::z) interpolate_to_widthn(decltype(cads::profile::z) z, size_t n )
   {
     using namespace std;
+    
+    if(z.size() == n) return z;
 
     auto step = (double)z.size() / (double)n;
     decltype(z) interpolated_z(n);
