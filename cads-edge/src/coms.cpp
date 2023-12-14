@@ -33,13 +33,6 @@ using namespace std;
 
 namespace
 {
-  std::vector<int16_t> z_as_int16(cads::z_type z,double z_resolution, double z_offset) {
-    namespace sr = std::ranges;
-  
-    auto tmp_z = z | sr::views::transform([=](float e) -> int16_t
-                                            { return std::isnan(e) ? std::numeric_limits<int16_t>::lowest() : int16_t(((double)e - z_offset) / z_resolution); });
-    return {tmp_z.begin(), tmp_z.end()};  
-  }
 
   std::vector<uint8_t> compress(uint8_t *input, uint32_t size)
   {
@@ -439,8 +432,6 @@ coro<remote_msg,bool> remote_control_coro()
 
     auto YmaxN = scan.cardinality;
 
-    auto z_resolution = gocator.zResolution;
-    auto z_offset = gocator.zOffset;
     auto y_step = conveyor.Length / (YmaxN);
 
     double belt_z_max = std::numeric_limits<double>::lowest();
@@ -463,13 +454,11 @@ coro<remote_msg,bool> remote_control_coro()
         belt_z_max = std::max(belt_z_max, (double)pmax);
         belt_z_min = std::min(belt_z_min, (double)pmin);
 
-        auto short_z = z_as_int16(zs,z_resolution,z_offset);
-
-        profiles_flat.push_back(CadsFlatbuffers::CreateprofileDirect(builder, y, 0, &short_z));
+        profiles_flat.push_back(CadsFlatbuffers::CreateprofileDirect(builder, y, 0, &zs));
 
         if (profiles_flat.size() == communications_config.UploadRows)
         {
-          builder.Finish(CadsFlatbuffers::Createprofile_array(builder, z_resolution, z_offset, idx - communications_config.UploadRows, profiles_flat.size(), builder.CreateVector(profiles_flat)));
+          builder.Finish(CadsFlatbuffers::Createprofile_array(builder, idx - communications_config.UploadRows, profiles_flat.size(), builder.CreateVector(profiles_flat)));
 
           auto [terminate,sent_rows] = send_bytes.resume({{builder.GetBufferPointer(),builder.GetBufferPointer()+builder.GetSize()},profiles_flat.size()});
           profiles_flat.clear(); builder.Clear();
@@ -483,7 +472,7 @@ coro<remote_msg,bool> remote_control_coro()
       {
         if (profiles_flat.size() > 0)
         {
-          builder.Finish(CadsFlatbuffers::Createprofile_array(builder, z_resolution, z_offset, idx - profiles_flat.size(), profiles_flat.size(), builder.CreateVector(profiles_flat)));
+          builder.Finish(CadsFlatbuffers::Createprofile_array(builder, idx - profiles_flat.size(), profiles_flat.size(), builder.CreateVector(profiles_flat)));
           auto [terminate,sent_rows] = send_bytes.resume({{builder.GetBufferPointer(),builder.GetBufferPointer()+builder.GetSize()},profiles_flat.size()});
           profiles_flat.clear(); builder.Clear();
           if(terminate) break;
@@ -516,8 +505,6 @@ coro<remote_msg,bool> remote_control_coro()
    
     FlatBufferBuilder builder(4096);
 
-    auto short_z = z_as_int16(p.z,p_g.zResolution,p_g.zOffset);
-  
     auto caas = CadsFlatbuffers::CreateCaasProfileDirect(builder,
       p_g.xOrigin, 
       p_g.zOrigin, 
@@ -526,9 +513,7 @@ coro<remote_msg,bool> remote_control_coro()
       nan,
       p.x_off,
       p_g.xResolution,
-      p_g.zResolution,
-      p_g.zOffset,
-      &short_z);
+      &p.z);
 
     auto msg = CadsFlatbuffers::CreateMsg(builder,
       CadsFlatbuffers::MsgContents_CaasProfile,

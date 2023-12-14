@@ -9,9 +9,7 @@ table CaasProfile
   nan_ratio : double;
   x_off : double;
   x_resolution : double;
-  z_resolution : double;
-  z_offset : double;
-	z_samples : [short];
+	z_samples : [float];
 }
 
 table Start

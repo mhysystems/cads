@@ -29,17 +29,6 @@ function interpolatetoN(array,N)
   return narray;
 }
 
-function array16ToFloat(array16,zResolution,zOffset)
-{
-  const f32 = new Float32Array(array16.length);
-  for(let i = 0; i < array16.length; ++i) {
-    const e = array16[i];
-    f32[i] =  e != -32768 ? (e * zResolution + zOffset) : NaN;
-  }
-
-  return f32;
-}
-
 class CanvasPlot {
   constructor(canvas,noiseValueElement) {
     this.ctx = canvas.getContext("2d");
@@ -68,9 +57,7 @@ class CanvasPlot {
 
     const profile = msgDataBuf.contents(new CaasProfile());
 
-    const z_resolutiom = profile.zResolution();
-    const z_Offset = profile.zOffset();
-    const z = array16ToFloat(profile.zSamplesArray(),z_resolutiom,z_Offset);
+    const z = profile.zSamplesArray();
     const nanCnt = Math.floor(100*profile.nanRatio());
     
     if(z.byteLength < Float32Array.BYTES_PER_ELEMENT) 

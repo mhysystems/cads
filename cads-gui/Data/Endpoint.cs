@@ -110,7 +110,7 @@ namespace cads_gui.Data
         var pc = pa.Profiles((int)cnt - 1);
         if(pc.HasValue) {
           var p = pc.Value;
-          var z = p.GetZSamplesArray().Select(e => e != -32768 ? (float)(e * pa.ZRes + pa.ZOff) : float.NaN).ToArray();
+          var z = p.GetZSamplesArray();
           zmax = Math.Max(zmax, z.Max());
           db.Save(pa.Idx + cnt - 1, p.Y, p.XOff, z);
         }else {

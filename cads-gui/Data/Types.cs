@@ -97,8 +97,6 @@ namespace cads_gui.Data
     public DateTime chrono { get; set; } = DateTime.UnixEpoch;
     public double x_res { get; set; } = 0;
     public double y_res { get; set; } = 0;
-    public double z_res { get; set; } = 0;
-    public double z_off { get; set; } = 0;
     public double z_max { get; set; } = 0;
     public double z_min { get; set; } = 0;
 
@@ -118,7 +116,7 @@ namespace cads_gui.Data
     public long Belt { get; set; } = 1;
     public int Orientation { get; set; } = -1;
 
-    public Scan(long rowid, string site, string conveyor, DateTime chrono, double x_res, double y_res, double z_res, double z_off, double z_max, double z_min)
+    public Scan(long rowid, string site, string conveyor, DateTime chrono, double x_res, double y_res, double z_max, double z_min)
     {
       this.rowid = rowid;
       this.site = site;
@@ -126,8 +124,6 @@ namespace cads_gui.Data
       this.chrono = chrono;
       this.x_res = x_res;
       this.y_res = y_res;
-      this.z_res = z_res;
-      this.z_off = z_off;
       this.z_max = z_max;
       this.z_min = z_min;
     }
@@ -140,8 +136,6 @@ namespace cads_gui.Data
       chrono = bc.chrono;
       x_res = bc.x_res;
       y_res = bc.y_res;
-      z_res = bc.z_res;
-      z_off = bc.z_off;
       z_max = bc.z_max;
       z_min = bc.z_min;
     }
