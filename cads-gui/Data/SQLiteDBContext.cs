@@ -18,10 +18,9 @@ namespace cads_gui.Data
               return iana ?? "Etc/UTC";
           }
         protected override void OnModelCreating(ModelBuilder modelBuilder) {
-
+          
           modelBuilder.Entity<Scan>().HasKey(e => e.rowid);
           modelBuilder.Entity<Scan>().Property(b => b.rowid).ValueGeneratedOnAdd();
-          modelBuilder.Entity<Scan>().Ignore(b => b.ConveyorID);
           modelBuilder.Entity<Scan>().Ignore(b => b.name);
           modelBuilder.Entity<Scan>().Property(e => e.chrono).HasConversion(e => e, e => DateTime.SpecifyKind(e,DateTimeKind.Utc));
 					modelBuilder.Entity<SavedZDepthParams>().HasKey( e => new{e.Site,e.Conveyor,e.Name});
