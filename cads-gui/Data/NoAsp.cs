@@ -21,13 +21,6 @@ namespace cads_gui.Data
   public static class NoAsp
   {
 
-    public static byte[] f2b(float[] z)
-    {
-      var b = new byte[z.Length * sizeof(float)];
-      Buffer.BlockCopy(z, 0, b, 0, b.Length);
-      return b;
-    }
-
     public static byte[] ConvertFloatsToBytes(float[] a)
     {
       var z_ptr = new ReadOnlySpan<float>(a);
@@ -197,13 +190,6 @@ namespace cads_gui.Data
       
       return (site,belt,chrono);
     }
-
-    public static string GetConveyorID(string site, string belt)
-    {
-
-      return site + belt;
-    }
-
   } // End class NoAsp
 
 } // End namespace

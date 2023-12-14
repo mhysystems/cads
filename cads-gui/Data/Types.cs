@@ -89,7 +89,6 @@ namespace cads_gui.Data
     public long rowid { get; set; } = 0;
     public string site { get; set; } = String.Empty;
     public string name { get { return NoAsp.EndpointToSQliteDbName(this.site, this.conveyor, this.chrono); } private set { } }
-    public string ConveyorID { get { return NoAsp.GetConveyorID(this.site, this.conveyor); } private set { } }
     //public long Revision {get; set;} = 0;
     //public SurfaceOrientation Orientation {get; set;} = SurfaceOrientation.Top;
     //public string FilePath {get; set;} = String.Empty;

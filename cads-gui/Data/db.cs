@@ -1,6 +1,5 @@
-using System;
 using Microsoft.Data.Sqlite;
-using System.Linq;
+
 
 namespace cads_gui.Data
 {
@@ -44,7 +43,7 @@ namespace cads_gui.Data
       command.Parameters[0].Value = idx;
       command.Parameters[1].Value = y;
       command.Parameters[2].Value = x_off;
-      command.Parameters[3].Value = NoAsp.f2b(z);
+      command.Parameters[3].Value = NoAsp.ConvertFloatsToBytes(z);
       command.ExecuteNonQuery();
 
     }
