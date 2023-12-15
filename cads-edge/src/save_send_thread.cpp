@@ -71,7 +71,7 @@ namespace cads
       cads::coro<int, std::tuple<int, int, cads::profile>, 1> store_profile;
       long idx = 0;
       coro<int, double,1> store_last_y;
-      coro<int, z_type, 1> store_scan;
+      coro<int, profile, 1> store_scan;
       GocatorProperties gocator_properties;
       Conveyor conveyor;
       date::utc_clock::time_point scan_begin;
@@ -100,7 +100,7 @@ namespace cads
         const auto store_action = [](global_t &global, const scan_t &e)
         {
           global.store_profile.resume({0, global.idx++, e.value});
-          global.store_scan.resume(e.value.z);
+          global.store_scan.resume(e.value);
           global.store_last_y.resume(e.value.y);
         };
 

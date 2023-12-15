@@ -63,7 +63,7 @@ namespace cads
   using end_sequence_t = struct {};
   
   struct Select {
-    moodycamel::BlockingReaderWriterQueue<std::deque<std::tuple<int, cads::z_type>>>* fifo;
+    moodycamel::BlockingReaderWriterQueue<std::deque<std::tuple<int, cads::profile>>>* fifo;
     size_t begin;
     size_t size;
   };

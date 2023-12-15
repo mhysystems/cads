@@ -441,12 +441,12 @@ coro<remote_msg,bool> remote_control_coro()
     while (!terminate)
     {
       auto [co_terminate, cv] = fetch_profile.resume(0);
-      auto [idx, zs_raw] = cv;
+      auto [idx, profile] = cv;
 
       if (!co_terminate)
       {
         namespace sr = std::ranges;
-        auto zs = scan.remote_reg ? interpolate_to_widthn(zs_raw,conveyor.WidthN) : zs_raw;
+        auto zs = scan.remote_reg ? interpolate_to_widthn(profile.z,conveyor.WidthN) : profile.z;
         idx -= scan.begin_index; cnt++;
         auto y = (idx - 1) * y_step; // Sqlite rowid starts a 1
         auto [pmin,pmax] = sr::minmax(zs | sr::views::filter([](float e) { return !std::isnan(e);}));
@@ -454,7 +454,7 @@ coro<remote_msg,bool> remote_control_coro()
         belt_z_max = std::max(belt_z_max, (double)pmax);
         belt_z_min = std::min(belt_z_min, (double)pmin);
 
-        profiles_flat.push_back(CadsFlatbuffers::CreateprofileDirect(builder, y, 0, &zs));
+        profiles_flat.push_back(CadsFlatbuffers::CreateprofileDirect(builder, y, profile.x_off, &zs));
 
         if (profiles_flat.size() == communications_config.UploadRows)
         {

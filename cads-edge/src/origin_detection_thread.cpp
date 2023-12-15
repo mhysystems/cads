@@ -106,23 +106,23 @@ namespace
 
     }
   
-  cv::Mat window_to_mat(const std::deque<cads::z_type>& win) {
+  cv::Mat window_to_mat(const std::deque<cads::profile>& win) {
 
     if(win.size() < 1) return cv::Mat(0,0,CV_32F);
 
-    const int n_cols = (int)win[0].size();
+    const int n_cols = (int)win[0].z.size();
     const int n_rows = (int)win.size();
     
     cv::Mat mat(n_rows,n_cols,CV_32F,cv::Scalar::all(0.0f));
     
     int i = 0;
-    for(auto zs : win) {
+    for(auto p : win) {
 
       auto m = mat.ptr<float>(i++);
 
       int j = 0;
       
-      for(auto z : zs) {
+      for(auto z : p.z) {
         m[j++] = (float)z;
       }
     }
@@ -785,13 +785,13 @@ coro<std::tuple<bool,size_t,size_t,double>,profile,1> anomaly_detection_coro(Ano
                 last_splice_index = index;
               }
               origin_sequence_cnt++;
-              std::deque<std::tuple<int, cads::z_type>> msg;
+              std::deque<std::tuple<int, cads::profile>> msg;
               moodycamel::BlockingReaderWriterQueue<decltype(msg)> rows;
               next_fifo.enqueue({msgid::select,Select{&rows,anomaly_index,anomaly.WindowSize}});
 
               rows.wait_dequeue(msg);
 
-              std::deque<cads::z_type> win;
+              std::deque<cads::profile> win;
               for(auto e : msg) {
                 win.push_back(get<1>(e));
               }

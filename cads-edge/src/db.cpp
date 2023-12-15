@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <memory>
 #include <sstream>
+#include <chrono>
 
 #include <fmt/core.h>
 #include <fmt/chrono.h>
@@ -528,10 +529,10 @@ namespace cads
     co_return err;
   }
 
-  std::tuple<std::deque<std::tuple<int, z_type>>, sqlite3_stmt_t> fetch_scan_coro_step(sqlite3_stmt_t stmt, int rowid_begin, int rowid_end)
+  std::tuple<std::deque<std::tuple<int, profile>>, sqlite3_stmt_t> fetch_scan_coro_step(sqlite3_stmt_t stmt, int rowid_begin, int rowid_end)
   {
 
-    std::deque<std::tuple<int, z_type>> rtn;
+    std::deque<std::tuple<int, profile>> rtn;
     auto err = sqlite3_bind_int(stmt.get(), 1, rowid_begin);
     err = sqlite3_bind_int(stmt.get(), 2, rowid_end);
 
@@ -548,7 +549,7 @@ namespace cads
         z_element *z = (z_element *)sqlite3_column_blob(stmt.get(), 1); // Freed on next call to sqlite3_step
         int len = sqlite3_column_bytes(stmt.get(), 1) / sizeof(*z);
 
-        rtn.push_back({rowid, {z, z + len}});
+        rtn.push_back({rowid, profile{decltype(profile::time){},0.0,0.0,{z, z + len}}});
       }
       else if (err == SQLITE_DONE)
       {
@@ -660,7 +661,7 @@ namespace cads
 
   long zs_count(std::string db_name) 
   {
-    return max_rowid("ZS",db_name);
+    return max_rowid("PROFILES",db_name);
   }
 
   std::tuple<date::utc_clock::time_point,std::vector<double>> fetch_last_motif(std::string name)
@@ -1002,12 +1003,12 @@ namespace cads
 
   bool transfer_profiles(std::string from_db_name, std::string to_db_name, int64_t first_index, int64_t last_index)
   {
-    auto err = db_exec(to_db_name, R"(CREATE TABLE IF NOT EXISTS ZS (Z BLOB NOT NULL))"s);
+    auto err = (int)create_scan_db(to_db_name);
     
     if(err != SQLITE_OK) return false;
     
-    auto from_query = R"(SELECT rowid,z FROM ZS WHERE rowid >= ? AND rowid < ?)";
-    auto to_query = R"(INSERT INTO ZS (z) VALUES (?))"s;
+    auto from_query = R"(SELECT rowid,Y,X,Z FROM PROFILES WHERE rowid >= ? AND rowid < ?)";
+    auto to_query = R"(INSERT INTO PROFILES (Y,X,Z) VALUES (?,?,?))"s;
     auto [from_stmt,from_db] = prepare_query(from_db_name, from_query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
     auto [to_stmt,to_db] = prepare_query(to_db_name, to_query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
 
@@ -1025,10 +1026,14 @@ namespace cads
 
       if (err == SQLITE_ROW)
       {
-          z_element *z = (z_element *)sqlite3_column_blob(from_stmt.get(), 1); // Freed on next call to sqlite3_step
-          int len = sqlite3_column_bytes(from_stmt.get(), 1) / sizeof(*z);
+          double y = sqlite3_column_double(from_stmt.get(),1);
+          double x = sqlite3_column_double(from_stmt.get(),2);
+          z_element *z = (z_element *)sqlite3_column_blob(from_stmt.get(), 3); // Freed on next call to sqlite3_step
+          int len = sqlite3_column_bytes(from_stmt.get(), 3) / sizeof(*z);
 
-          auto bind_err = sqlite3_bind_blob(to_stmt.get(), 2, z, len, SQLITE_STATIC);
+          auto bind_err = sqlite3_bind_double(to_stmt.get(),2,y); // start from 2 because rowid is 1 and hidden
+          bind_err = sqlite3_bind_double(to_stmt.get(),3,x);
+          bind_err = sqlite3_bind_blob(to_stmt.get(), 4, z, len, SQLITE_STATIC);
           tie(bind_err, to_stmt) = db_step(move(to_stmt));
           if (bind_err != SQLITE_DONE) {
             return false;
@@ -1041,19 +1046,20 @@ namespace cads
   }
 
   bool create_scan_db(std::string db_name) {
-    auto err = db_exec(db_name, R"(CREATE TABLE IF NOT EXISTS ZS (Z BLOB NOT NULL))"s);
+    auto err = db_exec(db_name, R"(CREATE TABLE IF NOT EXISTS PROFILES (Y REAL NOT NULL, X REAL NOT NULL, Z BLOB NOT NULL))"s);
     return err == SQLITE_OK;
   }
 
-  coro<int, z_type, 1> store_scan_coro(std::string db_name)
+  coro<int, profile, 1> store_scan_coro(std::string db_name)
   {
     spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}' args='{}'}})", __func__,"Entering",db_name);
     
     int err = SQLITE_ERROR;
     {
-      err = db_exec(db_name, R"(CREATE TABLE IF NOT EXISTS ZS (Z BLOB NOT NULL))"s);
 
-      auto query = R"(INSERT INTO ZS (z) VALUES (?))"s;
+      create_scan_db(db_name);
+
+      auto query = R"(INSERT INTO PROFILES (Y,X,Z) VALUES (?,?,?))"s;
       auto [stmt,db] = prepare_query(db_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
       db_exec(db.get(), R"(PRAGMA synchronous=OFF)"s);
 
@@ -1061,12 +1067,12 @@ namespace cads
 
       while (true)
       {
-        auto [z, terminate] = co_yield err;
+        auto [p, terminate] = co_yield err;
 
         if (terminate)
           break;
 
-        if(z.size() == 0 ) {
+        if(p.z.size() == 0 ) {
           
           if(zero_seq++ == 0) {
             spdlog::get("cads")->error(R"({{func = '{}', msg = '{}'}})", __func__,"No z samples. All sequential no z samples suppressed");
@@ -1075,18 +1081,28 @@ namespace cads
         }
 
         zero_seq = 0;
-        auto n = z.size() * sizeof(z_element);
+        auto n = p.z.size() * sizeof(z_element);
         if (n > std::numeric_limits<int>::max())
         {
           terminate = true;
           std::throw_with_nested(std::runtime_error("z data size greater than sqlite limits"));
         }
         
-        err = sqlite3_bind_blob(stmt.get(), 1, z.data(), (int)n, SQLITE_STATIC);
-        
+        err = sqlite3_bind_double(stmt.get(), 1, p.y);
         if (err != SQLITE_OK)
         {
-          terminate = true;
+          spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = {}, msg = '', line = {}}})", __func__,"sqlite3_bind_double",err,__LINE__);
+        }
+
+        err = sqlite3_bind_double(stmt.get(), 2, p.x_off);
+        if (err != SQLITE_OK)
+        {
+          spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = {}, msg = '', line = {}}})", __func__,"sqlite3_bind_double",err,__LINE__);
+        }
+
+        err = sqlite3_bind_blob(stmt.get(), 3, p.z.data(), (int)n, SQLITE_STATIC);
+        if (err != SQLITE_OK)
+        {
           spdlog::get("cads")->error(R"({{func = '{}', fn = '{}', rtn = {}, msg = ''}})", __func__,"sqlite3_bind_blob",err);
         }
       
@@ -1120,10 +1136,10 @@ namespace cads
     co_return err;
   }
 
-  coro<std::tuple<int, z_type>> fetch_scan_coro(long first_index, long last_idx, std::string db_name, int size)
+  coro<std::tuple<int, cads::profile>> fetch_scan_coro(long first_index, long last_idx, std::string db_name, int size)
   {
     spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}' args='{}'}})", __func__,"Entering",db_name);
-    auto query = R"(SELECT rowid,z FROM ZS WHERE rowid >= ? AND rowid < ?)";
+    auto query = R"(SELECT rowid,Y,X,Z FROM PROFILES WHERE rowid >= ? AND rowid < ?)";
     auto [stmt,db] = prepare_query(db_name, query);
 
     for (long i = first_index; i < last_idx; i += size)
@@ -1151,9 +1167,9 @@ namespace cads
     spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Exiting");
   }
 
-  std::deque<std::tuple<int, cads::z_type>> fetch_scan(long first_index, long last_idx, std::string db_name, int size)
+  std::deque<std::tuple<int, cads::profile>> fetch_scan(long first_index, long last_idx, std::string db_name, int size)
   {
-    auto query = R"(SELECT rowid,z FROM ZS WHERE rowid >= ? AND rowid < ?)";
+    auto query = R"(SELECT rowid,Y,X,Z FROM PROFILES WHERE rowid >= ? AND rowid < ?)";
     auto [stmt,db] = prepare_query(db_name, query);
 
     auto iend = first_index + size; 
