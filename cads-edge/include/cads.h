@@ -24,10 +24,11 @@ namespace cads
     double ClipHeight;
     double PulleyEstimatorInit;
     double ClampToZeroHeight;
+    double TypicalSpeed;
+    double PulleyCircumference;
+    size_t WidthN;
     IIRFilterConfig IIRFilter;
     RevolutionSensorConfig RevolutionSensor;
-    Conveyor conveyor;
-    Dbscan dbscan;
     MeasureConfig measureConfig;
   };
 

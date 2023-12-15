@@ -13,4 +13,24 @@ table profile_array {
   profiles : [profile];
 }
 
+table conveyor {
+  site : string;
+  name : string;
+  timezone : string;
+  pulley_circumference : double;
+  typical_speed : double;
+}
+
+table belt {
+  serial : string;
+  pulley_cover : double;
+  cord_diameter : double;
+  top_cover : double;
+  length : double;
+  width : double;
+  width_n : uint;
+}
+
+union scan {conveyor, belt, profile_array}
+
 root_type profile;

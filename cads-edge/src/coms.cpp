@@ -343,54 +343,13 @@ coro<remote_msg,bool> remote_control_coro()
   }
   
   
-  void http_post_profile_properties_json(std::string json, decltype(webapi_urls::add_meta) urls)
+  
+  void post_conveyor_table()
   {
 
-    auto endpoint_url = std::get<0>(urls);
-    auto upload_props = std::get<1>(urls);
-
-    cpr::Response r;
-    const cpr::Url endpoint{endpoint_url};
-
-    while (upload_props)
-    {
-      r = cpr::Post(endpoint,
-                    cpr::Body{json},
-                    cpr::Header{{"Content-Type", "application/json"}});
-
-      if (cpr::ErrorCode::OK == r.error.code && cpr::status::HTTP_OK == r.status_code)
-      {
-        spdlog::get("cads")->debug(R"({{func ='{}', msg = '{}'}})",__func__,"Scan Posted");
-        break;
-      }
-      else
-      {
-        spdlog::get("cads")->error("http_post_profile_properties_json failed with http status code {}, body: {}, endpoint: {}", r.status_code, json, endpoint.str());
-      }
-    }
   }
-
-  void http_post_profile_properties2(date::utc_clock::time_point chrono, double YmaxN, double y_step, double z_min, double z_max, Conveyor conveyor, GocatorProperties gocator, decltype(webapi_urls::add_meta) urls)
-  {
-    nlohmann::json params_json;
-
-    params_json["site"] = conveyor.Site;
-    params_json["conveyor"] = conveyor.Name;
-    params_json["chrono"] = to_str(chrono::floor<chrono::seconds>(chrono));
-    params_json["y_res"] = y_step;
-    params_json["x_res"] = gocator.xResolution;
-    params_json["z_res"] = gocator.zResolution;
-    params_json["z_off"] = gocator.zOffset;
-    params_json["z_min"] = z_min;
-    params_json["z_max"] = z_max;
-    params_json["Ymax"] = conveyor.Length;
-    params_json["YmaxN"] = YmaxN;
-    params_json["WidthN"] = conveyor.WidthN;
-    params_json["Belt"] = conveyor.Belt;
-
-    http_post_profile_properties_json(params_json.dump(), urls);
-  }
-
+  
+  
   std::tuple<state::scan,bool> post_scan(state::scan scan, webapi_urls urls,std::atomic<bool> &terminate)
   {
     using namespace flatbuffers;    
@@ -423,6 +382,14 @@ coro<remote_msg,bool> remote_control_coro()
       return {scan,true};
     } 
 
+    auto [belt, belt_err] = fetch_scan_belt(db_name);
+    
+    if (belt_err < 0)
+    {
+      spdlog::get("cads")->info("{} fetch_scan_belt failed - {}", __func__, db_name);
+      return {scan,true};
+    } 
+
     auto fetch_profile = fetch_scan_coro(scan.begin_index + 1 + scan.uploaded, scan.begin_index + scan.cardinality + 1, db_name);
 
     FlatBufferBuilder builder(4096 * 128);
@@ -432,7 +399,7 @@ coro<remote_msg,bool> remote_control_coro()
 
     auto YmaxN = scan.cardinality;
 
-    auto y_step = conveyor.Length / (YmaxN);
+    auto y_step = belt.Length / (YmaxN);
 
     double belt_z_max = std::numeric_limits<double>::lowest();
     double belt_z_min = std::numeric_limits<double>::max();
@@ -446,7 +413,7 @@ coro<remote_msg,bool> remote_control_coro()
       if (!co_terminate)
       {
         namespace sr = std::ranges;
-        auto zs = scan.remote_reg ? interpolate_to_widthn(profile.z,conveyor.WidthN) : profile.z;
+        auto zs = scan.remote_reg ? interpolate_to_widthn(profile.z,belt.WidthN) : profile.z;
         idx -= scan.begin_index; cnt++;
         auto y = (idx - 1) * y_step; // Sqlite rowid starts a 1
         auto [pmin,pmax] = sr::minmax(zs | sr::views::filter([](float e) { return !std::isnan(e);}));
@@ -494,7 +461,7 @@ coro<remote_msg,bool> remote_control_coro()
     bool failure = scan.uploaded != YmaxN;
     if (!failure && scan.remote_reg == 1)
     {
-      http_post_profile_properties2(scan.scanned_utc, YmaxN, y_step, belt_z_min, belt_z_max, conveyor, gocator, urls.add_meta);
+     // http_post_profile_properties2(scan.scanned_utc, YmaxN, y_step, belt_z_min, belt_z_max, conveyor, gocator, urls.add_meta);
     }
 
     return {scan,failure};

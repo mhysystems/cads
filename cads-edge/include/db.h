@@ -46,7 +46,8 @@ namespace cads
       int64_t cardinality;
       int64_t uploaded;
       int64_t status;
-      int64_t conveyor_id;
+      std::string site;
+      std::string conveyor;
       int64_t remote_reg;
       auto operator<=>(const scan&) const = default;
     };
@@ -64,10 +65,12 @@ namespace cads
   bool transfer_profiles(std::string from_db_name, std::string to_db_name, int64_t first_index, int64_t last_index = std::numeric_limits<int64_t>::max());
   bool store_scan_gocator(cads::GocatorProperties gocator, std::string db_name);
   bool store_scan_conveyor(cads::Conveyor conveyor, std::string db_name);
+  bool store_scan_belt(cads::Belt belt, std::string db_name);
   long zs_count(std::string db_name);
   coro<int, cads::profile, 1> store_scan_coro(std::string db_name);
   std::tuple<cads::GocatorProperties,int> fetch_scan_gocator(std::string db_name);
   std::tuple<cads::Conveyor,int> fetch_scan_conveyor(std::string db_name);
+  std::tuple<cads::Belt,int> fetch_scan_belt(std::string db_name);
 
 
 

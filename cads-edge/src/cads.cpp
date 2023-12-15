@@ -185,7 +185,7 @@ msg prs_to_scan(msg m)
 
     const auto x_width = config.Width;
     const auto nan_percentage = config.NaNPercentage;
-    const auto width_n = (int)config.conveyor.WidthN; // gcc-11 on ubuntu cannot compile doubles in ranges expression
+    const auto width_n = (int)config.WidthN; // gcc-11 on ubuntu cannot compile doubles in ranges expression
     const auto clip_height = (z_element)config.ClipHeight;
     const auto clamp_zero = (z_element)config.ClampToZeroHeight;
     double x_resolution = 1.0;
@@ -219,13 +219,13 @@ msg prs_to_scan(msg m)
     int64_t cnt = 0;
 
     auto dc_filter = mk_dc_filter();
-    auto pulley_speed = mk_pulley_stats(config.conveyor.TypicalSpeed,config.conveyor.PulleyCircumference);
+    auto pulley_speed = mk_pulley_stats(config.TypicalSpeed,config.PulleyCircumference);
 
     long drop_profiles = config.IIRFilter.skip; // Allow for iir fillter too stablize
 
     auto pulley_estimator = mk_pulleyfitter(z_resolution, config.PulleyEstimatorInit);
 
-    auto pulley_rev = config.RevolutionSensor.source == RevolutionSensorConfig::Source::length ? mk_pseudo_revolution(config.conveyor.PulleyCircumference) : mk_pulley_revolution(config.RevolutionSensor);
+    auto pulley_rev = config.RevolutionSensor.source == RevolutionSensorConfig::Source::length ? mk_pseudo_revolution(config.PulleyCircumference) : mk_pulley_revolution(config.RevolutionSensor);
 
     do
     {

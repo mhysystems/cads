@@ -14,7 +14,9 @@ namespace cads
     double cross_correlation_threshold;
     bool   dump_match;
     Fiducial fiducial;
-    Conveyor conveyor;
+    double length;
+    double avg_y_res;
+    double width_n;
   };
   
   struct AnomalyDetection {
@@ -28,5 +30,5 @@ namespace cads
 
   void fiducial_origin_thread(FiducialOriginDetection config,cads::Io<cads::msg> &profile_fifo, cads::Io<cads::msg> &next_fifo);
   void splice_detection_thread(cads::AnomalyDetection anomaly, cads::Io<cads::msg> &profile_fifo, cads::Io<cads::msg> &next_fifo);
-  void loop_beltlength_thread(Conveyor conveyor, cads::Io<cads::msg> &profile_fifo, cads::Io<cads::msg> &next_fifo);
+  void loop_beltlength_thread(double length, cads::Io<cads::msg> &profile_fifo, cads::Io<cads::msg> &next_fifo);
 }

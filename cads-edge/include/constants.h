@@ -27,31 +27,22 @@ namespace cads {
   };
 
   struct Conveyor {
-    int64_t Id;
-    std::string Org;
     std::string Site;
     std::string Name;
     std::string Timezone;
     double PulleyCircumference;
     double TypicalSpeed;
-    int64_t Belt;
-    double Length;
-    int64_t WidthN;
     operator std::string() const;
   };
 
   struct Belt {
-    int64_t Id;
-    DateTime Installed;
+    std::string Serial;
     double PulleyCover;
     double CordDiameter;
     double TopCover; 
     double Length;
     double Width;
-    double WidthN;
-    int64_t Splices;
-    int64_t Conveyor;
-
+    int64_t WidthN;
     operator std::string() const;
   };
 

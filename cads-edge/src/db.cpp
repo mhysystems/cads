@@ -222,7 +222,8 @@ namespace cads
         ,cardinality INTEGER NOT NULL
         ,uploaded INTEGER NOT NULL
         ,status INTEGER NOT NULL
-        ,conveyor_id INTEGER NOT NULL
+        ,site TEXT NOT NULL
+        ,conveyor TEXT NOT NULL,
         ,remote_reg INTEGER NOT NULL
         ))",
       R"(VACUUM)"
@@ -745,7 +746,8 @@ namespace cads
       ,cardinality
       ,uploaded
       ,status 
-      ,conveyor_id
+      ,site
+      ,conveyor
       ,remote_reg 
       FROM Scans)"s;
     auto db_config_name = name.empty() ? database_names.state_db_name : name;
@@ -769,8 +771,9 @@ namespace cads
           int64_t(sqlite3_column_int64(stmt.get(), 3)),
           int64_t(sqlite3_column_int64(stmt.get(), 4)),
           int64_t(sqlite3_column_int64(stmt.get(), 5)),
-          int64_t(sqlite3_column_int64(stmt.get(), 6)),
-          int64_t(sqlite3_column_int64(stmt.get(), 7))
+          std::string( (const char* )sqlite3_column_text(stmt.get(), 6), sqlite3_column_bytes(stmt.get(), 6)),
+          std::string( (const char* )sqlite3_column_text(stmt.get(), 7), sqlite3_column_bytes(stmt.get(), 7)),
+          int64_t(sqlite3_column_int64(stmt.get(), 8))
         };
 
         rtn.push_back(tmp); 
@@ -790,9 +793,10 @@ namespace cads
       ,cardinality
       ,uploaded
       ,status
-      ,conveyor_id
+      ,site
+      ,conveyor
       ,remote_reg 
-      ) = (?,?,?,?,?,?,?,?) where db_name=?;)"s;
+      ) = (?,?,?,?,?,?,?,?,?) where db_name=?;)"s;
     auto db_config_name = db_name.empty() ? database_names.state_db_name : db_name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
     
@@ -804,9 +808,10 @@ namespace cads
     err = sqlite3_bind_int64(stmt.get(), 4, scan.cardinality);
     err = sqlite3_bind_int64(stmt.get(), 5, scan.uploaded);
     err = sqlite3_bind_int64(stmt.get(), 6, scan.status); 
-    err = sqlite3_bind_int64(stmt.get(), 7, scan.conveyor_id); 
-    err = sqlite3_bind_int64(stmt.get(), 8, scan.remote_reg);
-    err = sqlite3_bind_text(stmt.get(), 9, scan.db_name.c_str(), scan.db_name.size(),nullptr); 
+    err = sqlite3_bind_text(stmt.get(), 7, scan.site.c_str(), scan.site.size(),nullptr);
+    err = sqlite3_bind_text(stmt.get(), 8, scan.conveyor.c_str(), scan.conveyor.size(),nullptr);
+    err = sqlite3_bind_int64(stmt.get(), 9, scan.remote_reg);
+    err = sqlite3_bind_text(stmt.get(), 10, scan.db_name.c_str(), scan.db_name.size(),nullptr); 
 
     tie(err, stmt) = db_step(move(stmt));
 
@@ -823,9 +828,10 @@ namespace cads
       ,cardinality
       ,uploaded
       ,status
-      ,conveyor_id
+      ,site
+      ,conveyor
       ,remote_reg
-      ) VALUES(?,?,?,?,?,?,?,?))"s;
+      ) VALUES(?,?,?,?,?,?,?,?,?))"s;
     auto db_config_name = db_name.empty() ? database_names.state_db_name : db_name;
     auto [stmt,db] = prepare_query(db_config_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
     
@@ -837,8 +843,9 @@ namespace cads
     err = sqlite3_bind_int64(stmt.get(), 4, scan.cardinality);
     err = sqlite3_bind_int64(stmt.get(), 5, scan.uploaded);
     err = sqlite3_bind_int64(stmt.get(), 6, scan.status); 
-    err = sqlite3_bind_int64(stmt.get(), 7, scan.conveyor_id); 
-    err = sqlite3_bind_int64(stmt.get(), 8, scan.remote_reg); 
+    err = sqlite3_bind_text(stmt.get(), 7, scan.site.c_str(), scan.site.size(),nullptr);
+    err = sqlite3_bind_text(stmt.get(), 8, scan.conveyor.c_str(), scan.conveyor.size(),nullptr);
+    err = sqlite3_bind_int64(stmt.get(), 9, scan.remote_reg); 
  
     tie(err, stmt) = db_step(move(stmt));
 
@@ -913,43 +920,28 @@ namespace cads
   bool store_scan_conveyor(cads::Conveyor conveyor, std::string db_name) 
   {
     auto err = db_exec(db_name, R"(CREATE TABLE IF NOT EXISTS Conveyor (
-      Id INTEGER PRIMARY KEY
-      ,Org TEXT NOT NULL 
       ,Site TEXT NOT NULL 
       ,Name TEXT NOT NULL 
       ,Timezone TEXT NOT NULL 
       ,PulleyCircumference REAL NOT NULL 
       ,TypicalSpeed REAL NOT NULL 
-      ,Belt INTEGER NOT NULL
-      ,Length REAL NOT NULL 
-      ,WidthN INTEGER NOT NULL
       ))");
     
     auto query = R"(INSERT INTO Conveyor (
-      Id
-      ,Org
       ,Site
       ,Name 
       ,Timezone
       ,PulleyCircumference
       ,TypicalSpeed
-      ,Belt
-      ,Length
-      ,WidthN
-    ) VALUES (?,?,?,?,?,?,?,?,?,?))"s;
+    ) VALUES (?,?,?,?,?))"s;
   
     auto [stmt,db] = prepare_query(db_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
 
-    err = sqlite3_bind_int64(stmt.get(), 1, conveyor.Id);
-    err = sqlite3_bind_text(stmt.get(), 2, conveyor.Org.c_str(),conveyor.Org.size(),nullptr);
-    err = sqlite3_bind_text(stmt.get(), 3, conveyor.Site.c_str(),conveyor.Site.size(),nullptr);
-    err = sqlite3_bind_text(stmt.get(), 4, conveyor.Name.c_str(), conveyor.Name.size(), nullptr);
-    err = sqlite3_bind_text(stmt.get(), 5, conveyor.Timezone.c_str(), conveyor.Timezone.size(), nullptr);
-    err = sqlite3_bind_double(stmt.get(), 6, conveyor.PulleyCircumference);
-    err = sqlite3_bind_double(stmt.get(), 7, conveyor.TypicalSpeed);
-    err = sqlite3_bind_int64(stmt.get(), 8, conveyor.Belt);
-    err = sqlite3_bind_double(stmt.get(), 9, conveyor.Length);
-    err = sqlite3_bind_int64(stmt.get(), 10, conveyor.WidthN);
+    err = sqlite3_bind_text(stmt.get(), 1, conveyor.Site.c_str(),conveyor.Site.size(),nullptr);
+    err = sqlite3_bind_text(stmt.get(), 2, conveyor.Name.c_str(), conveyor.Name.size(), nullptr);
+    err = sqlite3_bind_text(stmt.get(), 3, conveyor.Timezone.c_str(), conveyor.Timezone.size(), nullptr);
+    err = sqlite3_bind_double(stmt.get(), 4, conveyor.PulleyCircumference);
+    err = sqlite3_bind_double(stmt.get(), 5, conveyor.TypicalSpeed);
 
     tie(err, stmt) = db_step(move(stmt));
 
@@ -959,16 +951,11 @@ namespace cads
   std::tuple<cads::Conveyor,int> fetch_scan_conveyor(std::string db_name) 
   {
     auto query = R"(SELECT
-      Id
-      ,Org
       ,Site
       ,Name 
       ,Timezone
       ,PulleyCircumference
       ,TypicalSpeed
-      ,Belt
-      ,Length
-      ,WidthN
      FROM Conveyor)"s;
 
     auto [stmt,db] = prepare_query(db_name, query);
@@ -981,21 +968,91 @@ namespace cads
     {
 
       rtn = {
-          {int64_t(sqlite3_column_int64(stmt.get(), 0)),  
+          {std::string( (const char* )sqlite3_column_text(stmt.get(), 0), sqlite3_column_bytes(stmt.get(), 0)),
           std::string( (const char* )sqlite3_column_text(stmt.get(), 1), sqlite3_column_bytes(stmt.get(), 1)),
           std::string( (const char* )sqlite3_column_text(stmt.get(), 2), sqlite3_column_bytes(stmt.get(), 2)),
-          std::string( (const char* )sqlite3_column_text(stmt.get(), 3), sqlite3_column_bytes(stmt.get(), 3)),
-          std::string( (const char* )sqlite3_column_text(stmt.get(), 4), sqlite3_column_bytes(stmt.get(), 4)),
-          double(sqlite3_column_double(stmt.get(), 5)),
-          double(sqlite3_column_double(stmt.get(), 6)),
-          int64_t(sqlite3_column_int64(stmt.get(), 7)),
-          double(sqlite3_column_double(stmt.get(), 8)),
-          int64_t(sqlite3_column_int64(stmt.get(), 9))},
+          double(sqlite3_column_double(stmt.get(), 3)),
+          double(sqlite3_column_double(stmt.get(), 4))},
           0};
     }
     else
     {
       rtn = {cads::Conveyor{}, -1};
+    }
+
+    return rtn;
+  }
+
+  bool store_scan_belt(cads::Belt belt, std::string db_name) 
+  {
+    auto err = db_exec(db_name, R"(CREATE TABLE IF NOT EXISTS Belt (
+      ,Serial TEXT NOT NULL 
+      ,PulleyCover REAL NOT NULL 
+      ,CordDiameter REAL NOT NULL 
+      ,TopCover REAL NOT NULL 
+      ,Length REAL NOT NULL 
+      ,Width REAL NOT NULL 
+      ,WidthN INTEGER NOT NULL 
+      ))");
+    
+    auto query = R"(INSERT INTO Belt (
+      ,Serial
+      ,PulleyCover 
+      ,CordDiameter 
+      ,TopCover
+      ,Length
+      ,Width
+      ,WidthN
+    ) VALUES (?,?,?,?,?,?,?))"s;
+  
+    auto [stmt,db] = prepare_query(db_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
+    err = sqlite3_bind_text(stmt.get(), 1, belt.Serial.c_str(), belt.Serial.size(), nullptr);
+    err = sqlite3_bind_double(stmt.get(), 2, belt.PulleyCover);
+    err = sqlite3_bind_double(stmt.get(), 3, belt.CordDiameter);
+    err = sqlite3_bind_double(stmt.get(), 4, belt.TopCover);
+    err = sqlite3_bind_double(stmt.get(), 5, belt.Length);
+    err = sqlite3_bind_double(stmt.get(), 6, belt.Width);
+    err = sqlite3_bind_int64(stmt.get(), 7, belt.WidthN);
+
+    tie(err, stmt) = db_step(move(stmt));
+
+    return err == SQLITE_OK || err == SQLITE_DONE;
+  }
+
+  std::tuple<cads::Belt,int> fetch_scan_belt(std::string db_name) 
+  {
+    auto query = R"(SELECT
+      ,Serial
+      ,PulleyCover
+      ,CordDiameter
+      ,TopCover
+      ,Length 
+      ,Width
+      ,WidthN
+      ,Splices
+     FROM Belt)"s;
+
+    auto [stmt,db] = prepare_query(db_name, query);
+    auto err = SQLITE_OK;
+
+    tie(err, stmt) = db_step(move(stmt));
+
+    std::tuple<cads::Belt,int> rtn;
+    if (err == SQLITE_ROW)
+    {
+      rtn = {
+          {std::string( (const char* )sqlite3_column_text(stmt.get(), 0), sqlite3_column_bytes(stmt.get(), 0)),
+          sqlite3_column_double(stmt.get(), 1),
+          sqlite3_column_double(stmt.get(), 2),
+          sqlite3_column_double(stmt.get(), 3),
+          sqlite3_column_double(stmt.get(), 4),
+          sqlite3_column_double(stmt.get(), 5),
+          sqlite3_column_int64(stmt.get(), 6)},
+          0};
+    }
+    else
+    {
+      rtn = {cads::Belt{}, -1};
     }
 
     return rtn;

@@ -15,6 +15,11 @@
 namespace 
 {
 
+  bool match_conveyor(cads::state::scan a, cads::state::scan b)
+  {
+    return a.site == b.site && a.conveyor == b.conveyor;
+  }
+
   void delete_scan(cads::state::scan scan) 
   {
     cads::delete_scan_state(scan);
@@ -41,7 +46,7 @@ namespace
     return 0;
   }
 
-  std::vector<std::deque<cads::state::scan>> partiton(std::deque<cads::state::scan> scans, std::function<bool(cads::state::scan,cads::state::scan)> part = [](cads::state::scan e,cads::state::scan t) {return e.conveyor_id == t.conveyor_id;}) {
+  std::vector<std::deque<cads::state::scan>> partiton(std::deque<cads::state::scan> scans, std::function<bool(cads::state::scan,cads::state::scan)> part = [](cads::state::scan e,cads::state::scan t) {return ::match_conveyor(e,t);}) {
 
     using namespace std::placeholders;
 

@@ -414,7 +414,7 @@ namespace cads
     }
   }
 
-  void loop_beltlength_thread(Conveyor conveyor, cads::Io<msg> &profile_fifo, cads::Io<msg> &next_fifo)
+  void loop_beltlength_thread(double length, cads::Io<msg> &profile_fifo, cads::Io<msg> &next_fifo)
   {
     spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Entering Thread");
     cads::msg m;
@@ -439,7 +439,7 @@ namespace cads
     next_fifo.enqueue(m);
 
 
-    auto origin_detection = maxlength_coro(conveyor.Length);
+    auto origin_detection = maxlength_coro(length);
 
     long origin_sequence_cnt = 0;
     size_t scan_cnt = 0;
@@ -466,7 +466,7 @@ namespace cads
                 next_fifo.enqueue({msgid::measure,Measure::MeasureMsg{"cadstoorigin",0,date::utc_clock::now(),op.y}});
               }
 
-              auto scanprogress_now = std::floor(100* estimated_belt_length / conveyor.Length);
+              auto scanprogress_now = std::floor(100* estimated_belt_length / length);
 
               if(origin_sequence_cnt > 0 && scanprogress != scanprogress_now) {
                 scanprogress = scanprogress_now;
@@ -532,8 +532,8 @@ namespace cads
 
     int64_t cnt = 0;
     auto buffer_size_warning = buffer_warning_increment;
-    double x_resolution = 1.0, y_resolution = config.conveyor.TypicalSpeed;
-    int width_n = (int)config.conveyor.WidthN;
+    double x_resolution = 1.0, y_resolution = config.avg_y_res;
+    int width_n = (int)config.width_n;
 
     profile_fifo.wait_dequeue(m);
     auto m_id = get<0>(m);

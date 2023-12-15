@@ -125,14 +125,11 @@ namespace cads {
     
     nlohmann::json params_json;
   
-    params_json["Id"] = Id;
-    params_json["Org"] = Org;
     params_json["Site"] = Site;
     params_json["Name"] = Name;
     params_json["Timezone"] = Timezone;
     params_json["PulleyCircumference"] = PulleyCircumference;
-    params_json["Belt"] = Belt;
-    params_json["Length"] = Length;
+    params_json["TypicalSpeed"] = TypicalSpeed;
 
     return params_json.dump();
   }
@@ -141,15 +138,13 @@ namespace cads {
     
     nlohmann::json params_json;
   
-    params_json["Id"] = Id;
-    params_json["Installed"] =  date::format("%FT%TZ", Installed);
+    params_json["Serial"] =  Serial;
     params_json["PulleyCover"] = PulleyCover;
     params_json["CordDiameter"] = CordDiameter;
     params_json["TopCover"] = TopCover;
     params_json["Length"] = Length;
     params_json["Width"] = Width;
-    params_json["Splices"] = Splices;
-    params_json["Conveyor"] = Conveyor;
+    params_json["WidthN"] = WidthN;
     
     return params_json.dump();
   }

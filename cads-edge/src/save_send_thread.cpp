@@ -126,7 +126,8 @@ namespace cads
             int64_t(e.length),
             0,
             1,
-            global.conveyor.Id,
+            global.conveyor.Site,
+            global.conveyor.Name,
             global.remote_reg
           };
         
@@ -141,7 +142,8 @@ namespace cads
             0,
             0,
             0,
-            global.conveyor.Id,
+            global.conveyor.Site,
+            global.conveyor.Name,
             global.remote_reg
           };
 
@@ -171,7 +173,8 @@ namespace cads
             0,
             0,
             0,
-            global.conveyor.Id,
+            global.conveyor.Site,
+            global.conveyor.Name,
             global.remote_reg
           };
 
