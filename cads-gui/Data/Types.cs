@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.ComponentModel.DataAnnotations.Schema;
 using System;
+using NATS.Client.JetStream;
 
 namespace cads_gui.Data
 {

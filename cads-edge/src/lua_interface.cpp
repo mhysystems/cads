@@ -289,6 +289,26 @@ namespace
     return field_opt;
   }
 
+  std::optional<std::string> tofieldstring(lua_State *L, int index, std::string obj_name, std::string field)
+  {
+    if (lua_getfield(L, index, field.c_str()) == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, field);
+      return std::nullopt;
+    }
+
+    auto field_opt = tostring(L, -1);
+    lua_pop(L, 1);
+
+    if (!field_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} not a number' }}", __func__, field);
+      return std::nullopt;
+    }
+
+    return field_opt;
+  }
+
   std::optional<cads::Conveyor> toconveyor(lua_State *L, int index)
   {
 
@@ -377,6 +397,69 @@ namespace
 
     return cads::Conveyor{*site_opt, *name_opt, *Timezone_opt, *PulleyCircumference_opt, *TypicalSpeed_opt};
   }
+
+std::optional<cads::Belt> tobelt(lua_State *L, int index)
+  {
+
+    const std::string obj_name = "belt";
+
+    if (!lua_istable(L, index))
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} needs to be a table' }}", __func__, obj_name);
+      return std::nullopt;
+    }
+
+    auto Serial_opt = tofieldstring(L, index, obj_name,"Serial"s);
+
+    if (!Serial_opt)
+    {
+      return std::nullopt;
+    }
+
+    auto PulleyCover_opt = tofieldnumber(L, index, obj_name, "PulleyCover"s);
+
+    if (!PulleyCover_opt)
+    {
+      return std::nullopt;
+    }
+
+    auto CordDiameter_opt = tofieldnumber(L, index, obj_name, "CordDiameter"s);
+
+    if (!CordDiameter_opt)
+    {
+      return std::nullopt;
+    }
+    
+    auto TopCover_opt = tofieldnumber(L, index, obj_name, "TopCover"s);
+
+    if (!TopCover_opt)
+    {
+      return std::nullopt;
+    }
+
+    auto Length_opt = tofieldnumber(L, index, obj_name, "Length"s);
+
+    if (!Length_opt)
+    {
+      return std::nullopt;
+    }
+
+    auto Width_opt = tofieldnumber(L, index, obj_name, "Width"s);
+
+    if (!Width_opt)
+    {
+      return std::nullopt;
+    }
+
+    auto WidthN_opt = tofieldnumber(L, index, obj_name, "WidthN"s);
+
+    if (!WidthN_opt)
+    {
+      return std::nullopt;
+    }
+    return cads::Belt{*Serial_opt, *PulleyCover_opt, *CordDiameter_opt, *TopCover_opt, *Length_opt, *Width_opt, *WidthN_opt};
+  }
+
 
   std::optional<cads::Dbscan> todbscan(lua_State *L, int index)
   {
@@ -851,6 +934,66 @@ namespace
       return std::nullopt;
     }
 
+    if (lua_getfield(L, index, "ClampToZeroHeight") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'profile config requires {}' }}", __func__, "ClampToZeroHeight");
+      return std::nullopt;
+    }
+
+    auto ClampToZeroHeight_opt = tonumber(L, -1);
+    lua_pop(L, 1);
+
+    if (!ClampToZeroHeight_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'ClampToZeroHeight not a number' }}", __func__);
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "TypicalSpeed") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'profile config requires {}' }}", __func__, "TypicalSpeed");
+      return std::nullopt;
+    }
+
+    auto TypicalSpeed_opt = tonumber(L, -1);
+    lua_pop(L, 1);
+
+    if (!TypicalSpeed_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'TypicalSpeed not a number' }}", __func__);
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "PulleyCircumference") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'profile config requires {}' }}", __func__, "PulleyCircumference");
+      return std::nullopt;
+    }
+
+    auto PulleyCircumference_opt = tonumber(L, -1);
+    lua_pop(L, 1);
+
+    if (!PulleyCircumference_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'PulleyCircumference not a number' }}", __func__);
+      return std::nullopt;
+    }
+
+    if (lua_getfield(L, index, "WidthN") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'profile config requires {}' }}", __func__, "WidthN");
+      return std::nullopt;
+    }
+
+    auto WidthN_opt = tointeger(L, -1);
+    lua_pop(L, 1);
+
+    if (!WidthN_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'WidthN not a integer' }}", __func__);
+      return std::nullopt;
+    }
+
     if (lua_getfield(L, index, "IIRFilter") == LUA_TNIL)
     {
       spdlog::get("cads")->error("{{ func = {},  msg = 'profile config requires {}' }}", __func__, "IIRFilter");
@@ -866,20 +1009,6 @@ namespace
       return std::nullopt;
     }
 
-    if (lua_getfield(L, index, "ClampToZeroHeight") == LUA_TNIL)
-    {
-      spdlog::get("cads")->error("{{ func = {},  msg = 'profile config requires {}' }}", __func__, "ClampToZeroHeight");
-      return std::nullopt;
-    }
-
-    auto ClampToZeroHeight_opt = tonumber(L, -1);
-    lua_pop(L, 1);
-
-    if (!ClampToZeroHeight_opt)
-    {
-      spdlog::get("cads")->error("{{ func = {},  msg = 'ClampToZeroHeight not a number' }}", __func__);
-      return std::nullopt;
-    }
 
     if (lua_getfield(L, index, "RevolutionSensor") == LUA_TNIL)
     {
@@ -896,35 +1025,6 @@ namespace
       return std::nullopt;
     }
 
-    if (lua_getfield(L, index, "Conveyor") == LUA_TNIL)
-    {
-      spdlog::get("cads")->error("{{ func = {},  msg = 'profile config requires {}' }}", __func__, "Conveyor");
-      return std::nullopt;
-    }
-
-    auto conveyor_opt = toconveyor(L, -1);
-    lua_pop(L, 1);
-
-    if (!conveyor_opt)
-    {
-      spdlog::get("cads")->error("{{ func = {},  msg = 'Conveyor not a Conveyor' }}", __func__);
-      return std::nullopt;
-    }
-
-    if (lua_getfield(L, index, "Dbscan") == LUA_TNIL)
-    {
-      spdlog::get("cads")->error("{{ func = {},  msg = 'profile config requires {}' }}", __func__, "Dbscan");
-      return std::nullopt;
-    }
-
-    auto Dbscan_opt = todbscan(L, -1);
-    lua_pop(L, 1);
-
-    if (!Dbscan_opt)
-    {
-      spdlog::get("cads")->error("{{ func = {},  msg = 'Dbscan not a Dbscan' }}", __func__);
-      return std::nullopt;
-    }
 
     if (lua_getfield(L, index, "Measures") == LUA_TNIL)
     {
@@ -941,7 +1041,7 @@ namespace
       return std::nullopt;
     }
 
-    return cads::ProfileConfig{*width_opt, *nanpercentage_opt, *clipheight_opt,*PulleyEstimatorInit_opt,  *ClampToZeroHeight_opt, 0.0,0.0,0,*iirfilter_opt, *revolution_sensor_opt,*Measures_opt};
+    return cads::ProfileConfig{*width_opt, *nanpercentage_opt, *clipheight_opt,*PulleyEstimatorInit_opt,  *ClampToZeroHeight_opt, *TypicalSpeed_opt,*PulleyCircumference_opt,*WidthN_opt,*iirfilter_opt, *revolution_sensor_opt,*Measures_opt};
   }
 
   std::optional<cads::SqliteGocatorConfig> tosqlitegocatorconfig(lua_State *L, int index)
@@ -1728,16 +1828,20 @@ namespace
   int save_send_thread(lua_State *L)
   {
     using namespace std::placeholders;
+    const auto expected_arg_cnt = 5;
+
     auto arg_cnt = lua_gettop(L);
 
-    if (arg_cnt > 4)
+    if (arg_cnt > expected_arg_cnt)
     {
       spdlog::get("cads")->error("{{ func = {},  msg = 'More than 4 arguemtns'}}", __func__);
     }
 
     auto conveyor = toconveyor(L, 1);
-    auto remote_reg = arg_cnt == 4 ? lua_toboolean(L, 2) : true;
-    auto bound = std::bind(cads::save_send_thread, *conveyor, remote_reg, _1, _2);
+    auto belt = tobelt(L,2);
+    auto remote_reg = arg_cnt == expected_arg_cnt ? lua_toboolean(L, 3) : true;
+    auto bound = std::bind(cads::save_send_thread, *conveyor, *belt, remote_reg, _1, _2);
+    
     return mk_thread2(L, bound);
   }
 

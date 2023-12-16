@@ -2,6 +2,7 @@
 #include <ranges>
 #include <algorithm>
 #include <tuple>
+#include <expected>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wuseless-cast"
@@ -33,7 +34,6 @@ using namespace std;
 
 namespace
 {
-
   std::vector<uint8_t> compress(uint8_t *input, uint32_t size)
   {
 
@@ -52,6 +52,67 @@ namespace
   std::vector<uint8_t> compress(std::vector<uint8_t> input)
   {
     return ::compress(input.data(),input.size());
+  }
+
+  void send_bytes_simple(std::vector<uint8_t> data,std::string url, bool upload)
+  {
+    auto bufv = ::compress(std::move(data));
+    if(upload) {
+      cpr::Url endpoint{url};
+      cpr::Post(endpoint,cpr::Body{(char *)bufv.data(), bufv.size()}, cpr::Header{{"Content-Encoding", "br"}, {"Content-Type", "application/octet-stream"}});
+    }
+  }
+
+  void post_conveyor_table(cads::Conveyor o, std::string url, bool upload)
+  {
+    using namespace flatbuffers;
+    
+    FlatBufferBuilder builder;
+    auto site = builder.CreateString(o.Site);
+    auto name = builder.CreateString(o.Name);
+    auto timezone = builder.CreateString(o.Timezone);
+
+    CadsFlatbuffers::conveyorBuilder buf(builder);
+    buf.add_site(site);
+    buf.add_name(name);
+    buf.add_timezone(timezone);
+    buf.add_pulley_circumference(o.PulleyCircumference);
+    buf.add_typical_speed(o.TypicalSpeed);
+    auto send = buf.Finish();
+
+    CadsFlatbuffers::scanBuilder post(builder);
+    post.add_contents_type(CadsFlatbuffers::scan_tables_conveyor);
+    post.add_contents(send.Union());
+    auto bytes = post.Finish();
+
+    builder.Finish(bytes);
+
+    send_bytes_simple({builder.GetBufferPointer(),builder.GetBufferPointer()+builder.GetSize()},url,upload);
+  }
+
+  void post_belt_table(cads::Belt o, std::string url, bool upload)
+  {
+    using namespace flatbuffers;
+    FlatBufferBuilder builder;
+
+    auto serial = builder.CreateString(o.Serial);
+    CadsFlatbuffers::beltBuilder buf(builder);
+    buf.add_serial(serial);
+    buf.add_pulley_cover(o.PulleyCover);
+    buf.add_cord_diameter(o.CordDiameter);
+    buf.add_top_cover(o.TopCover);
+    buf.add_width(o.Width);
+    buf.add_width_n(o.WidthN);
+    auto send = buf.Finish();
+
+    CadsFlatbuffers::scanBuilder post(builder);
+    post.add_contents_type(CadsFlatbuffers::scan_tables_belt);
+    post.add_contents(send.Union());
+    auto bytes = post.Finish();
+
+    builder.Finish(bytes);
+
+    send_bytes_simple({builder.GetBufferPointer(),builder.GetBufferPointer()+builder.GetSize()},url,upload);
   }
 }
 
@@ -342,14 +403,92 @@ coro<remote_msg,bool> remote_control_coro()
 
   }
   
-  
-  
-  void post_conveyor_table()
+  cads::state::scan post_profiles_table(cads::state::scan scan, std::string url, double y_step, size_t width_n, bool upload)
   {
+    using namespace flatbuffers; 
 
+    auto fetch_profile = fetch_scan_coro(scan.begin_index + 1 + scan.uploaded, scan.begin_index + scan.cardinality + 1, scan.db_name);
+
+    FlatBufferBuilder builder(4096 * 128);
+    std::vector<flatbuffers::Offset<CadsFlatbuffers::profile>> profiles_flat;
+
+    auto send_bytes = send_bytes_coro(0L,url,upload);
+
+    double belt_z_max = std::numeric_limits<double>::lowest();
+    double belt_z_min = std::numeric_limits<double>::max();
+    long cnt = 0;
+
+    while (true)
+    {
+      auto [co_terminate, cv] = fetch_profile.resume(0);
+      auto [idx, profile] = cv;
+
+      if (!co_terminate)
+      {
+        namespace sr = std::ranges;
+        auto zs = scan.remote_reg ? interpolate_to_widthn(profile.z,width_n) : profile.z;
+        idx -= scan.begin_index; cnt++;
+        auto y = (idx - 1) * y_step; // Sqlite rowid starts a 1
+        auto [pmin,pmax] = sr::minmax(zs | sr::views::filter([](float e) { return !std::isnan(e);}));
+
+        belt_z_max = std::max(belt_z_max, (double)pmax);
+        belt_z_min = std::min(belt_z_min, (double)pmin);
+
+        profiles_flat.push_back(CadsFlatbuffers::CreateprofileDirect(builder, y, profile.x_off, &zs));
+
+        if (profiles_flat.size() == communications_config.UploadRows)
+        {
+          
+          auto send = CadsFlatbuffers::Createprofile_array(builder, idx - communications_config.UploadRows, profiles_flat.size(), builder.CreateVector(profiles_flat));
+          CadsFlatbuffers::scanBuilder post(builder);
+          post.add_contents_type(CadsFlatbuffers::scan_tables_profile_array);
+          post.add_contents(send.Union());
+          auto bytes = post.Finish();
+
+          builder.Finish(bytes);
+
+          auto [terminate,sent_rows] = send_bytes.resume({{builder.GetBufferPointer(),builder.GetBufferPointer()+builder.GetSize()},profiles_flat.size()});
+          profiles_flat.clear(); builder.Clear();
+          if(terminate) break;
+          scan.uploaded += sent_rows;
+          update_scan_state(scan);
+          
+        }
+      }
+      else
+      {
+        if (profiles_flat.size() > 0)
+        {
+          auto send = CadsFlatbuffers::Createprofile_array(builder, idx - profiles_flat.size(), profiles_flat.size(), builder.CreateVector(profiles_flat));
+          CadsFlatbuffers::scanBuilder post(builder);
+          post.add_contents_type(CadsFlatbuffers::scan_tables_profile_array);
+          post.add_contents(send.Union());
+          auto bytes = post.Finish();
+
+          builder.Finish(bytes);
+
+          auto [terminate,sent_rows] = send_bytes.resume({{builder.GetBufferPointer(),builder.GetBufferPointer()+builder.GetSize()},profiles_flat.size()});
+          profiles_flat.clear(); builder.Clear();
+          if(terminate) break;
+          scan.uploaded += sent_rows;
+          update_scan_state(scan);
+        }
+        
+        auto [terminate,sent_rows] = send_bytes.resume({std::vector<uint8_t>(),0});
+        if(!terminate) {
+          spdlog::get("cads")->info("{{func = {}, msg = 'Last resume not terminated'}}", __func__);
+        }
+          
+        scan.uploaded += sent_rows;
+        update_scan_state(scan);
+        break;
+      }
+    }
+
+    return scan;
   }
-  
-  
+
+
   std::tuple<state::scan,bool> post_scan(state::scan scan, webapi_urls urls,std::atomic<bool> &terminate)
   {
     using namespace flatbuffers;    
@@ -374,91 +513,34 @@ coro<remote_msg,bool> remote_control_coro()
       return {scan,true};
     } 
     
+
+    auto do_upload = std::get<1>(urls.add_belt);
     auto [conveyor, conveyor_err] = fetch_scan_conveyor(db_name);
-    
+
     if (conveyor_err < 0)
     {
       spdlog::get("cads")->info("{} fetch_scan_conveyor failed - {}", __func__, db_name);
       return {scan,true};
-    } 
+    }else{    
+      auto url = mk_post_profile_url(scan.scanned_utc,conveyor.Site,conveyor.Name, std::get<0>(urls.add_belt));
+      post_conveyor_table(conveyor,url,do_upload);
+    }
 
+    auto url = mk_post_profile_url(scan.scanned_utc,conveyor.Site,conveyor.Name, std::get<0>(urls.add_belt));
     auto [belt, belt_err] = fetch_scan_belt(db_name);
     
     if (belt_err < 0)
     {
       spdlog::get("cads")->info("{} fetch_scan_belt failed - {}", __func__, db_name);
       return {scan,true};
-    } 
-
-    auto fetch_profile = fetch_scan_coro(scan.begin_index + 1 + scan.uploaded, scan.begin_index + scan.cardinality + 1, db_name);
-
-    FlatBufferBuilder builder(4096 * 128);
-    std::vector<flatbuffers::Offset<CadsFlatbuffers::profile>> profiles_flat;
-
-    auto send_bytes = send_bytes_coro(0L,mk_post_profile_url(scan.scanned_utc,conveyor.Site,conveyor.Name, std::get<0>(urls.add_belt)),std::get<1>(urls.add_belt));
-
-    auto YmaxN = scan.cardinality;
-
-    auto y_step = belt.Length / (YmaxN);
-
-    double belt_z_max = std::numeric_limits<double>::lowest();
-    double belt_z_min = std::numeric_limits<double>::max();
-    long cnt = 0;
-
-    while (!terminate)
-    {
-      auto [co_terminate, cv] = fetch_profile.resume(0);
-      auto [idx, profile] = cv;
-
-      if (!co_terminate)
-      {
-        namespace sr = std::ranges;
-        auto zs = scan.remote_reg ? interpolate_to_widthn(profile.z,belt.WidthN) : profile.z;
-        idx -= scan.begin_index; cnt++;
-        auto y = (idx - 1) * y_step; // Sqlite rowid starts a 1
-        auto [pmin,pmax] = sr::minmax(zs | sr::views::filter([](float e) { return !std::isnan(e);}));
-
-        belt_z_max = std::max(belt_z_max, (double)pmax);
-        belt_z_min = std::min(belt_z_min, (double)pmin);
-
-        profiles_flat.push_back(CadsFlatbuffers::CreateprofileDirect(builder, y, profile.x_off, &zs));
-
-        if (profiles_flat.size() == communications_config.UploadRows)
-        {
-          builder.Finish(CadsFlatbuffers::Createprofile_array(builder, idx - communications_config.UploadRows, profiles_flat.size(), builder.CreateVector(profiles_flat)));
-
-          auto [terminate,sent_rows] = send_bytes.resume({{builder.GetBufferPointer(),builder.GetBufferPointer()+builder.GetSize()},profiles_flat.size()});
-          profiles_flat.clear(); builder.Clear();
-          if(terminate) break;
-          scan.uploaded += sent_rows;
-          update_scan_state(scan);
-          
-        }
-      }
-      else
-      {
-        if (profiles_flat.size() > 0)
-        {
-          builder.Finish(CadsFlatbuffers::Createprofile_array(builder, idx - profiles_flat.size(), profiles_flat.size(), builder.CreateVector(profiles_flat)));
-          auto [terminate,sent_rows] = send_bytes.resume({{builder.GetBufferPointer(),builder.GetBufferPointer()+builder.GetSize()},profiles_flat.size()});
-          profiles_flat.clear(); builder.Clear();
-          if(terminate) break;
-          scan.uploaded += sent_rows;
-          update_scan_state(scan);
-        }
-        
-        auto [terminate,sent_rows] = send_bytes.resume({std::vector<uint8_t>(),0});
-        if(!terminate) {
-          spdlog::get("cads")->info("{{func = {}, msg = 'Last resume not terminated'}}", __func__);
-        }
-          
-        scan.uploaded += sent_rows;
-        update_scan_state(scan);
-        break;
-      }
+    }else{
+      post_belt_table(belt,url,do_upload);
     }
 
-    bool failure = scan.uploaded != YmaxN;
+    
+    scan = post_profiles_table(scan,url,belt.Length / scan.cardinality, belt.WidthN, do_upload);
+
+    bool failure = scan.uploaded != scan.cardinality;
     if (!failure && scan.remote_reg == 1)
     {
      // http_post_profile_properties2(scan.scanned_utc, YmaxN, y_step, belt_z_min, belt_z_max, conveyor, gocator, urls.add_meta);

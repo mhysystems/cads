@@ -65,23 +65,6 @@ namespace cads_gui.Data
       return Ok();
     }
 
-    [Route("/api/conveyors")]
-    [HttpPost]
-    public async Task<IActionResult> Post_ConveyorsAsync([FromBody] Conveyor json)
-    {
-      var Id = await beltservice.AddConveyorAsync(json);
-      return new JsonResult(Id);
-    }
-
-    [Route("/api/belts")]
-    [HttpPost]
-    public async Task<IActionResult> Post_BeltsAsync([FromBody] Belt json)
-    {
-      var Id = await beltservice.AddBeltsAsync(json);
-      return new JsonResult(Id);
-    }
-
-
     [Route("/api/belt/{site}/{belt}/{chrono}")]
     [HttpPost]
     public async Task<IActionResult> Post_profile_bulk(string site, string belt, DateTime chrono)
@@ -125,6 +108,49 @@ namespace cads_gui.Data
 
       return Ok();
 
+    }
+  
+    [Route("/api/scan/{site}/{belt}/{chrono}")]
+    [HttpPost]
+    public async Task<IActionResult> PostScan(string site, string belt, DateTime chrono)
+    {
+      using var ms = new MemoryStream();
+      await Request.Body.CopyToAsync(ms);
+      
+      var bb = new ByteBuffer(ms.ToArray());
+      
+      var scanData = scan.GetRootAsscan(bb);
+
+      var dbname = Path.Combine(beltservice.config.DBPath,NoAsp.EndpointToSQliteDbName(site, belt, chrono));
+      if(scanData.ContentsType == scan_tables.conveyor) {
+        ScanData.Insert(dbname, scanData.ContentsAsconveyor());
+      }else if(scanData.ContentsType == scan_tables.belt) {
+        ScanData.Insert(dbname,scanData.ContentsAsbelt());
+      }else if(scanData.ContentsType == scan_tables.profile_array) {
+        var pa = scanData.ContentsAsprofile_array();
+        
+        if (pa.Count < 1)
+        {
+          return Ok();
+        }
+
+        using var db = new ProfileData(dbname);
+        for (var cnt = 0UL; cnt < pa.Count; cnt++)
+        {
+          var pc = pa.Profiles((int)cnt);
+          if(pc.HasValue) {
+            var p = pc.Value;
+            var z = p.GetZSamplesArray();
+            db.Save(pa.Idx + cnt, p.Y, p.XOff, z);
+          }else {
+            ArgumentNullException.ThrowIfNull(pc);
+          }
+        }
+      }else {
+        return NotFound();
+      }
+    
+      return Ok();
     }
 
 

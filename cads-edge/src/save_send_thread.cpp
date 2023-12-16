@@ -56,7 +56,7 @@ namespace {
 
 namespace cads
 {
-  void save_send_thread(Conveyor conveyor, bool remote_reg, cads::Io<msg> &profile_fifo, cads::Io<msg> &next)
+  void save_send_thread(Conveyor conveyor, Belt belt, bool remote_reg, cads::Io<msg> &profile_fifo, cads::Io<msg> &next)
   {
     
     spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Entering Thread");
@@ -74,20 +74,22 @@ namespace cads
       coro<int, profile, 1> store_scan;
       GocatorProperties gocator_properties;
       Conveyor conveyor;
+      Belt belt;
       date::utc_clock::time_point scan_begin;
       cads::Io<msg> & cps;
       bool remote_reg;
 
-      global_t(cads::Io<msg> &m, Conveyor c, date::utc_clock::time_point sb, std::string s, bool rg) : 
+      global_t(cads::Io<msg> &m, Conveyor c, Belt b, date::utc_clock::time_point sb, std::string s, bool rg) : 
         store_profile(rg ? store_profile_coro() : ::null_profile_coro()), 
         store_last_y(rg ? store_last_y_coro() : ::null_last_y_coro()), 
         store_scan(store_scan_coro(s)), 
         conveyor(c),
+        belt(b),
         scan_begin(sb),
         cps(m), 
         remote_reg(rg){};
 
-    } global(next,conveyor,scan_begin,scan_filename_init,remote_reg);
+    } global(next,conveyor,belt,scan_begin,scan_filename_init,remote_reg);
 
 
     struct transitions
@@ -112,6 +114,7 @@ namespace cads
           auto scan_filename = fmt::format("scan-{}.sqlite",global.scan_begin.time_since_epoch().count());
           store_scan_gocator(global.gocator_properties,scan_filename);
           store_scan_conveyor(global.conveyor,scan_filename);
+          store_scan_belt(global.belt,scan_filename);
           
           auto new_scan_filename = fmt::format("scan-{}.sqlite",scan_end.time_since_epoch().count());
           create_scan_db(new_scan_filename);

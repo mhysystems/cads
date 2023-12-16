@@ -31,6 +31,10 @@ table belt {
   width_n : uint;
 }
 
-union scan {conveyor, belt, profile_array}
+union scan_tables {conveyor, belt, profile_array}
+
+table scan {
+  contents : scan_tables;
+}
 
 root_type profile;

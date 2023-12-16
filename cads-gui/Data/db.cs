@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using CadsFlatbuffers;
 
 
 namespace cads_gui.Data
@@ -68,6 +69,103 @@ namespace cads_gui.Data
 
         disposed = true;
       }
+    }
+  }
+
+  static class ScanData
+  {
+    static public void Insert(string name, conveyor conveyor)
+    {
+
+      using var connection = new SqliteConnection("" +
+        new SqliteConnectionStringBuilder
+        {
+          Mode = SqliteOpenMode.ReadWriteCreate,
+          DataSource = name
+        });
+
+      connection.Open();
+
+      var command = connection.CreateCommand();
+      command.Transaction = connection.BeginTransaction();
+      command.CommandText = @"CREATE TABLE IF NOT EXISTS Conveyor (
+        Site TEXT NOT NULL 
+        ,Name TEXT NOT NULL 
+        ,Timezone TEXT NOT NULL 
+        ,PulleyCircumference REAL NOT NULL 
+        ,TypicalSpeed REAL NOT NULL 
+      )";
+
+      command.ExecuteNonQuery();
+
+      command.CommandText = @"INSERT OR REPLACE INTO Conveyor (
+        rowid
+        ,Site
+        ,Name 
+        ,Timezone
+        ,PulleyCircumference
+        ,TypicalSpeed
+      ) VALUES (1,@Site,@Name,@Timezone,@PulleyCircumference,@TypicalSpeed)";
+
+      command.Parameters.AddWithValue("@Site", conveyor.Site);
+      command.Parameters.AddWithValue("@Name", conveyor.Name);
+      command.Parameters.AddWithValue("@Timezone", conveyor.Timezone);
+      command.Parameters.AddWithValue("@PulleyCircumference",conveyor.PulleyCircumference);
+      command.Parameters.AddWithValue("@TypicalSpeed",conveyor.TypicalSpeed);
+
+      command.Prepare();
+      command.ExecuteNonQuery();
+      command.Transaction?.Commit();
+    }
+
+    static public void Insert(string name, belt belt)
+    {
+
+      using var connection = new SqliteConnection("" +
+        new SqliteConnectionStringBuilder
+        {
+          Mode = SqliteOpenMode.ReadWriteCreate,
+          DataSource = name
+        });
+
+      connection.Open();
+
+      var command = connection.CreateCommand();
+      command.Transaction = connection.BeginTransaction();
+      command.CommandText = @"CREATE TABLE IF NOT EXISTS Belt (
+      Serial TEXT NOT NULL 
+      ,PulleyCover REAL NOT NULL 
+      ,CordDiameter REAL NOT NULL 
+      ,TopCover REAL NOT NULL 
+      ,Length REAL NOT NULL 
+      ,Width REAL NOT NULL 
+      ,WidthN INTEGER NOT NULL 
+      )";
+
+      command.ExecuteNonQuery();
+
+      command.CommandText = @"INSERT OR REPLACE INTO Belt (
+      rowid
+      ,Serial
+      ,PulleyCover 
+      ,CordDiameter 
+      ,TopCover
+      ,Length
+      ,Width
+      ,WidthN
+    ) VALUES (1,@Serial,@PulleyCover,@CordDiameter,@TopCover,@Length,@Width,@WidthN)";
+
+      command.Parameters.AddWithValue("@Serial", belt.Serial);
+      command.Parameters.AddWithValue("@PulleyCover", belt.PulleyCover);
+      command.Parameters.AddWithValue("@CordDiameter", belt.CordDiameter);
+      command.Parameters.AddWithValue("@TopCover",belt.TopCover);
+      command.Parameters.AddWithValue("@Length",belt.Length);
+      command.Parameters.AddWithValue("@Width",belt.Width);
+      command.Parameters.AddWithValue("@WidthN",belt.WidthN);
+
+      command.Prepare();
+      command.ExecuteNonQuery();
+      command.Transaction?.Commit();
     }
   }
 

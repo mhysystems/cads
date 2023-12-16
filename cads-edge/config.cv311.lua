@@ -18,29 +18,21 @@ iirfilter = {
 }
 
 conveyor = {
-  Id = 54,
-  Org  = "FMG",
   Site = "FMG",
   Name = "CV912",
   Timezone = "Australia/Perth",
   PulleyCircumference = 624 * math.pi,
-  TypicalSpeed = 2.63,
-  Belt =  53,
-  Length = 39190.0,
-  WidthN = 1500.0
+  TypicalSpeed = 2.63
 }
 
 belt = {
-  Id = 53,
-  Installed = "2023-01-14T00:00:00Z",
+  Serial = "SerialBelt",
   PulleyCover = 7.0,
   CordDiameter = 5.6,
   TopCover = 20.0,
   Width = 1200.0,
-  Length = conveyor.Length,
-  LengthN = conveyor.TypicalSpeed / gocatorFps, 
-  Splices = 1,
-  Conveyor = 54
+  Length = 39190.0,
+  WidthN = 1500.0
 }
 
 dbscan = {
@@ -76,10 +68,11 @@ profileConfig = {
   ClipHeight = 35.0,
   ClampToZeroHeight = 10.0,
   PulleyEstimatorInit = -15.0,
+  PulleyCircumference = conveyor.PulleyCircumference,
+  TypicalSpeed = conveyor.TypicalSpeed,
+  WidthN = belt.WidthN,
   IIRFilter = iirfilter,
   RevolutionSensor = revolutionsensor,
-  Conveyor = conveyor,
-  Dbscan = dbscan,
   Measures = measures
 }
 
@@ -117,8 +110,8 @@ function main(sendmsg)
 
   local type_conversion = prsToScan(cads_origin)
   local thread_process_profile = process_profile(profileConfig,gocator_cads,type_conversion)
-  local belt_loop = loop_beltlength_thread(conveyor,cads_origin,origin_savedb)
-  local thread_send_save = save_send_thread(conveyor,origin_savedb,savedb_luamain)
+  local belt_loop = loop_beltlength_thread(belt.Length,cads_origin,origin_savedb)
+  local thread_send_save = save_send_thread(conveyor,belt,origin_savedb,savedb_luamain)
 
   if laser:Start(gocatorFps) then
     sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to start gocator")
