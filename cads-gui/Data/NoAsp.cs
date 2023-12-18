@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 using SQLitePCL;
 using static SQLitePCL.raw;
+using CadsFlatbuffers;
 
 
 
@@ -34,6 +35,25 @@ namespace cads_gui.Data
       var j = MemoryMarshal.Cast<byte, float>(z_ptr);
       return j.ToArray();
     }
+
+  static R DBReadQuerySingle<R>(string name, Func<SqliteCommand, SqliteCommand> cmdBuild, Func<SqliteDataReader, R> rows)
+  {
+    using var connection = new SqliteConnection("" +
+        new SqliteConnectionStringBuilder
+        {
+          Mode = SqliteOpenMode.ReadOnly,
+          DataSource = name
+        });
+
+    connection.Open();
+
+    var command = cmdBuild(connection.CreateCommand());
+
+    using var reader = command.ExecuteReader();
+    reader.Read();
+    return rows(reader);
+
+  }
 
     public static async Task<List<Profile>> RetrieveFrameModular(string db, double y_min, long len, long left)
     {
@@ -174,10 +194,30 @@ namespace cads_gui.Data
       }
 
     }
+
+    public static ScanLimits? GetScanLimits(Scan scan)
+    {
+      SqliteCommand CmdBuilder(SqliteCommand cmd)
+      {
+        var query = $"select belt.Width, length(z) / 4 as WidthN, Y as Length, profile.rowid as LengthN from profile join belt order by profile.rowid desc limit 1";
+        cmd.CommandText = query;
+        return cmd;
+      }
+
+      ScanLimits Read(SqliteDataReader reader)
+      {
+        return new ScanLimits(reader.GetDouble(0), 
+          reader.GetInt64(1), 
+          reader.GetDouble(2),
+          reader.GetInt64(3));
+      }
+
+      return DBReadQuerySingle(scan.Filepath, CmdBuilder, Read);
+    }
         
     public static string EndpointToSQliteDbName(string site, string belt, DateTime chronos)
     {
-      return site + '-' + belt + '-' + chronos.ToString("yyyy-MM-dd-HHmms");
+      return site + '-' + belt + '-' + chronos.ToString("yyyy-MM-dd-HHmms") + ".sqlite";
     }
 
     public static (string site, string belt, DateTime chronos) DecontructSQliteDbName(string filename)
@@ -189,6 +229,29 @@ namespace cads_gui.Data
       var chrono = DateTime.ParseExact(c,"yyyy-MM-dd-HHmms",System.Globalization.CultureInfo.InvariantCulture);
       
       return (site,belt,chrono);
+    }
+
+    public static Conveyor FromFlatbuffer(CadsFlatbuffers.conveyor conveyor)
+    {
+      return new Conveyor(){
+        Site =  conveyor.Site,
+        Name =  conveyor.Name,
+        Timezone = TimeZoneInfo.FindSystemTimeZoneById(conveyor.Timezone),
+        PulleyCircumference = conveyor.PulleyCircumference,
+        TypicalSpeed = conveyor.TypicalSpeed
+      };
+    }
+
+    public static Belt FromFlatbuffer(CadsFlatbuffers.belt belt)
+    {
+      return new Belt(){
+        Serial = belt.Serial,
+        PulleyCover =  belt.PulleyCover,
+        CordDiameter =  belt.CordDiameter,
+        TopCover = belt.TopCover,    
+        Length = belt.Length,
+        Width = belt.Width
+      };
     }
   } // End class NoAsp
 

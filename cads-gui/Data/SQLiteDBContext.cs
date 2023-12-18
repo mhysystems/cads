@@ -19,10 +19,9 @@ namespace cads_gui.Data
           }
         protected override void OnModelCreating(ModelBuilder modelBuilder) {
           
-          modelBuilder.Entity<Scan>().HasKey(e => e.rowid);
-          modelBuilder.Entity<Scan>().Property(b => b.rowid).ValueGeneratedOnAdd();
-          modelBuilder.Entity<Scan>().Ignore(b => b.name);
-          modelBuilder.Entity<Scan>().Property(e => e.chrono).HasConversion(e => e, e => DateTime.SpecifyKind(e,DateTimeKind.Utc));
+          modelBuilder.Entity<Scan>().HasKey(e => e.Id);
+          modelBuilder.Entity<Scan>().Property(b => b.Id).ValueGeneratedOnAdd();
+          modelBuilder.Entity<Scan>().Property(e => e.Chrono).HasConversion(e => e, e => DateTime.SpecifyKind(e,DateTimeKind.Utc));
 					modelBuilder.Entity<SavedZDepthParams>().HasKey( e => new{e.Site,e.Conveyor,e.Name});
 					modelBuilder.Entity<Conveyor>().HasKey(e => e.Id);
           modelBuilder.Entity<Conveyor>().Property(b => b.Id).ValueGeneratedOnAdd();
@@ -33,6 +32,10 @@ namespace cads_gui.Data
           
           modelBuilder.Entity<Belt>().HasKey(e => e.Id);
           modelBuilder.Entity<Belt>().Property(b => b.Id).ValueGeneratedOnAdd();
+          modelBuilder.Entity<Belt>().HasIndex(e => e.Serial).IsUnique();
+
+          modelBuilder.Entity<BeltInstall>().HasKey(e => e.Id);
+          modelBuilder.Entity<BeltInstall>().Property(b => b.Id).ValueGeneratedOnAdd();
 
           modelBuilder.Entity<Grafana>().HasKey(e => e.Id);
           modelBuilder.Entity<Grafana>().Property(b => b.Id).ValueGeneratedOnAdd();
@@ -41,9 +44,9 @@ namespace cads_gui.Data
 
        	public DbSet<Scan> Scans { get; set; }
         public DbSet<Belt> Belts { get; set; }
+        public DbSet<Conveyor> Conveyors { get; set; }
+        public DbSet<BeltInstall> BeltInstalls { get; set; }
 				public DbSet<SavedZDepthParams> SavedZDepthParams { get; set; }
-				public DbSet<Conveyor> Conveyors { get; set; }
-
         public DbSet<Grafana> Plots { get; set;}
     }
 }

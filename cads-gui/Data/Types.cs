@@ -7,6 +7,7 @@ using NATS.Client.JetStream;
 namespace cads_gui.Data
 {
   public record P4(double x, double y, double z, double z_off);
+  public record ScanLimits(double Width, long WidthN, double Length, long LengthN, double ZMin = 0.0, double ZMax = 0.0);
   public enum SurfaceOrientation { Top, Bottom };
 
 
@@ -86,63 +87,16 @@ namespace cads_gui.Data
 
   public sealed class Scan
   {
+    public long Id { get; set; } = 0;
+    public long ConveyorId {get; set;} = 0;
+    public long BeltId { get; set; } = 0;
+    public DateTime Chrono { get; set; } = DateTime.UnixEpoch;
+    public long Status { get; set; } = 0;
+    public string Filepath { get; set; } = String.Empty;
 
-    public long rowid { get; set; } = 0;
-    public string site { get; set; } = String.Empty;
-    public string name { get { return NoAsp.EndpointToSQliteDbName(this.site, this.conveyor, this.chrono); } private set { } }
-    //public long Revision {get; set;} = 0;
-    //public SurfaceOrientation Orientation {get; set;} = SurfaceOrientation.Top;
-    //public string FilePath {get; set;} = String.Empty;
-
-    public string conveyor { get; set; } = String.Empty;
-    public DateTime chrono { get; set; } = DateTime.UnixEpoch;
-    public double x_res { get; set; } = 0;
-    public double y_res { get; set; } = 0;
-    public double z_max { get; set; } = 0;
-    public double z_min { get; set; } = 0;
-
-    public double Ymax { get; set; } = 0;
-    public double YmaxN { get; set; } = 0;
-
-    public double WidthN { get; set; } = 0;
-    [NotMapped]
-    public double Xmax { get { return WidthN * x_res; } private set { } }
-    [NotMapped]
-    public double FrameLength { get { return 4000; } private set { } }
-    [NotMapped]
-    public bool HasData { get { return x_res != 0; } private set { } }
-    [NotMapped]
-    public (double,double) XBegin{ get { return (0, x_res) ; } private set { } }
-
-    public long Belt { get; set; } = 1;
-    public int Orientation { get; set; } = -1;
-
-    public Scan(long rowid, string site, string conveyor, DateTime chrono, double x_res, double y_res, double z_max, double z_min)
-    {
-      this.rowid = rowid;
-      this.site = site;
-      this.conveyor = conveyor;
-      this.chrono = chrono;
-      this.x_res = x_res;
-      this.y_res = y_res;
-      this.z_max = z_max;
-      this.z_min = z_min;
-    }
-
-    public Scan(Scan bc)
-    {
-      rowid = bc.rowid;
-      site = bc.site;
-      conveyor = bc.conveyor;
-      chrono = bc.chrono;
-      x_res = bc.x_res;
-      y_res = bc.y_res;
-      z_max = bc.z_max;
-      z_min = bc.z_min;
-    }
 
     // Required for ASP ApiController JSON Deserialization 
-    public Scan() { }
+    //public Scan() { }
 
   }
 
@@ -173,25 +127,32 @@ namespace cads_gui.Data
 
   public class Conveyor
   {
-    public long Id { get; set; } = 1;
+    public long Id { get; set; } = 0;
     public string Site { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public TimeZoneInfo Timezone { get; set; } = TimeZoneInfo.Utc;
     public double PulleyCircumference { get; set; } = 0;
-    public long Belt { get; set; } = 1;
+    public double TypicalSpeed { get; set; } = 0;
   }
 
   public class Belt
   {
-    public long Id { get; set; } = 1;
-    public DateTime Installed { get; set; } = DateTime.UnixEpoch;
+    public long Id { get; set; } = 0;
+    public string Serial { get; set; } = String.Empty;
     public double PulleyCover { get; set; } = 0;
     public double CordDiameter { get; set; } = 0;
     public double TopCover { get; set; } = 0;
     public double Length { get; set; } = 0;
     public double Width { get; set; } = 0;
-    public long Splices { get; set; } = 0;
-    public long Conveyor { get; set; } = 1;
+
+  }
+
+  public class BeltInstall
+  {
+    public long Id { get; set; } = 0;
+    public long ConveyorId { get; set; } = 0;
+    public long BeltId { get; set; } = 0;
+    public DateTime Chrono { get; set; } = DateTime.UnixEpoch;
   }
 
   public class Grafana 

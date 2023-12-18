@@ -1,9 +1,9 @@
 @namespace Cads
 
 
-      <DoughnutPlot belt_length=Belt.Ymax
-        data=@(_ZDepthValues.Select(d => new PlotInfo(d.y,scan.FrameLength,d.z.z,"")).ToArray()) animate="@_AnimateSearch" Y=@SelectedY
-        SY=0 />
+  <DoughnutPlot Length="Length"
+    data=@(_ZDepthValues.Select(d => new PlotInfo(d.y,FrameLength,d.z.z,"")).ToArray()) animate="@_AnimateSearch" Y=@SelectedY
+    SY=0 />
 
 
 @code {
@@ -30,7 +30,10 @@
   }
 
   [Parameter]
-  public Scan scan { get; set; } = new();
+  public double Length { get; set; } = 0;
+
+  [Parameter]
+  public  double FrameLength{ get; set; } = 4000;
 
   [Parameter]
   public EventCallback<ZDepth> SelectedRow { get; set; }

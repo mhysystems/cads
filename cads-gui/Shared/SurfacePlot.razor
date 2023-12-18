@@ -45,7 +45,7 @@
   }
 
   [Parameter]
-  public Scan scan { get; set; } = new();
+  public ScanLimits scanLimit { get; set; } = new();
 
   [Parameter]
   public EventCallback<double> clevelChanged { get; set; }
@@ -64,10 +64,9 @@
 
   protected override void OnInitialized()
   {
-    logger.LogInformation($"Plotting for {scan.name}");
     (double, string)[] s = { (0, "hsl(240,100,50)"), (0.002, "hsl(0,0,100)"), (1.0, "hsl(0,0,0)") };
     colorscale = (true, "Greys", s);
-    sliderLow = scan.z_max;
+    sliderLow = scanLimit.ZMax;
   }
 
 
@@ -75,10 +74,11 @@
   {
     if (firstRender)
     {
+      var xRes = scanLimit.Width / scanLimit.WidthN;
       selfReference = DotNetObjectReference.Create(this);
       await using var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
       jsSurfacePlot = await
-      module.InvokeAsync<IJSObjectReference>("mk_SurfacePlot", jsPlot, scan.x_res, scan.z_min, scan.z_max,
+      module.InvokeAsync<IJSObjectReference>("mk_SurfacePlot", jsPlot, xRes, scanLimit.ZMin, scanLimit.ZMax,
       colorscale.use_array ?
       colorscale.array.Select(i => i.ToTuple()) : colorscale.str, selfReference);
     }
@@ -86,7 +86,7 @@
 
   public async Task HighlightSurfaceAsync(Func<float, bool> fn)
   {
-    var colorRange = GenerateColorRange(scan.z_max - sliderLow, fn).ToArray();
+    var colorRange = GenerateColorRange(scanLimit.ZMax - sliderLow, fn).ToArray();
     if (jsSurfacePlot is not null)
     {
       await jsSurfacePlot.InvokeVoidAsync("changeColorScale", colorRange.Select(i => i.ToTuple()));
@@ -111,7 +111,8 @@
   {
     if (jsSurfacePlot is not null)
     {
-      var y = await jsSurfacePlot.InvokeAsync<double>("updatePlot", plotDataPromise, scan.x_res);
+      var xRes = scanLimit.Width / scanLimit.WidthN;
+      var y = await jsSurfacePlot.InvokeAsync<double>("updatePlot", plotDataPromise, xRes);
       return y;
     }
     else
@@ -125,8 +126,8 @@
   {
     if (jsSurfacePlot is not null)
     {
-      var y = await jsSurfacePlot.InvokeAsync<double>("updatePlotDoubleSided", plotDataPromiseTop, plotDataPromiseBottom,
-      scan.x_res);
+      var xRes = scanLimit.Width / scanLimit.WidthN;
+      var y = await jsSurfacePlot.InvokeAsync<double>("updatePlotDoubleSided", plotDataPromiseTop, plotDataPromiseBottom, xRes);
       return y;
     }
     else
@@ -152,7 +153,7 @@
     }
 
 
-    float z_max = (float)scan.z_max;
+    float z_max = (float)scanLimit.ZMax;
     float z_min = 0f;
     var steps = 1000;
 
@@ -240,7 +241,7 @@
   protected async Task SliderOnChangeAsync(ChangeEventArgs e)
   {
     sliderLow = Convert.ToDouble(e.Value);
-    var colorRange = GenerateColorRange(scan.z_max - sliderLow).ToArray();
+    var colorRange = GenerateColorRange(scanLimit.ZMax - sliderLow).ToArray();
     if (jsSurfacePlot is not null)
     {
       await jsSurfacePlot.InvokeVoidAsync("changeColorScale", colorRange.Select(i => i.ToTuple()));

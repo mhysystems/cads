@@ -29,12 +29,11 @@
 @code {
 
   [Parameter]
-  public Scan? scan { get; set; }
+  public ScanLimits? scanLimits { get; set; }
+  
   [Parameter]
   public Belt? belt { get; set; }
-  [Parameter]
-  public bool DoubleSided { get; set; }
-
+  
 
   protected IJSObjectReference? jsProfilePlot;
   protected ElementReference jsPlot;
@@ -44,8 +43,8 @@
     if (firstRender)
     {
       await using var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");
-      jsProfilePlot = await
-      module.InvokeAsync<IJSObjectReference>("mk_ProfilePlot", jsPlot, scan?.x_res, scan?.z_min, scan?.z_max, belt?.TopCover, belt?.CordDiameter, belt?.PulleyCover);
+      var xRes = scanLimits?.Width / scanLimits?.WidthN;
+      jsProfilePlot = await module.InvokeAsync<IJSObjectReference>("mk_ProfilePlot", jsPlot, xRes, scanLimits?.ZMin, scanLimits?.ZMax, belt?.TopCover, belt?.CordDiameter, belt?.PulleyCover);
     }
 
   }

@@ -57,59 +57,7 @@ namespace cads_gui.Data
       }
     }
 
-    [Route("/api/meta")]
-    [HttpPost]
-    public async Task<IActionResult> Post_meta([FromBody] Scan json)
-    {
-      await beltservice.StoreBeltConstantsAsync(json);
-      return Ok();
-    }
 
-    [Route("/api/belt/{site}/{belt}/{chrono}")]
-    [HttpPost]
-    public async Task<IActionResult> Post_profile_bulk(string site, string belt, DateTime chrono)
-    {
-      using var ms = new MemoryStream();
-
-      await Request.Body.CopyToAsync(ms);
-      var jjd = ms.ToArray();
-      var bb = new ByteBuffer(jjd);
-      var pa = profile_array.GetRootAsprofile_array(bb);
-
-      if (pa.Count < 1)
-      {
-        return Ok();
-      }
-
-      ulong cnt = 0;
-      var (zmaxInit, err) = beltservice.SelectBeltPropertyZmax(site, belt, chrono);
-      double zmax = err == 0 ? zmaxInit : 0;
-
-      var dbname = Path.Combine(beltservice.config.DBPath,NoAsp.EndpointToSQliteDbName(site, belt, chrono));
-      using var db = new ProfileData(dbname);
-
-      while (cnt++ < pa.Count)
-      {
-        var pc = pa.Profiles((int)cnt - 1);
-        if(pc.HasValue) {
-          var p = pc.Value;
-          var z = p.GetZSamplesArray();
-          zmax = Math.Max(zmax, z.Max());
-          db.Save(pa.Idx + cnt - 1, p.Y, p.XOff, z);
-        }else {
-          ArgumentNullException.ThrowIfNull(pc);
-        }
-      }
-
-      if (zmax > zmaxInit)
-      {
-        await beltservice.UpdateBeltPropertyZmax(site, belt, chrono, zmax);
-      }
-
-      return Ok();
-
-    }
-  
     [Route("/api/scan/{site}/{belt}/{chrono}")]
     [HttpPost]
     public async Task<IActionResult> PostScan(string site, string belt, DateTime chrono)
@@ -124,8 +72,10 @@ namespace cads_gui.Data
       var dbname = Path.Combine(beltservice.config.DBPath,NoAsp.EndpointToSQliteDbName(site, belt, chrono));
       if(scanData.ContentsType == scan_tables.conveyor) {
         ScanData.Insert(dbname, scanData.ContentsAsconveyor());
+        await beltservice.AddConveyorAsync(NoAsp.FromFlatbuffer(scanData.ContentsAsconveyor()));
       }else if(scanData.ContentsType == scan_tables.belt) {
         ScanData.Insert(dbname,scanData.ContentsAsbelt());
+        await beltservice.AddBeltAsync(NoAsp.FromFlatbuffer(scanData.ContentsAsbelt()));
       }else if(scanData.ContentsType == scan_tables.profile_array) {
         var pa = scanData.ContentsAsprofile_array();
         

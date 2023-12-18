@@ -6,6 +6,8 @@ using InfluxDB.Client.Api.Domain;
 using InfluxDB.Client.Core;
 
 using cads_gui.BeltN;
+using System.Security.Cryptography;
+using CadsFlatbuffers;
 
 namespace cads_gui.Data
 {
@@ -156,26 +158,12 @@ namespace cads_gui.Data
       return results;
     }
 
-    public IEnumerable<Conveyor> GetConveyors(string site)
-    {
-      using var context = dBContext.CreateDbContext();
-      return from row in context.Conveyors where row.Site == site select row;
-    }
-
     public IEnumerable<string> GetConveyorsString(string site)
     {
       using var context = dBContext.CreateDbContext();
-      var data = from row in context.Scans where row.site == site select row.conveyor;
+      var data = from row in context.Conveyors where row.Site == site select row.Name;
 
       return data.Distinct().ToList();
-    }
-
-    public DateTime GetChronoAtTimezone(Scan s)
-    {
-      using var context = dBContext.CreateDbContext();
-      var data = from a in context.Conveyors where a.Belt == s.Belt select TimeZoneInfo.ConvertTimeFromUtc(s.chrono, a.Timezone);
-
-      return data.First();
     }
 
     public TimeZoneInfo GetConveyorTimezone(string site, string conveyor)
@@ -186,103 +174,74 @@ namespace cads_gui.Data
       return data.Any() ? data.First().Timezone : TimeZoneInfo.Local;
     }
 
-    public IEnumerable<Scan> GetScans(string site, string belt)
+    public IEnumerable<Scan> GetScans(string site, string conveyorName)
     {
       using var context = dBContext.CreateDbContext();
-      var data = from a in context.Scans orderby a.chrono where a.site == site && a.conveyor == belt select a;
+      var data = from scan in context.Scans 
+        join conveyor in context.Conveyors on scan.ConveyorId equals conveyor.Id 
+        orderby scan.Chrono 
+        where conveyor.Site == site && conveyor.Name == conveyorName select scan;
+
+      return data.ToList();
+    }
+
+    public List<Scan> GetScans(string site, string conveyorName, DateTime chrono)
+    {
+      using var context = dBContext.CreateDbContext();
+      var data = from scan in context.Scans 
+        join conveyor in context.Conveyors on scan.ConveyorId equals conveyor.Id 
+        orderby scan.Chrono 
+        where conveyor.Site == site && conveyor.Name == conveyorName && scan.Chrono == chrono select scan;
 
       return data.ToList();
     }
 
 
-    public async Task<Belt> GetBelt(string site, string belt)
+    public async Task<Belt> GetBelt(string site, string conveyorName)
     {
       using var context = await dBContext.CreateDbContextAsync();
-      var beltId = (from a in context.Conveyors where a.Site == site && a.Name == belt select a.Belt).First();
-      var data = from b in context.Belts where b.Id == beltId select b;
+      var rows = from installs in context.BeltInstalls 
+        join conveyor in context.Conveyors on installs.ConveyorId equals conveyor.Id
+        join belt in context.Belts on installs.BeltId equals belt.Id 
+        where conveyor.Site == site && conveyor.Name == conveyorName
+        orderby installs.Chrono 
+        select belt;
 
-      return data.First();
+      return rows.First();
     }
 
-    public List<Scan> GetScans(string site, string belt, DateTime chrono)
-    {
-      using var context = dBContext.CreateDbContext();
-      var data = from a in context.Scans orderby a.chrono where a.site == site && a.conveyor == belt && a.chrono.Date == chrono.Date select a;
-
-      return data.ToList();
-    }
-
-    public IEnumerable<Scan> GetScansAsync(string site, string conveyor)
-    {
-      using var context = dBContext.CreateDbContext();
-      var data = from a in context.Scans orderby a.chrono where a.site == site && a.conveyor == conveyor select a;
-
-      // context will be disposed without evaluation of data
-      return data.ToArray();
-
-    }
 
     public IEnumerable<Belt> GetBelt(Scan scan)
     {
       using var context = dBContext.CreateDbContext();
-      var data = from a in context.Belts where a.Id == scan.Belt select a;
+      var data = from belt in context.Belts where belt.Id == scan.BeltId select belt;
 
       return data.ToArray();
 
     }
 
-    public async Task<IEnumerable<DateTime>> GetBeltDatesAsync(Scan belt)
+    public async Task<IEnumerable<DateTime>> GetBeltDatesAsync(Scan scan)
     {
       using var context = dBContext.CreateDbContext();
-      return await Task.Run(() => (from a in context.Scans orderby a.chrono where a.site == belt.site && a.conveyor == belt.conveyor select a.chrono).ToArray());
+      return await Task.Run(() => (from s in context.Scans orderby s.Chrono where s.ConveyorId == scan.ConveyorId && s.BeltId == scan.BeltId select s.Chrono).ToArray());
     }
 
-
-    public async Task UpdateBeltPropertyZmax(string site, string belt, DateTime chrono, double param)
-    {
-      using var context = dBContext.CreateDbContext();
-      var data = from a in context.Scans where a.site == site && a.conveyor == belt && a.chrono == chrono select a;
-
-      if (data.Any())
-      {
-        var row = data.First();
-        row.z_max = param;
-        await context.SaveChangesAsync();
-      }
-    }
-
-    public (double, int) SelectBeltPropertyZmax(string site, string belt, DateTime chrono)
-    {
-      using var context = dBContext.CreateDbContext();
-      var data = from a in context.Scans where a.site == site && a.conveyor == belt && a.chrono == chrono select a;
-
-      if (data.Any())
-      {
-        var row = data.First();
-        return (row.z_max, 0);
-      }
-      else
-      {
-        return (0, 1);
-      }
-    }
 
     public IEnumerable<(string, string)> GetSitesWithCads()
     {
       using var context = dBContext.CreateDbContext();
-      // EFcore returns IQueryable which doesn't handle selecting tuples or order by very well, so convert to Enumerable
-      var rows = (from a in context.Scans orderby a.chrono select a).ToList();
-      var sites = from r in rows group r by r.site into site select (site.Key, site.First().conveyor);
+      
+      // EFcore returns IQueryable which doesn't handle selecting tuples or order by very well, so convert to List
+      var conveyors = (from conveyor in context.Conveyors select conveyor).ToList();
+      
+      // tuple (map.Key,map.First().Name) is (conveyor site name, [conveyor].First().Name)
+      var sites = from conveyor in conveyors group conveyor by conveyor.Site into map select (map.Key, map.First().Name);
       return sites;
     }
-
-
-    public async Task StoreBeltConstantsAsync(Scan entry)
+    public IEnumerable<Conveyor> GetConveyors(string site)
     {
       using var context = dBContext.CreateDbContext();
-      DateTime.SpecifyKind(entry.chrono, DateTimeKind.Utc);
-      context.Scans.Add(entry);
-      await context.SaveChangesAsync();
+      return from row in context.Conveyors where row.Site == site select row;
     }
 
     public async Task<long> AddConveyorAsync(Conveyor entry)
@@ -303,10 +262,11 @@ namespace cads_gui.Data
 
     }
 
-    public async Task<long> AddBeltsAsync(Belt entry)
+    public async Task<long> AddBeltAsync(Belt entry)
     {
+      
       using var context = dBContext.CreateDbContext();
-      var q = context.Belts.Where(e => e.Conveyor == entry.Conveyor && e.Installed == entry.Installed);
+      var q = context.Belts.Where(e => e.Serial == entry.Serial);
 
       if (q.Any())
       {
@@ -320,6 +280,39 @@ namespace cads_gui.Data
       }
     }
 
+    public Belt? GetBeltAsync(string serial)
+    {
+      
+      using var context = dBContext.CreateDbContext();
+      var q = context.Belts.Where(e => e.Serial == serial);
+
+      if (q.Any())
+      {
+        return null;
+      }
+      else
+      {
+        return q.First();
+      }
+    }
+
+    public async Task AddScanAsync(Scan scan)
+    {
+      
+      using var context = dBContext.CreateDbContext();
+      
+      var isInstalled = from install in context.BeltInstalls 
+        where install.ConveyorId == scan.ConveyorId && install.BeltId == scan.BeltId
+        select install;
+
+      if(isInstalled.Any())
+      {
+        DateTime.SpecifyKind(scan.Chrono, DateTimeKind.Utc);
+        context.Scans.Add(scan);
+        await context.SaveChangesAsync();
+      }
+    }
+
     public async Task<IEnumerable<Grafana>> GetGrafanaPlotsAsync(Belt belt)
     {
       using var context = await dBContext.CreateDbContextAsync();
@@ -329,20 +322,17 @@ namespace cads_gui.Data
     }
 
 
-    public async Task<float[]> GetBeltProfileAsync(double y, long num_y_samples, Scan belt)
+    public async Task<float[]> GetBeltProfileAsync(double y, long num_y_samples, Scan scan)
     {
-      var dbpath = Path.GetFullPath(Path.Combine(config.DBPath, belt.name));
-      var fs = await NoAsp.RetrieveFrameModular(dbpath, y, num_y_samples, 0);
+      var fs = await NoAsp.RetrieveFrameModular(scan.Filepath, y, num_y_samples, 0);
       var z = fs.SelectMany(f => f.z).ToArray();
       return z;
     }
-
 
     public string AppendPath(string belt)
     {
       return Path.GetFullPath(Path.Combine(config.DBPath, belt));
     }
-
 
     public List<SavedZDepthParams> GetSavedZDepthParams(Scan belt)
     {
@@ -367,13 +357,17 @@ namespace cads_gui.Data
 
     }
 
-    public async Task<List<ZDepth>> BeltScanAsync2(ZDepthQueryParameters search, Scan belt, long limit)
+    public async Task<List<ZDepth>> BeltScanAsync2(ZDepthQueryParameters search, Scan scan, long limit)
     {
 
-      var db = AppendPath(NoAsp.EndpointToSQliteDbName(belt.site, belt.conveyor, belt.chrono));
+      var belt = NoAsp.GetScanLimits(scan);
+      
+      if(belt is null) {
+        return Enumerable.Empty<ZDepth>().ToList();
+      }
 
-      var dx = belt.x_res;
-      var dy = belt.y_res;
+      var dx = belt.Width / belt.WidthN;
+      var dy = belt.Length / belt.LengthN;
 
       var X = search.Width;
       var Y = search.Length;
@@ -381,11 +375,11 @@ namespace cads_gui.Data
       var ZMin = search.ZMin;
       var P = search.Percentage;
 
-      var xMinIndex = (int)Math.Max(Math.Floor(search.XMin / belt.x_res), 0);
-      var xMaxIndex = (int)Math.Min(Math.Floor(search.XMax / belt.x_res), belt.WidthN);
+      var xMinIndex = (int)Math.Max(Math.Floor(search.XMin / dx), 0);
+      var xMaxIndex = (int)Math.Min(Math.Floor(search.XMax / dx), belt.WidthN);
 
-      var columns = (int)Math.Ceiling(belt.Xmax / X);
-      var rows = (int)Math.Ceiling(belt.Ymax / Y);
+      var columns = (int)Math.Ceiling(belt.Width / X);
+      var rows = (int)Math.Ceiling(belt.Length / Y);
 
       bool fz(float z)
       {
@@ -404,7 +398,7 @@ namespace cads_gui.Data
 
       var req = new List<ZDepth>();
 
-      var x = await Search.SearchParallelAsync(db, columns, rows, (int)belt.WidthN, (long)belt.YmaxN, limit, xRange, fz, fp);
+      var x = await Search.SearchParallelAsync(scan.Filepath, columns, rows, (int)belt.WidthN, belt.LengthN, limit, xRange, fz, fp);
 
       foreach (var r in x)
       {
