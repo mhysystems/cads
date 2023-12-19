@@ -438,7 +438,7 @@ coro<remote_msg,bool> remote_control_coro()
 
         if (profiles_flat.size() == communications_config.UploadRows)
         {
-          
+          auto serial = builder.CreateString(o.Serial);
           auto send = CadsFlatbuffers::Createprofile_array(builder, idx - communications_config.UploadRows, profiles_flat.size(), builder.CreateVector(profiles_flat));
           CadsFlatbuffers::scanBuilder post(builder);
           post.add_contents_type(CadsFlatbuffers::scan_tables_profile_array);
@@ -459,6 +459,7 @@ coro<remote_msg,bool> remote_control_coro()
       {
         if (profiles_flat.size() > 0)
         {
+          
           auto send = CadsFlatbuffers::Createprofile_array(builder, idx - profiles_flat.size(), profiles_flat.size(), builder.CreateVector(profiles_flat));
           CadsFlatbuffers::scanBuilder post(builder);
           post.add_contents_type(CadsFlatbuffers::scan_tables_profile_array);

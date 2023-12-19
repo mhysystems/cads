@@ -8,6 +8,7 @@ using InfluxDB.Client.Core;
 using cads_gui.BeltN;
 using System.Security.Cryptography;
 using CadsFlatbuffers;
+using System.Data;
 
 namespace cads_gui.Data
 {
@@ -210,14 +211,28 @@ namespace cads_gui.Data
       return rows.First();
     }
 
+    public Belt GetBelt(Scan scan)
+    {
+      using var context = dBContext.CreateDbContext();
+      var data = from belt in context.Belts where belt.Id == scan.BeltId select belt;
 
-    public IEnumerable<Belt> GetBelt(Scan scan)
+      return data.First();
+    }
+
+    public Conveyor? GetConveyor(Scan scan)
+    {
+      using var context = dBContext.CreateDbContext();
+      var data = from conveyor in context.Conveyors where conveyor.Id == scan.ConveyorId select conveyor;
+
+      return data?.First();
+    }
+
+    public IEnumerable<Belt> GetBelts(Scan scan)
     {
       using var context = dBContext.CreateDbContext();
       var data = from belt in context.Belts where belt.Id == scan.BeltId select belt;
 
       return data.ToArray();
-
     }
 
     public async Task<IEnumerable<DateTime>> GetBeltDatesAsync(Scan scan)
@@ -321,23 +336,49 @@ namespace cads_gui.Data
       return beltplots.ToList();
     }
 
+    public ScanLimits? GetScanLimits(Scan scan)
+    {
+      return NoAsp.GetScanLimits(MakeScanFilePath(scan));
+    }
 
     public async Task<float[]> GetBeltProfileAsync(double y, long num_y_samples, Scan scan)
     {
-      var fs = await NoAsp.RetrieveFrameModular(scan.Filepath, y, num_y_samples, 0);
+      var fs = await NoAsp.RetrieveFrameModular(MakeScanFilePath(scan), y, num_y_samples, 0);
       var z = fs.SelectMany(f => f.z).ToArray();
       return z;
     }
 
-    public string AppendPath(string belt)
+    public string MakeScanFilePath(string site, string conveyor, DateTime chrono)
     {
-      return Path.GetFullPath(Path.Combine(config.DBPath, belt));
+      var filename = NoAsp.MakeScanFilename(site,conveyor,chrono);
+      return Path.GetFullPath(Path.Combine(config.DBPath, filename));
     }
 
-    public List<SavedZDepthParams> GetSavedZDepthParams(Scan belt)
+    public string MakeScanFilePath(Scan scan)
+    {
+      var filename = MakeScanFilename(scan);
+      return Path.GetFullPath(Path.Combine(config.DBPath, filename));
+    }
+
+    public string MakeScanFilename(Scan scan)
     {
       using var context = dBContext.CreateDbContext();
-      var rtn = from a in context.SavedZDepthParams where a.Conveyor == belt.conveyor && a.Site == belt.site select a;
+      var data = from conveyor in context.Conveyors where conveyor.Id == scan.ConveyorId select conveyor;
+      if(data.Any()){
+        var conveyor = data.First();
+        return NoAsp.MakeScanFilename(conveyor.Site,conveyor.Name,scan.Chrono);
+      }else {
+        return String.Empty;
+      }
+    }
+
+    public List<SavedZDepthParams> GetSavedZDepthParams(Scan scan)
+    {
+      using var context = dBContext.CreateDbContext();
+      var rtn = from conveyor in context.Conveyors
+        join saved in context.SavedZDepthParams on new {Site = conveyor.Site, Conveyor = conveyor.Name} equals new {Site = saved.Site, Conveyor = saved.Conveyor} 
+        where conveyor.Id == scan.ConveyorId
+        select saved;
       return rtn.ToList();
     }
 
@@ -360,7 +401,7 @@ namespace cads_gui.Data
     public async Task<List<ZDepth>> BeltScanAsync2(ZDepthQueryParameters search, Scan scan, long limit)
     {
 
-      var belt = NoAsp.GetScanLimits(scan);
+      var belt = GetScanLimits(scan);
       
       if(belt is null) {
         return Enumerable.Empty<ZDepth>().ToList();

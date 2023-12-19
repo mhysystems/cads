@@ -35,6 +35,9 @@ table belt {
 union scan_tables {conveyor, belt, profile_array}
 
 table scan {
+  site : string;
+  conveyor_name : string;
+  chrono : string;
   contents : scan_tables;
 }
 

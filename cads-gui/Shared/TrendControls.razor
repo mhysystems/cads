@@ -71,14 +71,14 @@
   protected Func<DateTime,bool> IsDateDisabledFunc = (DateTime d) => false;
 
   [Parameter]
-  public Scan scan {get; set;} = new();
+  public Scan? scan {get; set;}
   
   [Parameter]
   public EventCallback<ValueTuple<DateTime?,int,string>> DateChanged {get; set;}
 
   protected override async Task OnInitializedAsync()
   { 
-    if(scan.HasData) 
+    if(scan is not null) 
     {
       _scanDate0 = (await Beltservice.GetBeltDatesAsync(scan)).LastOrDefault(DateTime.Now); 
       _scanDate1 = _scanDate0;

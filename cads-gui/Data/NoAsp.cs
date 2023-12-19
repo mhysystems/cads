@@ -58,6 +58,11 @@ namespace cads_gui.Data
     public static async Task<List<Profile>> RetrieveFrameModular(string db, double y_min, long len, long left)
     {
 
+      if(!File.Exists(db))
+      {
+        return Enumerable.Empty<Profile>().ToList();
+      }
+
       var frame = new List<Profile>();
       var abslen = Math.Abs(len);
 
@@ -195,7 +200,7 @@ namespace cads_gui.Data
 
     }
 
-    public static ScanLimits? GetScanLimits(Scan scan)
+    public static ScanLimits? GetScanLimits(string filePath)
     {
       SqliteCommand CmdBuilder(SqliteCommand cmd)
       {
@@ -212,14 +217,9 @@ namespace cads_gui.Data
           reader.GetInt64(3));
       }
 
-      return DBReadQuerySingle(scan.Filepath, CmdBuilder, Read);
+      return DBReadQuerySingle(filePath, CmdBuilder, Read);
     }
         
-    public static string EndpointToSQliteDbName(string site, string belt, DateTime chronos)
-    {
-      return site + '-' + belt + '-' + chronos.ToString("yyyy-MM-dd-HHmms") + ".sqlite";
-    }
-
     public static (string site, string belt, DateTime chronos) DecontructSQliteDbName(string filename)
     {
       var p = filename.Split("-");
@@ -229,6 +229,11 @@ namespace cads_gui.Data
       var chrono = DateTime.ParseExact(c,"yyyy-MM-dd-HHmms",System.Globalization.CultureInfo.InvariantCulture);
       
       return (site,belt,chrono);
+    }
+
+    public static string MakeScanFilename(string site, string conveyor, DateTime chrono)
+    {
+      return site + '-' + conveyor + '-' + chrono.ToString("yyyy-MM-dd-HHmms");
     }
 
     public static Conveyor FromFlatbuffer(CadsFlatbuffers.conveyor conveyor)

@@ -5,10 +5,10 @@ namespace Fluxor.Blazor.Store
 	[FeatureState]
 	public class GuiState
 	{
-		public Scan scan { get; } = new Scan();
+		public Scan? scan { get; }
     public double Y { get; }
     private GuiState(){}
-		public GuiState(Scan b, double y)
+		public GuiState(Scan? b, double y)
 		{
 			scan = b;
       Y = y;

@@ -45,7 +45,7 @@
   }
 
   [Parameter]
-  public ScanLimits scanLimit { get; set; } = new();
+  public ScanLimits scanLimit { get; set; } = new(0,1,0,1);
 
   [Parameter]
   public EventCallback<double> clevelChanged { get; set; }

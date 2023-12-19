@@ -18,7 +18,7 @@
   </MudTooltip>
   <MudTooltip Text="Jump">
     <MudNumericField @bind-Value="@Y" Color="Color.Secondary" HideSpinButtons="true" Class="ma-0 flex-grow-0"
-      Variant="Variant.Text" Min="0" Max="@(scan.Ymax / 1000)" Format="N2" />
+      Variant="Variant.Text" Min="0" Max="@(length / 1000)" Format="N2" />
   </MudTooltip>
   <MudTooltip Text="Step Forward">
     <MudButton Color="Color.Primary" StartIcon="@Icons.Material.Filled.FastForward" Size="Size.Large"
@@ -39,6 +39,7 @@
 @code {
 
   protected DateTime? _scanDate = null;
+  protected double length = 0;
 
   protected string ss = "30";
 
@@ -145,7 +146,8 @@
 
   protected override async Task OnInitializedAsync()
   {
-       _scanDate = (await Beltservice.GetBeltDatesAsync(scan)).LastOrDefault(DateTime.Now);
+    _scanDate = (await Beltservice.GetBeltDatesAsync(scan)).LastOrDefault(DateTime.Now);
+    length = Beltservice.GetScanLimits(scan)?.Length ?? 0;
 
     if (savedZDepthParams.Any())
     {

@@ -52,7 +52,7 @@
   // Must use Async version otherwise fluxor crashes
   protected override async Task OnInitializedAsync()
   {
-    if((GuiState is not null) && GuiState.Value.scan.HasData) {
+    if(GuiState?.Value.scan is not null) {
       scan = GuiState.Value.scan;
       yCoord = GuiState.Value.Y;
     }else {

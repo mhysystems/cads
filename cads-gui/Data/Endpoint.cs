@@ -69,7 +69,7 @@ namespace cads_gui.Data
       
       var scanData = scan.GetRootAsscan(bb);
 
-      var dbname = Path.Combine(beltservice.config.DBPath,NoAsp.EndpointToSQliteDbName(site, belt, chrono));
+      var dbname = NoAsp.MakeScanFilename(site, belt, chrono);
       if(scanData.ContentsType == scan_tables.conveyor) {
         ScanData.Insert(dbname, scanData.ContentsAsconveyor());
         await beltservice.AddConveyorAsync(NoAsp.FromFlatbuffer(scanData.ContentsAsconveyor()));
