@@ -1,4 +1,5 @@
-// profile data sent to server
+// scan sent to server
+// Use capitals for names to reduce dotnet compiler warnings
 namespace CadsFlatbuffers;
 
 table profile{
@@ -13,7 +14,7 @@ table profile_array {
   profiles : [profile];
 }
 
-table conveyor {
+table Conveyor {
   site : string;
   name : string;
   timezone : string;
@@ -21,7 +22,7 @@ table conveyor {
   typical_speed : double;
 }
 
-table belt {
+table Belt {
   serial : string;
   pulley_cover : double;
   cord_diameter : double;
@@ -31,8 +32,17 @@ table belt {
   width_n : uint;
 }
 
+table register_scan {
+  belt_serial : string;
+}
 
-union scan_tables {conveyor, belt, profile_array}
+table Install {
+  belt : Belt;
+  conveyor : Conveyor;
+}
+
+
+union scan_tables {Install, profile_array, register_scan}
 
 table scan {
   site : string;

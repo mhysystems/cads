@@ -9,6 +9,7 @@ using cads_gui.BeltN;
 using System.Security.Cryptography;
 using CadsFlatbuffers;
 using System.Data;
+using cadsgui.Migrations;
 
 namespace cads_gui.Data
 {
@@ -19,14 +20,14 @@ namespace cads_gui.Data
   // z in the minimum z sample found in area before total threshold
   public record ZDepth(double x, double y, double width, double length, double t, P3 z);
 
-  public class BeltService
+  public class CadsBackend
   {
     private readonly IDbContextFactory<SQLiteDBContext> dBContext;
-    private readonly ILogger<BeltService> _logger;
+    private readonly ILogger<CadsBackend> _logger;
     public readonly AppSettings config;
     private readonly IWebHostEnvironment _env;
 
-    public BeltService(IDbContextFactory<SQLiteDBContext> db, ILogger<BeltService> logger, IOptions<AppSettings> config, IWebHostEnvironment env)
+    public CadsBackend(IDbContextFactory<SQLiteDBContext> db, ILogger<CadsBackend> logger, IOptions<AppSettings> config, IWebHostEnvironment env)
     {
       _env = env;
       this.dBContext = db;
@@ -227,6 +228,14 @@ namespace cads_gui.Data
       return data?.First();
     }
 
+    public Conveyor? GetConveyor(string site, string name)
+    {
+      using var context = dBContext.CreateDbContext();
+      var data = from conveyor in context.Conveyors where conveyor.Site == site && conveyor.Name == name select conveyor;
+
+      return data?.First();
+    }
+
     public IEnumerable<Belt> GetBelts(Scan scan)
     {
       using var context = dBContext.CreateDbContext();
@@ -274,7 +283,24 @@ namespace cads_gui.Data
         await context.SaveChangesAsync();
         return entry.Id;
       }
+    }
 
+    public async Task<long> AddInstallAsync(BeltInstall install)
+    {
+      using var context = dBContext.CreateDbContext();
+
+      var q = context.BeltInstalls.Where(e => e.ConveyorId == install.ConveyorId && e.BeltId == install.BeltId);
+
+      if (q.Any())
+      {
+        return q.Last().Id;
+      }
+      else
+      {
+        context.BeltInstalls.Add(install);
+        await context.SaveChangesAsync();
+        return install.Id;
+      }
     }
 
     public async Task<long> AddBeltAsync(Belt entry)
@@ -295,13 +321,13 @@ namespace cads_gui.Data
       }
     }
 
-    public Belt? GetBeltAsync(string serial)
+    public Belt? GetBelt(string serial)
     {
       
       using var context = dBContext.CreateDbContext();
       var q = context.Belts.Where(e => e.Serial == serial);
 
-      if (q.Any())
+      if (!q.Any())
       {
         return null;
       }
@@ -328,6 +354,27 @@ namespace cads_gui.Data
       }
     }
 
+    public async Task AddScanAsync(string site, string conveyorName, string beltSerial, DateTime chrono)
+    {
+      
+      using var context = dBContext.CreateDbContext();
+      
+      var belt = GetBelt(beltSerial);
+      var conveyor = GetConveyor(site,conveyorName);
+      
+      if(belt is not null && conveyor is not null)
+      {
+        Scan scan = new(){
+          ConveyorId = conveyor.Id,
+          BeltId = belt.Id,
+          Chrono = chrono,
+          Filepath = MakeScanFilename(site,conveyorName,chrono)
+        };
+        DateTime.SpecifyKind(scan.Chrono, DateTimeKind.Utc);
+        await AddScanAsync(scan);
+      }
+    }
+
     public async Task<IEnumerable<Grafana>> GetGrafanaPlotsAsync(Belt belt)
     {
       using var context = await dBContext.CreateDbContextAsync();
@@ -348,9 +395,14 @@ namespace cads_gui.Data
       return z;
     }
 
+    public string MakeScanFilename(string site, string conveyor, DateTime chrono)
+    {
+      return NoAsp.MakeScanFilename(site,conveyor,chrono);
+    }
+
     public string MakeScanFilePath(string site, string conveyor, DateTime chrono)
     {
-      var filename = NoAsp.MakeScanFilename(site,conveyor,chrono);
+      var filename = MakeScanFilename(site,conveyor,chrono);
       return Path.GetFullPath(Path.Combine(config.DBPath, filename));
     }
 

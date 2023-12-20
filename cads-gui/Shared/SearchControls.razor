@@ -1,4 +1,4 @@
-@inject BeltService Beltservice
+@inject CadsBackend backend
 
 <MudToolBar Class="d-flex flex-grow-0 ma-0" Style="width:50%">
   <MudTooltip Text="Search belt for damage ">
@@ -146,8 +146,8 @@
 
   protected override async Task OnInitializedAsync()
   {
-    _scanDate = (await Beltservice.GetBeltDatesAsync(scan)).LastOrDefault(DateTime.Now);
-    length = Beltservice.GetScanLimits(scan)?.Length ?? 0;
+    _scanDate = (await backend.GetBeltDatesAsync(scan)).LastOrDefault(DateTime.Now);
+    length = backend.GetScanLimits(scan)?.Length ?? 0;
 
     if (savedZDepthParams.Any())
     {
@@ -166,7 +166,7 @@
       }
     }
 
-    var validDates = await Beltservice.GetBeltDatesAsync(scan);
+    var validDates = await backend.GetBeltDatesAsync(scan);
     IsDateDisabledFunc = (DateTime d) => !validDates.Where(e => e.Date == d.Date).Any();
 
   }

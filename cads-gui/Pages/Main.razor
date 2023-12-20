@@ -6,7 +6,7 @@
 @using Fluxor.Blazor.Store
 
 @inject IJSRuntime JS
-@inject BeltService Beltservice
+@inject CadsBackend backend
 @inject ILogger<Main> logger
 @inject ISnackbar Snackbar
 
@@ -27,7 +27,7 @@
 
       <MudTooltip Placement="Placement.End"
         Text="The circle represents the entire belt. Damage locations that match the search criteria are indicated in white. Clicking on the circle triggers the plot to jump to that location. If too many damage locations are found they are limited">
-        <DoughnutPlot @ref="doughnutPlot" Style="display:contents" Scan="@scan" Y="@UpdateYAsync" />
+        <DoughnutPlot @ref="doughnutPlot" Style="display:contents" Length="@scanLimits.Length" Y="@UpdateYAsync" />
       </MudTooltip>
       <MudContainer Class="d-flex flex-column ">
         <ZDepthQuery @ref="zDepthQuery" Scan="@scan"></ZDepthQuery>
@@ -49,7 +49,7 @@
       <SurfacePlot @ref="surfacePlot" Scan="@scan" YIndex="@UpdateProfilePlotAsync"></SurfacePlot>
     </MudItem>
     <MudItem xs="12" Style="height:10%">
-      <ProfilePlot @ref="profilePlot" Scan="@scan" DoubleSided="@(Beltservice.IsDoubledSided())">
+      <ProfilePlot @ref="profilePlot" Scan="@scan">
       </ProfilePlot>
     </MudItem>
   </MudGrid>
@@ -96,14 +96,14 @@
 
   protected override async Task OnInitializedAsync()
   {
-    var scans = Beltservice.GetScans(site, conveyor);
+    var scans = backend.GetScans(site, conveyor);
     if (scans.Any())
     {
       scan = scans.Last();
-      scanLimits = Beltservice.GetScanLimits(scan);
+      scanLimits = backend.GetScanLimits(scan);
       var action = new BeltAction(scan);
       Dispatcher?.Dispatch(action);
-      savedZDepthParams = await Task.Run(() => Beltservice.GetSavedZDepthParams(scan) ?? new List<SavedZDepthParams>());
+      savedZDepthParams = await Task.Run(() => backend.GetSavedZDepthParams(scan) ?? new List<SavedZDepthParams>());
     }
 
   }
@@ -134,7 +134,7 @@
   async Task StepForward()
   {
     if(scanLimits is not null) {
-      var windowLen = Beltservice.config.NumDisplayLines;
+      var windowLen = backend.config.NumDisplayLines;
       var yRes = scanLimits.Length / scanLimits.LengthN;
 
       currentY += (yRes * windowLen);
@@ -146,7 +146,7 @@
   async Task StepBackward()
   {
     if(scanLimits is not null) {
-      var windowLen = Beltservice.config.NumDisplayLines;
+      var windowLen = backend.config.NumDisplayLines;
       var yRes = scanLimits.Length / scanLimits.LengthN;
 
       currentY -= (yRes * windowLen);
@@ -188,9 +188,9 @@
 
     currentY = y;
     surfacePlot.Loading = true;
-    var windowLen = Beltservice.config.NumDisplayLines;
+    var windowLen = backend.config.NumDisplayLines;
     var windowBegin = (int)(windowLen / 2);
-    var frameLength = Beltservice.config.FrameLength;
+    var frameLength = backend.config.FrameLength;
 
     try
     {
@@ -199,7 +199,7 @@
         throw new Exception();
       }
 
-      if (!Beltservice.IsDoubledSided())
+      if (!backend.IsDoubledSided())
       {
         await using var plotDataPromise = await plotDataCache.InvokeAsync<IJSObjectReference>("fetchData", scan.Filepath, currentY,windowLen, windowBegin);
 
@@ -238,13 +238,13 @@
     }
 
 
-    var b = Beltservice.GetScans(site, conveyor, date.Value);
+    var b = backend.GetScans(site, conveyor, date.Value);
 
     if (b.Any())
     {
       Snackbar.Add($"Loading belt scan on {DateOnly.FromDateTime(date.Value)}", Severity.Info);
       scan = b.Last();
-      scanLimits = Beltservice.GetScanLimits(scan);
+      scanLimits = backend.GetScanLimits(scan);
       await UpdateYAsync(currentY);
       StateHasChanged();
     }
@@ -260,7 +260,7 @@
     if(scan is null) {
       return;
     }
-    var conveyor = Beltservice.GetConveyor(scan);
+    var conveyor = backend.GetConveyor(scan);
     
     if(conveyor is null) {
       return;
@@ -281,8 +281,8 @@
       };
 
     await zDepthQuery.LoadZDepthParamsAsync(s);
-    Beltservice.AddDamage(s);
-    savedZDepthParams = Beltservice.GetSavedZDepthParams(scan);
+    backend.AddDamage(s);
+    savedZDepthParams = backend.GetSavedZDepthParams(scan);
     StateHasChanged();
   }
   async Task SearchBelt()
@@ -297,7 +297,7 @@
 
     try
     {
-      var zDepth = await Beltservice.BeltScanAsync2(zDepthQuery.SearchParameters, scan, limit);
+      var zDepth = await backend.BeltScanAsync2(zDepthQuery.SearchParameters, scan, limit);
 
       if (zDepth.Count > limit)
       {
@@ -305,7 +305,7 @@
       }
 
       doughnutPlot.data = zDepth.OrderBy(i => i.y).Take((int)limit).Select(d => new
-      PlotInfo(d.y, Beltservice.config.FrameLength, d.z.z, "")).ToList();
+      PlotInfo(d.y, backend.config.FrameLength, d.z.z, "")).ToList();
 
       zDepthTabe.data = zDepth;
       var fn = zDepthQuery.MakeAreaOfInterest();

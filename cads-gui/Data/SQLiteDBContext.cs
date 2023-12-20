@@ -22,6 +22,7 @@ namespace cads_gui.Data
           modelBuilder.Entity<Scan>().HasKey(e => e.Id);
           modelBuilder.Entity<Scan>().Property(b => b.Id).ValueGeneratedOnAdd();
           modelBuilder.Entity<Scan>().Property(e => e.Chrono).HasConversion(e => e, e => DateTime.SpecifyKind(e,DateTimeKind.Utc));
+          modelBuilder.Entity<Scan>().HasIndex(e => new {e.ConveyorId,e.BeltId,e.Chrono}).IsUnique();
 					modelBuilder.Entity<SavedZDepthParams>().HasKey( e => new{e.Site,e.Conveyor,e.Name});
 					modelBuilder.Entity<Conveyor>().HasKey(e => e.Id);
           modelBuilder.Entity<Conveyor>().Property(b => b.Id).ValueGeneratedOnAdd();

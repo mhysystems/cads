@@ -7,7 +7,7 @@ using NATS.Client.JetStream;
 namespace cads_gui.Data
 {
   public record P4(double x, double y, double z, double z_off);
-  public record ScanLimits(double Width, long WidthN, double Length, long LengthN, double ZMin = 0, double ZMax = 0, double XMin = 0);
+  public record ScanLimits(double Width, long WidthN, double Length, long LengthN, double ZMin = 0, double ZMax = 35, double XMin = 0);
   public enum SurfaceOrientation { Top, Bottom };
 
 

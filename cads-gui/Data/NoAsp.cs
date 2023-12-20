@@ -236,7 +236,7 @@ namespace cads_gui.Data
       return site + '-' + conveyor + '-' + chrono.ToString("yyyy-MM-dd-HHmms");
     }
 
-    public static Conveyor FromFlatbuffer(CadsFlatbuffers.conveyor conveyor)
+    public static Conveyor FromFlatbuffer(CadsFlatbuffers.Conveyor conveyor)
     {
       return new Conveyor(){
         Site =  conveyor.Site,
@@ -247,7 +247,7 @@ namespace cads_gui.Data
       };
     }
 
-    public static Belt FromFlatbuffer(CadsFlatbuffers.belt belt)
+    public static Belt FromFlatbuffer(CadsFlatbuffers.Belt belt)
     {
       return new Belt(){
         Serial = belt.Serial,

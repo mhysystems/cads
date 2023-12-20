@@ -15,9 +15,9 @@ namespace cads_gui.Data
   [ApiController]
   public class EndpointController : ControllerBase
   {
-    private readonly BeltService beltservice;
+    private readonly CadsBackend beltservice;
 
-    public EndpointController(BeltService helper)
+    public EndpointController(CadsBackend helper)
     {
       beltservice = helper;
     }
@@ -69,13 +69,19 @@ namespace cads_gui.Data
       
       var scanData = scan.GetRootAsscan(bb);
 
-      var dbname = NoAsp.MakeScanFilename(site, belt, chrono);
-      if(scanData.ContentsType == scan_tables.conveyor) {
-        ScanData.Insert(dbname, scanData.ContentsAsconveyor());
-        await beltservice.AddConveyorAsync(NoAsp.FromFlatbuffer(scanData.ContentsAsconveyor()));
-      }else if(scanData.ContentsType == scan_tables.belt) {
-        ScanData.Insert(dbname,scanData.ContentsAsbelt());
-        await beltservice.AddBeltAsync(NoAsp.FromFlatbuffer(scanData.ContentsAsbelt()));
+      var dbPath = beltservice.MakeScanFilePath(site, belt, chrono);
+      if(scanData.ContentsType == scan_tables.Install) {
+        var conveyor = scanData.ContentsAsInstall().Conveyor;
+        var beltf = scanData.ContentsAsInstall().Belt;
+        
+        if(conveyor is not null && beltf is not null) {
+          ScanData.Insert(dbPath,conveyor.Value);
+          ScanData.Insert(dbPath, beltf.Value);
+          var conveyorId = await beltservice.AddConveyorAsync(NoAsp.FromFlatbuffer(conveyor.Value));
+          var beltId = await beltservice.AddBeltAsync(NoAsp.FromFlatbuffer(beltf.Value));
+          await beltservice.AddInstallAsync(new BeltInstall{ConveyorId = conveyorId, BeltId = beltId, Chrono = chrono});
+        }
+      
       }else if(scanData.ContentsType == scan_tables.profile_array) {
         var pa = scanData.ContentsAsprofile_array();
         
@@ -84,7 +90,7 @@ namespace cads_gui.Data
           return Ok();
         }
 
-        using var db = new ProfileData(dbname);
+        using var db = new ProfileData(dbPath);
         for (var cnt = 0UL; cnt < pa.Count; cnt++)
         {
           var pc = pa.Profiles((int)cnt);
@@ -96,6 +102,9 @@ namespace cads_gui.Data
             ArgumentNullException.ThrowIfNull(pc);
           }
         }
+      }else if(scanData.ContentsType == scan_tables.register_scan) {
+        var registerScan = scanData.ContentsAsregister_scan();
+        await beltservice.AddScanAsync(site,belt,registerScan.BeltSerial,chrono);
       }else {
         return NotFound();
       }

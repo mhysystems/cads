@@ -8,7 +8,7 @@
 @using System.Diagnostics;
 @inject ILogger<SurfacePlot> logger;
 
-@inject BeltService Beltservice
+@inject CadsBackend backend
 
 
 <surface-plot>
@@ -24,7 +24,7 @@
 
 @code {
 
-  double sliderLow;
+  double sliderLow = 0;
   private DotNetObjectReference<SurfacePlot>? selfReference;
 
   protected ElementReference jsPlot;
@@ -45,7 +45,7 @@
   }
 
   [Parameter]
-  public ScanLimits scanLimit { get; set; } = new(0,1,0,1);
+  public Scan? scan { get; set; }
 
   [Parameter]
   public EventCallback<double> clevelChanged { get; set; }
@@ -57,8 +57,7 @@
   public double clevel { get; set; } = 0.0;
 
   (bool use_array, string str, (double, string)[] array) colorscale;
-  [Parameter]
-  public string colour_query { get; set; } = $"\"area\":0.8,\"sum\":1000,\"num\":320,\"query\":\"z == -999999999\"";
+  ScanLimits? scanLimit;
 
   protected IJSObjectReference? jsSurfacePlot;
 
@@ -66,13 +65,19 @@
   {
     (double, string)[] s = { (0, "hsl(240,100,50)"), (0.002, "hsl(0,0,100)"), (1.0, "hsl(0,0,0)") };
     colorscale = (true, "Greys", s);
-    sliderLow = scanLimit.ZMax;
+    
+    if(scan is not null) {
+      scanLimit = backend.GetScanLimits(scan);
+      if(scanLimit is not null) {
+        sliderLow = scanLimit.ZMax;
+      }
+    }
   }
 
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
-    if (firstRender)
+    if (firstRender && scanLimit is not null)
     {
       var xRes = scanLimit.Width / scanLimit.WidthN;
       selfReference = DotNetObjectReference.Create(this);
@@ -86,6 +91,10 @@
 
   public async Task HighlightSurfaceAsync(Func<float, bool> fn)
   {
+    if(scanLimit is null) {
+      return;
+    }
+
     var colorRange = GenerateColorRange(scanLimit.ZMax - sliderLow, fn).ToArray();
     if (jsSurfacePlot is not null)
     {
@@ -109,7 +118,7 @@
 
   public async Task<double> UpdatePlotAsync(IJSObjectReference plotDataPromise)
   {
-    if (jsSurfacePlot is not null)
+    if (jsSurfacePlot is not null && scanLimit is not null)
     {
       var xRes = scanLimit.Width / scanLimit.WidthN;
       var y = await jsSurfacePlot.InvokeAsync<double>("updatePlot", plotDataPromise, xRes);
@@ -124,7 +133,7 @@
   public async Task<double> UpdatePlotDoubleSidedAsync(IJSObjectReference plotDataPromiseTop, IJSObjectReference
   plotDataPromiseBottom)
   {
-    if (jsSurfacePlot is not null)
+    if (jsSurfacePlot is not null && scanLimit is not null)
     {
       var xRes = scanLimit.Width / scanLimit.WidthN;
       var y = await jsSurfacePlot.InvokeAsync<double>("updatePlotDoubleSided", plotDataPromiseTop, plotDataPromiseBottom, xRes);
@@ -153,7 +162,7 @@
     }
 
 
-    float z_max = (float)scanLimit.ZMax;
+    float z_max = (float)(scanLimit?.ZMax ?? 0.0);
     float z_min = 0f;
     var steps = 1000;
 
@@ -241,7 +250,7 @@
   protected async Task SliderOnChangeAsync(ChangeEventArgs e)
   {
     sliderLow = Convert.ToDouble(e.Value);
-    var colorRange = GenerateColorRange(scanLimit.ZMax - sliderLow).ToArray();
+    var colorRange = GenerateColorRange((scanLimit?.ZMax ?? 0.0) - sliderLow).ToArray();
     if (jsSurfacePlot is not null)
     {
       await jsSurfacePlot.InvokeVoidAsync("changeColorScale", colorRange.Select(i => i.ToTuple()));

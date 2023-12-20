@@ -5,7 +5,7 @@
 
 
 @inject IJSRuntime JS
-@inject BeltService Beltservice
+@inject CadsBackend backend
 
 <plotly-container>
     <div id="container-profile" @ref="@jsPlotElement"></div>
@@ -31,8 +31,8 @@
   {
     if (firstRender && scan is not null)
     {
-      var belt = Beltservice.GetBelt(scan);
-      var scanLimits = Beltservice.GetScanLimits(scan);
+      var belt = backend.GetBelt(scan);
+      var scanLimits = backend.GetScanLimits(scan);
 
       if(scanLimits is not null) {
         var zMin = scanLimits.ZMin + belt.CordDiameter + belt.PulleyCover;
@@ -54,7 +54,7 @@
     
     if(jsPlot is not null && scan is not null) 
     {  
-      var scanLimits = Beltservice.GetScanLimits(scan);
+      var scanLimits = backend.GetScanLimits(scan);
       if(scanLimits is not null) {
         var xRes = scanLimits.Width / scanLimits.WidthN;
         var xAxisE = from x in Enumerable.Range(0,z.Count()) select (scanLimits.XMin + x * xRes) / 1000; 

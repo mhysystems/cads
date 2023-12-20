@@ -2,7 +2,7 @@
 
 @implements IAsyncDisposable
 
-@inject BeltService Beltservice
+@inject CadsBackend backend
 @inject IJSRuntime JS
 
 <style>
@@ -40,8 +40,8 @@
   {
     if (firstRender && Scan is not null)
     {
-      var belt = Beltservice.GetBelt(Scan);
-      var scanLimits = Beltservice.GetScanLimits(Scan);
+      var belt = backend.GetBelt(Scan);
+      var scanLimits = backend.GetScanLimits(Scan);
 
       if(belt is not null && scanLimits is not null) {
         await using var module = await JS.InvokeAsync<IJSObjectReference>("import", "./plot.js");

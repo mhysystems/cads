@@ -1,4 +1,4 @@
-@inject BeltService Beltservice
+@inject CadsBackend backend
 
 
   <MudToolBar Class="d-flex flex-grow-0 ma-0" Style="width:50%">
@@ -80,12 +80,12 @@
   { 
     if(scan is not null) 
     {
-      _scanDate0 = (await Beltservice.GetBeltDatesAsync(scan)).LastOrDefault(DateTime.Now); 
+      _scanDate0 = (await backend.GetBeltDatesAsync(scan)).LastOrDefault(DateTime.Now); 
       _scanDate1 = _scanDate0;
       _scanDate2 = _scanDate0;
       _scanDate3 = _scanDate0;
       
-      var validDates = await Beltservice.GetBeltDatesAsync(scan);
+      var validDates = await backend.GetBeltDatesAsync(scan);
       IsDateDisabledFunc = (DateTime d) => !validDates.Where(e => e.Date == d.Date).Any();
     }
   }

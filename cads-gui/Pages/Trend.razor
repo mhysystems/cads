@@ -4,7 +4,7 @@
 @using Cads
 
 @inject IJSRuntime JS
-@inject BeltService Beltservice
+@inject CadsBackend backend
 @inject ISnackbar Snackbar
 @inject ILogger<Trend> logger
 
@@ -56,7 +56,7 @@
       scan = GuiState.Value.scan;
       yCoord = GuiState.Value.Y;
     }else {
-      scan = await Task.Run(() => Beltservice.GetScans(site, conveyor).Last());
+      scan = await Task.Run(() => backend.GetScans(site, conveyor).Last());
     }
   }
 
@@ -64,7 +64,7 @@
   {
     if (firstRender)
     {
-      var z = await Beltservice.GetBeltProfileAsync(yCoord, 1, scan);
+      var z = await backend.GetBeltProfileAsync(yCoord, 1, scan);
       var color = trendControls.DatePickerColor[0];
       await trendPlot.UpdatePlotAsync(0,z,color);
       await UpdateWearPlot(1000);
@@ -81,10 +81,10 @@
     }
 
     var Y = GuiState?.Value.Y ?? 0;
-    List<Scan> scan = Beltservice.GetScans(site, conveyor, date.Value);
+    List<Scan> scan = backend.GetScans(site, conveyor, date.Value);
 
     if(scan is not null && scan.Any()) {
-      var z = await Beltservice.GetBeltProfileAsync(Y, 1, scan.First());
+      var z = await backend.GetBeltProfileAsync(Y, 1, scan.First());
       await trendPlot.UpdatePlotAsync(index,z,color);
     }else{
       Snackbar.Add($"No data for selected date", Severity.Error);
@@ -99,8 +99,9 @@
     var tasks = new List<Task<(DateTime,(bool,float))>>();
 
     var Y = GuiState?.Value.Y ?? 0;
-    foreach (var scan in Beltservice.GetScans(site, conveyor)) {
-      tasks.Add(Task.Run(() => (scan.Chrono,NoAsp.RetrievePoint(scan.Filepath,Y,x_index))));
+    foreach (var scan in backend.GetScans(site, conveyor)) {
+      var Filepath = backend.MakeScanFilePath(scan);
+      tasks.Add(Task.Run(() => (scan.Chrono,NoAsp.RetrievePoint(Filepath,Y,x_index))));
     }
 
    

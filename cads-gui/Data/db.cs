@@ -74,7 +74,7 @@ namespace cads_gui.Data
 
   static class ScanData
   {
-    static public void Insert(string name, conveyor conveyor)
+    static public void Insert(string name, CadsFlatbuffers.Conveyor conveyor)
     {
 
       using var connection = new SqliteConnection("" +
@@ -118,7 +118,7 @@ namespace cads_gui.Data
       command.Transaction?.Commit();
     }
 
-    static public void Insert(string name, belt belt)
+    static public void Insert(string name, CadsFlatbuffers.Belt belt)
     {
 
       using var connection = new SqliteConnection("" +

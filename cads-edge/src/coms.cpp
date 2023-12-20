@@ -63,26 +63,60 @@ namespace
     }
   }
 
-  void post_conveyor_table(cads::Conveyor o, std::string url, bool upload)
+  void post_register_scan_table(std::string belt_serial, std::string url, bool upload)
+  {
+    using namespace flatbuffers;
+    FlatBufferBuilder builder;
+    auto beltserial = builder.CreateString(belt_serial);
+    CadsFlatbuffers::register_scanBuilder buf(builder);
+    buf.add_belt_serial(beltserial);
+    auto send = buf.Finish();
+
+    CadsFlatbuffers::scanBuilder post(builder);
+    post.add_contents_type(CadsFlatbuffers::scan_tables_register_scan);
+    post.add_contents(send.Union());
+    auto bytes = post.Finish();
+    
+    builder.Finish(bytes);
+
+    send_bytes_simple({builder.GetBufferPointer(),builder.GetBufferPointer()+builder.GetSize()},url,upload);
+  }
+
+  void post_install_table(cads::Conveyor c, cads::Belt b, std::string url, bool upload)
   {
     using namespace flatbuffers;
     
     FlatBufferBuilder builder;
-    auto site = builder.CreateString(o.Site);
-    auto name = builder.CreateString(o.Name);
-    auto timezone = builder.CreateString(o.Timezone);
+    auto site = builder.CreateString(c.Site);
+    auto name = builder.CreateString(c.Name);
+    auto timezone = builder.CreateString(c.Timezone);
 
-    CadsFlatbuffers::conveyorBuilder buf(builder);
-    buf.add_site(site);
-    buf.add_name(name);
-    buf.add_timezone(timezone);
-    buf.add_pulley_circumference(o.PulleyCircumference);
-    buf.add_typical_speed(o.TypicalSpeed);
-    auto send = buf.Finish();
+    CadsFlatbuffers::ConveyorBuilder buf_conveyor(builder);
+    buf_conveyor.add_site(site);
+    buf_conveyor.add_name(name);
+    buf_conveyor.add_timezone(timezone);
+    buf_conveyor.add_pulley_circumference(c.PulleyCircumference);
+    buf_conveyor.add_typical_speed(c.TypicalSpeed);
+    auto send_conveyor = buf_conveyor.Finish();
+
+    auto serial = builder.CreateString(b.Serial);
+    CadsFlatbuffers::BeltBuilder buf_belt(builder);
+    buf_belt.add_serial(serial);
+    buf_belt.add_pulley_cover(b.PulleyCover);
+    buf_belt.add_cord_diameter(b.CordDiameter);
+    buf_belt.add_top_cover(b.TopCover);
+    buf_belt.add_width(b.Width);
+    buf_belt.add_width_n(b.WidthN);
+    auto send_belt = buf_belt.Finish();
+
+    CadsFlatbuffers::InstallBuilder buf_install(builder);
+    buf_install.add_belt(send_belt);
+    buf_install.add_conveyor(send_conveyor);
+    auto send_install = buf_install.Finish();
 
     CadsFlatbuffers::scanBuilder post(builder);
-    post.add_contents_type(CadsFlatbuffers::scan_tables_conveyor);
-    post.add_contents(send.Union());
+    post.add_contents_type(CadsFlatbuffers::scan_tables_Install);
+    post.add_contents(send_install.Union());
     auto bytes = post.Finish();
 
     builder.Finish(bytes);
@@ -90,30 +124,6 @@ namespace
     send_bytes_simple({builder.GetBufferPointer(),builder.GetBufferPointer()+builder.GetSize()},url,upload);
   }
 
-  void post_belt_table(cads::Belt o, std::string url, bool upload)
-  {
-    using namespace flatbuffers;
-    FlatBufferBuilder builder;
-
-    auto serial = builder.CreateString(o.Serial);
-    CadsFlatbuffers::beltBuilder buf(builder);
-    buf.add_serial(serial);
-    buf.add_pulley_cover(o.PulleyCover);
-    buf.add_cord_diameter(o.CordDiameter);
-    buf.add_top_cover(o.TopCover);
-    buf.add_width(o.Width);
-    buf.add_width_n(o.WidthN);
-    auto send = buf.Finish();
-
-    CadsFlatbuffers::scanBuilder post(builder);
-    post.add_contents_type(CadsFlatbuffers::scan_tables_belt);
-    post.add_contents(send.Union());
-    auto bytes = post.Finish();
-
-    builder.Finish(bytes);
-
-    send_bytes_simple({builder.GetBufferPointer(),builder.GetBufferPointer()+builder.GetSize()},url,upload);
-  }
 }
 
 namespace cads
@@ -438,7 +448,6 @@ coro<remote_msg,bool> remote_control_coro()
 
         if (profiles_flat.size() == communications_config.UploadRows)
         {
-          auto serial = builder.CreateString(o.Serial);
           auto send = CadsFlatbuffers::Createprofile_array(builder, idx - communications_config.UploadRows, profiles_flat.size(), builder.CreateVector(profiles_flat));
           CadsFlatbuffers::scanBuilder post(builder);
           post.add_contents_type(CadsFlatbuffers::scan_tables_profile_array);
@@ -494,7 +503,7 @@ coro<remote_msg,bool> remote_control_coro()
   {
     using namespace flatbuffers;    
     
-    if(scan.uploaded >= scan.cardinality) return {scan,false};
+    //if(scan.uploaded >= scan.cardinality) return {scan,false};
     
     auto db_name = scan.db_name;
     
@@ -522,9 +531,6 @@ coro<remote_msg,bool> remote_control_coro()
     {
       spdlog::get("cads")->info("{} fetch_scan_conveyor failed - {}", __func__, db_name);
       return {scan,true};
-    }else{    
-      auto url = mk_post_profile_url(scan.scanned_utc,conveyor.Site,conveyor.Name, std::get<0>(urls.add_belt));
-      post_conveyor_table(conveyor,url,do_upload);
     }
 
     auto url = mk_post_profile_url(scan.scanned_utc,conveyor.Site,conveyor.Name, std::get<0>(urls.add_belt));
@@ -534,17 +540,15 @@ coro<remote_msg,bool> remote_control_coro()
     {
       spdlog::get("cads")->info("{} fetch_scan_belt failed - {}", __func__, db_name);
       return {scan,true};
-    }else{
-      post_belt_table(belt,url,do_upload);
     }
-
     
+    post_install_table(conveyor,belt,url,do_upload);
     scan = post_profiles_table(scan,url,belt.Length / scan.cardinality, belt.WidthN, do_upload);
 
     bool failure = scan.uploaded != scan.cardinality;
     if (!failure && scan.remote_reg == 1)
     {
-     // http_post_profile_properties2(scan.scanned_utc, YmaxN, y_step, belt_z_min, belt_z_max, conveyor, gocator, urls.add_meta);
+      post_register_scan_table(belt.Serial,url,do_upload);
     }
 
     return {scan,failure};

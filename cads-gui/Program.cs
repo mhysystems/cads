@@ -24,7 +24,7 @@ builder.Services.AddDbContextFactory<SQLiteDBContext>(options =>
 );
 
 builder.Services.AddFluxor(o => o.ScanAssemblies(typeof(Program).Assembly));
-builder.Services.AddScoped<BeltService>();
+builder.Services.AddScoped<CadsBackend>();
 builder.Services.AddMudServices();
 builder.Services.AddHostedService<NatsConsumerHostedService>();
 builder.Services.AddOptions();
