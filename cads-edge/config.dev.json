@@ -1,6 +1,6 @@
 {
   "Device" : {
-    "Serial" : 80819
+    "Serial" : 99999
   },
 
   "upload" : {
@@ -24,9 +24,9 @@
 
   "heartbeat" : {
     "SendHeartBeat" : false,
-    "Subject" :  "caas.80819.heartbeat",
+    "Subject" :  "caas.99999.heartbeat",
     "Period_ms" : 10000
   },
 
-  "luascript" : "../config.cv311.lua"
+  "luascript" : "../../caas-gui/alignment.lua"
 }

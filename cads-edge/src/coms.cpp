@@ -34,6 +34,14 @@ using namespace std;
 
 namespace
 {
+  std::vector<int16_t> z_as_int16(cads::z_type z,double z_resolution, double z_offset) {
+    namespace sr = std::ranges;
+  
+    auto tmp_z = z | sr::views::transform([=](float e) -> int16_t
+                                            { return std::isnan(e) ? std::numeric_limits<int16_t>::lowest() : int16_t(((double)e - z_offset) / z_resolution); });
+    return {tmp_z.begin(), tmp_z.end()};  
+  }
+
   std::vector<uint8_t> compress(uint8_t *input, uint32_t size)
   {
 
@@ -541,7 +549,7 @@ coro<remote_msg,bool> remote_control_coro()
       spdlog::get("cads")->info("{} fetch_scan_belt failed - {}", __func__, db_name);
       return {scan,true};
     }
-    
+
     post_install_table(conveyor,belt,url,do_upload);
     scan = post_profiles_table(scan,url,belt.Length / scan.cardinality, belt.WidthN, do_upload);
 
@@ -559,6 +567,8 @@ coro<remote_msg,bool> remote_control_coro()
    
     FlatBufferBuilder builder(4096);
 
+    auto short_z = z_as_int16(p.z,p_g.zResolution,p_g.zOffset);
+  
     auto caas = CadsFlatbuffers::CreateCaasProfileDirect(builder,
       p_g.xOrigin, 
       p_g.zOrigin, 
@@ -567,7 +577,9 @@ coro<remote_msg,bool> remote_control_coro()
       nan,
       p.x_off,
       p_g.xResolution,
-      &p.z);
+      p_g.zResolution,
+      p_g.zOffset,
+      &short_z);
 
     auto msg = CadsFlatbuffers::CreateMsg(builder,
       CadsFlatbuffers::MsgContents_CaasProfile,

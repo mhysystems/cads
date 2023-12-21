@@ -18,8 +18,8 @@ iirfilter = {
 }
 
 conveyor = {
-  Site = "FMG",
-  Name = "CV912",
+  Site = "GOLD",
+  Name = "JIG",
   Timezone = "Australia/Perth",
   PulleyCircumference = 624 * math.pi,
   TypicalSpeed = 2.63
@@ -100,8 +100,8 @@ function main(sendmsg)
   
   local align_profile = alignProfile(gocator_cads)
   local partition_profile = partitionProfile(dbscan,align_profile)
-  -- local laser = gocator(laserConf,gocator_cads)
-  local laser = sqlitegocator(sqlitegocatorConfig,partition_profile) 
+  local laser = gocator(laserConf,partition_profile)
+  --local laser = sqlitegocator(sqlitegocatorConfig,partition_profile) 
 
   if laser == nil then
     sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to start gocator")

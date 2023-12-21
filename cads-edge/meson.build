@@ -91,6 +91,7 @@ cads = executable(
 	include_directories : [GoSdkInc,kApiInc,cadsInc],
 	dependencies:libdep,
   link_with : [GoSdkLib,kApiLib],
+  link_args : [linkArgs],
   #link_args : ['-fsanitize=address'], # GCC Address Sanitzer
   #cpp_args : ['-fcoroutines', '-fsanitize=address'] # GCC Address Sanitzer
   cpp_args : ['-fcoroutines'] 
