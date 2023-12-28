@@ -38,7 +38,7 @@ belt = {
 dbscan = {
   InClusterRadius = 12,
   MinPoints = 20,
-  MergeRadius = 3,
+  MergeRadius = 6,
   MaxClusters = 2
 }
 
@@ -81,7 +81,7 @@ sqlitegocatorConfig = {
     Fps = gocatorFps,
     Forever = true,
     --Source = "../../profiles/rawprofile_cv311_2023-11-08.db",
-    Source = "../../profiles/rawprofile_cv000_2023-11-20.db",
+    Source = "../../profiles/scan-1703728368588917648.sqlite",
     TypicalSpeed = conveyor.TypicalSpeed,
     Sleep = false
   }
@@ -100,8 +100,8 @@ function main(sendmsg)
   
   local align_profile = alignProfile(gocator_cads)
   local partition_profile = partitionProfile(dbscan,align_profile)
-  local laser = gocator(laserConf,partition_profile)
-  --local laser = sqlitegocator(sqlitegocatorConfig,partition_profile) 
+  --local laser = gocator(laserConf,partition_profile)
+  local laser = sqlitegocator(sqlitegocatorConfig,partition_profile) 
 
   if laser == nil then
     sendmsg("caas." .. DeviceSerial .. "." .. "error","","Unable to start gocator")

@@ -23,8 +23,6 @@
 #include <utils.hpp>
 #include <err.h>
 
-
-
 using namespace std;
 using namespace moodycamel;
 using namespace std::chrono;
@@ -434,7 +432,7 @@ msg prs_to_scan(msg m)
   }
 
   void cads_remote_main() {
-    
+
     std::atomic<bool> terminate_upload = false;
     std::atomic<bool> terminate_metrics = false;
     std::atomic<bool> terminate_remote = false;

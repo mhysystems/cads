@@ -28,5 +28,5 @@
     "Period_ms" : 10000
   },
 
-  "luascript" : "../../caas-gui/alignment.lua"
+  "luascript" : "../config.cv311.lua"
 }

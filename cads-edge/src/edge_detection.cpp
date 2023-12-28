@@ -2,6 +2,8 @@
 #include <tuple>
 
 #include <edge_detection.h>
+#include <vec_nan_free.h>
+#include <regression.h>
 
 namespace 
 {
@@ -50,6 +52,13 @@ namespace
     return {{s,i},cnt};
   }
 
+  auto cluster_regression(cads::zrange last_cluster, cads::zrange append_cluster)
+  {
+    auto cluster_params = cads::linear_regression(cads::vector_NaN_free::yx(last_cluster.cbegin(),last_cluster.end()));
+    auto append_params = cads::linear_regression(cads::vector_NaN_free::yx(append_cluster.cbegin(),append_cluster.end()));
+    return std::tuple{cluster_params,append_params};
+  }
+
   void cluster_merge1D(cads::z_cluster& group, cads::zrange c, const double in_cluster) 
   {
 
@@ -60,7 +69,9 @@ namespace
     
     auto& x = group.back();
     
-    if(std::abs(*c.begin() - *(x.end()-1)) < in_cluster ) {
+    auto [x_params, c_params] = cluster_regression(x,c);
+    if(std::abs(x_params.intercept - c_params.intercept) < in_cluster ) {
+    //if(std::abs(*c.begin() - *(x.end()-1)) < in_cluster ) {
         x = {begin(x),end(c)};
       
     }else {

@@ -2,6 +2,8 @@
 
 #include <tuple>
 #include <vector>
+#include <functional>
+
 #include <profile_t.h>
 #include <vec_nan_free.h>
 

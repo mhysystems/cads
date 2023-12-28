@@ -1,5 +1,3 @@
-#include "db.h"
-
 #include <vector>
 #include <string>
 #include <iostream>
@@ -12,8 +10,7 @@
 #include <fmt/chrono.h>
 #include <spdlog/spdlog.h>
 
-#include <readerwriterqueue.h>
-#include <constants.h>
+#include <db.h>
 #include <utils.hpp>
 
 
@@ -173,6 +170,160 @@ namespace
     }
 
     return {err, move(stmt)};
+  }
+ int sqlite3_bind(sqlite3_stmt *s, int index, int64_t value)
+  {
+    return sqlite3_bind_int64(s, index, value);
+  }
+
+  int sqlite3_bind(sqlite3_stmt *s, int index, double value)
+  {
+    return sqlite3_bind_double(s, index, value);
+  }
+
+  int sqlite3_bind(sqlite3_stmt *s, int index, std::string value)
+  {
+    return sqlite3_bind_text(s, index, value.c_str(), value.size(), nullptr);
+  }
+
+  template<class ...T, int ...N> auto zippy_bind(sqlite3_stmt *s, std::tuple<T...> t,std::integer_sequence<int,N...> i) {
+    return (0 || ... || sqlite3_bind(s,N+1,std::get<N>(t)));
+  }
+
+  template<class ...T> int bind(sqlite3_stmt *s,std::tuple<T...> t)
+  {
+    return zippy_bind(s,t,std::make_integer_sequence<int,sizeof...(T)>{}); 
+  }
+
+  template<class T> std::tuple<T,int> sqlite3_column(sqlite3_stmt *s,int index);
+
+  template<> std::tuple<int64_t,int> sqlite3_column<int64_t>(sqlite3_stmt *s, int index)
+  {
+    auto value = sqlite3_column_int64(s,index);
+    return {value,0};
+  }
+
+  template<> std::tuple<double,int> sqlite3_column<double>(sqlite3_stmt *s, int index)
+  {
+    auto value = sqlite3_column_double(s,index);
+    return {value,0};
+  }
+
+  template<> std::tuple<std::string,int> sqlite3_column<std::string>(sqlite3_stmt *s, int index)
+  {
+    std::string value( (const char* )sqlite3_column_text(s, index), sqlite3_column_bytes(s, index));
+    return {value,0};
+  }
+
+  template<class ...T, int ...N> auto zippy_column(sqlite3_stmt *s,std::integer_sequence<int,N...> i) {
+    return std::make_tuple(sqlite3_column<T>(s,N)...);
+  }
+
+  template<class ...T> struct column
+  {
+    static std::expected<std::tuple<T...>,int> get(sqlite3_stmt *s)
+    {
+
+      auto r = zippy_column<T...>(s,std::make_integer_sequence<int,sizeof...(T)>{});
+      auto error = std::apply([=](auto&&...e){return (0 || ... || std::get<1>(e));},r);
+
+      if(error) {
+        return std::unexpected(error);
+      }else{
+        auto row = std::apply([=](auto&&...e){return std::make_tuple(std::get<0>(e)...);},r);
+        return row;
+      }
+    }
+  };
+
+  template<class T> std::string sqlite_type_names();
+
+  template<> std::string sqlite_type_names<double>()
+  {
+    using namespace std::string_literals;
+    return "REAL";
+  }
+
+  template<> std::string sqlite_type_names<std::string>()
+  {
+    using namespace std::string_literals;
+    return "TEXT";
+  }
+
+  template<> std::string sqlite_type_names<int64_t>()
+  {
+    using namespace std::string_literals;
+    return "INTEGER";
+  }
+
+  template<class ...T> std::array<std::string,sizeof...(T)> creation_types(std::tuple<T...> )
+  {
+    return std::array{sqlite_type_names<T>()...};
+  }
+
+  template<int ...N> std::array<std::string,sizeof...(N)> repeat_n(std::string s, std::integer_sequence<int,N...> i)
+  {
+    using namespace std::string_literals;
+    auto f = [=](int){return s;};
+    return std::array{f(N)...};
+  }
+
+  template<int N> std::array<std::string,N> repeat(std::string s)
+  {
+    return repeat_n(s,std::make_integer_sequence<int,N>{});
+  }
+  
+  template<class ...T> auto create_insert(std::tuple<std::string,std::tuple<std::tuple<std::string,T>...>> table, std::string db_filename)
+  {
+    using namespace std::literals;
+    using table_types = std::tuple<std::tuple<std::string,T>...>;
+    
+    auto type_names = std::array{sqlite_type_names<T>()...};
+    auto field_names = std::apply([=](auto&&... e) {return std::array{std::get<0>(e)...};},std::get<1>(table));
+    auto field_values = std::apply([=](auto&&... e) {return std::make_tuple(std::get<1>(e)...);},std::get<1>(table));
+    constexpr int field_no = std::tuple_size<table_types>::value;
+
+    auto not_null = ::repeat<field_no>("NOT NULL"s);
+    auto question_mark = ::repeat<field_no>("?"s);
+
+    auto create = std::views::zip_transform([](std::string name, std::string type, std::string suffix){return name + ' ' + type + ' ' + suffix;},field_names,type_names,not_null);
+
+    auto create_query = fmt::format("CREATE TABLE IF NOT EXISTS {} ({})",std::get<0>(table),fmt::join(create,","));  
+    auto err = db_exec(db_filename, create_query);
+    
+    if(err) return err;
+
+    auto insert_query = fmt::format("INSERT INTO {} ({}) VALUES({})",std::get<0>(table),fmt::join(field_names,","),fmt::join(question_mark,","));  
+
+    auto [stmt,db] = prepare_query(db_filename, insert_query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
+
+    err = bind(stmt.get(),field_values);
+
+    if(err) return err;
+    
+    err = sqlite3_step(stmt.get());
+
+    return err ;
+
+  }
+
+  template<class ...T> std::expected<std::tuple<T...>,int>  select_single (std::tuple<std::string,std::tuple<std::tuple<std::string,T>...>> table, std::string db_filename)
+  {
+    using namespace std::literals;
+    using table_types = std::tuple<std::tuple<std::string,T>...>;
+    
+    auto type_names = std::array{sqlite_type_names<T>()...};
+    auto field_names = std::apply([=](auto&&... e) {return std::array{std::get<0>(e)...};},std::get<1>(table));
+
+    auto select_query = fmt::format("SELECT {} FROM {} LIMIT 1",fmt::join(field_names,","),std::get<0>(table));  
+
+    auto [stmt,db] = prepare_query(db_filename, select_query, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX);
+
+    auto err = sqlite3_step(stmt.get());
+    if (err != SQLITE_ROW) return  std::unexpected(err);
+
+    return column<T...>::get(stmt.get());
+
   }
 
 }
@@ -351,7 +502,7 @@ namespace cads
   std::tuple<cads::GocatorProperties, int> fetch_profile_parameters(std::string name)
   {
 
-    auto query = R"(SELECT x_res,z_res,z_off FROM PARAMETERS WHERE ROWID = 1)"s;
+    auto query = R"(SELECT XRes,ZRes,ZOff FROM GOCATOR WHERE ROWID = 1)"s;
     auto db_config_name = name.empty() ? database_names.profile_db_name : name;
     auto [stmt,db] = prepare_query(db_config_name, query);
     auto err = SQLITE_OK;
@@ -616,7 +767,8 @@ namespace cads
 
   coro<std::tuple<int, profile>> fetch_belt_coro(int revid, long last_idx, long first_index, int size, std::string name)
   {
-    auto query = fmt::format(R"(SELECT idx,y,x_off,z FROM PROFILE WHERE REVID = {} AND IDX >= ? AND IDX < ?)", revid);
+    //auto query = fmt::format(R"(SELECT idx,y,x_off,z FROM PROFILE WHERE REVID = {} AND IDX >= ? AND IDX < ?)", revid);
+    auto query = fmt::format(R"(SELECT rowid - 1,y,x,z FROM PROFILES WHERE rowid >= ? + 1 AND rowid < ? + 1)", revid);
     auto db_config_name = name.empty() ? database_names.profile_db_name : name;
     auto [stmt,db] = prepare_query(db_config_name, query);
 
@@ -985,6 +1137,7 @@ namespace cads
     return rtn;
   }
 
+
   bool store_scan_belt(cads::Belt belt, std::string db_name) 
   {
     auto err = db_exec(db_name, R"(CREATE TABLE IF NOT EXISTS Belt (
@@ -1058,6 +1211,22 @@ namespace cads
 
     return rtn;
   }
+
+  bool store_scan_limits(cads::ScanLimits limits, std::string db_name)
+  {
+    return (bool)create_insert(limits.decompose(),db_name);
+  }
+
+  std::expected<cads::ScanLimits,int> fetch_scan_limits(std::string db_name)
+  {
+    auto row = select_single(ScanLimits().decompose(),db_name);
+    if(row) {
+      return std::unexpected(row.error());
+    }
+
+    return std::apply([](auto&&... e){return ScanLimits{e...};}, *row);
+  }
+
 
   bool transfer_profiles(std::string from_db_name, std::string to_db_name, int64_t first_index, int64_t last_index)
   {

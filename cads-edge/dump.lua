@@ -2,50 +2,29 @@ json = require "json"
 
 gocatorFps = 984.0
 
-iirfilter = {
-  Skip = 10000,
-  Delay = 334,
-  Sos  = {{ 1.66008519e-07,  1.66008519e-07,  0.00000000e+00, 1.00000000e+00, -9.77361093e-01,  0.00000000e+00},
-          { 1.00000000e+00, -1.98638977e+00,  1.00000000e+00, 1.00000000e+00, -1.95693573e+00,  9.57429859e-01},
-          { 1.00000000e+00, -1.99649383e+00,  1.00000000e+00, 1.00000000e+00, -1.96256904e+00,  9.63016716e-01},
-          { 1.00000000e+00, -1.99836739e+00,  1.00000000e+00, 1.00000000e+00, -1.96958098e+00,  9.69971891e-01},
-          { 1.00000000e+00, -1.99901953e+00,  1.00000000e+00, 1.00000000e+00, -1.97638907e+00,  9.76726728e-01},
-          { 1.00000000e+00, -1.99931660e+00,  1.00000000e+00, 1.00000000e+00, -1.98230743e+00,  9.82601536e-01},
-          { 1.00000000e+00, -1.99947217e+00,  1.00000000e+00, 1.00000000e+00, -1.98725122e+00,  9.87512612e-01},
-          { 1.00000000e+00, -1.99955888e+00,  1.00000000e+00, 1.00000000e+00, -1.99139129e+00,  9.91629854e-01},
-          { 1.00000000e+00, -1.99960633e+00,  1.00000000e+00, 1.00000000e+00, -1.99496619e+00,  9.95190499e-01},
-          { 1.00000000e+00, -1.99962752e+00,  1.00000000e+00, 1.00000000e+00, -1.99821287e+00,  9.98430473e-01}}
-}
-
 conveyor = {
-  Id = 51,
-  Org  = "FMG",
-  Site = "FMG",
-  Name = "CV331",
+  Site = "GOLD",
+  Name = "JIG",
   Timezone = "Australia/Perth",
   PulleyCircumference = 624 * math.pi,
-  TypicalSpeed = 2.63,
-  Belt =  50,
-  Length = 391960.0,
-  WidthN = 1200.0
+  TypicalSpeed = 2.63
 }
 
 belt = {
-  Id = 50,
-  Installed = "2023-01-14T00:00:00Z",
+  Serial = "SerialBelt",
   PulleyCover = 7.0,
-  CordDiameter = 0.0,
+  CordDiameter = 5.6,
   TopCover = 20.0,
   Width = 1200.0,
-  Length = conveyor.Length,
-  LengthN = conveyor.TypicalSpeed / gocatorFps, 
-  Splices = 1,
-  Conveyor = 51
+  Length = 39190.0,
+  WidthN = 1500.0
 }
 
 dbscan = {
   InClusterRadius = 12,
-  MinPoints = 20
+  MinPoints = 20,
+  MergeRadius = 3,
+  MaxClusters = 2
 }
 
 revolutionsensor = {
@@ -70,14 +49,15 @@ measures = {
 
 profileConfig = {
   Width = belt.Width,
-  NaNPercentage = 0.15,
+  NaNPercentage = 1,
   ClipHeight = 35.0,
+  ClampToZeroHeight = 10.0,
   PulleyEstimatorInit = -15.0,
+  PulleyCircumference = conveyor.PulleyCircumference,
+  TypicalSpeed = conveyor.TypicalSpeed,
+  WidthN = belt.WidthN,
   IIRFilter = iirfilter,
-  PulleySamplesExtend = 10,
   RevolutionSensor = revolutionsensor,
-  Conveyor = conveyor,
-  Dbscan = dbscan,
   Measures = measures
 }
 

@@ -130,7 +130,7 @@ namespace cads
     z_type rtn;
 
     for(size_t i = std::get<0>(range); i < std::get<1>(range);++i) {
-      if(!std::isnan(z[i])) rtn.push_back(float(i));
+      if(!std::isnan(z[i])) rtn.push_back(z_type::value_type(i));
     } 
 
     return rtn;
@@ -161,7 +161,7 @@ namespace cads
 
   errors::ErrCode is_alignable(const ProfilePartitions &part)
   {
-    if(!part.contains(ProfileSection::Left) || !part.contains(ProfileSection::Right))
+    if(!part.contains(ProfileSection::Left) && !part.contains(ProfileSection::Right))
     {
       return errors::ErrCode (__FILE__,__func__,__LINE__,1);
     }else if(part.contains(ProfileSection::Left) && !part.contains(ProfileSection::Right))

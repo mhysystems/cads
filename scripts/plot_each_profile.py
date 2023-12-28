@@ -19,7 +19,7 @@ if __name__ == "__main__":
         case "transient":
             q = "select z from ErroredProfile where id like 'raw_%'"
         case _:
-            q = f"select z from profile where idx > {args.begin};"
+            q = f"select z from profiles where rowid > {args.begin};"
 
     for z0 in pg.process_profile(args.db,q):
         if not args.hist:

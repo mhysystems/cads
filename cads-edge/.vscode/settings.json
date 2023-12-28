@@ -96,7 +96,16 @@
     "format": "cpp",
     "stdfloat": "cpp",
     "filesystem": "cpp",
-    "expected": "cpp"
+    "expected": "cpp",
+    "core": "cpp",
+    "qtalignedmalloc": "cpp",
+    "*.main": "cpp",
+    "mprealsupport": "cpp",
+    "matrixfunctions": "cpp",
+    "cassert": "cpp",
+    "cerrno": "cpp",
+    "cfloat": "cpp",
+    "climits": "cpp"
   },
   "cmake.configureOnOpen": false
 }
