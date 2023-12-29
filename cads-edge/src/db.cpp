@@ -1219,12 +1219,27 @@ namespace cads
 
   std::expected<cads::ScanLimits,int> fetch_scan_limits(std::string db_name)
   {
-    auto row = select_single(ScanLimits().decompose(),db_name);
+    auto row = select_single(cads::ScanLimits().decompose(),db_name);
     if(row) {
       return std::unexpected(row.error());
     }
 
-    return std::apply([](auto&&... e){return ScanLimits{e...};}, *row);
+    return std::apply([](auto&&... e){return cads::ScanLimits{e...};}, *row);
+  }
+
+  bool store_scan_meta(cads::ScanMeta meta, std::string db_name)
+  {
+    return (bool)create_insert(meta.decompose(),db_name);
+  }
+
+  std::expected<cads::ScanMeta,int> fetch_scan_meta(std::string db_name)
+  {
+    auto row = select_single(cads::ScanMeta().decompose(),db_name);
+    if(row) {
+      return std::unexpected(row.error());
+    }
+
+    return std::apply([](auto&&... e){return cads::ScanMeta{e...};}, *row);
   }
 
 

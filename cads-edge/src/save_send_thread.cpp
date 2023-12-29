@@ -18,6 +18,7 @@
 #include <coms.h>
 #include <db.h>
 #include <spdlog/spdlog.h>
+#include <scandb.h>
 
 using namespace moodycamel;
 using namespace std::chrono;
@@ -78,8 +79,11 @@ namespace cads
       date::utc_clock::time_point scan_begin;
       cads::Io<msg> & cps;
       bool remote_reg;
+      ScanLimits limits;
+      ScanMeta meta;
 
-      global_t(cads::Io<msg> &m, Conveyor c, Belt b, date::utc_clock::time_point sb, std::string s, bool rg) : 
+
+      global_t(cads::Io<msg> &m, Conveyor c, Belt b, date::utc_clock::time_point sb, std::string s, bool rg, ScanMeta met) : 
         store_profile(rg ? store_profile_coro() : ::null_profile_coro()), 
         store_last_y(rg ? store_last_y_coro() : ::null_last_y_coro()), 
         store_scan(store_scan_coro(s)), 
@@ -87,9 +91,16 @@ namespace cads
         belt(b),
         scan_begin(sb),
         cps(m), 
-        remote_reg(rg){};
+        remote_reg(rg),
+        meta(met){};
 
-    } global(next,conveyor,belt,scan_begin,scan_filename_init,remote_reg);
+    } global(next
+        ,conveyor
+        ,belt
+        ,scan_begin
+        ,scan_filename_init
+        ,remote_reg
+        ,{.Version = 0, .ZEncoding = 0});
 
 
     struct transitions

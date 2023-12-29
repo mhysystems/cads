@@ -16,7 +16,7 @@
 #include <coro.hpp>
 #include <msg.h>
 #include <constants.h>
-#include <scan.h>
+#include <scandb.h>
 
 
 namespace cads
@@ -69,12 +69,14 @@ namespace cads
   bool store_scan_conveyor(cads::Conveyor conveyor, std::string db_name);
   bool store_scan_belt(cads::Belt belt, std::string db_name);
   bool store_scan_limits(cads::ScanLimits limits, std::string db_name);
+  bool store_scan_meta(cads::ScanMeta,std::string);
   long zs_count(std::string db_name);
   coro<int, cads::profile, 1> store_scan_coro(std::string db_name);
   std::tuple<cads::GocatorProperties,int> fetch_scan_gocator(std::string db_name);
   std::tuple<cads::Conveyor,int> fetch_scan_conveyor(std::string db_name);
   std::tuple<cads::Belt,int> fetch_scan_belt(std::string db_name);
   std::expected<cads::ScanLimits,int> fetch_scan_limits(std::string db_name);
+  std::expected<cads::ScanMeta,int> fetch_scan_meta(std::string);
 
 
 

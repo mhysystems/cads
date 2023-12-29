@@ -22,7 +22,7 @@ cadsSrc += files(
   'utils.cpp',
   'vec_nan_free.cpp',
   'err.cpp',
-  'scan.cpp'
+  'scandb.cpp'
 )
 
 cadsEntry += files('main.cpp')
