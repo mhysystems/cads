@@ -38,7 +38,7 @@ belt = {
 dbscan = {
   InClusterRadius = 12,
   MinPoints = 20,
-  MergeRadius = 6,
+  MergeRadius = 10,
   MaxClusters = 2
 }
 

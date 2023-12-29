@@ -6,15 +6,13 @@
 namespace cads
 {
   struct ScanLimits{
-    double Width;
-    long WidthN;
-    double Length;
-    long LengthN;
     double ZMin;
     double ZMax;
     double XMin;
+    double XMax;
 
     std::tuple<std::string,std::tuple<std::tuple<std::string,double>
+      ,std::tuple<std::string,double>
       ,std::tuple<std::string,double>
       ,std::tuple<std::string,double>>> decompose();
   };

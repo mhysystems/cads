@@ -90,7 +90,7 @@ namespace cads
     for (auto i = begin; i < end;)
     {
       i = std::find_if(i, end, is);
-      if(i == end) break;
+      if(i >= end) break;
 
       auto n = std::find_if_not(i,end,is);
 
@@ -103,7 +103,7 @@ namespace cads
 
       z_type::iterator::value_type step = 1.0 / (z_type::iterator::value_type)std::distance(i,n);
       
-      for(z_type::iterator::value_type t = 0.0; t < 1.0; t += step)
+      for(z_type::iterator::value_type t = 0.0; t < 1.0 && i < n; t += step)
       {
         *i++ = std::lerp(iv,nv,t);
       }

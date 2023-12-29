@@ -1,6 +1,7 @@
 #include <chrono>
 #include <future>
 #include <type_traits>
+#include <algorithm>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstringop-overflow="
@@ -79,8 +80,9 @@ namespace cads
       date::utc_clock::time_point scan_begin;
       cads::Io<msg> & cps;
       bool remote_reg;
-      ScanLimits limits;
       ScanMeta meta;
+      std::vector<cads::z_element> z_minmax;
+      std::vector<double> x_minmax;
 
 
       global_t(cads::Io<msg> &m, Conveyor c, Belt b, date::utc_clock::time_point sb, std::string s, bool rg, ScanMeta met) : 
@@ -112,6 +114,13 @@ namespace cads
 
         const auto store_action = [](global_t &global, const scan_t &e)
         {
+          const auto [z_min,z_max] = std::minmax_element(e.value.z.begin(),e.value.z.end());
+          const auto x_min = e.value.x_off;
+          const auto x_max = e.value.x_off + e.value.z.size() * global.gocator_properties.xResolution;
+          global.z_minmax.push_back(*z_min);
+          global.z_minmax.push_back(*z_max);
+          global.x_minmax.push_back(x_min);
+          global.x_minmax.push_back(x_max);
           global.store_profile.resume({0, global.idx++, e.value});
           global.store_scan.resume(e.value);
           global.store_last_y.resume(e.value.y);
@@ -120,12 +129,20 @@ namespace cads
         const auto complete_belt_action = [](global_t &global, const CompleteBelt &e)
         {
           global.idx = 0;
+          const auto [z_min,z_max] = std::minmax_element(global.z_minmax.begin() + 2*e.start_value,global.z_minmax.begin()+2*(e.start_value + e.length));
+          const auto [x_min,x_max] = std::minmax_element(global.x_minmax.begin() + 2*e.start_value,global.x_minmax.begin()+2*(e.start_value + e.length));
 
           auto scan_end = date::utc_clock::now();
           auto scan_filename = fmt::format("scan-{}.sqlite",global.scan_begin.time_since_epoch().count());
           store_scan_gocator(global.gocator_properties,scan_filename);
           store_scan_conveyor(global.conveyor,scan_filename);
           store_scan_belt(global.belt,scan_filename);
+          store_scan_limits({.ZMin = *z_min, .ZMax = *z_max, .XMin = *x_min, .XMax = *x_max},scan_filename);
+          store_scan_meta(global.meta,scan_filename);
+          
+          // Clear after dereferencing
+          global.z_minmax.clear();
+          global.x_minmax.clear();
           
           auto new_scan_filename = fmt::format("scan-{}.sqlite",scan_end.time_since_epoch().count());
           create_scan_db(new_scan_filename);

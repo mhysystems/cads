@@ -4,9 +4,10 @@ namespace cads
 {
   std::tuple<std::string,std::tuple< std::tuple<std::string,double>
     ,std::tuple<std::string,double>
+    ,std::tuple<std::string,double>
     ,std::tuple<std::string,double>>> ScanLimits::decompose(){
       using namespace std::literals;
-    return {"ScanLimits",{{"ZMin"s,ZMin}, {"ZMax"s,ZMax}, {"XMin"s,XMin}}};
+    return {"ScanLimits",{{"ZMin"s,ZMin}, {"ZMax"s,ZMax}, {"XMin"s,XMin},{"XMax"s,XMax}}};
     }
 
     std::tuple<std::string,std::tuple<std::tuple<std::string,long>

@@ -298,6 +298,32 @@ msg prs_to_scan(msg m)
         continue;
       }
 
+      if(right_edge_filtered > iz.size()) {
+        spdlog::get("cads")->error("{}({}) > z.size({})", "right_edge_filtered",right_edge_filtered,iz.size());
+        right_edge_filtered = (z_element)iz.size(); 
+      } 
+      
+      if(left_edge_filtered > iz.size()) {
+        spdlog::get("cads")->error("{}({}) > z.size({})", "left_edge_filtered",left_edge_filtered,iz.size());
+        continue;
+      } 
+
+      if(right_edge_filtered < 0) {
+        spdlog::get("cads")->error("{}({}) < 0 )", "right_edge_filtered",right_edge_filtered);
+        continue;
+      } 
+      
+      if(left_edge_filtered < 0) {
+        spdlog::get("cads")->error("{}({}) < 0 ", "left_edge_filtered",left_edge_filtered);
+        left_edge_filtered = 0; 
+      } 
+
+      if(left_edge_filtered >= right_edge_filtered )
+      {
+        spdlog::get("cads")->error("left_edge_filtered({}) >= right_edge_filtered({})", left_edge_filtered, right_edge_filtered);
+        continue;
+      }
+
       if(config.measureConfig.Enable) {
         next.enqueue({msgid::measure,Measure::MeasureMsg{"pulleylevel",0,date::utc_clock::now(),pulley_filtered}});
         next.enqueue({msgid::measure,Measure::MeasureMsg{"beltedgeposition",0,date::utc_clock::now(),double(ix + left_edge_filtered * x_resolution)}});
@@ -348,7 +374,7 @@ msg prs_to_scan(msg m)
       
       auto interpolated = interpolate_to_widthn({z.begin()+left_edge_index_avg,z.begin()+right_edge_index_avg},width_n);
 
-      next.enqueue({msgid::pulley_revolution_scan,PulleyRevolutionScan{std::get<0>(ps),std::get<1>(ps), cads::profile{delayed_profile.time,y, x + left_edge_index_avg * x_resolution, interpolated}}});
+      next.enqueue({msgid::pulley_revolution_scan,PulleyRevolutionScan{std::get<0>(ps),std::get<1>(ps), cads::profile{delayed_profile.time,y, x + left_edge_index_avg * x_resolution, std::move(interpolated)}}});
 
     } while (std::get<0>(m) != msgid::finished);
 
