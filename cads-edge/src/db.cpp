@@ -1025,51 +1025,19 @@ namespace cads
 
   bool store_scan_gocator(cads::GocatorProperties gocator, std::string db_name) 
   {
-    
-    auto err = db_exec(db_name, R"(CREATE TABLE IF NOT EXISTS GOCATOR(XRes REAL NOT NULL, ZRes REAL NOT NULL, ZOff REAL NOT NULL))"s);
-    
-    auto query = R"(INSERT INTO GOCATOR (XRes, ZRes, ZOff) VALUES (?,?,?))"s;
-
-    auto [stmt,db] = prepare_query(db_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
-
-    err = sqlite3_bind_double(stmt.get(), 1, gocator.xResolution);
-    err = sqlite3_bind_double(stmt.get(), 2, gocator.zResolution);
-    err = sqlite3_bind_double(stmt.get(), 3, gocator.zOffset);
-
-    tie(err, stmt) = db_step(move(stmt));
-
-    return err == SQLITE_OK || err == SQLITE_DONE;
+    return (bool)create_insert(gocator.decompose(),db_name);
   }
 
-  std::tuple<cads::GocatorProperties,int> fetch_scan_gocator(std::string db_name) 
+  std::expected<cads::GocatorProperties,int> fetch_scan_gocator(std::string db_name) 
   {
-    auto query = R"(SELECT XRes, ZRes, ZOff FROM GOCATOR)"s;
-    auto [stmt,db] = prepare_query(db_name, query);
-    auto err = SQLITE_OK;
-
-    tie(err, stmt) = db_step(move(stmt));
-
-    std::tuple<cads::GocatorProperties,int> rtn;
-    if (err == SQLITE_ROW)
-    {
-
-      rtn = {
-          {sqlite3_column_double(stmt.get(), 0),
-           sqlite3_column_double(stmt.get(), 1),
-           sqlite3_column_double(stmt.get(), 2),
-           0.0,
-           0.0,
-           0.0,
-           0.0},
-          0};
-    }
-    else
-    {
-      rtn = {cads::GocatorProperties{}, -1};
+    auto row = select_single(cads::GocatorProperties().decompose(),db_name);
+    if(row) {
+      return std::unexpected(row.error());
     }
 
-    return rtn;
+    return std::apply([](auto&&... e){return cads::GocatorProperties{e...};}, *row);
   }
+
 
   bool store_scan_conveyor(cads::Conveyor conveyor, std::string db_name) 
   {

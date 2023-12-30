@@ -51,6 +51,14 @@ namespace cads
     double width;
     double zOrigin;
     double height;
+
+    std::tuple<std::string,std::tuple<std::tuple<std::string,double>
+      ,std::tuple<std::string,double>
+      ,std::tuple<std::string,double>
+      ,std::tuple<std::string,double>
+      ,std::tuple<std::string,double>
+      ,std::tuple<std::string,double>
+      ,std::tuple<std::string,double> >> decompose();    
   };
   
   struct CaasMsg {

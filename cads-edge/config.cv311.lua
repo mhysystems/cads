@@ -31,7 +31,7 @@ belt = {
   CordDiameter = 5.6,
   TopCover = 20.0,
   Width = 1200.0,
-  Length = 39190.0,
+  Length = 3919.0,
   WidthN = 1500.0
 }
 

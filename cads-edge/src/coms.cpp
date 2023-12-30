@@ -511,7 +511,7 @@ coro<remote_msg,bool> remote_control_coro()
   {
     using namespace flatbuffers;    
     
-    //if(scan.uploaded >= scan.cardinality) return {scan,false};
+    if(scan.uploaded >= scan.cardinality) return {scan,false};
     
     auto db_name = scan.db_name;
     
@@ -523,9 +523,9 @@ coro<remote_msg,bool> remote_control_coro()
       return {scan,true};
     }
     
-    auto [gocator, gocator_err] = fetch_scan_gocator(db_name);
+    auto gocator = fetch_scan_gocator(db_name);
     
-    if (gocator_err < 0)
+    if (!gocator)
     {
       spdlog::get("cads")->info("{} fetch_scan_gocator failed - {}", __func__, db_name);
       return {scan,true};
