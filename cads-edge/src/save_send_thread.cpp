@@ -122,7 +122,7 @@ namespace cads
           global.x_minmax.push_back(x_min);
           global.x_minmax.push_back(x_max);
           global.store_profile.resume({0, global.idx++, e.value});
-          global.store_scan.resume(e.value);
+          global.store_scan.resume(packzbits(e.value));
           global.store_last_y.resume(e.value.y);
         };
 

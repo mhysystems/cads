@@ -18,6 +18,7 @@ namespace cads
     z_type z;
   };
 
+
   using zrange = std::ranges::subrange<cads::z_type::const_iterator>;
   using z_cluster = std::vector<zrange>;
 

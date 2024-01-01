@@ -17,7 +17,7 @@ namespace cads
     for (auto &e : z)
     {
       e += z_off;
-      if (e < threshold )
+      if (e < threshold || std::isnan(e))
         e = 0;
       if (e > z_max)
         e = z_max;

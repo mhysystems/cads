@@ -22,6 +22,115 @@
 
 namespace 
 {
+
+cads::z_type delta_coding(cads::z_type zs)
+{
+	cads::z_element z_n = 0;
+	for(auto& z : zs)
+	{
+		auto z_tmp = z;
+		z = z - z_n;
+		z_n = z_tmp;
+	}
+
+	return zs;
+}
+
+cads::z_type delta_decoding(cads::z_type zs)
+{
+	cads::z_element z_n = 0;
+	for(auto& z : zs)
+	{
+		z = z + z_n;
+		z_n = z;
+	}
+
+	return zs;
+}
+
+std::vector<int> quantise(cads::z_type zs, float res)
+{
+	std::vector<int> r;
+	for(auto z : zs) {
+		r.push_back(!std::isnan(z) ? (int)floor(z / res) : std::numeric_limits<int>::lowest());
+	}
+ 
+	return r;
+}
+
+cads::z_type unquantise(std::vector<int> zs, cads::z_element res)
+{
+	cads::z_type r;
+	for(auto z : zs) {
+		r.push_back(z != std::numeric_limits<int>::lowest() ? z * res : std::numeric_limits<cads::z_element>::quiet_NaN());
+	}
+	return r;
+}
+
+cads::z_type zbitpacking(const std::vector<int> bs, int s) {
+	
+  cads::z_type r;
+  r.push_back(std::bit_cast<cads::z_element>((int)bs.size()));
+  r.push_back(std::bit_cast<float>(s));
+
+	auto mask = (1 << s) - 1 ;
+	
+	int p = 0;
+	auto bi = bs.cbegin();
+  r.push_back(std::bit_cast<cads::z_element>(*bi++));
+  int br = 0;
+  while (bi < bs.cend()) {
+    int i = br;
+    unsigned int v = 0;
+    
+    for(;i < sizeof(int)*CHAR_BIT && bi < bs.cend(); i+=s) {
+      v = *bi++;
+      p |= (v & mask) << i;
+    }
+    
+    r.push_back(std::bit_cast<cads::z_element>(p));
+    br = i - sizeof(int)*CHAR_BIT;
+    
+    p = (v & mask) >> (s-br) ;
+  }
+  if(br > 0) r.push_back(std::bit_cast<cads::z_element>(p));
+  return r;
+	
+}
+
+std::vector<int> zbitunpacking(const cads:: z_type bs) {
+	
+  auto bi = bs.cbegin();
+  auto len = std::bit_cast<int>(*bi++);
+  auto s = std::bit_cast<int>(*bi++);
+  
+  std::vector<int> r(len,0);
+  
+  const auto mask = (1 << s) - 1 ;
+	
+
+  int br = 0;
+  
+  size_t c = 0;
+  r[c++] = std::bit_cast<int>(*bi++);
+  
+  while (c < len+2) {
+    int v = std::bit_cast<int>(*bi++);
+
+    r[c++] |= (v << br) & mask;
+    const int sn = ((sizeof(int)*CHAR_BIT - br) / s) * s;
+    
+    for(auto i = s; i < sn; i+=s) {
+      r[c++] = (v << (sizeof(int)*CHAR_BIT - s - i)) >> (sizeof(int)*CHAR_BIT - s);
+    }
+
+    r[c] = sn < sizeof(int)*CHAR_BIT ? v >> sn : 0;
+    br = sizeof(int)*CHAR_BIT - sn;
+    
+  }
+
+  return r;
+}
   double sampling_distribution(double x)
   {
     const auto s = 0.05;
@@ -217,5 +326,15 @@ namespace cads
     return rtn;
   }
 
+  profile packzbits(profile p)
+  {
+    auto zs_dc = delta_coding(p.z) ; 
+	  auto zs_dc_q = quantise(zs_dc,0.3) ; 
+	  const auto [min,max] = std::ranges::minmax_element(zs_dc_q | std::views::drop(1));
+
+	  auto l = (int)ceil(log(*max - *min) / log(2));
+    auto bp = ::zbitpacking(zs_dc_q,l);
+    return {p.time,p.y,p.x_off,bp};
+  }
 
 } // namespace cads
