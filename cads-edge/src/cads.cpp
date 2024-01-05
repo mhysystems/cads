@@ -299,12 +299,12 @@ msg prs_to_scan(msg m)
       }
 
       if(right_edge_filtered > iz.size()) {
-        spdlog::get("cads")->error("{}({}) > z.size({})", "right_edge_filtered",right_edge_filtered,iz.size());
+        spdlog::get("cads")->error("{} > z.size()", "right_edge_filtered",right_edge_filtered);
         right_edge_filtered = (z_element)iz.size(); 
       } 
       
       if(left_edge_filtered > iz.size()) {
-        spdlog::get("cads")->error("{}({}) > z.size({})", "left_edge_filtered",left_edge_filtered,iz.size());
+        spdlog::get("cads")->error("{} > z.size()", "left_edge_filtered",left_edge_filtered);
         continue;
       } 
 

@@ -450,7 +450,7 @@ coro<remote_msg,bool> remote_control_coro()
 
   }
   
-  cads::state::scan post_profiles_table(cads::state::scan scan, std::string url, double y_step, size_t width_n, bool upload)
+  cads::state::scan post_profiles_table(cads::state::scan scan, std::string url, double y_step, bool upload)
   {
     using namespace flatbuffers; 
 
@@ -461,8 +461,6 @@ coro<remote_msg,bool> remote_control_coro()
 
     auto send_bytes = send_bytes_coro(0L,url,upload);
 
-    double belt_z_max = std::numeric_limits<double>::lowest();
-    double belt_z_min = std::numeric_limits<double>::max();
     long cnt = 0;
 
     while (true)
@@ -473,15 +471,10 @@ coro<remote_msg,bool> remote_control_coro()
       if (!co_terminate)
       {
         namespace sr = std::ranges;
-        auto zs = scan.remote_reg ? interpolate_to_widthn(profile.z,width_n) : profile.z;
         idx -= scan.begin_index; cnt++;
         auto y = (idx - 1) * y_step; // Sqlite rowid starts a 1
-        auto [pmin,pmax] = sr::minmax(zs | sr::views::filter([](float e) { return !std::isnan(e);}));
 
-        belt_z_max = std::max(belt_z_max, (double)pmax);
-        belt_z_min = std::min(belt_z_min, (double)pmin);
-
-        profiles_flat.push_back(CadsFlatbuffers::CreateprofileDirect(builder, y, profile.x_off, &zs));
+        profiles_flat.push_back(CadsFlatbuffers::CreateprofileDirect(builder, y, profile.x_off, &profile.z));
 
         if (profiles_flat.size() == communications_config.UploadRows)
         {
@@ -596,7 +589,7 @@ coro<remote_msg,bool> remote_control_coro()
     }
 
     post_auxiliary_tables(conveyor,belt,*scan_limits,*scan_meta,*gocator,url,do_upload);
-    scan = post_profiles_table(scan,url,belt.Length / scan.cardinality, belt.WidthN, do_upload);
+    scan = post_profiles_table(scan,url,belt.Length / scan.cardinality, do_upload);
 
     bool failure = scan.uploaded != scan.cardinality;
     if (!failure && scan.remote_reg == 1)

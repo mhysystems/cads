@@ -78,14 +78,14 @@ profileConfig = {
 
 scanMeta = {
   Version = 0,
-  ZEncoding = 0
+  ZEncoding = 1
 }
 
 scanstorageConfig = {
   Conveyor = conveyor,
   Belt = belt,
   ScanMeta = scanMeta,
-  RegisterUpload = false
+  RegisterUpload = true
 }
 
 sqlitegocatorConfig = {

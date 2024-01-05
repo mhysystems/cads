@@ -1038,7 +1038,9 @@ namespace cads
   std::expected<cads::GocatorProperties,int> fetch_scan_gocator(std::string db_name) 
   {
     auto row = select_single(cads::GocatorProperties().decompose(),db_name);
-    if(row) {
+    if(!row) {
+      auto errmsg = sqlite3_errstr(row.error());
+      spdlog::get("cads")->error(R"({{func = '{}', msg = '{}'}})", __func__,errmsg);
       return std::unexpected(row.error());
     }
 
@@ -1195,7 +1197,7 @@ namespace cads
   std::expected<cads::ScanLimits,int> fetch_scan_limits(std::string db_name)
   {
     auto row = select_single(cads::ScanLimits().decompose(),db_name);
-    if(row) {
+    if(!row) {
       return std::unexpected(row.error());
     }
 
@@ -1210,7 +1212,7 @@ namespace cads
   std::expected<cads::ScanMeta,int> fetch_scan_meta(std::string db_name)
   {
     auto row = select_single(cads::ScanMeta().decompose(),db_name);
-    if(row) {
+    if(!row) {
       return std::unexpected(row.error());
     }
 
