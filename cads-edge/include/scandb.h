@@ -18,11 +18,11 @@ namespace cads
   };
 
   struct ScanMeta{
-    long Version;
-    long ZEncoding;
+    int64_t Version;
+    int64_t ZEncoding;
 
-    std::tuple<std::string,std::tuple<std::tuple<std::string,long>
-      ,std::tuple<std::string,long> >> decompose();
+    std::tuple<std::string,std::tuple<std::tuple<std::string,int64_t>
+      ,std::tuple<std::string,int64_t> >> decompose();
   };
 
 }

@@ -32,17 +32,31 @@ table Belt {
   width_n : uint;
 }
 
+table Meta {
+  version : int64;
+  z_encoding : int64;
+}
+
+table Limits {
+  z_min : double;
+  z_max : double;
+  x_min : double;
+  x_max : double;
+}
+
 table register_scan {
   belt_serial : string;
 }
 
-table Install {
+table Auxiliary {
   belt : Belt;
   conveyor : Conveyor;
+  limits : Limits;
+  meta : Meta;
 }
 
 
-union scan_tables {Install, profile_array, register_scan}
+union scan_tables {Auxiliary, profile_array, register_scan}
 
 table scan {
   site : string;

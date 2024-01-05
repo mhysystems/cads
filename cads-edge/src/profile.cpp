@@ -332,7 +332,7 @@ namespace cads
 	  auto zs_dc_q = quantise(zs_dc,0.3) ; 
 	  const auto [min,max] = std::ranges::minmax_element(zs_dc_q | std::views::drop(1));
 
-	  auto l = (int)ceil(log(*max - *min) / log(2));
+	  auto l = (int)ceil(log((double)*max - (double)*min) / log(2.0));
     auto bp = ::zbitpacking(zs_dc_q,l);
     return {p.time,p.y,p.x_off,bp};
   }

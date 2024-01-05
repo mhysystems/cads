@@ -2,8 +2,18 @@
 
 #include <io.hpp>
 #include <constants.h>
+#include <scandb.h>
 
 namespace cads
 {
-  void save_send_thread(cads::Conveyor,cads::Belt, bool, cads::Io<msg> &, cads::Io<msg>& );
+
+  struct ScanStorageConfig
+  {
+    Belt belt;
+    Conveyor conveyor;
+    ScanMeta meta;
+    bool register_upload;
+  };
+
+  void save_send_thread(ScanStorageConfig, cads::Io<msg> &, cads::Io<msg>& );
 }

@@ -12,6 +12,7 @@
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
 #pragma GCC diagnostic ignored "-Wreorder"
 #pragma GCC diagnostic ignored "-Wuseless-cast"
+#pragma GCC diagnostic ignored "-Wdangling-reference"
 
 #include <fmt/core.h>
 #include <fmt/chrono.h>
@@ -90,7 +91,7 @@ namespace
     send_bytes_simple({builder.GetBufferPointer(),builder.GetBufferPointer()+builder.GetSize()},url,upload);
   }
 
-  void post_install_table(cads::Conveyor c, cads::Belt b, std::string url, bool upload)
+  void post_auxiliary_tables(cads::Conveyor c, cads::Belt b, cads::ScanLimits limits, cads::ScanMeta meta, std::string url, bool upload)
   {
     using namespace flatbuffers;
     
@@ -117,14 +118,28 @@ namespace
     buf_belt.add_width_n(b.WidthN);
     auto send_belt = buf_belt.Finish();
 
-    CadsFlatbuffers::InstallBuilder buf_install(builder);
-    buf_install.add_belt(send_belt);
-    buf_install.add_conveyor(send_conveyor);
-    auto send_install = buf_install.Finish();
+    CadsFlatbuffers::LimitsBuilder buf_limits(builder);
+    buf_limits.add_z_min(limits.ZMin);
+    buf_limits.add_z_max(limits.ZMax);
+    buf_limits.add_x_min(limits.XMin);
+    buf_limits.add_x_max(limits.XMax);
+    auto send_limits = buf_limits.Finish();
+
+    CadsFlatbuffers::MetaBuilder buf_meta(builder);
+    buf_meta.add_version(meta.Version);
+    buf_meta.add_z_encoding(meta.ZEncoding);
+    auto send_meta = buf_meta.Finish();
+
+    CadsFlatbuffers::AuxiliaryBuilder buf_auxiliary(builder);
+    buf_auxiliary.add_belt(send_belt);
+    buf_auxiliary.add_conveyor(send_conveyor);
+    buf_auxiliary.add_limits(send_limits);
+    buf_auxiliary.add_meta(send_meta);
+    auto send_auxiliary = buf_auxiliary.Finish();
 
     CadsFlatbuffers::scanBuilder post(builder);
-    post.add_contents_type(CadsFlatbuffers::scan_tables_Install);
-    post.add_contents(send_install.Union());
+    post.add_contents_type(CadsFlatbuffers::scan_tables_Auxiliary);
+    post.add_contents(send_auxiliary.Union());
     auto bytes = post.Finish();
 
     builder.Finish(bytes);
@@ -550,7 +565,23 @@ coro<remote_msg,bool> remote_control_coro()
       return {scan,true};
     }
 
-    post_install_table(conveyor,belt,url,do_upload);
+    auto scan_limits = fetch_scan_limits(db_name);
+    
+    if (scan_limits.error())
+    {
+      spdlog::get("cads")->info("{} fetch_scan_limits failed - {}", __func__, db_name);
+      return {scan,true};
+    }
+  
+    auto scan_meta = fetch_scan_meta(db_name);
+    
+    if (scan_meta.error())
+    {
+      spdlog::get("cads")->info("{} fetch_scan_limits failed - {}", __func__, db_name);
+      return {scan,true};
+    }
+
+    post_auxiliary_tables(conveyor,belt,*scan_limits,*scan_meta,url,do_upload);
     scan = post_profiles_table(scan,url,belt.Length / scan.cardinality, belt.WidthN, do_upload);
 
     bool failure = scan.uploaded != scan.cardinality;

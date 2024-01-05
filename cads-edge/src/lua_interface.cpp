@@ -23,6 +23,7 @@
 #include <init.h>
 #include <fiducial.h>
 #include <utils.hpp>
+#include <scandb.h>
 
 namespace
 {
@@ -269,6 +270,26 @@ namespace
     return std::make_tuple(a, b);
   }
 
+  template<class R> std::optional<R> tofield(lua_State *L, int index, std::string obj_name, std::string field, std::function<std::optional<R>(lua_State*,int)> fieldfn)
+  {
+    if (lua_getfield(L, index, field.c_str()) == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, field);
+      return std::nullopt;
+    }
+
+    auto field_opt = fieldfn(L, -1);
+    lua_pop(L, 1);
+
+    if (!field_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} not a number' }}", __func__, field);
+      return std::nullopt;
+    }
+
+    return field_opt;
+  }
+
   std::optional<double> tofieldnumber(lua_State *L, int index, std::string obj_name, std::string field)
   {
     if (lua_getfield(L, index, field.c_str()) == LUA_TNIL)
@@ -458,6 +479,77 @@ std::optional<cads::Belt> tobelt(lua_State *L, int index)
       return std::nullopt;
     }
     return cads::Belt{*Serial_opt, *PulleyCover_opt, *CordDiameter_opt, *TopCover_opt, *Length_opt, *Width_opt, *WidthN_opt};
+  }
+
+  std::optional<cads::ScanMeta>  toscanmeta(lua_State *L, int index) 
+  {
+    const std::string obj_name = "scanmeta";
+
+    if (!lua_istable(L, index))
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} needs to be a table' }}", __func__, obj_name);
+      return std::nullopt;
+    }
+
+    auto Version_opt = tofield<int64_t>(L, index, obj_name,"Version"s, tointeger);
+
+    if (!Version_opt)
+    {
+      return std::nullopt;
+    }
+
+    auto ZEncoding_opt = tofield<int64_t>(L, index, obj_name,"ZEncoding"s, tointeger);
+
+    if (!ZEncoding_opt)
+    {
+      return std::nullopt;
+    }
+
+    return cads::ScanMeta{*Version_opt,*ZEncoding_opt};
+
+  }
+
+
+  std::optional<cads::ScanStorageConfig> toscanstorageconfig(lua_State *L, int index)
+  {
+
+    const std::string obj_name = "scanstorageconfig";
+
+    if (!lua_istable(L, index))
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} needs to be a table' }}", __func__, obj_name);
+      return std::nullopt;
+    }
+
+    auto Belt_opt = tofield<cads::Belt>(L, index, obj_name,"Belt"s,tobelt);
+
+    if (!Belt_opt)
+    {
+      return std::nullopt;
+    }
+
+    auto Conveyor_opt = tofield<cads::Conveyor>(L, index, obj_name, "Conveyor"s,toconveyor);
+
+    if (!Conveyor_opt)
+    {
+      return std::nullopt;
+    }
+
+    auto ScanMeta_opt = tofield<cads::ScanMeta>(L, index, obj_name, "ScanMeta"s,toscanmeta);
+
+    if (!ScanMeta_opt)
+    {
+      return std::nullopt;
+    }
+    
+    auto RegisterUpload_opt = tofield<bool>(L, index, obj_name,"RegisterUpload"s,lua_toboolean);
+
+    if (!RegisterUpload_opt)
+    {
+      return std::nullopt;
+    }
+
+    return cads::ScanStorageConfig{.belt = *Belt_opt, .conveyor = *Conveyor_opt, .meta = *ScanMeta_opt, .register_upload = *RegisterUpload_opt};
   }
 
 
@@ -1828,19 +1920,17 @@ std::optional<cads::Belt> tobelt(lua_State *L, int index)
   int save_send_thread(lua_State *L)
   {
     using namespace std::placeholders;
-    const auto expected_arg_cnt = 5;
+    const auto expected_arg_cnt = 3;
 
     auto arg_cnt = lua_gettop(L);
 
     if (arg_cnt > expected_arg_cnt)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = 'More than 4 arguemtns'}}", __func__);
+      spdlog::get("cads")->error("{{ func = {},  msg = 'Requires {} arguemtns not {}'}}", __func__,expected_arg_cnt,arg_cnt);
     }
 
-    auto conveyor = toconveyor(L, 1);
-    auto belt = tobelt(L,2);
-    auto remote_reg = arg_cnt == expected_arg_cnt ? lua_toboolean(L, 3) : true;
-    auto bound = std::bind(cads::save_send_thread, *conveyor, *belt, remote_reg, _1, _2);
+    auto config = toscanstorageconfig(L, 1);
+    auto bound = std::bind(cads::save_send_thread, *config, _1, _2);
     
     return mk_thread2(L, bound);
   }

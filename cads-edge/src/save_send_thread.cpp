@@ -58,51 +58,41 @@ namespace {
 
 namespace cads
 {
-  void save_send_thread(Conveyor conveyor, Belt belt, bool remote_reg, cads::Io<msg> &profile_fifo, cads::Io<msg> &next)
+  void save_send_thread(ScanStorageConfig config, cads::Io<msg> &profile_fifo, cads::Io<msg> &next)
   {
     
     spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Entering Thread");
 
     namespace sml = boost::sml;
 
-    auto scan_begin = date::utc_clock::now();
-    auto scan_filename_init = fmt::format("scan-{}.sqlite",scan_begin.time_since_epoch().count());
+    auto init_scan_time = date::utc_clock::now();
+    auto scan_filename_init = fmt::format("scan-{}.sqlite",init_scan_time.time_since_epoch().count());
     
     struct global_t
     {
+      ScanStorageConfig config;
       cads::coro<int, std::tuple<int, int, cads::profile>, 1> store_profile;
-      long idx = 0;
       coro<int, double,1> store_last_y;
       coro<int, profile, 1> store_scan;
-      GocatorProperties gocator_properties;
-      Conveyor conveyor;
-      Belt belt;
       date::utc_clock::time_point scan_begin;
       cads::Io<msg> & cps;
-      bool remote_reg;
-      ScanMeta meta;
+      GocatorProperties gocator_properties;
       std::vector<cads::z_element> z_minmax;
       std::vector<double> x_minmax;
+      long idx = 0;
 
-
-      global_t(cads::Io<msg> &m, Conveyor c, Belt b, date::utc_clock::time_point sb, std::string s, bool rg, ScanMeta met) : 
-        store_profile(rg ? store_profile_coro() : ::null_profile_coro()), 
-        store_last_y(rg ? store_last_y_coro() : ::null_last_y_coro()), 
+      global_t(ScanStorageConfig c, cads::Io<msg> &m, date::utc_clock::time_point sb, std::string s) : 
+        config(c),
+        store_profile(c.register_upload ? store_profile_coro() : ::null_profile_coro()), 
+        store_last_y(c.register_upload ? store_last_y_coro() : ::null_last_y_coro()), 
         store_scan(store_scan_coro(s)), 
-        conveyor(c),
-        belt(b),
         scan_begin(sb),
-        cps(m), 
-        remote_reg(rg),
-        meta(met){};
+        cps(m){};
 
-    } global(next
-        ,conveyor
-        ,belt
-        ,scan_begin
-        ,scan_filename_init
-        ,remote_reg
-        ,{.Version = 0, .ZEncoding = 0});
+    } global(config
+        ,next
+        ,init_scan_time
+        ,scan_filename_init);
 
 
     struct transitions
@@ -122,7 +112,11 @@ namespace cads
           global.x_minmax.push_back(x_min);
           global.x_minmax.push_back(x_max);
           global.store_profile.resume({0, global.idx++, e.value});
-          global.store_scan.resume(packzbits(e.value));
+          if(global.config.meta.ZEncoding == 1) {
+            global.store_scan.resume(packzbits(e.value));
+          }else{
+            global.store_scan.resume(e.value);
+          }
           global.store_last_y.resume(e.value.y);
         };
 
@@ -135,10 +129,10 @@ namespace cads
           auto scan_end = date::utc_clock::now();
           auto scan_filename = fmt::format("scan-{}.sqlite",global.scan_begin.time_since_epoch().count());
           store_scan_gocator(global.gocator_properties,scan_filename);
-          store_scan_conveyor(global.conveyor,scan_filename);
-          store_scan_belt(global.belt,scan_filename);
+          store_scan_conveyor(global.config.conveyor,scan_filename);
+          store_scan_belt(global.config.belt,scan_filename);
           store_scan_limits({.ZMin = *z_min, .ZMax = *z_max, .XMin = *x_min, .XMax = *x_max},scan_filename);
-          store_scan_meta(global.meta,scan_filename);
+          store_scan_meta(global.config.meta,scan_filename);
           
           // Clear after dereferencing
           global.z_minmax.clear();
@@ -157,9 +151,9 @@ namespace cads
             int64_t(e.length),
             0,
             1,
-            global.conveyor.Site,
-            global.conveyor.Name,
-            global.remote_reg
+            global.config.conveyor.Site,
+            global.config.conveyor.Name,
+            global.config.register_upload
           };
         
           global.store_scan = store_scan_coro(new_scan_filename);
@@ -173,9 +167,9 @@ namespace cads
             0,
             0,
             0,
-            global.conveyor.Site,
-            global.conveyor.Name,
-            global.remote_reg
+            global.config.conveyor.Site,
+            global.config.conveyor.Name,
+            global.config.register_upload
           };
 
           store_scan_state(scan2);  
@@ -204,9 +198,9 @@ namespace cads
             0,
             0,
             0,
-            global.conveyor.Site,
-            global.conveyor.Name,
-            global.remote_reg
+            global.config.conveyor.Site,
+            global.config.conveyor.Name,
+            global.config.register_upload
           };
 
           store_scan_state(scan2);  

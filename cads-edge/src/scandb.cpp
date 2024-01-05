@@ -10,10 +10,10 @@ namespace cads
     return {"ScanLimits",{{"ZMin"s,ZMin}, {"ZMax"s,ZMax}, {"XMin"s,XMin},{"XMax"s,XMax}}};
     }
 
-    std::tuple<std::string,std::tuple<std::tuple<std::string,long>
-      ,std::tuple<std::string,long> >> ScanMeta::decompose()
+    std::tuple<std::string,std::tuple<std::tuple<std::string,int64_t>
+      ,std::tuple<std::string,int64_t> >> ScanMeta::decompose()
       {
-         using namespace std::literals;
+        using namespace std::literals;
         return {"ScanMeta",{{"Version"s,Version}, {"ZEncoding"s,ZEncoding}}};
       }
 }

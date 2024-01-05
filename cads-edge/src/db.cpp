@@ -6,9 +6,21 @@
 #include <sstream>
 #include <chrono>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuseless-cast"
+#pragma GCC diagnostic ignored "-Wshadow"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wconversion"
+#pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
+#pragma GCC diagnostic ignored "-Wreorder"
+#pragma GCC diagnostic ignored "-Wuseless-cast"
+#pragma GCC diagnostic ignored "-Wdangling-reference"
+
 #include <fmt/core.h>
 #include <fmt/chrono.h>
 #include <spdlog/spdlog.h>
+
+#pragma GCC diagnostic pop
 
 #include <db.h>
 #include <utils.hpp>
@@ -186,7 +198,8 @@ namespace
     return sqlite3_bind_text(s, index, value.c_str(), value.size(), nullptr);
   }
 
-  template<class ...T, int ...N> auto zippy_bind(sqlite3_stmt *s, std::tuple<T...> t,std::integer_sequence<int,N...> i) {
+  template<class ...T, int ...N> auto zippy_bind(sqlite3_stmt *s, std::tuple<T...> t,std::integer_sequence<int,N...>) {
+    
     return (0 || ... || sqlite3_bind(s,N+1,std::get<N>(t)));
   }
 
@@ -215,8 +228,8 @@ namespace
     return {value,0};
   }
 
-  template<class ...T, int ...N> auto zippy_column(sqlite3_stmt *s,std::integer_sequence<int,N...> i) {
-    return std::make_tuple(sqlite3_column<T>(s,N)...);
+  template<class ...T, int ...N> auto zippy_column(sqlite3_stmt *s,std::integer_sequence<int,N...>) {
+    return std::make_tuple(sqlite3_column<typename std::conditional<std::is_enum_v<T>,int64_t,T>::type>(s,N)...);
   }
 
   template<class ...T> struct column
@@ -261,7 +274,7 @@ namespace
     return std::array{sqlite_type_names<T>()...};
   }
 
-  template<int ...N> std::array<std::string,sizeof...(N)> repeat_n(std::string s, std::integer_sequence<int,N...> i)
+  template<int ...N> std::array<std::string,sizeof...(N)> repeat_n(std::string s, std::integer_sequence<int,N...>)
   {
     using namespace std::string_literals;
     auto f = [=](int){return s;};
@@ -310,7 +323,6 @@ namespace
   template<class ...T> std::expected<std::tuple<T...>,int>  select_single (std::tuple<std::string,std::tuple<std::tuple<std::string,T>...>> table, std::string db_filename)
   {
     using namespace std::literals;
-    using table_types = std::tuple<std::tuple<std::string,T>...>;
     
     auto type_names = std::array{sqlite_type_names<T>()...};
     auto field_names = std::apply([=](auto&&... e) {return std::array{std::get<0>(e)...};},std::get<1>(table));
