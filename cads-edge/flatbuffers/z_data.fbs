@@ -4,8 +4,8 @@ namespace CadsFlatbuffers;
 
 table profile{
   y : double;
-	x_off : double;
-	z_samples : [float];
+	x : double;
+	z : [float];
 }
 
 table profile_array {
@@ -44,15 +44,28 @@ table Limits {
   x_max : double;
 }
 
+table Gocator
+{
+  x_resolution : double;
+  z_resolution : double;
+  z_offset     : double;
+  x_origin     : double;
+  width        : double;
+  z_origin     : double;
+  height       : double;
+}
+
 table register_scan {
   belt_serial : string;
 }
+
 
 table Auxiliary {
   belt : Belt;
   conveyor : Conveyor;
   limits : Limits;
   meta : Meta;
+  gocator : Gocator;
 }
 
 

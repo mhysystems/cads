@@ -73,7 +73,7 @@
   public Scan? Scan { get; set; }
 
   public ZDepthQueryParameters SearchParameters { get { return new ZDepthQueryParameters(X, Y, ZMax, P / 100.0, XMin, XMax, ZMin); } private set { } }
-  public ScanLimits scanLimits = new(0,1,0,1);
+  public ScanLimits scanLimits = new(0,1,0,1,0,0);
   protected IJSObjectReference? module;
 
   protected override void OnInitialized()

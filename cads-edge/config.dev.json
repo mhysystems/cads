@@ -28,5 +28,5 @@
     "Period_ms" : 10000
   },
 
-  "luascript" : "../config.cv311.lua"
+  "luascript" : "../config.dev.lua"
 }

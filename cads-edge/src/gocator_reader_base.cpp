@@ -76,7 +76,7 @@ namespace cads
   ,std::tuple<std::string,double> >> GocatorProperties::decompose()
   {
     using namespace std::literals;
-    return {"GocatorProperties",{{"xResolution"s,xResolution}, {"zResolution"s,zResolution}, {"zOffset"s,zOffset}, {"xOrigin"s,xOrigin}, {"width"s,width}, {"zOrigin"s,zOrigin}, {"height"s,height}}};
+    return {"Gocator",{{"xResolution"s,xResolution}, {"zResolution"s,zResolution}, {"zOffset"s,zOffset}, {"xOrigin"s,xOrigin}, {"width"s,width}, {"zOrigin"s,zOrigin}, {"height"s,height}}};
   }   
 
 }

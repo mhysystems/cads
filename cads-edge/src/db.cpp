@@ -780,7 +780,7 @@ namespace cads
   coro<std::tuple<int, profile>> fetch_belt_coro(int revid, long last_idx, long first_index, int size, std::string name)
   {
     //auto query = fmt::format(R"(SELECT idx,y,x_off,z FROM PROFILE WHERE REVID = {} AND IDX >= ? AND IDX < ?)", revid);
-    auto query = fmt::format(R"(SELECT rowid - 1,y,x,z FROM PROFILES WHERE rowid >= ? + 1 AND rowid < ? + 1)", revid);
+    auto query = fmt::format(R"(SELECT rowid - 1,y,x,z FROM Profiles WHERE rowid >= ? + 1 AND rowid < ? + 1)", revid);
     auto db_config_name = name.empty() ? database_names.profile_db_name : name;
     auto [stmt,db] = prepare_query(db_config_name, query);
 
@@ -824,11 +824,6 @@ namespace cads
 
     auto cnt = sqlite3_column_int64(stmt.get(), 0);
     return cnt;
-  }
-
-  long zs_count(std::string db_name) 
-  {
-    return max_rowid("PROFILES",db_name);
   }
 
   std::tuple<date::utc_clock::time_point,std::vector<double>> fetch_last_motif(std::string name)
@@ -1229,8 +1224,8 @@ namespace cads
     
     if(err != SQLITE_OK) return false;
     
-    auto from_query = R"(SELECT rowid,Y,X,Z FROM PROFILES WHERE rowid >= ? AND rowid < ?)";
-    auto to_query = R"(INSERT INTO PROFILES (Y,X,Z) VALUES (?,?,?))"s;
+    auto from_query = R"(SELECT rowid,Y,X,Z FROM Profiles WHERE rowid >= ? AND rowid < ?)";
+    auto to_query = R"(INSERT INTO Profiles (Y,X,Z) VALUES (?,?,?))"s;
     auto [from_stmt,from_db] = prepare_query(from_db_name, from_query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
     auto [to_stmt,to_db] = prepare_query(to_db_name, to_query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
 
@@ -1268,7 +1263,7 @@ namespace cads
   }
 
   bool create_scan_db(std::string db_name) {
-    auto err = db_exec(db_name, R"(CREATE TABLE IF NOT EXISTS PROFILES (Y REAL NOT NULL, X REAL NOT NULL, Z BLOB NOT NULL))"s);
+    auto err = db_exec(db_name, R"(CREATE TABLE IF NOT EXISTS Profiles (Y REAL NOT NULL, X REAL NOT NULL, Z BLOB NOT NULL))"s);
     return err == SQLITE_OK;
   }
 
@@ -1281,7 +1276,7 @@ namespace cads
 
       create_scan_db(db_name);
 
-      auto query = R"(INSERT INTO PROFILES (Y,X,Z) VALUES (?,?,?))"s;
+      auto query = R"(INSERT INTO Profiles (Y,X,Z) VALUES (?,?,?))"s;
       auto [stmt,db] = prepare_query(db_name, query, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
       db_exec(db.get(), R"(PRAGMA synchronous=OFF)"s);
 
@@ -1391,7 +1386,7 @@ namespace cads
 
   std::deque<std::tuple<int, cads::profile>> fetch_scan(long first_index, long last_idx, std::string db_name, int size)
   {
-    auto query = R"(SELECT rowid,Y,X,Z FROM PROFILES WHERE rowid >= ? AND rowid < ?)";
+    auto query = R"(SELECT rowid,Y,X,Z FROM Profiles WHERE rowid >= ? AND rowid < ?)";
     auto [stmt,db] = prepare_query(db_name, query);
 
     auto iend = first_index + size; 

@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Diagnostics;
 using System.Data;
 using System.Threading.Tasks;
+using System.Runtime.CompilerServices;
 
 using SQLitePCL;
 using static SQLitePCL.raw;
@@ -36,29 +37,29 @@ namespace cads_gui.Data
       return j.ToArray();
     }
 
-  static R DBReadQuerySingle<R>(string name, Func<SqliteCommand, SqliteCommand> cmdBuild, Func<SqliteDataReader, R> rows)
-  {
-    using var connection = new SqliteConnection("" +
-        new SqliteConnectionStringBuilder
-        {
-          Mode = SqliteOpenMode.ReadOnly,
-          DataSource = name
-        });
+    static R DBReadQuerySingle<R>(string name, Func<SqliteCommand, SqliteCommand> cmdBuild, Func<SqliteDataReader, R> rows)
+    {
+      using var connection = new SqliteConnection("" +
+          new SqliteConnectionStringBuilder
+          {
+            Mode = SqliteOpenMode.ReadOnly,
+            DataSource = name
+          });
 
-    connection.Open();
+      connection.Open();
 
-    var command = cmdBuild(connection.CreateCommand());
+      var command = cmdBuild(connection.CreateCommand());
 
-    using var reader = command.ExecuteReader();
-    reader.Read();
-    return rows(reader);
+      using var reader = command.ExecuteReader();
+      reader.Read();
+      return rows(reader);
 
-  }
+    }
 
     public static async Task<List<Profile>> RetrieveFrameModular(string db, double y_min, long len, long left)
     {
 
-      if(!File.Exists(db))
+      if (!File.Exists(db))
       {
         return Enumerable.Empty<Profile>().ToList();
       }
@@ -76,38 +77,38 @@ namespace cads_gui.Data
       await connection.OpenAsync();
 
       var commandRes = connection.CreateCommand();
-      commandRes.CommandText = $"select y from profile where rowid = 1 limit 1";
+      commandRes.CommandText = $"select Y from Profiles where rowid = 1 limit 1";
 
       using var readerRes = commandRes.ExecuteReader(CommandBehavior.SingleRow);
-      
+
       readerRes.Read();
       var y_res = readerRes.GetDouble(0);
-      
+
       readerRes.Close();
 
       var commandMax = connection.CreateCommand();
-      commandMax.CommandText = $"select max(rowid)+1 from profile ";
+      commandMax.CommandText = $"select max(rowid)+1 from Profiles ";
 
       using var readerMax = commandMax.ExecuteReader(CommandBehavior.SingleRow);
-      
+
       readerMax.Read();
       var max = readerMax.GetInt64(0);
-      
+
       readerMax.Close();
 
       var row = (long)Math.Floor(y_min / y_res);
-      var rowBegin = Mod(row - left,max);
+      var rowBegin = Mod(row - left, max);
       var mask = rowBegin > row - left || Mod(row - left + len, max) < row - left + len ? 1.0 : 0.0;
-      
 
-      var query = $"select (rowid - @mask*@rowmax)*@yres,z from PROFILE where rowid >= @row union all select rowid*@yres,z from profile limit @len";
+
+      var query = $"select (rowid - @mask*@rowmax)*@yres,Z from Profiles where rowid >= @row union all select rowid*@yres,Z from Profiles limit @len";
       var command = connection.CreateCommand();
       command.CommandText = query;
       command.Parameters.AddWithValue("@row", rowBegin);
       command.Parameters.AddWithValue("@len", abslen);
-      command.Parameters.AddWithValue("@mask",mask);
-      command.Parameters.AddWithValue("@rowmax",max);
-      command.Parameters.AddWithValue("@yres",y_res);
+      command.Parameters.AddWithValue("@mask", mask);
+      command.Parameters.AddWithValue("@rowmax", max);
+      command.Parameters.AddWithValue("@yres", y_res);
 
 
       using var reader = command.ExecuteReader();
@@ -120,11 +121,11 @@ namespace cads_gui.Data
 
         if (len >= 0)
         {
-          frame.Add(new Profile(y,z));
+          frame.Add(new Profile(y, z));
         }
         else
         {
-          frame.Insert(0, new Profile(y,z));
+          frame.Insert(0, new Profile(y, z));
         }
       }
 
@@ -142,12 +143,13 @@ namespace cads_gui.Data
 
     }
 
-    public static (bool,float) RetrievePoint(string db, double y, long x)
+    public static (bool, float) RetrievePoint(string db, double y, long x)
     {
-      if (!File.Exists(db)) {
-        return (true,0.0f);
+      if (!File.Exists(db))
+      {
+        return (true, 0.0f);
       }
-      
+
       using var connection = new SqliteConnection("" +
         new SqliteConnectionStringBuilder
         {
@@ -155,80 +157,157 @@ namespace cads_gui.Data
           DataSource = db,
         });
 
-      if(connection is null) {
-        return (true,0.0f);
+      if (connection is null)
+      {
+        return (true, 0.0f);
       }
 
       connection.Open();
-            
-      var command = connection.CreateCommand();      
-      
-      if(command is null) {
-        return (true,0.0f);
+
+      var command = connection.CreateCommand();
+
+      if (command is null)
+      {
+        return (true, 0.0f);
       }
 
-      command.CommandText = $"select y from profile where y > 0 limit 1";
+      command.CommandText = $"select Y from Profiles where Y > 0 limit 1";
 
       using var reader = command.ExecuteReader(CommandBehavior.SingleRow);
-      var y_res =  0.0;
-      
-      if(reader.Read()) {
+      var y_res = 0.0;
+
+      if (reader.Read())
+      {
         y_res = reader.GetDouble(0);
-      }else {
-        return (true,0.0f);
+      }
+      else
+      {
+        return (true, 0.0f);
       }
       reader.Close();
 
-      command.CommandText = $"select z from profile where rowid = @rowid";
+      command.CommandText = $"select Z from Profiles where rowid = @rowid";
       command.Parameters.AddWithValue("@rowid", (int)(y / y_res));
 
       using var reader2 = command.ExecuteReader(CommandBehavior.SingleRow);
-      
-      if(reader2 is null) {
-        return (true,0.0f);
+
+      if (reader2 is null)
+      {
+        return (true, 0.0f);
       }
 
-      if(reader2.Read()) {
+      if (reader2.Read())
+      {
 
         byte[] z = (byte[])reader2[0];
         var j = Convert(z);
         var r = j[x];
-        return (false,r);
-      }else {
-        return (true,0.0f);
+        return (false, r);
+      }
+      else
+      {
+        return (true, 0.0f);
       }
 
+    }
+    public static async IAsyncEnumerable<R> DBReadQuery<R>(string name, Func<SqliteCommand, SqliteCommand> cmdBuild, Func<SqliteDataReader, R> rows, [EnumeratorCancellation] CancellationToken stop = default)
+    {
+      using var connection = new SqliteConnection("" +
+          new SqliteConnectionStringBuilder
+          {
+            Mode = SqliteOpenMode.ReadOnly,
+            DataSource = name
+          });
+
+      await connection.OpenAsync(stop);
+
+      var command = cmdBuild(connection.CreateCommand());
+
+      using var reader = await command.ExecuteReaderAsync(stop);
+      int a = 0;
+      while (await reader.ReadAsync(stop))
+      {
+        a++;
+        yield return rows(reader);
+      }
+    }
+
+    public static async Task<R> DBReadQuerySingle<R>(string name, Func<SqliteCommand, SqliteCommand> cmdBuild, Func<SqliteDataReader, R> rows, CancellationToken stop = default)
+    {
+      using var connection = new SqliteConnection("" +
+          new SqliteConnectionStringBuilder
+          {
+            Mode = SqliteOpenMode.ReadOnly,
+            DataSource = name
+          });
+
+      await connection.OpenAsync(stop);
+
+      var command = cmdBuild(connection.CreateCommand());
+
+      using var reader = await command.ExecuteReaderAsync(stop);
+      await reader.ReadAsync(stop);
+      return rows(reader);
+
+    }
+
+    public static async IAsyncEnumerable<float[]> RetrieveFrameSamplesAsync(long rowid, long len, string db, [EnumeratorCancellation] CancellationToken stop = default)
+    {
+
+      SqliteCommand CmdBuilder(SqliteCommand cmd)
+      {
+        var query = $"select Z from Profiles where rowid >= @rowid limit @len";
+        cmd.CommandText = query;
+        cmd.Parameters.AddWithValue("@rowid", rowid);
+        cmd.Parameters.AddWithValue("@len", len);
+        return cmd;
+      }
+
+      float[] Read(SqliteDataReader reader)
+      {
+        var z = NoAsp.ConvertBytesToFloats((byte[])reader[0]);
+        return z;
+      }
+
+      var rows = DBReadQuery(db, CmdBuilder, Read, stop);
+
+      await foreach (var r in rows)
+      {
+        yield return r;
+      }
     }
 
     public static ScanLimits? GetScanLimits(string filePath)
     {
       SqliteCommand CmdBuilder(SqliteCommand cmd)
       {
-        var query = $"select belt.Width, length(z) / 4 as WidthN, Y as Length, profile.rowid as LengthN from profile join belt order by profile.rowid desc limit 1";
+        var query = $"select belt.Width, length(z) / 4 as WidthN, Y as Length, Profiles.rowid as LengthN from Profiles join belt order by Profiles.rowid desc limit 1";
         cmd.CommandText = query;
         return cmd;
       }
 
       ScanLimits Read(SqliteDataReader reader)
       {
-        return new ScanLimits(reader.GetDouble(0), 
-          reader.GetInt64(1), 
+        return new ScanLimits(reader.GetDouble(0),
+          reader.GetInt64(1),
           reader.GetDouble(2),
-          reader.GetInt64(3));
+          reader.GetInt64(3),
+          reader.GetDouble(4),
+          reader.GetDouble(5));
       }
 
       return DBReadQuerySingle(filePath, CmdBuilder, Read);
     }
-        
+
     public static (string site, string belt, DateTime chronos) DecontructSQliteDbName(string filename)
     {
       var p = filename.Split("-");
       var site = p[0];
       var belt = p[1];
-      var c = string.Join("-",p[2..^1]);
-      var chrono = DateTime.ParseExact(c,"yyyy-MM-dd-HHmms",System.Globalization.CultureInfo.InvariantCulture);
-      
-      return (site,belt,chrono);
+      var c = string.Join("-", p[2..^1]);
+      var chrono = DateTime.ParseExact(c, "yyyy-MM-dd-HHmms", System.Globalization.CultureInfo.InvariantCulture);
+
+      return (site, belt, chrono);
     }
 
     public static string MakeScanFilename(string site, string conveyor, DateTime chrono)
@@ -238,9 +317,10 @@ namespace cads_gui.Data
 
     public static Conveyor FromFlatbuffer(CadsFlatbuffers.Conveyor conveyor)
     {
-      return new Conveyor(){
-        Site =  conveyor.Site,
-        Name =  conveyor.Name,
+      return new Conveyor()
+      {
+        Site = conveyor.Site,
+        Name = conveyor.Name,
         Timezone = TimeZoneInfo.FindSystemTimeZoneById(conveyor.Timezone),
         PulleyCircumference = conveyor.PulleyCircumference,
         TypicalSpeed = conveyor.TypicalSpeed
@@ -249,15 +329,17 @@ namespace cads_gui.Data
 
     public static Belt FromFlatbuffer(CadsFlatbuffers.Belt belt)
     {
-      return new Belt(){
+      return new Belt()
+      {
         Serial = belt.Serial,
-        PulleyCover =  belt.PulleyCover,
-        CordDiameter =  belt.CordDiameter,
-        TopCover = belt.TopCover,    
+        PulleyCover = belt.PulleyCover,
+        CordDiameter = belt.CordDiameter,
+        TopCover = belt.TopCover,
         Length = belt.Length,
         Width = belt.Width
       };
     }
+
   } // End class NoAsp
 
 } // End namespace

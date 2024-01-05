@@ -25,25 +25,25 @@ namespace cads_gui.Data
 
       command = connection.CreateCommand();
       command.Transaction = connection.BeginTransaction();
-      command.CommandText = @"CREATE TABLE IF NOT EXISTS PROFILE (y REAL NOT NULL, x_off REAL NOT NULL, z BLOB NOT NULL)";
+      command.CommandText = @"CREATE TABLE IF NOT EXISTS Profiles (Y REAL NOT NULL, X REAL NOT NULL, Z BLOB NOT NULL)";
       var sql = command.ExecuteNonQuery();
 
-      command.CommandText = @"INSERT OR REPLACE INTO PROFILE (rowid,y,x_off,z) VALUES (@rowid,@y,@x_off,@z)";
+      command.CommandText = @"INSERT OR REPLACE INTO Profiles (rowid,Y,X,Z) VALUES (@rowid,@Y,@X,@Z)";
 
       command.Parameters.AddWithValue("@rowid", 1);
-      command.Parameters.AddWithValue("@y", 0.0);
-      command.Parameters.AddWithValue("@x_off", 0.0);
-      command.Parameters.AddWithValue("@z", Array.Empty<float>());
+      command.Parameters.AddWithValue("@Y", 0.0);
+      command.Parameters.AddWithValue("@X", 0.0);
+      command.Parameters.AddWithValue("@Z", Array.Empty<float>());
 
       command.Prepare();
     }
 
-    public void Save(ulong idx, double y, double x_off, float[] z)
+    public void Save(ulong idx, double y, double x, float[] z)
     {
 
       command.Parameters[0].Value = idx;
       command.Parameters[1].Value = y;
-      command.Parameters[2].Value = x_off;
+      command.Parameters[2].Value = x;
       command.Parameters[3].Value = NoAsp.ConvertFloatsToBytes(z);
       command.ExecuteNonQuery();
 
@@ -133,27 +133,27 @@ namespace cads_gui.Data
       var command = connection.CreateCommand();
       command.Transaction = connection.BeginTransaction();
       command.CommandText = @"CREATE TABLE IF NOT EXISTS Belt (
-      Serial TEXT NOT NULL 
-      ,PulleyCover REAL NOT NULL 
-      ,CordDiameter REAL NOT NULL 
-      ,TopCover REAL NOT NULL 
-      ,Length REAL NOT NULL 
-      ,Width REAL NOT NULL 
-      ,WidthN INTEGER NOT NULL 
+        Serial TEXT NOT NULL 
+        ,PulleyCover REAL NOT NULL 
+        ,CordDiameter REAL NOT NULL 
+        ,TopCover REAL NOT NULL 
+        ,Length REAL NOT NULL 
+        ,Width REAL NOT NULL 
+        ,WidthN INTEGER NOT NULL 
       )";
 
       command.ExecuteNonQuery();
 
       command.CommandText = @"INSERT OR REPLACE INTO Belt (
-      rowid
-      ,Serial
-      ,PulleyCover 
-      ,CordDiameter 
-      ,TopCover
-      ,Length
-      ,Width
-      ,WidthN
-    ) VALUES (1,@Serial,@PulleyCover,@CordDiameter,@TopCover,@Length,@Width,@WidthN)";
+        rowid
+        ,Serial
+        ,PulleyCover 
+        ,CordDiameter 
+        ,TopCover
+        ,Length
+        ,Width
+        ,WidthN
+      ) VALUES (1,@Serial,@PulleyCover,@CordDiameter,@TopCover,@Length,@Width,@WidthN)";
 
       command.Parameters.AddWithValue("@Serial", belt.Serial);
       command.Parameters.AddWithValue("@PulleyCover", belt.PulleyCover);
@@ -167,6 +167,134 @@ namespace cads_gui.Data
       command.ExecuteNonQuery();
       command.Transaction?.Commit();
     }
+
+    static public void Insert(string name, CadsFlatbuffers.Meta meta)
+    {
+
+      using var connection = new SqliteConnection("" +
+        new SqliteConnectionStringBuilder
+        {
+          Mode = SqliteOpenMode.ReadWriteCreate,
+          DataSource = name
+        });
+
+      connection.Open();
+
+      var command = connection.CreateCommand();
+      command.Transaction = connection.BeginTransaction();
+      command.CommandText = @"CREATE TABLE IF NOT EXISTS Meta (
+        Version INTEGER NOT NULL 
+        ,ZEncoding INTEGER NOT NULL
+      )";
+
+      command.ExecuteNonQuery();
+
+      command.CommandText = @"INSERT OR REPLACE INTO Meta (
+        rowid
+        ,Version
+        ,ZEncoding 
+      ) VALUES (1,@Version,@ZEncoding)";
+
+      command.Parameters.AddWithValue("@Version", meta.Version);
+      command.Parameters.AddWithValue("@ZEncoding", meta.ZEncoding);
+ 
+      command.Prepare();
+      command.ExecuteNonQuery();
+      command.Transaction?.Commit();
+    }
+    static public void Insert(string name, CadsFlatbuffers.Limits limits)
+    {
+
+      using var connection = new SqliteConnection("" +
+        new SqliteConnectionStringBuilder
+        {
+          Mode = SqliteOpenMode.ReadWriteCreate,
+          DataSource = name
+        });
+
+      connection.Open();
+
+      var command = connection.CreateCommand();
+      command.Transaction = connection.BeginTransaction();
+      command.CommandText = @"CREATE TABLE IF NOT EXISTS Limits (
+        ZMin REAL NOT NULL 
+        ,ZMax REAL NOT NULL 
+        ,XMin REAL NOT NULL 
+        ,XMax REAL NOT NULL 
+      )";
+
+      command.ExecuteNonQuery();
+
+      command.CommandText = @"INSERT OR REPLACE INTO Limits (
+        rowid
+        ,ZMin 
+        ,ZMax 
+        ,XMin 
+        ,XMax 
+      ) VALUES (1,@ZMin,@ZMax,@XMin,@XMax)";
+
+      command.Parameters.AddWithValue("@ZMin", limits.ZMin);
+      command.Parameters.AddWithValue("@ZMax", limits.ZMax);
+      command.Parameters.AddWithValue("@XMin", limits.XMin);
+      command.Parameters.AddWithValue("@XMax", limits.XMax);
+ 
+      command.Prepare();
+      command.ExecuteNonQuery();
+      command.Transaction?.Commit();
+    }
+
+    static public void Insert(string name, CadsFlatbuffers.Gocator gocator)
+    {
+
+      using var connection = new SqliteConnection("" +
+        new SqliteConnectionStringBuilder
+        {
+          Mode = SqliteOpenMode.ReadWriteCreate,
+          DataSource = name
+        });
+
+      connection.Open();
+
+      var command = connection.CreateCommand();
+      command.Transaction = connection.BeginTransaction();
+      command.CommandText = @"CREATE TABLE IF NOT EXISTS Gocator (
+        xResolution REAL NOT NULL
+        ,zResolution REAL NOT NULL
+        ,zOffset REAL NOT NULL
+        ,xOrigin REAL NOT NULL
+        ,width REAL NOT NULL
+        ,zOrigin REAL NOT NULL
+        ,height REAL NOT NULL 
+      )";
+
+      command.ExecuteNonQuery();
+
+      command.CommandText = @"INSERT OR REPLACE INTO Gocator (
+        rowid
+        ,xResolution
+        ,zResolution
+        ,zOffset
+        ,xOrigin
+        ,width
+        ,zOrigin
+        ,height
+      ) VALUES (1,@xResolution,@zResolution,@zOffset,@xOrigin,@width,@zOrigin,@height)";
+
+      command.Parameters.AddWithValue("@xResolution", gocator.XResolution);
+      command.Parameters.AddWithValue("@zResolution", gocator.ZResolution);
+      command.Parameters.AddWithValue("@zOffset", gocator.ZOffset);
+      command.Parameters.AddWithValue("@xOrigin", gocator.XOrigin);
+      command.Parameters.AddWithValue("@width", gocator.Width);
+      command.Parameters.AddWithValue("@zOrigin", gocator.ZOrigin);
+      command.Parameters.AddWithValue("@height", gocator.Height);
+ 
+      command.Prepare();
+      command.ExecuteNonQuery();
+      command.Transaction?.Commit();
+    }
+
+
+
   }
 
 }

@@ -113,7 +113,7 @@ namespace cads
           global.x_minmax.push_back(x_max);
           global.store_profile.resume({0, global.idx++, e.value});
           if(global.config.meta.ZEncoding == 1) {
-            global.store_scan.resume(packzbits(e.value));
+            global.store_scan.resume(packzbits(e.value,global.gocator_properties.zResolution));
           }else{
             global.store_scan.resume(e.value);
           }

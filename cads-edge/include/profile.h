@@ -34,6 +34,7 @@ namespace cads
   extract_pulley_coords(const z_type &z, ProfilePartitions conveyor);
   errors::ErrCode is_alignable(const ProfilePartitions &part);
 
-  profile packzbits(profile);
+  profile packzbits(profile,double);
+  profile unpackzbits(profile,double);
 
 }

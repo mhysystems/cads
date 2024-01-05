@@ -326,15 +326,24 @@ namespace cads
     return rtn;
   }
 
-  profile packzbits(profile p)
+  profile packzbits(profile p,double res)
   {
     auto zs_dc = delta_coding(p.z) ; 
-	  auto zs_dc_q = quantise(zs_dc,0.3) ; 
+	  auto zs_dc_q = quantise(zs_dc,(float)res) ; 
 	  const auto [min,max] = std::ranges::minmax_element(zs_dc_q | std::views::drop(1));
 
 	  auto l = (int)ceil(log((double)*max - (double)*min) / log(2.0));
     auto bp = ::zbitpacking(zs_dc_q,l);
     return {p.time,p.y,p.x_off,bp};
+  }
+
+  profile unpackzbits(profile p,double res)
+  {
+    auto ubp = ::zbitunpacking(p.z);
+    auto dc = unquantise(ubp,(float)res);
+    auto zs = delta_decoding(dc) ; 
+
+    return {p.time,p.y,p.x_off,zs};
   }
 
 } // namespace cads

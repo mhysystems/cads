@@ -91,7 +91,7 @@ namespace
     send_bytes_simple({builder.GetBufferPointer(),builder.GetBufferPointer()+builder.GetSize()},url,upload);
   }
 
-  void post_auxiliary_tables(cads::Conveyor c, cads::Belt b, cads::ScanLimits limits, cads::ScanMeta meta, std::string url, bool upload)
+  void post_auxiliary_tables(cads::Conveyor c, cads::Belt b, cads::ScanLimits limits, cads::ScanMeta meta, cads::GocatorProperties gocator, std::string url, bool upload)
   {
     using namespace flatbuffers;
     
@@ -130,12 +130,26 @@ namespace
     buf_meta.add_z_encoding(meta.ZEncoding);
     auto send_meta = buf_meta.Finish();
 
+
+    CadsFlatbuffers::GocatorBuilder buf_gocator(builder);
+    buf_gocator.add_x_resolution (gocator.xResolution);
+    buf_gocator.add_z_resolution (gocator.zResolution);
+    buf_gocator.add_z_offset     (gocator.zOffset);
+    buf_gocator.add_x_origin     (gocator.xOrigin);
+    buf_gocator.add_width        (gocator.width);
+    buf_gocator.add_z_origin     (gocator.zOrigin);
+    buf_gocator.add_height       (gocator.height);
+    auto send_gocator = buf_gocator.Finish();
+
+
     CadsFlatbuffers::AuxiliaryBuilder buf_auxiliary(builder);
     buf_auxiliary.add_belt(send_belt);
     buf_auxiliary.add_conveyor(send_conveyor);
     buf_auxiliary.add_limits(send_limits);
     buf_auxiliary.add_meta(send_meta);
+    buf_auxiliary.add_gocator(send_gocator);
     auto send_auxiliary = buf_auxiliary.Finish();
+   
 
     CadsFlatbuffers::scanBuilder post(builder);
     post.add_contents_type(CadsFlatbuffers::scan_tables_Auxiliary);
@@ -581,7 +595,7 @@ coro<remote_msg,bool> remote_control_coro()
       return {scan,true};
     }
 
-    post_auxiliary_tables(conveyor,belt,*scan_limits,*scan_meta,url,do_upload);
+    post_auxiliary_tables(conveyor,belt,*scan_limits,*scan_meta,*gocator,url,do_upload);
     scan = post_profiles_table(scan,url,belt.Length / scan.cardinality, belt.WidthN, do_upload);
 
     bool failure = scan.uploaded != scan.cardinality;

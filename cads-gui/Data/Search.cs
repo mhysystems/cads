@@ -59,7 +59,7 @@ public static class Search
 
     SqliteCommand CmdBuilder(SqliteCommand cmd)
     {
-      var query = $"select z from PROFILE where rowid >= @rowid limit @len";
+      var query = $"select Z from Profiles where rowid >= @rowid limit @len";
       cmd.CommandText = query;
       cmd.Parameters.AddWithValue("@rowid", rowid);
       cmd.Parameters.AddWithValue("@len", len);
@@ -246,7 +246,7 @@ public static class Search
   {
     var columns = (int)Math.Ceiling((double)width / xStride);
     var rows = (long)Math.Ceiling((double)length / yStride);
-    var rawSamples = RetrieveFrameSamplesAsync(y, length, db, cancel);
+    var rawSamples = NoAsp.RetrieveFrameSamplesAsync(y, length, db, cancel);
     var g = CountIf(rawSamples, xStride, fx, fz, cancel);
     var l = CountIfMatrixAsync(g, columns, yStride,  cancel);
     var ll = AddCoordinatesAsync2(l, columns, xStride, yStride, y,cancel);

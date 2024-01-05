@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.SignalR;
 
 using Google.FlatBuffers;
 using CadsFlatbuffers;
+using System.Reflection;
 
 namespace cads_gui.Data
 {
@@ -70,13 +71,20 @@ namespace cads_gui.Data
       var scanData = scan.GetRootAsscan(bb);
 
       var dbPath = beltservice.MakeScanFilePath(site, belt, chrono);
-      if(scanData.ContentsType == scan_tables.Install) {
-        var conveyor = scanData.ContentsAsInstall().Conveyor;
-        var beltf = scanData.ContentsAsInstall().Belt;
+      if(scanData.ContentsType == scan_tables.Auxiliary) {
+        var conveyor = scanData.ContentsAsAuxiliary().Conveyor;
+        var beltf = scanData.ContentsAsAuxiliary().Belt;
+        var limits = scanData.ContentsAsAuxiliary().Limits;
+        var gocator = scanData.ContentsAsAuxiliary().Gocator;
+        var meta = scanData.ContentsAsAuxiliary().Meta;
         
-        if(conveyor is not null && beltf is not null) {
-          ScanData.Insert(dbPath,conveyor.Value);
+        if(conveyor is not null && beltf is not null && limits is not null && meta is not null && gocator is not null) {
+          ScanData.Insert(dbPath, conveyor.Value);
           ScanData.Insert(dbPath, beltf.Value);
+          ScanData.Insert(dbPath, limits.Value);
+          ScanData.Insert(dbPath, gocator.Value);
+          ScanData.Insert(dbPath, meta.Value);
+
           var conveyorId = await beltservice.AddConveyorAsync(NoAsp.FromFlatbuffer(conveyor.Value));
           var beltId = await beltservice.AddBeltAsync(NoAsp.FromFlatbuffer(beltf.Value));
           await beltservice.AddInstallAsync(new BeltInstall{ConveyorId = conveyorId, BeltId = beltId, Chrono = chrono});
@@ -96,8 +104,8 @@ namespace cads_gui.Data
           var pc = pa.Profiles((int)cnt);
           if(pc.HasValue) {
             var p = pc.Value;
-            var z = p.GetZSamplesArray();
-            db.Save(pa.Idx + cnt, p.Y, p.XOff, z);
+            var z = p.GetZArray();
+            db.Save(pa.Idx + cnt, p.Y, p.X, z);
           }else {
             ArgumentNullException.ThrowIfNull(pc);
           }
