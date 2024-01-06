@@ -217,7 +217,7 @@
         await profilePlot.UpdatePlotDoubleSidedAsync(plotDataPromiseTop, plotDataPromiseBottom);
       }
     }
-    catch (Exception)
+    catch (Exception e)
     {
       Snackbar.Add($"Problem retrieving data", Severity.Error);
     }

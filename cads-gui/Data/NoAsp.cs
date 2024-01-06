@@ -77,24 +77,18 @@ namespace cads_gui.Data
       await connection.OpenAsync();
 
       var commandRes = connection.CreateCommand();
-      commandRes.CommandText = $"select Y from Profiles where rowid = 1 limit 1";
+      commandRes.CommandText = $"select Belt.Length, max(Profiles.rowid)+1, Meta.ZEncoding, Gocator.zResolution from Belt join Meta join Profiles join Gocator limit 1;";
 
       using var readerRes = commandRes.ExecuteReader(CommandBehavior.SingleRow);
 
       readerRes.Read();
-      var y_res = readerRes.GetDouble(0);
+      var max = readerRes.GetInt64(1);
+      var y_res = readerRes.GetDouble(0) / max;
+      var ZEncoding = readerRes.GetInt64(2);
+      var zResolution = readerRes.GetDouble(3);
+     
 
       readerRes.Close();
-
-      var commandMax = connection.CreateCommand();
-      commandMax.CommandText = $"select max(rowid)+1 from Profiles ";
-
-      using var readerMax = commandMax.ExecuteReader(CommandBehavior.SingleRow);
-
-      readerMax.Read();
-      var max = readerMax.GetInt64(0);
-
-      readerMax.Close();
 
       var row = (long)Math.Floor(y_min / y_res);
       var rowBegin = Mod(row - left, max);
@@ -117,7 +111,11 @@ namespace cads_gui.Data
       while (reader.Read())
       {
         var y = reader.GetDouble(0);
-        var z = ConvertBytesToFloats((byte[])reader[1]);
+        var z =  ZEncoding switch 
+        {
+          1 => ZbitUnpacking((byte[])reader[1],(float)zResolution),
+          _ => ConvertBytesToFloats((byte[])reader[1])
+        };
 
         if (len >= 0)
         {
@@ -141,6 +139,75 @@ namespace cads_gui.Data
       var j = MemoryMarshal.Cast<byte, float>(z_ptr);
       return j.ToArray();
 
+    }
+
+    public static int[] UnpackZBits(byte[] z) 
+    {
+      ReadOnlySpan<byte> zPtr = new(z);
+      var header = MemoryMarshal.Cast<byte, int>(zPtr);
+      var length = header[0];
+      var bits = header[1];
+      int mask = (1 << bits) - 1 ;
+
+      int[] Z = new int[length];
+      
+      Z[0] = header[2];
+
+      var packedZs = MemoryMarshal.Cast<byte, int>(zPtr.Slice(sizeof(int)*3));
+
+      int indexZ = 1;
+      int packedIndex = 0;
+      int i = bits;
+
+      int maxBits = sizeof(int)*8;
+
+      while (indexZ < length)
+      {
+
+        if(i < maxBits) {
+          Z[indexZ++] = (packedZs[packedIndex] << (maxBits - i)) >> (maxBits - bits);
+        }else {
+          Z[indexZ] = packedZs[packedIndex++] >> (i - bits);
+          i -= maxBits;
+          Z[indexZ++] |= (packedZs[packedIndex] << (maxBits - i)) >> (maxBits - bits);
+        }
+
+        i += bits;
+        
+      }
+
+      return Z;
+    }
+
+    public static float[] Unquantise(int[] z, float res)
+    {
+      float[] Z = new float[z.Length];
+	    
+      for(var i = 0; i< Z.Length; i++) {
+		    Z[i] = z[i] != Int32.MinValue ? z[i] * res : Single.NaN;
+	    }
+
+	    return Z;
+    }
+
+    public static float [] DeltaDecoding(float[] z)
+    {
+	    float zn = 0;
+      for(var i = 0; i< z.Length; i++) {
+		    z[i] = z[i] + zn;
+		    zn = z[i];
+	    }
+
+	    return z;
+    }
+
+    public static float[] ZbitUnpacking(byte[] z, float res)
+    {
+      try {
+      return DeltaDecoding(Unquantise(UnpackZBits(z),res));
+      }catch(Exception e) {
+        return new float[1];
+      }
     }
 
     public static (bool, float) RetrievePoint(string db, double y, long x)
@@ -281,7 +348,7 @@ namespace cads_gui.Data
     {
       SqliteCommand CmdBuilder(SqliteCommand cmd)
       {
-        var query = $"select belt.Width, length(z) / 4 as WidthN, Y as Length, Profiles.rowid as LengthN from Profiles join belt order by Profiles.rowid desc limit 1";
+        var query = $"select belt.Width, belt.WidthN as WidthN, belt.Length as Length, max(Profiles.rowid)+1 as LengthN, limits.ZMin, limits.ZMax from Profiles join belt join limits limit 1";
         cmd.CommandText = query;
         return cmd;
       }

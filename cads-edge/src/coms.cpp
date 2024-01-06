@@ -114,6 +114,7 @@ namespace
     buf_belt.add_pulley_cover(b.PulleyCover);
     buf_belt.add_cord_diameter(b.CordDiameter);
     buf_belt.add_top_cover(b.TopCover);
+    buf_belt.add_length(b.Length);
     buf_belt.add_width(b.Width);
     buf_belt.add_width_n(b.WidthN);
     auto send_belt = buf_belt.Finish();
