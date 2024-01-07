@@ -78,7 +78,7 @@ profileConfig = {
 
 scanMeta = {
   Version = 0,
-  ZEncoding = 0
+  ZEncoding = 1
 }
 
 scanstorageConfig = {

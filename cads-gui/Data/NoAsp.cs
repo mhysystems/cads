@@ -140,44 +140,43 @@ namespace cads_gui.Data
       return j.ToArray();
 
     }
-
     public static int[] UnpackZBits(byte[] z) 
     {
       ReadOnlySpan<byte> zPtr = new(z);
       var header = MemoryMarshal.Cast<byte, int>(zPtr);
       var length = header[0];
       var bits = header[1];
+      var min = header[2];
       int mask = (1 << bits) - 1 ;
 
       int[] Z = new int[length];
       
-      Z[0] = header[2];
+      Z[0] = header[3];
 
-      var packedZs = MemoryMarshal.Cast<byte, int>(zPtr.Slice(sizeof(int)*3));
+      var packedZs = MemoryMarshal.Cast<byte, int>(zPtr.Slice(sizeof(int)*4));
 
       int indexZ = 1;
       int packedIndex = 0;
-      int i = bits;
+
+      int l = 0;
+      int r = 0;
+      int i = 0;
 
       int maxBits = sizeof(int)*8;
 
       while (indexZ < length)
       {
 
-        if(i < maxBits) {
-          Z[indexZ++] = (packedZs[packedIndex] << (maxBits - i)) >> (maxBits - bits);
-        }else {
-          Z[indexZ] = packedZs[packedIndex++] >> (i - bits);
-          i -= maxBits;
-          if(i != 0) {
-            Z[indexZ++] |= (packedZs[packedIndex] << (maxBits - i)) >> (maxBits - bits);
-          }else {
-            indexZ++;
-          }
-        }
-
-        i += bits;
+        Z[indexZ] |= (int)(((uint)packedZs[packedIndex]  << l ) >>> r) & mask ;
         
+        i += bits;
+        Z[indexZ] += min*System.Convert.ToInt32(i <= maxBits);
+        indexZ += System.Convert.ToInt32(i <= maxBits);
+        packedIndex += System.Convert.ToInt32(i >= maxBits);
+        l = (maxBits - i + bits)*System.Convert.ToInt32(i > maxBits);
+        r = i*System.Convert.ToInt32(i <= maxBits);
+        i = i - maxBits*System.Convert.ToInt32(i >= maxBits) - bits*System.Convert.ToInt32(l > 0);
+
       }
 
       return Z;

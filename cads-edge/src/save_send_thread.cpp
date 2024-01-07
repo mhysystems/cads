@@ -113,13 +113,11 @@ namespace cads
           global.x_minmax.push_back(x_max);
           global.store_profile.resume({0, global.idx++, e.value});
           if(global.config.meta.ZEncoding == 1) {
-            auto vv = packzbits(e.value,global.gocator_properties.zResolution);
-            auto vvv = unpackzbits(vv,global.gocator_properties.zResolution);
-            global.store_scan.resume(vv);
+            //auto vv = packzbits(e.value,global.gocator_properties.zResolution);
+            //auto vvv = unpackzbits(vv,global.gocator_properties.zResolution);
+            global.store_scan.resume(packzbits(e.value,global.gocator_properties.zResolution));
           }else{
-                        auto vv = packzbits(e.value,global.gocator_properties.zResolution);
-            auto vvv = unpackzbits(vv,global.gocator_properties.zResolution);
-            global.store_scan.resume(vvv);
+            global.store_scan.resume(e.value);
           }
           global.store_last_y.resume(e.value.y);
         };

@@ -67,12 +67,13 @@ cads::z_type unquantise(std::vector<int> zs, cads::z_element res)
 	return r;
 }
 
-cads::z_type zbitpacking(const std::vector<int> bs, int s) {
+cads::z_type zbitpacking(const std::vector<int> bs, int s, int min) {
 	
   cads::z_type r;
   r.push_back(std::bit_cast<cads::z_element>((int)bs.size()));
   r.push_back(std::bit_cast<float>(s));
-
+  r.push_back(std::bit_cast<float>(min));
+ 
 	auto mask = (1 << s) - 1 ;
 	
 	int p = 0;
@@ -84,7 +85,7 @@ cads::z_type zbitpacking(const std::vector<int> bs, int s) {
     unsigned int v = 0;
     
     for(;i < sizeof(int)*CHAR_BIT && bi < bs.cend(); i+=s) {
-      v = *bi++;
+      v = *bi++ - min;
       p |= (v & mask) << i;
     }
     
@@ -103,68 +104,37 @@ std::vector<int> zbitunpacking(const cads:: z_type bs) {
   auto bi = bs.cbegin();
   auto len = std::bit_cast<int>(*bi++);
   auto s = std::bit_cast<int>(*bi++);
-  
+  auto min = std::bit_cast<int>(*bi++);
+  auto mask = (1 << s) - 1 ;
+
   std::vector<int> r(len,0);
   
   size_t c = 0;
   r[c++] = std::bit_cast<int>(*bi++);
-  int i = s;
+  int i = 0;
+  int l = 0;
+  int sr = 0;
   const int max_bits = sizeof(int)*CHAR_BIT;
   
-  int v = std::bit_cast<int>(*bi++);
-  while (c < len) {
   
-    if(i < max_bits) {
-      r[c++] = (v << (max_bits - i)) >> (max_bits - s);
-    }else {
-      r[c] = v >> (i - s);
-      i -= max_bits;
-      v = std::bit_cast<int>(*bi++);
-      if(i != 0) {
-        r[c++] |= (v << (max_bits - i)) >> (max_bits - s);
-      }else {
-        c++;
-      }
-    }
+  while (c < len) {
+    
+    const int v = std::bit_cast<int>(*bi);
+    r[c] |= ((((unsigned int)v  << l ) >> sr) & mask);
+
     i += s;
+    r[c] += min*(i <= max_bits);
+    c += (i <= max_bits);
+    bi += (i >= max_bits);
+    l = (max_bits - i + s)*(i > max_bits);
+    sr = i*(i <= max_bits);
+
+    i = i - max_bits*(i >= max_bits) - s*(l > 0);
   }
 
   return r;
 }
 
-std::vector<int> zbitunpacking2(const cads:: z_type bs) {
-	
-  auto bi = bs.cbegin();
-  auto len = std::bit_cast<int>(*bi++);
-  auto s = std::bit_cast<int>(*bi++);
-  
-  std::vector<int> r(len,0);
-  
-  const auto mask = (1 << s) - 1 ;
-	
-
-  int br = 0;
-  
-  size_t c = 0;
-  r[c++] = std::bit_cast<int>(*bi++);
-  
-  while (c < len) {
-    int v = std::bit_cast<int>(*bi++);
-
-    r[c++] |= (v << br) & mask;
-    const int sn = ((sizeof(int)*CHAR_BIT - br) / s) * s;
-    
-    for(auto i = s; i < sn; i+=s) {
-      r[c++] = (v << (sizeof(int)*CHAR_BIT - s - i)) >> (sizeof(int)*CHAR_BIT - s);
-    }
-
-    r[c] = sn < sizeof(int)*CHAR_BIT ? v >> sn : 0;
-    br = sizeof(int)*CHAR_BIT - sn;
-    
-  }
-
-  return r;
-}
   double sampling_distribution(double x)
   {
     const auto s = 0.05;
@@ -388,11 +358,43 @@ namespace cads
 	  const auto [min,max] = std::ranges::minmax_element(zs_dc | std::views::drop(1));
 
 	  auto l = (int)ceil(log((double)*max - (double)*min) / log(2.0));
-    auto bp = ::zbitpacking(zs_dc,l);
+    auto bp = ::zbitpacking(zs_dc,l,*min);
 
     return {p.time,p.y,p.x_off,bp};
   }
+ 
+  /* int compare_vector(const std::vector<int>& a, const std::vector<int>& b ){
+    
+    auto f = a.size() == b.size();
+    
+    for(int i = 0; i< a.size(); i++) {
+      auto gg = a[i] == b[i];
+      if(!gg) {
+        auto bb = gg;
+        return i;
+      }
+    }
+    return -1;
+  }
 
+   profile packzbits(profile p,double res)
+  {
+    auto zs_dc_q = quantise(p.z,(float)res) ; 
+    auto zs_dc = delta_coding(zs_dc_q) ; 
+    const auto [min,max] = std::ranges::minmax_element(zs_dc | std::views::drop(1));
+    auto l = (int)ceil(log((double)*max - (double)*min) / log(2.0));
+    auto bp = ::zbitpacking(zs_dc,l,*min);
+    auto ubp = ::zbitunpacking(bp);
+    int err = compare_vector(zs_dc,ubp);
+    if(err >= 0) {
+      ::zbitunpacking(bp);
+    }
+    auto dc = delta_decoding(ubp) ; 
+    
+    auto zs = unquantise(dc,(float)res);
+	  
 
+    return {p.time,p.y,p.x_off,zs};
+  } */
 
 } // namespace cads
