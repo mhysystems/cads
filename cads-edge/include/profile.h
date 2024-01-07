@@ -32,6 +32,10 @@ namespace cads
   ProfilePartitions conveyor_profile_detection(const profile &, Dbscan config);
   std::tuple<vector_NaN_free,vector_NaN_free> 
   extract_pulley_coords(const z_type &z, ProfilePartitions conveyor);
+  
+  std::tuple<vector_NaN_free,vector_NaN_free> 
+  extract_belt_coords(const z_type &z, ProfilePartitions conveyor);
+  
   errors::ErrCode is_alignable(const ProfilePartitions &part);
 
   profile packzbits(profile,double);

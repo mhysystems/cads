@@ -78,7 +78,21 @@ std::function<msg(msg)>
         auto status = is_alignable(profile_part.partitions);
         if(status)
         {
-          regression_compensate(profile_part.scan.z,linear_regression(extract_pulley_coords(profile_part.scan.z,profile_part.partitions)).gradient);
+          if(profile_part.partitions.contains(ProfileSection::Left) && profile_part.partitions.contains(ProfileSection::Right)) { 
+            regression_compensate(profile_part.scan.z,linear_regression(extract_pulley_coords(profile_part.scan.z,profile_part.partitions)).gradient);
+          }else {
+            auto pulley_coords = extract_pulley_coords(profile_part.scan.z,profile_part.partitions);
+            auto pulley_size = (double)std::get<0>(pulley_coords).data.size();
+            auto pulley_gradient = linear_regression(std::move(pulley_coords)).gradient;
+            
+            auto belt_coords = extract_belt_coords(profile_part.scan.z,profile_part.partitions);
+            auto belt_size = (double)std::get<0>(belt_coords).data.size();
+            auto belt_gradient = linear_regression(std::move(belt_coords)).gradient;
+
+            auto gradient = pulley_gradient*(pulley_size / (pulley_size + belt_size)) + belt_gradient*(belt_size / (pulley_size + belt_size));
+
+            regression_compensate(profile_part.scan.z,gradient);
+          }
           return {id,profile_part};
         }else {
           return {msgid::error,::ProfileError(__FILE__,__func__,__LINE__,status).clone()}; 

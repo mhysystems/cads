@@ -169,7 +169,11 @@ namespace cads_gui.Data
         }else {
           Z[indexZ] = packedZs[packedIndex++] >> (i - bits);
           i -= maxBits;
-          Z[indexZ++] |= (packedZs[packedIndex] << (maxBits - i)) >> (maxBits - bits);
+          if(i != 0) {
+            Z[indexZ++] |= (packedZs[packedIndex] << (maxBits - i)) >> (maxBits - bits);
+          }else {
+            indexZ++;
+          }
         }
 
         i += bits;
@@ -190,9 +194,9 @@ namespace cads_gui.Data
 	    return Z;
     }
 
-    public static float [] DeltaDecoding(float[] z)
+    public static int [] DeltaDecoding(int[] z)
     {
-	    float zn = 0;
+	    int zn = 0;
       for(var i = 0; i< z.Length; i++) {
 		    z[i] = z[i] + zn;
 		    zn = z[i];
@@ -203,11 +207,8 @@ namespace cads_gui.Data
 
     public static float[] ZbitUnpacking(byte[] z, float res)
     {
-      try {
-      return DeltaDecoding(Unquantise(UnpackZBits(z),res));
-      }catch(Exception e) {
-        return new float[1];
-      }
+      return Unquantise(DeltaDecoding(UnpackZBits(z)),res);
+
     }
 
     public static (bool, float) RetrievePoint(string db, double y, long x)

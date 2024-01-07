@@ -23,9 +23,9 @@
 namespace 
 {
 
-cads::z_type delta_coding(cads::z_type zs)
+template<class T> std::vector<T> delta_coding(std::vector<T> zs) requires std::integral<T> || std::floating_point<T>
 {
-	cads::z_element z_n = 0;
+	T z_n = 0;
 	for(auto& z : zs)
 	{
 		auto z_tmp = z;
@@ -36,9 +36,9 @@ cads::z_type delta_coding(cads::z_type zs)
 	return zs;
 }
 
-cads::z_type delta_decoding(cads::z_type zs)
+template<class T> std::vector<T> delta_decoding(std::vector<T> zs) requires std::integral<T> || std::floating_point<T>
 {
-	cads::z_element z_n = 0;
+	T z_n = 0;
 	for(auto& z : zs)
 	{
 		z = z + z_n;
@@ -52,7 +52,7 @@ std::vector<int> quantise(cads::z_type zs, float res)
 {
 	std::vector<int> r;
 	for(auto z : zs) {
-		r.push_back(!std::isnan(z) ? (int)floor(z / res) : std::numeric_limits<int>::lowest());
+		r.push_back(!std::isnan(z) ? (int)(z / res) : std::numeric_limits<int>::lowest());
 	}
  
 	return r;
@@ -106,6 +106,40 @@ std::vector<int> zbitunpacking(const cads:: z_type bs) {
   
   std::vector<int> r(len,0);
   
+  size_t c = 0;
+  r[c++] = std::bit_cast<int>(*bi++);
+  int i = s;
+  const int max_bits = sizeof(int)*CHAR_BIT;
+  
+  int v = std::bit_cast<int>(*bi++);
+  while (c < len) {
+  
+    if(i < max_bits) {
+      r[c++] = (v << (max_bits - i)) >> (max_bits - s);
+    }else {
+      r[c] = v >> (i - s);
+      i -= max_bits;
+      v = std::bit_cast<int>(*bi++);
+      if(i != 0) {
+        r[c++] |= (v << (max_bits - i)) >> (max_bits - s);
+      }else {
+        c++;
+      }
+    }
+    i += s;
+  }
+
+  return r;
+}
+
+std::vector<int> zbitunpacking2(const cads:: z_type bs) {
+	
+  auto bi = bs.cbegin();
+  auto len = std::bit_cast<int>(*bi++);
+  auto s = std::bit_cast<int>(*bi++);
+  
+  std::vector<int> r(len,0);
+  
   const auto mask = (1 << s) - 1 ;
 	
 
@@ -114,7 +148,7 @@ std::vector<int> zbitunpacking(const cads:: z_type bs) {
   size_t c = 0;
   r[c++] = std::bit_cast<int>(*bi++);
   
-  while (c < len+2) {
+  while (c < len) {
     int v = std::bit_cast<int>(*bi++);
 
     r[c++] |= (v << br) & mask;
@@ -262,6 +296,17 @@ namespace cads
     };
   }
 
+  std::tuple<vector_NaN_free,vector_NaN_free> 
+  extract_belt_coords(const z_type &z, ProfilePartitions conveyor)
+  {
+    return {
+      vector_NaN_free(conveyor.contains(ProfileSection::Belt) ? 
+        z_type(z.begin()+std::get<0>(conveyor[ProfileSection::Belt]),z.begin()+std::get<1>(conveyor[ProfileSection::Belt])) 
+        : z_type()),
+      vector_NaN_free(conveyor.contains(ProfileSection::Belt) ?  x_pos_skipNaN(z,conveyor[ProfileSection::Belt]) : z_type())
+    };
+  }
+
 
   size_t distance(std::tuple<size_t, size_t> x)
   {
@@ -325,25 +370,29 @@ namespace cads
 
     return rtn;
   }
-
-  profile packzbits(profile p,double res)
-  {
-    auto zs_dc = delta_coding(p.z) ; 
-	  auto zs_dc_q = quantise(zs_dc,(float)res) ; 
-	  const auto [min,max] = std::ranges::minmax_element(zs_dc_q | std::views::drop(1));
-
-	  auto l = (int)ceil(log((double)*max - (double)*min) / log(2.0));
-    auto bp = ::zbitpacking(zs_dc_q,l);
-    return {p.time,p.y,p.x_off,bp};
-  }
-
+  
   profile unpackzbits(profile p,double res)
   {
     auto ubp = ::zbitunpacking(p.z);
-    auto dc = unquantise(ubp,(float)res);
-    auto zs = delta_decoding(dc) ; 
+    auto dc = delta_decoding(ubp) ; 
+    auto zs = unquantise(dc,(float)res);
 
     return {p.time,p.y,p.x_off,zs};
   }
+
+  profile packzbits(profile p,double res)
+  {
+    auto zs_dc_q = quantise(p.z,(float)res) ; 
+    auto zs_dc = delta_coding(zs_dc_q) ; 
+	  
+	  const auto [min,max] = std::ranges::minmax_element(zs_dc | std::views::drop(1));
+
+	  auto l = (int)ceil(log((double)*max - (double)*min) / log(2.0));
+    auto bp = ::zbitpacking(zs_dc,l);
+
+    return {p.time,p.y,p.x_off,bp};
+  }
+
+
 
 } // namespace cads

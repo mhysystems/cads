@@ -31,7 +31,7 @@ belt = {
   CordDiameter = 5.6,
   TopCover = 20.0,
   Width = 1200.0,
-  Length = 39190.0,
+  Length = 19190.0,
   WidthN = 1500.0
 }
 
@@ -65,7 +65,7 @@ measures = {
 profileConfig = {
   Width = belt.Width,
   NaNPercentage = 1,
-  ClipHeight = 35.0,
+  ClipHeight = 24.0,
   ClampToZeroHeight = 10.0,
   PulleyEstimatorInit = -15.0,
   PulleyCircumference = conveyor.PulleyCircumference,
@@ -78,7 +78,7 @@ profileConfig = {
 
 scanMeta = {
   Version = 0,
-  ZEncoding = 1
+  ZEncoding = 0
 }
 
 scanstorageConfig = {
