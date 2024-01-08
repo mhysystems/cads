@@ -1,0 +1,45 @@
+@page "/site/files/{site}/{conveyor}"
+
+@inject CadsBackend backend
+
+<SiteHeader ShowDraw site="@site" conveyor="@conveyor">
+</SiteHeader>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="ma-0 pa-0"
+  Style="display: inline-block; width:calc(100vw - var(--mud-drawer-width-mini-left));height:calc(100vh - var(--mud-appbar-height)">
+  <MudPaper Class="pa-16 ma-2" Outlined="true">
+  @if(scans is not null && ConvertTimeFromUtc is not null) {
+    <MudTable  Class="flex-grow-1 ma-0 pa-0 overflow-scroll" Items="@scans" Breakpoint="Breakpoint.Sm"  T="Scan">
+      <HeaderContent>
+          <MudTh><MudTableSortLabel SortBy="new Func<Scan, object>(e=>e.Filepath)"><MudText Typo="Typo.h5">File Name</MudText></MudTableSortLabel></MudTh>
+          <MudTh><MudTableSortLabel SortBy="new Func<Scan, object>(e=>e.Chrono)"><MudText Typo="Typo.h5">Scan Date</MudText></MudTableSortLabel></MudTh>
+      </HeaderContent>
+      <RowTemplate>
+              <MudTd Typo="Typo.h5" DataLabel="Name" ><MudLink Target="_parent" Color=Color.Secondary Href=@($"/api/files/{context.Filepath}")> @context.Filepath</MudLink> </MudTd>
+              <MudTd Typo="Typo.h5" DataLabel="Date" > @ConvertTimeFromUtc(@context.Chrono).ToString("s")</MudTd>
+      </RowTemplate>
+    </MudTable>
+  }
+  </MudPaper>
+</MudContainer>
+
+@code {
+  [Parameter]
+  public string site { get; set; } = "";
+  [Parameter]
+  public string conveyor { get; set; } = "";
+
+  protected IEnumerable<Scan>? scans;
+
+  protected Func<DateTime,DateTime>? ConvertTimeFromUtc;
+
+  
+
+  protected override async Task OnInitializedAsync()
+  {
+    var timezone = backend.GetConveyor(site, conveyor)?.Timezone ?? TimeZoneInfo.Utc;
+    ConvertTimeFromUtc = t => TimeZoneInfo.ConvertTimeFromUtc(t,timezone);
+    scans = backend.GetScans(site, conveyor);
+  }
+
+}

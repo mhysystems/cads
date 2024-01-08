@@ -105,7 +105,6 @@
       Dispatcher?.Dispatch(action);
       savedZDepthParams = await Task.Run(() => backend.GetSavedZDepthParams(scan) ?? new List<SavedZDepthParams>());
     }
-
   }
 
   protected override async Task OnAfterRenderAsync(bool firstRender)

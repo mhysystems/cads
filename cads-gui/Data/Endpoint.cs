@@ -23,6 +23,21 @@ namespace cads_gui.Data
       beltservice = helper;
     }
 
+    [Route("/api/files/{filePath}")]
+    [HttpGet]
+    public IActionResult GetFile(string filePath)
+    {
+      var filename = Path.GetFileName(filePath);
+      var scanpath = Path.GetFullPath(Path.Combine(beltservice.config.DBPath,filename));
+      FileStream destination = new FileStream(scanpath,FileMode.Open, FileAccess.Read);
+      return new FileStreamResult(destination, "application/octet-stream")
+      {
+          FileDownloadName = filename,
+          EnableRangeProcessing = true  // this enable the resume abality
+      };
+    }
+
+
     // localhost:5000/Endpoint
     [Route("/api/belt/{belt}/{y:double}/{len:long}/{left:long?}")]
     [HttpGet]

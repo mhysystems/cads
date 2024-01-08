@@ -36,6 +36,7 @@
     <MudNavLink DisableRipple=true Icon="@Icons.Material.Filled.AccessAlarm">Alarm</MudNavLink>
     <MudNavLink Href=@($"/site/prediction/{site}/{conveyor}") DisableRipple=true Icon="@Icons.Material.Filled.OnlinePrediction">Prediction</MudNavLink>
     <MudNavLink Href=@($"/site/trend/{site}/{conveyor}") DisableRipple=true Icon="@Icons.Material.Filled.TrendingUp">Trend</MudNavLink>
+    <MudNavLink Href=@($"/site/files/{site}/{conveyor}") DisableRipple=true Icon="@Icons.Material.Filled.FileDownload">Download</MudNavLink>
     <MudNavLink DisableRipple=true Icon="@Icons.Material.Filled.Settings">Settings</MudNavLink>
   </MudNavMenu>
 </MudDrawer>
@@ -63,6 +64,4 @@
       logo = "https://cadswebsite.blob.core.windows.net/wwwroot/miniow.png";
     }
   }
-
-
 }
