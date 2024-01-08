@@ -293,14 +293,14 @@ namespace cads
       return errors::ErrCode (__FILE__,__func__,__LINE__,1);
     }else if(part.contains(ProfileSection::Left) && !part.contains(ProfileSection::Right))
     {
-      if(distance(part.at(ProfileSection::Left)) > 100) {
+      if(distance(part.at(ProfileSection::Left)) > 50) {
         return errors::ErrCode ();
       }else {
         return errors::ErrCode (__FILE__,__func__,__LINE__,1);
       }
     }else if(part.contains(ProfileSection::Right) && !part.contains(ProfileSection::Left))
     {
-      if(distance(part.at(ProfileSection::Right)) > 100) {
+      if(distance(part.at(ProfileSection::Right)) > 50) {
         return errors::ErrCode ();
       }else {
         return errors::ErrCode (__FILE__,__func__,__LINE__,1);
