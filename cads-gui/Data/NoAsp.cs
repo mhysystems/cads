@@ -38,25 +38,6 @@ namespace cads_gui.Data
       return j.ToArray();
     }
 
-    static R DBReadQuerySingle<R>(string name, Func<SqliteCommand, SqliteCommand> cmdBuild, Func<SqliteDataReader, R> rows)
-    {
-      using var connection = new SqliteConnection("" +
-          new SqliteConnectionStringBuilder
-          {
-            Mode = SqliteOpenMode.ReadOnly,
-            DataSource = name
-          });
-
-      connection.Open();
-
-      var command = cmdBuild(connection.CreateCommand());
-
-      using var reader = command.ExecuteReader();
-      reader.Read();
-      return rows(reader);
-
-    }
-
     public static async Task<List<Profile>> RetrieveFrameModular(string db, double y_min, long len, long left)
     {
 
@@ -112,11 +93,7 @@ namespace cads_gui.Data
       while (reader.Read())
       {
         var y = reader.GetDouble(0);
-        var z =  ZEncoding switch 
-        {
-          1 => ZbitUnpacking((byte[])reader[1],(float)zResolution),
-          _ => ConvertBytesToFloats((byte[])reader[1])
-        };
+        var z = SelectZDecoder((int)ZEncoding)((byte[])reader[1],(float)zResolution);
 
         if (len >= 0)
         {
@@ -144,20 +121,18 @@ namespace cads_gui.Data
     public static int[] UnpackZBits(byte[] z) 
     {
       ReadOnlySpan<byte> zPtr = new(z);
-      var header = MemoryMarshal.Cast<byte, int>(zPtr);
-      var length = header[0];
-      var bits = header[1];
-      var min = header[2];
+      var packedZs = MemoryMarshal.Cast<byte, int>(zPtr);
+      var length = packedZs[0];
+      var bits = packedZs[1];
+      var min = packedZs[2];
       int mask = (1 << bits) - 1 ;
 
       int[] Z = new int[length];
       
-      Z[0] = header[3];
-
-      var packedZs = MemoryMarshal.Cast<byte, int>(zPtr.Slice(sizeof(int)*4));
+      Z[0] = packedZs[3];
 
       int indexZ = 1;
-      int packedIndex = 0;
+      int packedIndex = 4;
 
       int l = 0;
       int r = 0;
@@ -169,13 +144,13 @@ namespace cads_gui.Data
       {
 
         Z[indexZ] |= (int)(((uint)packedZs[packedIndex]  << l ) >>> r) & mask ;
-        
+
         i += bits;
         Z[indexZ] += min*System.Convert.ToInt32(i <= maxBits);
         indexZ += System.Convert.ToInt32(i <= maxBits);
         packedIndex += System.Convert.ToInt32(i >= maxBits);
         l = (maxBits - i + bits)*System.Convert.ToInt32(i > maxBits);
-        r = i*System.Convert.ToInt32(i <= maxBits);
+        r = i*System.Convert.ToInt32(i < maxBits);
         i = i - maxBits*System.Convert.ToInt32(i >= maxBits) - bits*System.Convert.ToInt32(l > 0);
 
       }
@@ -226,64 +201,36 @@ namespace cads_gui.Data
         return (true, 0.0f);
       }
 
-      using var connection = new SqliteConnection("" +
-        new SqliteConnectionStringBuilder
-        {
-          Mode = SqliteOpenMode.ReadOnly,
-          DataSource = db,
-        });
-
-      if (connection is null)
+      SqliteCommand CmdEncoding(SqliteCommand cmd)
       {
-        return (true, 0.0f);
+        var query = $"select ZEncoding, ZResolution, Belt.Length / (max(Profiles.rowid)+1) from Meta join Gocator join Belt join Profiles limit 1";
+        cmd.CommandText = query;
+        return cmd;
       }
 
-      connection.Open();
-
-      var command = connection.CreateCommand();
-
-      if (command is null)
+      (Int32,float,double) ReadEncoding(SqliteDataReader reader)
       {
-        return (true, 0.0f);
+        return (reader.GetInt32(0),reader.GetFloat(1),reader.GetDouble(2));
+      }
+      
+      var (ZEncoding,ZResolution,yRes) = DBReadQuerySingle(db, CmdEncoding, ReadEncoding);
+      
+      
+      SqliteCommand CmdBuilder(SqliteCommand cmd)
+      {
+        var query = $"select Z from Profiles where rowid = @rowid";
+        cmd.CommandText = query;
+        cmd.Parameters.AddWithValue("@rowid", (int)(y / yRes));
+        return cmd;
       }
 
-      command.CommandText = $"select Y from Profiles where Y > 0 limit 1";
-
-      using var reader = command.ExecuteReader(CommandBehavior.SingleRow);
-      var y_res = 0.0;
-
-      if (reader.Read())
+      float[] Read(SqliteDataReader reader)
       {
-        y_res = reader.GetDouble(0);
+        return SelectZDecoder(ZEncoding)((byte[])reader[0],ZResolution);
       }
-      else
-      {
-        return (true, 0.0f);
-      }
-      reader.Close();
-
-      command.CommandText = $"select Z from Profiles where rowid = @rowid";
-      command.Parameters.AddWithValue("@rowid", (int)(y / y_res));
-
-      using var reader2 = command.ExecuteReader(CommandBehavior.SingleRow);
-
-      if (reader2 is null)
-      {
-        return (true, 0.0f);
-      }
-
-      if (reader2.Read())
-      {
-
-        byte[] z = (byte[])reader2[0];
-        var j = Convert(z);
-        var r = j[x];
-        return (false, r);
-      }
-      else
-      {
-        return (true, 0.0f);
-      }
+      
+      var z = DBReadQuerySingle(db, CmdBuilder, Read);
+      return (false,z[x % z.Length]);
 
     }
     public static async IAsyncEnumerable<R> DBReadQuery<R>(string name, Func<SqliteCommand, SqliteCommand> cmdBuild, Func<SqliteDataReader, R> rows, [EnumeratorCancellation] CancellationToken stop = default)
@@ -300,15 +247,31 @@ namespace cads_gui.Data
       var command = cmdBuild(connection.CreateCommand());
 
       using var reader = await command.ExecuteReaderAsync(stop);
-      int a = 0;
+
       while (await reader.ReadAsync(stop))
       {
-        a++;
         yield return rows(reader);
       }
     }
+    static R DBReadQuerySingle<R>(string name, Func<SqliteCommand, SqliteCommand> cmdBuild, Func<SqliteDataReader, R> rows)
+    {
+      using var connection = new SqliteConnection("" +
+          new SqliteConnectionStringBuilder
+          {
+            Mode = SqliteOpenMode.ReadOnly,
+            DataSource = name
+          });
 
-    public static async Task<R> DBReadQuerySingle<R>(string name, Func<SqliteCommand, SqliteCommand> cmdBuild, Func<SqliteDataReader, R> rows, CancellationToken stop = default)
+      connection.Open();
+
+      var command = cmdBuild(connection.CreateCommand());
+
+      using var reader = command.ExecuteReader();
+      reader.Read();
+      return rows(reader);
+
+    }
+    public static async Task<R> DBReadQuerySingleAsync<R>(string name, Func<SqliteCommand, SqliteCommand> cmdBuild, Func<SqliteDataReader, R> rows, CancellationToken stop = default)
     {
       using var connection = new SqliteConnection("" +
           new SqliteConnectionStringBuilder
@@ -329,7 +292,10 @@ namespace cads_gui.Data
 
     public static async IAsyncEnumerable<float[]> RetrieveFrameSamplesAsync(long rowid, long len, string db, [EnumeratorCancellation] CancellationToken stop = default)
     {
-
+      if (!File.Exists(db))
+      {
+        yield return Enumerable.Empty<float>().ToArray();
+      }
 
       SqliteCommand CmdEncoding(SqliteCommand cmd)
       {
@@ -343,7 +309,7 @@ namespace cads_gui.Data
         return (reader.GetInt32(0),reader.GetFloat(1));
       }
       
-      var (ZEncoding,ZResolution) = await DBReadQuerySingle(db, CmdEncoding, ReadEncoding, stop);
+      var (ZEncoding,ZResolution) = await DBReadQuerySingleAsync(db, CmdEncoding, ReadEncoding, stop);
       
       SqliteCommand CmdBuilder(SqliteCommand cmd)
       {
@@ -367,8 +333,13 @@ namespace cads_gui.Data
       }
     }
 
-    public static ScanLimits? GetScanLimits(string filePath)
+    public static ScanLimits? GetScanLimits(string db)
     {
+      if (!File.Exists(db))
+      {
+        return null;
+      }
+
       SqliteCommand CmdBuilder(SqliteCommand cmd)
       {
         var query = $"select belt.Width, belt.WidthN as WidthN, belt.Length as Length, max(Profiles.rowid)+1 as LengthN, limits.ZMin, limits.ZMax from Profiles join belt join limits limit 1";
@@ -386,7 +357,7 @@ namespace cads_gui.Data
           reader.GetDouble(5));
       }
 
-      return DBReadQuerySingle(filePath, CmdBuilder, Read);
+      return DBReadQuerySingle(db, CmdBuilder, Read);
     }
 
     public static (string site, string belt, DateTime chronos) DecontructSQliteDbName(string filename)

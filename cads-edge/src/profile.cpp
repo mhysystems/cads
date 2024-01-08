@@ -123,13 +123,16 @@ std::vector<int> zbitunpacking(const cads:: z_type bs) {
     r[c] |= ((((unsigned int)v  << l ) >> sr) & mask);
 
     i += s;
-    r[c] += min*(i <= max_bits);
-    c += (i <= max_bits);
-    bi += (i >= max_bits);
-    l = (max_bits - i + s)*(i > max_bits);
-    sr = i*(i <= max_bits);
+    const int lmax = i <= max_bits;
+    const int gmax = i >= max_bits;
 
-    i = i - max_bits*(i >= max_bits) - s*(l > 0);
+    r[c] += min*lmax;
+    c += lmax;
+    bi += gmax;
+    l = (max_bits - i + s)*(i > max_bits);
+    sr = i*lmax;
+
+    i = i - max_bits*gmax - s*(l > 0);
   }
 
   return r;

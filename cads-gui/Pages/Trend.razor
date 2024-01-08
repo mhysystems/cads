@@ -99,6 +99,7 @@
     var tasks = new List<Task<(DateTime,(bool,float))>>();
 
     var Y = GuiState?.Value.Y ?? 0;
+   
     foreach (var scan in backend.GetScans(site, conveyor)) {
       var Filepath = backend.MakeScanFilePath(scan);
       tasks.Add(Task.Run(() => (scan.Chrono,NoAsp.RetrievePoint(Filepath,Y,x_index))));
