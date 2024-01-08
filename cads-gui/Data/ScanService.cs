@@ -491,7 +491,7 @@ namespace cads_gui.Data
 
       var req = new List<ZDepth>();
 
-      var x = await Search.SearchParallelAsync(scan.Filepath, columns, rows, (int)belt.WidthN, belt.LengthN, limit, xRange, fz, fp);
+      var x = await Search.SearchParallelAsync(MakeScanFilePath(scan), columns, rows, (int)belt.WidthN, belt.LengthN, limit, xRange, fz, fp);
 
       foreach (var r in x)
       {

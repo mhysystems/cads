@@ -363,38 +363,4 @@ namespace cads
     return {p.time,p.y,p.x_off,bp};
   }
  
-  /* int compare_vector(const std::vector<int>& a, const std::vector<int>& b ){
-    
-    auto f = a.size() == b.size();
-    
-    for(int i = 0; i< a.size(); i++) {
-      auto gg = a[i] == b[i];
-      if(!gg) {
-        auto bb = gg;
-        return i;
-      }
-    }
-    return -1;
-  }
-
-   profile packzbits(profile p,double res)
-  {
-    auto zs_dc_q = quantise(p.z,(float)res) ; 
-    auto zs_dc = delta_coding(zs_dc_q) ; 
-    const auto [min,max] = std::ranges::minmax_element(zs_dc | std::views::drop(1));
-    auto l = (int)ceil(log((double)*max - (double)*min) / log(2.0));
-    auto bp = ::zbitpacking(zs_dc,l,*min);
-    auto ubp = ::zbitunpacking(bp);
-    int err = compare_vector(zs_dc,ubp);
-    if(err >= 0) {
-      ::zbitunpacking(bp);
-    }
-    auto dc = delta_decoding(ubp) ; 
-    
-    auto zs = unquantise(dc,(float)res);
-	  
-
-    return {p.time,p.y,p.x_off,zs};
-  } */
-
 } // namespace cads

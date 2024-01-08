@@ -11,6 +11,7 @@ using System.Runtime.CompilerServices;
 using SQLitePCL;
 using static SQLitePCL.raw;
 using CadsFlatbuffers;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 
 
@@ -207,7 +208,15 @@ namespace cads_gui.Data
     public static float[] ZbitUnpacking(byte[] z, float res)
     {
       return Unquantise(DeltaDecoding(UnpackZBits(z)),res);
+    }
 
+    public static Func<byte[],float,float[]> SelectZDecoder(int zEncoding)
+    {
+      return zEncoding switch 
+        {
+          1 => ZbitUnpacking,
+          _ => (b,_) => ConvertBytesToFloats(b)
+        };
     }
 
     public static (bool, float) RetrievePoint(string db, double y, long x)
@@ -321,6 +330,21 @@ namespace cads_gui.Data
     public static async IAsyncEnumerable<float[]> RetrieveFrameSamplesAsync(long rowid, long len, string db, [EnumeratorCancellation] CancellationToken stop = default)
     {
 
+
+      SqliteCommand CmdEncoding(SqliteCommand cmd)
+      {
+        var query = $"select ZEncoding, ZResolution from Meta join Gocator limit 1";
+        cmd.CommandText = query;
+        return cmd;
+      }
+
+      (Int32,float) ReadEncoding(SqliteDataReader reader)
+      {
+        return (reader.GetInt32(0),reader.GetFloat(1));
+      }
+      
+      var (ZEncoding,ZResolution) = await DBReadQuerySingle(db, CmdEncoding, ReadEncoding, stop);
+      
       SqliteCommand CmdBuilder(SqliteCommand cmd)
       {
         var query = $"select Z from Profiles where rowid >= @rowid limit @len";
@@ -332,8 +356,7 @@ namespace cads_gui.Data
 
       float[] Read(SqliteDataReader reader)
       {
-        var z = NoAsp.ConvertBytesToFloats((byte[])reader[0]);
-        return z;
+        return SelectZDecoder(ZEncoding)((byte[])reader[0],ZResolution);
       }
 
       var rows = DBReadQuery(db, CmdBuilder, Read, stop);
