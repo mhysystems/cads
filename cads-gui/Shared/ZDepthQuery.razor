@@ -17,22 +17,22 @@
   <MudItem xs="12" Class="d-flex gap-1 ">
     <MudTooltip Text="X Range Minimum">
       <MudNumericField HideSpinButtons="true" Immediate="true" Class="XMin queryInput mt-0" T="double" @bind-Value="@XMin"
-        Min="0" Max="@(scanLimits.Width / 2)" Variant="Variant.Text" Format="F0">
+        Min="0" Max="@(scanLimits?.Width ?? 0 / 2)" Variant="Variant.Text" Format="F0">
       </MudNumericField>
     </MudTooltip>
     <MudTooltip Text="X Range Maximum">
       <MudNumericField HideSpinButtons="true" Immediate="true" Class="XMax queryInput mt-0" T="double" @bind-Value="@XMax"
-        Min="@(scanLimits.Width / 2)" Max="@(scanLimits.Width)" Variant="Variant.Text" Format="F0"> 
+        Min="@(scanLimits?.Width ?? 0 / 2)" Max="@(scanLimits?.Width ?? 0)" Variant="Variant.Text" Format="F0"> 
       </MudNumericField>
     </MudTooltip>
         <MudTooltip Text="Z Range Minimum">
       <MudNumericField HideSpinButtons="true" Immediate="true" Class="ZMin queryInput mt-0" T="double" @bind-Value="@ZMin"
-        Min="scanLimits.ZMin" Max="scanLimits.ZMax" Variant="Variant.Text" Format="F1">
+        Min="scanLimits?.ZMin ?? 0" Max="scanLimits?.ZMax ?? 0" Variant="Variant.Text" Format="F1">
       </MudNumericField>
     </MudTooltip>
     <MudTooltip Text="Z Range Maximum">
       <MudNumericField HideSpinButtons="true" Immediate="true" Class="ZMax queryInput mt-0" T="double" @bind-Value="@ZMax"
-        Min="scanLimits.ZMin" Max="scanLimits.ZMax" Variant="Variant.Text" Format="F1">
+        Min="scanLimits?.ZMin ?? 0" Max="scanLimits?.ZMax ?? 0" Variant="Variant.Text" Format="F1">
       </MudNumericField>
     </MudTooltip>
   </MudItem>
@@ -40,7 +40,7 @@
 
     <MudTooltip Text="X">
       <MudNumericField HideSpinButtons="true" Immediate="true" Class="X queryInput mt-0" T="double" @bind-Value="@X"
-        Min="0" Max="scanLimits.Width" Variant="Variant.Text" Format="F0">
+        Min="0" Max="scanLimits?.Width ?? 0" Variant="Variant.Text" Format="F0">
       </MudNumericField>
     </MudTooltip>
     <MudTooltip Text="Y">
@@ -73,13 +73,13 @@
   public Scan? Scan { get; set; }
 
   public ZDepthQueryParameters SearchParameters { get { return new ZDepthQueryParameters(X, Y, ZMax, P / 100.0, XMin, XMax, ZMin); } private set { } }
-  public ScanLimits scanLimits = new(0,1,0,1,0,0);
+  public ScanLimits? scanLimits;
   protected IJSObjectReference? module;
 
   protected override void OnInitialized()
   {
     if(Scan is not null) {
-      var scanLimits = backend.GetScanLimits(Scan);
+      scanLimits = backend.GetScanLimits(Scan);
       var belt = backend.GetBelt(Scan);
 
       if(scanLimits is not null) {
@@ -89,13 +89,15 @@
         ZMin = scanLimits.ZMin + belt.CordDiameter + belt.PulleyCover;
         XMin = scanLimits.XMin;
         XMax = scanLimits.Width;
+      }else {
+        logger.LogError("Scan limits are null");
       }
     }
   }
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
-    if (firstRender && Scan is not null)
+    if (firstRender && Scan is not null && scanLimits is not null)
     {
       module = await JS.InvokeAsync<IJSObjectReference>("import", "./querybuilder.js");
       await module.InvokeVoidAsync("initThree", scanLimits.Width, backend.config.FrameLength, scanLimits.ZMax - scanLimits.ZMin);
