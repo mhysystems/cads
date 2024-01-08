@@ -392,7 +392,6 @@ msg prs_to_scan(msg m)
 
     } while (std::get<0>(m) != msgid::finished);
 
-
     spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Exiting Thread");
 
   }

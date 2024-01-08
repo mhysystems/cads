@@ -29,11 +29,32 @@
       ]
     },
     {
-			"name": "(gdb) Playback",
+			"name": "local dev",
 			"type": "cppdbg",
 			"request": "launch",
 			"program": "${workspaceFolder}/debug/cads",
 			"args": ["-l","debug","-c", "${workspaceFolder}/config.dev.json"],
+			"stopAtEntry": false,
+			"cwd": "${workspaceFolder}/debug",
+			"environment": [],
+			"externalConsole": false,
+			"MIMode": "gdb",
+			"setupCommands": [
+				{
+					"description": "Enable pretty-printing for gdb",
+					"text": "-enable-pretty-printing",
+					"ignoreFailures": true
+				}
+			],
+			"miDebuggerPath": "/usr/bin/gdb",
+      "preLaunchTask": "build"
+		},
+    {
+			"name": "jnano",
+			"type": "cppdbg",
+			"request": "launch",
+			"program": "${workspaceFolder}/debug/cads",
+			"args": ["-l","debug","-c", "${workspaceFolder}/config.mhydev.json"],
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}/debug",
 			"environment": [],
