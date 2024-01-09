@@ -166,7 +166,7 @@ namespace
 
 namespace cads
 {
-coro<remote_msg,bool> remote_control_coro()
+coro<remote_msg,bool> remote_control_coro(std::atomic<bool>& terminate)
   {
 
     using NC = std::unique_ptr<natsConnection, decltype(&natsConnection_Destroy)>;
@@ -178,7 +178,7 @@ coro<remote_msg,bool> remote_control_coro()
     auto nats_subject = fmt::format("{}Publish",constants_device.Serial);
 
 
-    for (bool terminate = false; !terminate;)
+    for (;!terminate;)
     {
       natsOptions *opts_raw = nullptr;
       auto status = natsOptions_Create(&opts_raw);
@@ -260,7 +260,7 @@ coro<remote_msg,bool> remote_control_coro()
     spdlog::get("cads")->debug(R"({{ func = '{}' msg = '{}'}})", __func__, "Entering Thread");
 
     while(!terminate) {
-    auto remote_control = remote_control_coro();
+    auto remote_control = remote_control_coro(terminate);
    
       for(;!terminate;) {
         auto [err,msg] = remote_control.resume(terminate);

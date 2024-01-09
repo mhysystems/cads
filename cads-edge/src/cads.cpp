@@ -489,10 +489,8 @@ msg prs_to_scan(msg m)
             
         // Wait for start message
         while(!terminate_signal) {
-          remote_queue.wait_dequeue(rmsg);
-          
-          if(rmsg.index() == 0) break;
-
+          if(remote_queue.wait_dequeue_timed(rmsg,std::chrono::milliseconds(500)) 
+            && rmsg.index() == 0 /* Start Msg */) break;
         }
 
         if(terminate_signal) continue;
