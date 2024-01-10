@@ -1577,16 +1577,22 @@ std::optional<cads::Belt> tobelt(lua_State *L, int index)
 
   int alignProfile(lua_State *L)
   {
-    auto out = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, -1));
-    std::function<cads::msg(cads::msg)> fn(cads::mk_align_profile());
+    auto i = tointeger(L,-2);
+    if(i) {
+      auto out = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, -1));
+      std::function<cads::msg(cads::msg)> fn(cads::mk_align_profile(*i));
 
-    new (lua_newuserdata(L, sizeof(cads::AdaptFn<cads::msg>))) cads::AdaptFn<cads::msg>(TransformMsg(fn, out));
+      new (lua_newuserdata(L, sizeof(cads::AdaptFn<cads::msg>))) cads::AdaptFn<cads::msg>(TransformMsg(fn, out));
 
-    lua_createtable(L, 0, 1);
-    lua_pushcfunction(L, Io_gc);
-    lua_setfield(L, -2, "__gc");
-    lua_setmetatable(L, -2);
+      lua_createtable(L, 0, 1);
+      lua_pushcfunction(L, Io_gc);
+      lua_setfield(L, -2, "__gc");
+      lua_setmetatable(L, -2);
+    }else {
+      lua_pushnil(L);
+    }
     return 1;
+
   }
 
   int prsToScan(lua_State *L)
@@ -1705,7 +1711,7 @@ std::optional<cads::Belt> tobelt(lua_State *L, int index)
     }
     else if (mid == cads::msgid::error)
     {
-      auto errmsg = std::get<std::string>(std::get<1>(m));
+      auto errmsg = std::get<std::shared_ptr<cads::errors::Err>>(std::get<1>(m))->str();
       lua_pushlstring(L, errmsg.c_str(), errmsg.size());
       return 3;
     }
@@ -2012,6 +2018,15 @@ std::optional<cads::Belt> tobelt(lua_State *L, int index)
     return 1;
   }
 
+  int cadsLog(lua_State *L)
+  {
+    size_t strlen = 0;
+    auto str = lua_tolstring(L, 1, &strlen);
+    std::string sub(str, strlen);
+    spdlog::get("cads")->error(sub);
+    return 0;
+  }
+
 }
 
 namespace cads
@@ -2106,6 +2121,9 @@ namespace cads
 
       lua_pushcfunction(L, ::voidMsg);
       lua_setglobal(L, "voidMsg");
+
+      lua_pushcfunction(L, ::cadsLog);
+      lua_setglobal(L, "cadsLog");
 
       return UL;
     }

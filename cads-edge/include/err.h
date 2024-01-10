@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 namespace cads
 {
@@ -16,11 +17,13 @@ namespace cads
       virtual ~Err() = default;
 
       std::shared_ptr<Err> clone() const;
+      std::string str() const;
 
       private:
       struct Impl;
       Err& operator=(const Err&) = delete;
       virtual Err* clone_impl() const;
+      virtual std::string str_impl() const;
 
       const std::shared_ptr<Impl> pImpl = nullptr;
 

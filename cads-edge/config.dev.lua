@@ -99,10 +99,6 @@ sqlitegocatorConfig = {
   }
 
 
-function timeToString(time) -- overwritten externally
-  return tostring(time)
-end
-
 function main(sendmsg)
 
   local gocator_cads = BlockingReaderWriterQueue()
@@ -110,7 +106,7 @@ function main(sendmsg)
   local origin_savedb = BlockingReaderWriterQueue()
   local savedb_luamain = BlockingReaderWriterQueue()
   
-  local align_profile = alignProfile(gocator_cads)
+  local align_profile = alignProfile(iirfilter.Skip,gocator_cads)
   local partition_profile = partitionProfile(dbscan,align_profile)
   --local laser = gocator(laserConf,partition_profile)
   local laser = sqlitegocator(sqlitegocatorConfig,partition_profile) 
@@ -139,6 +135,8 @@ function main(sendmsg)
     if is_value then
       if msg_id == 2 then break 
       elseif msg_id == 5 then break
+      elseif msg_id == 12 then
+        cadsLog(data)
       end
     end
 

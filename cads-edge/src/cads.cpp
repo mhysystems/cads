@@ -32,7 +32,9 @@ namespace
 {
   struct ProfileError : cads::errors::Err
   {
-    
+    ProfileError(const char* file, const char* func, int line) : 
+      Err(file,func,line){}
+
     ProfileError(const char* file, const char* func, int line, const Err& child) : 
       Err(file,func,line,child){}
     
@@ -65,44 +67,45 @@ msg partition_profile(msg m, Dbscan dbscan)
   return {msgid::profile_partitioned,cads::ProfilePartitioned{.partitions = std::move(partitions), .scan = std::move(profile)}}; 
 }
 
-
 std::function<msg(msg)> 
-  mk_align_profile()
+  mk_align_profile(size_t warm_up)
   {
+    auto online_mean = mk_online_mean();
+    auto mean_gradient = 0.0;
     return [=](msg m) mutable -> msg
     {
       auto id = std::get<0>(m);
       if(id == msgid::profile_partitioned)
       {
+
         auto profile_part = std::get<ProfilePartitioned>(std::get<1>(m));
-        auto status = is_alignable(profile_part.partitions);
-        if(status)
+        auto part = profile_part.partitions;
+        warm_up -= (warm_up != 0);
+
+        if(part.contains(ProfileSection::Left) && part.contains(ProfileSection::Right))
         {
-          if(profile_part.partitions.contains(ProfileSection::Left) && profile_part.partitions.contains(ProfileSection::Right)) { 
-            regression_compensate(profile_part.scan.z,linear_regression(extract_pulley_coords(profile_part.scan.z,profile_part.partitions)).gradient);
-          }else {
-            auto pulley_coords = extract_pulley_coords(profile_part.scan.z,profile_part.partitions);
-            auto pulley_size = (double)std::get<0>(pulley_coords).data.size();
-            auto pulley_gradient = linear_regression(std::move(pulley_coords)).gradient;
-            
-            auto belt_coords = extract_belt_coords(profile_part.scan.z,profile_part.partitions);
-            auto belt_size = (double)std::get<0>(belt_coords).data.size();
-            auto belt_gradient = linear_regression(std::move(belt_coords)).gradient;
+          if(warm_up != 0) mean_gradient = online_mean(linear_regression(extract_pulley_coords(profile_part.scan.z,profile_part.partitions)).gradient);
 
-            auto gradient = pulley_gradient*(pulley_size / (pulley_size + belt_size)) + belt_gradient*(belt_size / (pulley_size + belt_size));
+          regression_compensate(profile_part.scan.z,mean_gradient);
+          return {id,std::move(profile_part)};
 
-            regression_compensate(profile_part.scan.z,gradient);
-          }
-          return {id,profile_part};
+        }else if(part.contains(ProfileSection::Belt))
+        {
+          if (warm_up != 0) mean_gradient = online_mean(linear_regression(extract_belt_coords(profile_part.scan.z,profile_part.partitions)).gradient);
+
+          regression_compensate(profile_part.scan.z,mean_gradient);
+          return {id,std::move(profile_part)};
         }else {
-          return {msgid::error,::ProfileError(__FILE__,__func__,__LINE__,status).clone()}; 
+          return {msgid::error,::ProfileError(__FILE__,__func__,__LINE__).clone()}; 
         }
 
-      }else{
+      }else
+      {
         return m;
       }
     };
   }
+
 
 msg prs_to_scan(msg m)
 {
@@ -228,8 +231,6 @@ msg prs_to_scan(msg m)
 
     auto delay = mk_delay(config.IIRFilter.delay);
 
-    int64_t cnt = 0;
-
     auto dc_filter = mk_dc_filter();
     auto pulley_speed = mk_pulley_stats(config.TypicalSpeed,config.PulleyCircumference);
 
@@ -248,11 +249,8 @@ msg prs_to_scan(msg m)
       if (m_id != cads::msgid::profile_partitioned)
       {
         next.enqueue(m);
-        break;
+        continue;
       }
-
-      ++cnt;
-
       
       auto profile_partitioned = get<ProfilePartitioned>(get<1>(m));
       auto p = profile_partitioned.scan;

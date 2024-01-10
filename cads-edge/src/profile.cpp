@@ -286,30 +286,6 @@ namespace cads
     return std::get<1>(x) > std::get<0>(x) ? std::get<1>(x) - std::get<0>(x) : std::get<0>(x) - std::get<1>(x);
   }
 
-  errors::ErrCode is_alignable(const ProfilePartitions &part)
-  {
-    if(!part.contains(ProfileSection::Left) && !part.contains(ProfileSection::Right))
-    {
-      return errors::ErrCode (__FILE__,__func__,__LINE__,1);
-    }else if(part.contains(ProfileSection::Left) && !part.contains(ProfileSection::Right))
-    {
-      if(distance(part.at(ProfileSection::Left)) > 50) {
-        return errors::ErrCode ();
-      }else {
-        return errors::ErrCode (__FILE__,__func__,__LINE__,1);
-      }
-    }else if(part.contains(ProfileSection::Right) && !part.contains(ProfileSection::Left))
-    {
-      if(distance(part.at(ProfileSection::Right)) > 50) {
-        return errors::ErrCode ();
-      }else {
-        return errors::ErrCode (__FILE__,__func__,__LINE__,1);
-      }
-    }
-
-    return errors::ErrCode ();
-  }
-
   ProfilePartitions conveyor_profile_detection(const profile &profile, Dbscan config)
   {
     ProfilePartitions rtn = {};

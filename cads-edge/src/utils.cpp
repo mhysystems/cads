@@ -162,6 +162,15 @@ namespace cads
     };
   }
 
+  std::function<double(double)> mk_online_mean() {
+    auto existing_aggregate = std::make_tuple(0.0,0.0,0.0);
+
+    return [=](double new_value) mutable -> double {
+      existing_aggregate = mean_update(existing_aggregate,new_value);
+      return std::get<1>(existing_aggregate);
+    };
+  }
+
   double interquartile_mean(std::vector<float> &z) 
   {
     using namespace std::ranges;

@@ -1,6 +1,9 @@
 #include <err.h>
 #include <optional>
 
+#include <fmt/core.h>
+
+
 namespace cads 
 {
   namespace errors
@@ -21,6 +24,21 @@ namespace cads
 
     std::shared_ptr<Err> Err::clone() const {
       return std::shared_ptr<Err>(clone_impl());
+    }
+
+
+    std::string Err::str() const {
+      if(pImpl->child) {
+        return fmt::format("{{file = '{}', func = '{}', line = {}, child = {}}}",pImpl->file,pImpl->func,pImpl->line,(*(pImpl->child))->str());
+      }else {
+        return fmt::format("{{file = '{}', func = '{}', line = {}}}",pImpl->file,pImpl->func,pImpl->line);
+      }
+    }
+
+    std::string Err::str_impl() const 
+    {
+      using namespace std::literals;
+      return ""s;
     }
 
     Err* Err::clone_impl() const
