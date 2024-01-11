@@ -3,25 +3,38 @@ using Microsoft.Extensions.Options;
 
 namespace caas_gui.Data;
 
-public class PostgresDBContext : DbContext
+public class CaasDBContext : DbContext
 {
-    private readonly string _connectionString = string.Empty;   
-    public PostgresDBContext(DbContextOptions<PostgresDBContext> options, IOptions<AppSettings> config)
-        : base(options)
+  private readonly Action<DbContextOptionsBuilder> _dbSelect;
+
+  public CaasDBContext(DbContextOptions<CaasDBContext> options, IOptions<AppSettings> config)
+      : base(options)
+  {
+    _dbSelect = (DbContextOptionsBuilder optionsBuilder) =>
     {
-      _connectionString = config.Value.ConnectionString;
-    }
+      if (config.Value.DBBackend == DBBackend.Sqlite)
+      {
+        optionsBuilder.UseSqlite(config.Value.SqliteConnectionString);
+      }
+      else
+      {
+        optionsBuilder.UseNpgsql(config.Value.PostgresSqlConnectionString);
+      }
+    };
+  }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) {
-      optionsBuilder.UseNpgsql(_connectionString);
-    }
-    protected override void OnModelCreating(ModelBuilder modelBuilder) {
+  protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+  {
+    _dbSelect(optionsBuilder);
+  }
+  protected override void OnModelCreating(ModelBuilder modelBuilder)
+  {
 
-      modelBuilder.Entity<Device>().HasKey(e => e.Serial);
-      modelBuilder.Entity<Conveyor>().HasKey(e => e.Id);
+    modelBuilder.Entity<Device>().HasKey(e => e.Serial);
+    modelBuilder.Entity<Conveyor>().HasKey(e => e.Id);
 
-    }
+  }
 
-    public DbSet<Device> Devices { get; set; }
-    public DbSet<Conveyor> Conveyors { get; set; }
+  public DbSet<Device> Devices { get; set; }
+  public DbSet<Conveyor> Conveyors { get; set; }
 }

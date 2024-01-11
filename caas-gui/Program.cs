@@ -12,7 +12,7 @@ builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddSingleton<MsgPublishService>();
 builder.Services.AddHostedService<NatsConsumerHostedService>();
-builder.Services.AddDbContextFactory<PostgresDBContext>();
+builder.Services.AddDbContextFactory<CaasDBContext>();
 
 
 var app = builder.Build();

@@ -9,10 +9,18 @@ namespace caas_gui.Data;
    Aligned = 4
 }
 
+public enum DBBackend {
+  Sqlite,
+  Postgres
+}
+
 public class AppSettings
 {
   public string NatsUrl { get; set; } = "127.0.0.1";
-  public string ConnectionString { get; set; } = String.Empty;
+
+  public DBBackend DBBackend { get; set; } = DBBackend.Postgres;
+  public string PostgresSqlConnectionString { get; set; } = String.Empty;
+  public string SqliteConnectionString { get; set; } = String.Empty;
   public string UrlKey { get; set; } = String.Empty;
 
   public string AlignmentCode { get; set; } = "alignment.lua";

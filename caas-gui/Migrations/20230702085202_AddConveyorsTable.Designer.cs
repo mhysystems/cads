@@ -10,7 +10,7 @@ using caas_gui.Data;
 
 namespace caasgui.Migrations
 {
-    [DbContext(typeof(PostgresDBContext))]
+    [DbContext(typeof(CaasDBContext))]
     [Migration("20230702085202_AddConveyorsTable")]
     partial class AddConveyorsTable
     {

@@ -10,7 +10,7 @@ using caas_gui.Data;
 
 namespace caasgui.Migrations
 {
-    [DbContext(typeof(PostgresDBContext))]
+    [DbContext(typeof(CaasDBContext))]
     partial class PostgresDBContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)

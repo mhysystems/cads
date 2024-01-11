@@ -11,7 +11,7 @@ using caas_gui.Data;
 
 namespace caasgui.Migrations
 {
-    [DbContext(typeof(PostgresDBContext))]
+    [DbContext(typeof(CaasDBContext))]
     [Migration("20230806011625_RemoveMsgSubjectSuscribe")]
     partial class RemoveMsgSubjectSuscribe
     {

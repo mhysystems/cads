@@ -15,13 +15,13 @@ public class NatsConsumerHostedService : BackgroundService
   protected readonly ILogger<NatsConsumerHostedService> _logger;
   protected readonly IHubContext<MessagesHub> _messageshubContext;
   protected readonly AppSettings _config;
-  protected readonly IDbContextFactory<PostgresDBContext> _dBContext;
+  protected readonly IDbContextFactory<CaasDBContext> _dBContext;
 
   public NatsConsumerHostedService(IWebHostEnvironment env
     ,ILogger<NatsConsumerHostedService> logger
     ,IOptions<AppSettings> config
     ,IHubContext<MessagesHub> messageshubContext
-    ,IDbContextFactory<PostgresDBContext> dBContext
+    ,IDbContextFactory<CaasDBContext> dBContext
 )
   {
     _logger = logger;

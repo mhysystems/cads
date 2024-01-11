@@ -4,7 +4,7 @@ namespace caas_gui.Data;
 
 public class Db
 {
-  public static Device[] GetDevices(IDbContextFactory<PostgresDBContext> dBContext) {
+  public static Device[] GetDevices(IDbContextFactory<CaasDBContext> dBContext) {
 
     using var context = dBContext.CreateDbContext();
     var rows = context?.Devices?.AsEnumerable();
@@ -14,7 +14,7 @@ public class Db
     return rows.ToArray();
   }
 
-  public static Device? GetDevice(IDbContextFactory<PostgresDBContext> dBContext, int serial) {
+  public static Device? GetDevice(IDbContextFactory<CaasDBContext> dBContext, int serial) {
 
     using var context = dBContext.CreateDbContext();
     var rows = context?.Devices?.Where( r => r.Serial == serial);
@@ -24,7 +24,7 @@ public class Db
     return rows.First();
   }
 
-    public static void UpdateDeviceStatus(IDbContextFactory<PostgresDBContext> dBContext, Device device) {
+    public static void UpdateDeviceStatus(IDbContextFactory<CaasDBContext> dBContext, Device device) {
 
       using var context = dBContext.CreateDbContext();
 

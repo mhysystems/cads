@@ -9,9 +9,9 @@ namespace caas_gui.Data;
 
 public class MsgPublishService
 {
-  private readonly IDbContextFactory<PostgresDBContext> _dBContext;
+  private readonly IDbContextFactory<CaasDBContext> _dBContext;
   private readonly AppSettings _config;
-  public MsgPublishService(IDbContextFactory<PostgresDBContext> dBContext, IOptions<AppSettings> config)
+  public MsgPublishService(IDbContextFactory<CaasDBContext> dBContext, IOptions<AppSettings> config)
   {
     _dBContext = dBContext;
     _config = config.Value;
