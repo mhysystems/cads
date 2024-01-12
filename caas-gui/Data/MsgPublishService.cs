@@ -25,7 +25,10 @@ public class MsgPublishService
   }
 
   public Device? GetDevice(string serialCipherText) {
-    var id = SerialToInt(serialCipherText,_config.UrlKey);
+    var id = _config.Obfuscate switch {
+      true  => SerialToInt(serialCipherText,_config.UrlKey),
+      _     => Int32.Parse(serialCipherText)
+    };
     
     if(!id.HasValue) return null;
 

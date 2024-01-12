@@ -24,6 +24,7 @@ public class AppSettings
   public string UrlKey { get; set; } = String.Empty;
 
   public string AlignmentCode { get; set; } = "alignment.lua";
+  public bool Obfuscate { get; set; } = true;
 }
 
 public class Device

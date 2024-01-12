@@ -8,6 +8,8 @@ IN ~/bash_aliases
 export DOTNET_ROOT=$HOME/.dotnet
 PATH=$PATH:$HOME/.dotnet
 PATH=$PATH:$HOME/.dotnet/tools
+export GOPATH=$HOME/.local/bin/go
+PATH=$PATH:$HOME/.local/bin/go/bin
 
 
 Install nvm if on the nano otherwise whatever
@@ -19,11 +21,19 @@ nvm install 16.20.0
 From flatbuffers-typescript directory
 npm run build
 
-
-
-
 From caas-gui directory
 dotnet tool install --global dotnet-ef --version=7.0.5
+
+Install and upgrade go - needs to be at least 1.20:
+sudo apt-get install golang-1.18-go
+wget https://go.dev/dl/go1.21.6.src.tar.gz
+tar -zxvf go1.21.6.src.tar.gz
+GOROOT_BOOTSTRAP=/usr/lib/go-1.18 GOARCH=arm64 ./make.bash
+cp go ~/.local/bin
+sudo apt remove golang-1.18-go
+
+go install github.com/nats-io/nats-server/v2@latest
+
 
 
 
