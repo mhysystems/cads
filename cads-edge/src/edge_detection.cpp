@@ -89,7 +89,7 @@ namespace
       std::tie(a_cluster,cnt) = cluster1D(z,config.InClusterRadius);
 
       if( cnt > config.MinPoints) {
-        cluster_merge1D(group,a_cluster,config.MergeRadius);
+        cluster_merge1D(group,a_cluster,config.ZMergeRadius);
       }
 
       z = {end(a_cluster), end(z)};

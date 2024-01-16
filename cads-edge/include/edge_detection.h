@@ -8,7 +8,8 @@ namespace cads
   struct Dbscan {
     double InClusterRadius;
     size_t MinPoints;
-    double MergeRadius;
+    double ZMergeRadius;
+    size_t XMergeRadius;
     size_t MaxClusters;
   };
 

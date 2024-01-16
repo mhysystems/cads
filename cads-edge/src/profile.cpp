@@ -316,14 +316,24 @@ namespace cads
     {
       auto left_edge = rz.size() - std::distance(rz.cbegin(),std::end(clusters_left[1]));
       auto right_edge = rz.size() - std::distance(rz.cbegin(),std::begin(clusters_left[1]));
-      rtn.insert({ProfileSection::Left,{left_edge,right_edge}});
+      
+      auto cluster_gap = std::distance(std::end(clusters_left[0]),std::begin(clusters_left[1]));
+      
+      if(cluster_gap < config.XMergeRadius) {
+        rtn.insert({ProfileSection::Left,{left_edge,right_edge}});
+      }
     }
 
     if(clusters_left.size() > 0 && clusters_right.size() > 1 )
     {
       auto left_edge = std::distance(z.cbegin(),std::begin(clusters_right[1]));  
       auto right_edge = std::distance(z.cbegin(),std::end(clusters_right[1]));  
-      rtn.insert({ProfileSection::Right,{left_edge,right_edge}});
+      
+      auto cluster_gap = std::distance(std::end(clusters_right[0]), std::begin(clusters_right[1]));
+      
+      if(cluster_gap < config.XMergeRadius) {
+        rtn.insert({ProfileSection::Right,{left_edge,right_edge}});
+      }
     }
 
     return rtn;

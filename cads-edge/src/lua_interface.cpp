@@ -599,14 +599,37 @@ std::optional<cads::Belt> tobelt(lua_State *L, int index)
       return std::nullopt;
     }
 
-    if (lua_getfield(L, index, "MergeRadius") == LUA_TNIL)
+    if (lua_getfield(L, index, "ZMergeRadius") == LUA_TNIL)
     {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "MergeRadius");
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "ZMergeRadius");
       return std::nullopt;
     }
 
-    auto MergeRadius_opt = tonumber(L, -1);
+    auto ZMergeRadius_opt = tonumber(L, -1);
     lua_pop(L, 1);
+
+    if (!ZMergeRadius_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'ZMergeRadius not a number' }}", __func__);
+      return std::nullopt;
+    }
+
+
+
+    if (lua_getfield(L, index, "XMergeRadius") == LUA_TNIL)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "XMergeRadius");
+      return std::nullopt;
+    }
+
+    auto XMergeRadius_opt = tointeger(L, -1);
+    lua_pop(L, 1);
+
+    if (!XMergeRadius_opt)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'XMergeRadius not a integer' }}", __func__);
+      return std::nullopt;
+    }
 
     if (lua_getfield(L, index, "MaxClusters") == LUA_TNIL)
     {
@@ -629,7 +652,7 @@ std::optional<cads::Belt> tobelt(lua_State *L, int index)
       return std::nullopt;
     }
 
-    return cads::Dbscan{*InClusterRadius_opt, (size_t)*MinPoints_opt, *MergeRadius_opt, (size_t)*MaxClusters_opt};
+    return cads::Dbscan{*InClusterRadius_opt, (size_t)*MinPoints_opt, *ZMergeRadius_opt, (size_t)*XMergeRadius_opt, (size_t)*MaxClusters_opt};
   }
 
   std::optional<cads::Fiducial> tofiducial(lua_State *L, int index)
