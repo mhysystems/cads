@@ -76,8 +76,6 @@ namespace cads
     size_t size;
   };
 
-  struct ProfilePartitioned { ProfilePartitions partitions; profile scan; };
-
   struct CompleteBelt {size_t start_value; size_t length;};
   using msg = std::tuple<msgid,std::variant<
     cads::GocatorProperties,

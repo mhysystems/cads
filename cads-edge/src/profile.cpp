@@ -252,6 +252,15 @@ namespace cads
     return rtn;
   }
 
+  z_type extract_partition(const ProfilePartitioned& profile, ProfileSection section)
+  {
+    if(profile.partitions.contains(section)) {
+      return z_type(profile.scan.z.begin()+std::get<0>(profile.partitions.at(section)),profile.scan.z.begin()+std::get<1>(profile.partitions.at(section)));
+    }else {
+      return z_type();
+    }
+  }
+
   std::tuple<vector_NaN_free,vector_NaN_free> 
   extract_pulley_coords(const z_type &z, ProfilePartitions conveyor)
   {

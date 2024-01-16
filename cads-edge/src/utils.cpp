@@ -43,6 +43,7 @@ namespace cads
       case 10 : return msgid::caas_msg;
       case 11 : return msgid::measure;
       case 12 : return msgid::error;
+      case 13 : return msgid::profile_partitioned;
     }
     return msgid::error;
   }

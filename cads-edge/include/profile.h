@@ -11,8 +11,9 @@
 
 namespace cads
 {
-  enum class ProfileSection {Left,Belt,Right};
+  enum class ProfileSection {Left,Belt,Right,End};
   using ProfilePartitions = std::unordered_map<ProfileSection,std::tuple<size_t,size_t>>;
+  struct ProfilePartitioned { ProfilePartitions partitions; profile scan; };
 
   bool operator==(const profile &, const profile &);
 
@@ -30,6 +31,9 @@ namespace cads
 
   z_type profile_decimate(z_type z, size_t width);
   ProfilePartitions conveyor_profile_detection(const profile &, Dbscan config);
+
+  z_type extract_partition(const ProfilePartitioned&, ProfileSection);
+
   std::tuple<vector_NaN_free,vector_NaN_free> 
   extract_pulley_coords(const z_type &z, ProfilePartitions conveyor);
   

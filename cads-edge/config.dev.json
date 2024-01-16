@@ -28,5 +28,5 @@
     "Period_ms" : 10000
   },
 
-  "luascript" : "../config.dev.lua"
+  "luascript" : "../configs/config.pulley.lua"
 }

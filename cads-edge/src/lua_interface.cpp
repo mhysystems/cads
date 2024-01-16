@@ -1609,11 +1609,30 @@ std::optional<cads::Belt> tobelt(lua_State *L, int index)
     return 1;
   }
 
-  int scanZ(lua_State *L)
+  int extractPartition(lua_State *L)
   {
     auto out = static_cast<cads::Io<cads::z_type> *>(lua_touserdata(L, -1));
-    std::function<cads::z_type(cads::msg)> fn = [](cads::msg m)
-    { return std::get<cads::profile>(std::get<1>(m)).z; };
+    auto i_opt = tointeger(L,-2);
+
+    if(!i_opt) {
+      return 0;
+    }
+    auto i = (int)*i_opt;
+
+    if(i >= (int)cads::ProfileSection::End || i < 0) {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'Integer cannot be cast to a ProfileSection'}}", __func__);
+      return 0;
+    }
+    
+    std::function<cads::z_type(cads::msg)> fn = [i](cads::msg m)
+    { 
+      if(std::get<0>(m) == cads::msgid::profile_partitioned) {
+        return extract_partition(std::get<cads::ProfilePartitioned>(std::get<1>(m)),static_cast<cads::ProfileSection>(i)); 
+      }else {
+        return cads::z_type();
+      }
+    };
+    
     new (lua_newuserdata(L, sizeof(cads::AdaptFn<cads::msg>))) cads::AdaptFn<cads::msg>(TransformMsg(fn, out));
 
     lua_createtable(L, 0, 1);
@@ -1655,6 +1674,14 @@ std::optional<cads::Belt> tobelt(lua_State *L, int index)
 
   int teeMsg(lua_State *L)
   {
+    auto nil = lua_isnil(L,-2) + 2*lua_isnil(L,-1);
+    
+    if(nil)
+    {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'Argument is nil {}. The value is a bitmask.'}}", __func__,nil);
+      return 0;
+    }
+
     auto out0 = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, -2));
     auto out1 = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, -1));
 
@@ -2107,8 +2134,8 @@ namespace cads
       lua_pushcfunction(L, ::prsToScan);
       lua_setglobal(L, "prsToScan");
 
-      lua_pushcfunction(L, ::scanZ);
-      lua_setglobal(L, "scanZ");
+      lua_pushcfunction(L, ::extractPartition);
+      lua_setglobal(L, "extractPartition");
 
       lua_pushcfunction(L, ::filterMsgs);
       lua_setglobal(L, "filterMsgs");

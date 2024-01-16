@@ -12,20 +12,30 @@ sqlitegocatorConfig = {
 }
 
 dbscan = {
-  InClusterRadius = 2.5,
-  MinPoints = 11
+  InClusterRadius = 12,
+  MinPoints = 20,
+  MergeRadius = 10,
+  MaxClusters = 2
 }
 
 
 function main(sendmsg)
 
   local gocator_luamain = BlockingReaderWriterQueue()
-  local scan_only = teeMsg(
-    --todo
-    filterMsgs(1,pulleyValues(dbscan,-30.0,true,scanZ(fileCSV("fileL.csv")))),
-    filterMsgs(1,pulleyValues(dbscan,-30.0,false,scanZ(fileCSV("fileR.csv"))))
+
+
+
+  local toCSV = teeMsg(
+    filterMsgs(13,extractPartition(0,fileCSV("fileL.csv"))),
+    filterMsgs(13,extractPartition(2,fileCSV("fileR.csv")))
   )
-  local laser = sqlitegocator(sqlitegocatorConfig,scan_only) 
+
+  local tee = teeMsg(
+    gocator_luamain,
+    toCSV
+  )
+  local partition_profile = partitionProfile(dbscan,tee)
+  local laser = sqlitegocator(sqlitegocatorConfig,partition_profile) 
 
   laser:Start(gocatorFps)
 
@@ -34,9 +44,10 @@ function main(sendmsg)
     local is_value,msg_id,data = wait_for(gocator_luamain)
 
     if is_value then
-      if msg_id == 2 then 
-        print("finished")
-        break 
+      if msg_id == 2 then break 
+      elseif msg_id == 5 then break
+      elseif msg_id == 12 then
+        cadsLog(data)
       end
     end
 
@@ -62,3 +73,4 @@ mainco = coroutine.create(main)
 -- caas_msg = 10
 -- measure = 11
 -- error = 12
+-- profile_partitioned = 13
