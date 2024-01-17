@@ -39,11 +39,11 @@ namespace cads
     if (!m_stopped)
     {
       m_stopped = true;
-      m_thread.join();
       if(signal_finished)
       {
         m_gocatorFifo.enqueue({msgid::finished, 0});
       }
+      m_thread.join();
     }
   }
 
@@ -79,6 +79,7 @@ namespace cads
 
         if (co_terminate && !config.Forever)
         {
+          m_gocatorFifo.enqueue({msgid::finished, 0});
           m_stopped = true;
           break;
         }else if(co_terminate && config.Forever) {
@@ -111,7 +112,7 @@ namespace cads
 
       }
     } while (config.Forever && !m_stopped);
-    
+   
   }
 
 }

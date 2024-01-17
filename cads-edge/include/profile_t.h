@@ -3,6 +3,7 @@
 #include <vector>
 #include <chrono>
 #include <limits>
+#include <unordered_map>
 
 namespace cads
 {
@@ -21,6 +22,10 @@ namespace cads
 
   using zrange = std::ranges::subrange<cads::z_type::const_iterator>;
   using z_cluster = std::vector<zrange>;
+
+  enum class ProfileSection {Left,Belt,Right,End};
+  using ProfilePartitions = std::unordered_map<ProfileSection,std::tuple<size_t,size_t>>;
+  struct ProfilePartitioned { ProfilePartitions partitions; profile scan; };  
 
   const cads::profile null_profile{ std::chrono::time_point<std::chrono::system_clock>::min(),std::numeric_limits<cads::y_type>::max(), std::numeric_limits<double>::max(), {}};  
 }

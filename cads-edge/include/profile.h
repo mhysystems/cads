@@ -2,7 +2,6 @@
 
 #include <vector>
 #include <tuple>
-#include <unordered_map>
 
 #include <profile_t.h>
 #include <edge_detection.h>
@@ -11,9 +10,6 @@
 
 namespace cads
 {
-  enum class ProfileSection {Left,Belt,Right,End};
-  using ProfilePartitions = std::unordered_map<ProfileSection,std::tuple<size_t,size_t>>;
-  struct ProfilePartitioned { ProfilePartitions partitions; profile scan; };
 
   bool operator==(const profile &, const profile &);
 

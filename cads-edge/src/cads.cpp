@@ -194,6 +194,119 @@ msg prs_to_scan(msg m)
     } while (std::get<0>(m) != msgid::finished);
   }
 
+  void profile_pulley_translate(ProfileConfig config, Io<msg>& gocatorFifo, Io<msg>& next)
+  {
+    spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Entering Thread");
+
+    double z_resolution = 1.0;
+
+    cads::msg m;
+
+    gocatorFifo.wait_dequeue(m);
+    auto m_id = get<0>(m);
+
+    if (m_id != cads::msgid::gocator_properties)
+    {
+      std::throw_with_nested(std::runtime_error("preprocessing:First message must be gocator_properties"));
+    }
+    else
+    {
+      auto p = get<GocatorProperties>(get<1>(m));
+      z_resolution = p.zResolution;
+    }
+
+    next.enqueue(m);
+
+    auto iirfilter_pulley_level = mk_iirfilterSoS(config.IIRFilter.sos);
+    auto iirfilter_left_edge = mk_iirfilterSoS(config.IIRFilter.sos);
+    auto iirfilter_right_edge = mk_iirfilterSoS(config.IIRFilter.sos);
+
+    auto delay = mk_delay_partitioned(config.IIRFilter.delay);
+
+    long drop_profiles = config.IIRFilter.skip; // Allow for iir fillter too stablize
+
+    auto pulley_estimator = mk_pulleyfitter(z_resolution, config.PulleyEstimatorInit);
+
+    do
+    {
+
+      gocatorFifo.wait_dequeue(m);
+      auto m_id = get<0>(m);
+
+      if (m_id != cads::msgid::profile_partitioned)
+      {
+        next.enqueue(m);
+        continue;
+      }
+      
+      auto profile_partitioned = get<ProfilePartitioned>(get<1>(m));
+      auto p = profile_partitioned.scan;
+
+      auto pulley_level = pulley_estimator(std::get<0>(extract_pulley_coords(p.z,profile_partitioned.partitions)).data);
+
+      auto left_edge = profile_partitioned.partitions.contains(ProfileSection::Belt) ? 
+        std::get<0>(profile_partitioned.partitions[ProfileSection::Belt])
+        : size_t(0);
+      
+      auto right_edge = profile_partitioned.partitions.contains(ProfileSection::Belt) ? 
+        std::get<1>(profile_partitioned.partitions[ProfileSection::Belt])
+        : p.z.size();
+
+      auto pulley_filtered = (z_element)iirfilter_pulley_level(pulley_level);
+      auto left_edge_filtered = (z_element)iirfilter_left_edge(left_edge);
+      auto right_edge_filtered = (z_element)iirfilter_right_edge(right_edge);
+
+      // Required for iirfilter stabilisation
+      if (drop_profiles > 0)
+      {
+        --drop_profiles;
+        continue;
+      }
+
+      if(right_edge_filtered > p.z.size()) {
+        spdlog::get("cads")->error("{} > z.size()", "right_edge_filtered",right_edge_filtered);
+        right_edge_filtered = (z_element)p.z.size(); 
+      } 
+      
+      if(left_edge_filtered > p.z.size()) {
+        spdlog::get("cads")->error("{} > z.size()", "left_edge_filtered",left_edge_filtered);
+        continue;
+      } 
+
+      if(right_edge_filtered < 0) {
+        spdlog::get("cads")->error("{}({}) < 0 )", "right_edge_filtered",right_edge_filtered);
+        continue;
+      } 
+      
+      if(left_edge_filtered < 0) {
+        spdlog::get("cads")->error("{}({}) < 0 ", "left_edge_filtered",left_edge_filtered);
+        left_edge_filtered = 0; 
+      } 
+
+      if(left_edge_filtered >= right_edge_filtered )
+      {
+        spdlog::get("cads")->error("left_edge_filtered({}) >= right_edge_filtered({})", left_edge_filtered, right_edge_filtered);
+        continue;
+      }
+
+      auto [delayed, dd] = delay({std::move(profile_partitioned), (int)left_edge_filtered, (int)left_edge, (int)right_edge, (int)right_edge_filtered});
+
+      if (!delayed)
+        continue;
+
+      auto [delayed_profile, left_edge_index_avg, left_edge_index, right_edge_index, right_edge_index_avg] = dd;
+
+      pulley_level_compensate(delayed_profile.scan.z, -pulley_filtered);
+      
+      next.enqueue({msgid::profile_partitioned,std::move(delayed_profile)});
+
+    } while (std::get<0>(m) != msgid::finished);
+
+    spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Exiting Thread");
+
+  }
+
+
   void process_profile(ProfileConfig config, Io<msg>& gocatorFifo, Io<msg>& next)
   {
     spdlog::get("cads")->debug(R"({{func = '{}', msg = '{}'}})", __func__,"Entering Thread");
@@ -288,7 +401,6 @@ msg prs_to_scan(msg m)
       auto ix = p.x_off;
       auto iz = p.z;
 
-      auto gg = extract_pulley_coords(p.z,profile_partitioned.partitions);
       auto pulley_level = pulley_estimator(std::get<0>(extract_pulley_coords(p.z,profile_partitioned.partitions)).data);
 
       auto left_edge = profile_partitioned.partitions.contains(ProfileSection::Belt) ? 

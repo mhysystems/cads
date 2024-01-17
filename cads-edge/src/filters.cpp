@@ -24,6 +24,15 @@ namespace cads
     }
   }
 
+  void pulley_level_compensate(z_type &z, z_element z_off)
+  {
+
+    for (auto &e : z)
+    {
+      e += z_off;
+    }
+  }
+
   std::function<double(double)> mk_iirfilterSoS(std::vector<std::vector<double>> coeff)
   {
     auto r = coeff | std::ranges::views::join;
@@ -33,6 +42,26 @@ namespace cads
     return [=](z_element xn) mutable
     {
       return a.filter(xn);
+    };
+  }
+
+  std::function<std::tuple<bool, std::tuple<cads::ProfilePartitioned,int,int,int,int>>(std::tuple<cads::ProfilePartitioned,int,int,int,int>)> mk_delay_partitioned(size_t len)
+  {
+
+    std::deque<std::tuple<cads::ProfilePartitioned,int,int,int,int>> delay;
+    return [=](std::tuple<cads::ProfilePartitioned,int,int,int,int> p) mutable
+    {
+      delay.push_back(p);
+
+      if (delay.size() < len)
+      {
+        return std::tuple{false, std::tuple<cads::ProfilePartitioned,int,int,int,int>()};
+      }
+
+      auto rn = delay.front();
+      delay.pop_front();
+
+      return std::tuple{true, rn};
     };
   }
 

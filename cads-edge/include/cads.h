@@ -39,6 +39,8 @@ namespace cads
   void generate_signal();
   void stop_gocator();
   void process_profile(ProfileConfig, Io<msg>& gocatorFifo, Io<msg>& next);
+  void profile_pulley_translate(ProfileConfig, Io<msg>& gocatorFifo, Io<msg>& next);
+  
   void process_identity(Io<msg>& gocatorFifo, Io<msg>& next);
 
   msg prs_to_scan(msg);

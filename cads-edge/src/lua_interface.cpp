@@ -2008,6 +2008,14 @@ std::optional<cads::Belt> tobelt(lua_State *L, int index)
     return mk_thread2(L, bound);
   }
 
+  int profile_pulley_translate(lua_State *L)
+  {
+    using namespace std::placeholders;
+    auto profile_config = toprofileconfig(L, 1);
+    auto bound = std::bind(cads::profile_pulley_translate, *profile_config, _1, _2);
+    return mk_thread2(L, bound);
+  }
+
   int process_identity(lua_State *L)
   {
     return mk_thread2(L, cads::process_identity);
@@ -2126,6 +2134,9 @@ namespace cads
 
       lua_pushcfunction(L, ::process_profile);
       lua_setglobal(L, "process_profile");
+
+      lua_pushcfunction(L, ::profile_pulley_translate);
+      lua_setglobal(L, "profile_pulley_translate");
 
       lua_pushcfunction(L, ::process_identity);
       lua_setglobal(L, "process_identity");
