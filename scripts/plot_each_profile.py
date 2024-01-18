@@ -8,7 +8,8 @@ from scipy.interpolate import CubicSpline
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Plot each profile')
     parser.add_argument("db", help="Sqlite belt profiles")
-    parser.add_argument("--begin","-b", help="Begin Position", default=0)
+    parser.add_argument("--begin","-b", help="Begin Index Position", default=0)
+    parser.add_argument("--yoff","-y", help="Begin Y Position")
     parser.add_argument("--table","-l", help="Source Table", default="profile")
     parser.add_argument("--s", help="Sub NaN with", default=-15.00)
     parser.add_argument("--hist","-t", help="Histogram plot", action='store_true')
@@ -19,7 +20,10 @@ if __name__ == "__main__":
         case "transient":
             q = "select z from ErroredProfile where id like 'raw_%'"
         case _:
-            q = f"select z from profiles where rowid > {args.begin};"
+            if args.yoff:
+                q = f"select z from profiles where y > {args.yoff};"
+            else:
+                q = f"select z from profiles where rowid > {args.begin};"
 
     for z0 in pg.process_profile(args.db,q):
         if not args.hist:

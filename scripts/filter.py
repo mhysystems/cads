@@ -22,27 +22,28 @@ def dcfilter(x):
 # Change dtype depending on source. Usually int of float
 # arr is the barrel height signal, 
 # arrf is the C++ iirfilter of above.   
-arr,arrf = np.loadtxt("../cads-edge/debug/filt.txt",
-                 delimiter=",", dtype=float, unpack=True, usecols=(0,1))
+#arr,arrf = np.loadtxt("../cads-edge/debug/filt.txt",
+#                 delimiter=",", dtype=float, unpack=True, usecols=(0,1))
 
+arr = np.loadtxt("filt.txt")
 #Whaleback CV405
 #sos = signal.iirfilter(19, 4, rs=120, btype='low',analog=False, ftype='cheby2', fs=980, output='sos')
 
 #Jimblebar CV001
-#sos = signal.iirfilter(19, 3, rs=120, btype='low',analog=False, ftype='cheby2', fs=980, output='sos')
+sos = signal.iirfilter(19, 4, rs=120, btype='low',analog=False, ftype='cheby2', fs=980, output='sos')
 
 
 # Uncomment to get filter parameters 
 #print(repr(sos))
 
 # Insert delay in front using usless data.
-#plt.plot(np.append([0 for x in range(1,228)],arr))
+plt.plot(np.append([0 for x in range(1,334)],arr))
 #plt.plot(np.append([0 for x in range(1,334)],arrf))
-plt.plot(arr)
-np.savetxt("profile.txt",arr)
+#plt.plot(arr)
+#np.savetxt("profile.txt",arr)
 #plt.plot(arrf)
 
-#plt.plot(signal.sosfilt(sos,arrf))
+plt.plot(signal.sosfilt(sos,arr))
 
 
 

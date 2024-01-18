@@ -49,7 +49,7 @@ namespace
   };
 }
 
-
+#include <vec_nan_free.h>
 namespace cads
 {
   

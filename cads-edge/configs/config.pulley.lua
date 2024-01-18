@@ -22,7 +22,7 @@ sqlitegocatorConfig = {
   Fps = gocatorFps,
   Forever = false,
   --Source = "../../profiles/rawprofile_cv001_2023-08-30.db",
-  Source = "../../profiles/rawprofile_cv211_2023-11-08.db",
+  Source = "../../profiles/rawprofile_cv912.db",
   TypicalSpeed = 6.0,
   Sleep = false
 }
@@ -30,7 +30,7 @@ sqlitegocatorConfig = {
 dbscan = {
   InClusterRadius = 12,
   MinPoints = 12,
-  ZMergeRadius = 10,
+  ZMergeRadius = 5,
   XMergeRadius = 50,
   MaxClusters = 2
 }
@@ -71,8 +71,8 @@ function main(sendmsg)
 
 
   local toCSV = teeMsg(
-    filterMsgs(13,extractPartition(0,fileCSV("cv211L.csv"))),
-    filterMsgs(13,extractPartition(2,fileCSV("cv211R.csv")))
+    filterMsgs(13,extractPartition(0,fileCSV("cv912L.csv"))),
+    filterMsgs(13,extractPartition(2,fileCSV("cv912R.csv")))
   )
 
   local tee = teeMsg(
@@ -80,8 +80,10 @@ function main(sendmsg)
     toCSV
   )
 
-  local thread_profile_pulley_translate = profile_pulley_translate(profileConfigTranslate,align_pulleyTranslate,tee)
-  local align_profile = alignProfile(iirfilter.Skip,align_pulleyTranslate)
+  --local thread_profile_pulley_translate = profile_pulley_translate(profileConfigTranslate,align_pulleyTranslate,tee)
+  --local align_profile = alignProfile(iirfilter.Skip,align_pulleyTranslate)
+  
+  local align_profile = alignProfile(iirfilter.Skip,tee)
   local partition_profile = partitionProfile(dbscan,align_profile)
   local laser = sqlitegocator(sqlitegocatorConfig,partition_profile) 
 
@@ -104,7 +106,7 @@ function main(sendmsg)
 
   laser:Stop(true)
 
-  join_threads({thread_profile_pulley_translate})
+  --join_threads({thread_profile_pulley_translate})
   
 end
 

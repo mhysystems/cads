@@ -70,8 +70,10 @@ namespace
     auto& x = group.back();
     
     auto [x_params, c_params] = cluster_regression(x,c);
-    if(std::abs(x_params.intercept - c_params.intercept) < in_cluster ) {
-    //if(std::abs(*c.begin() - *(x.end()-1)) < in_cluster ) {
+    auto dd = std::distance(x.cbegin(),c.cbegin());
+    auto est = dd*x_params.gradient + x_params.intercept;
+    //if(std::abs(x_params.intercept - c_params.intercept) < in_cluster ) {
+    if(std::abs(*c.begin() - est) < in_cluster ) {
         x = {begin(x),end(c)};
       
     }else {
