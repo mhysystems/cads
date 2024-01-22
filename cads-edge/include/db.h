@@ -27,7 +27,7 @@ namespace cads
   // profile db
   // profile table
   coro<int, std::tuple<int, int, profile>, 1> store_profile_coro(std::string name = "");
-  coro<std::tuple<int, profile>> fetch_belt_coro(int revid, long last_idx, long first_idx = 0, int size = 256, std::string name = "");
+  coro<std::tuple<int, profile>> fetch_belt_coro(long last_idx, long first_idx = 0, int size = 256, std::string name = "");
   long count_with_width_n(std::string name, int revid, int width_n);
   int store_profile_parameters(GocatorProperties p, std::string name = "");
   std::tuple<cads::GocatorProperties, int> fetch_profile_parameters(std::string name = "");

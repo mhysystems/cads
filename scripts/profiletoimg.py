@@ -15,7 +15,7 @@ def process_belt(db,nan) :
     while rowcnt > 0:
         rowcnt = 0
         b = []
-        for row in cur.execute(f"SELECT z from PROFILE where revid = 0 and idx >= ? order by idx asc limit ?",(yindex,maxrows)):
+        for row in cur.execute(f"SELECT z from PROFILES where rowid >= ? order by rowid asc limit ?",(yindex,maxrows)):
             rowcnt = rowcnt + 1
             z = np.frombuffer(row[0],dtype='f')
             m = min(m,len(z))

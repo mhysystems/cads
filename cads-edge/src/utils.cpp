@@ -63,7 +63,7 @@ namespace cads
 
       if(data.size() < 1) continue;
       
-      for(auto v : data | views::drop(1)) {
+      for(auto v : data | views::take(data.size()-1)) {
         file << v << ',';
       }
 

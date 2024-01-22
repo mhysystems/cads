@@ -22,7 +22,7 @@ sqlitegocatorConfig = {
   Fps = gocatorFps,
   Forever = false,
   --Source = "../../profiles/rawprofile_cv001_2023-08-30.db",
-  Source = "../../profiles/rawprofile_cv912.db",
+  Source = "../../profiles/rawprofile_cv311_2023-11-08.db",
   TypicalSpeed = 6.0,
   Sleep = false
 }
@@ -71,8 +71,8 @@ function main(sendmsg)
 
 
   local toCSV = teeMsg(
-    filterMsgs(13,extractPartition(0,fileCSV("cv912L.csv"))),
-    filterMsgs(13,extractPartition(2,fileCSV("cv912R.csv")))
+    fileCSV("cv311L.csv",0,241.40200000000002),
+    fileCSV("cv311R.csv",2,1547.058)
   )
 
   local tee = teeMsg(

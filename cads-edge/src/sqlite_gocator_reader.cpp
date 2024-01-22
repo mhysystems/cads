@@ -69,7 +69,7 @@ namespace cads
 
     do
     {
-      auto fetch_profile = fetch_belt_coro(0,std::get<1>(config.Range), std::get<0>(config.Range), 256, data_src);
+      auto fetch_profile = fetch_belt_coro(std::get<1>(config.Range), std::get<0>(config.Range), 256, data_src);
 
       while (!m_stopped)
       {

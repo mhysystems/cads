@@ -747,12 +747,6 @@ std::optional<cads::Belt> tobelt(lua_State *L, int index)
       return std::nullopt;
     }
 
-    if (lua_getfield(L, index, "Conveyor") == LUA_TNIL)
-    {
-      spdlog::get("cads")->error("{{ func = {},  msg = '{} requires {}' }}", __func__, obj_name, "Conveyor"s);
-      return std::nullopt;
-    }
-
     auto length_opt = tofieldnumber(L, index, obj_name, "length"s);
 
     if (!length_opt)
@@ -767,7 +761,7 @@ std::optional<cads::Belt> tobelt(lua_State *L, int index)
       return std::nullopt;
     }
 
-    auto width_n_opt = tofieldnumber(L, index, obj_name, "width_n_res"s);
+    auto width_n_opt = tofieldnumber(L, index, obj_name, "width_n"s);
 
     if (!width_n_opt)
     {
@@ -1647,10 +1641,14 @@ std::optional<cads::Belt> tobelt(lua_State *L, int index)
       return 0;
     }
     
-    std::function<cads::z_type(cads::msg)> fn = [i](cads::msg m)
+    double x_res = 1.0;
+    std::function<cads::z_type(cads::msg)> fn = [x_res,i](cads::msg m) mutable
     { 
       if(std::get<0>(m) == cads::msgid::profile_partitioned) {
         return extract_partition(std::get<cads::ProfilePartitioned>(std::get<1>(m)),static_cast<cads::ProfileSection>(i)); 
+      }else if(std::get<0>(m) == cads::msgid::gocator_properties){
+        x_res = std::get<cads::GocatorProperties>(std::get<1>(m)).xResolution;
+        return cads::z_type();
       }else {
         return cads::z_type();
       }
@@ -1668,10 +1666,19 @@ std::optional<cads::Belt> tobelt(lua_State *L, int index)
   int fileCSV(lua_State *L)
   {
     auto filename = tostring(L, 1);
+    auto i_opt = tointeger(L, 2);
+    auto x_min = tonumber(L, 3);
 
-    using user_type = cads::Adapt<cads::z_type, decltype(cads::file_csv_coro(*filename))>;
+    auto i = (int)*i_opt;
 
-    new (lua_newuserdata(L, sizeof(user_type))) user_type(cads::file_csv_coro(*filename));
+    if(i >= (int)cads::ProfileSection::End || i < 0) {
+      spdlog::get("cads")->error("{{ func = {},  msg = 'Integer cannot be cast to a ProfileSection'}}", __func__);
+      return 0;
+    }
+
+    using user_type = cads::Adapt<cads::msg, decltype(cads::file_csv_coro2(*filename,static_cast<cads::ProfileSection>(i),*x_min))>;
+
+    new (lua_newuserdata(L, sizeof(user_type))) user_type(cads::file_csv_coro2(*filename,static_cast<cads::ProfileSection>(i),*x_min));
 
     lua_createtable(L, 0, 1);
     lua_pushcfunction(L, Io_gc);

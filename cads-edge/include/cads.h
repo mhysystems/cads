@@ -60,6 +60,7 @@ namespace cads
   */
 
   cads::coro<cads::msg,cads::msg,1> profile_decimation_coro(long long, long long, cads::Io<msg> &next);
+  coro<cads::msg,cads::msg,1> file_csv_coro2(std::string filename, ProfileSection section, double x_min);
 
   std::function<msg(msg)> mk_align_profile(size_t);
   msg partition_profile(msg m, Dbscan dbscan);

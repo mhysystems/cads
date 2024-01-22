@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <unordered_map>
 #include <expected>
+#include <fstream>
 
 #include <spdlog/spdlog.h>
 #include <lua_script.h>
@@ -106,6 +107,74 @@ std::function<msg(msg)>
     };
   }
 
+  coro<cads::msg,cads::msg,1> file_csv_coro2(std::string filename, ProfileSection section, double x_min) {
+    
+    using namespace std::ranges;
+
+    std::ofstream file(filename);
+
+    double x_res = 1;
+    msg m;
+    bool terminate;
+    double scan_x_min = std::numeric_limits<double>::max();
+    size_t line = 1;
+
+    while(true) {
+      std::tie(m,terminate) = co_yield m;
+      
+      if(terminate) break;
+      
+      auto [msg_id, var] = m;
+
+      if(msg_id == cads::msgid::gocator_properties) {
+        x_res = std::get<cads::GocatorProperties>(var).xResolution;
+        continue;
+      }
+
+      if(msg_id != cads::msgid::profile_partitioned) {
+        continue;
+      }
+
+      auto pp = std::get<cads::ProfilePartitioned>(var);
+
+      if(pp.partitions.contains(section))
+      {
+        auto [left,right] = pp.partitions.at(section);
+        const auto left_distance = left * x_res + pp.scan.x_off;
+        
+        if(left_distance > x_min) {
+          const auto left_new = (x_min - pp.scan.x_off) / x_res;
+          std::fill(pp.scan.z.begin()+left_new, pp.scan.z.begin()+left, std::numeric_limits<z_element>::quiet_NaN());
+          left = left_new;
+        }
+
+        auto data = z_type(pp.scan.z.begin()+left,pp.scan.z.begin()+right);
+        if(data.size() < 1) continue;
+        
+        for(auto v : data | views::take(data.size()-1)) {
+          file << v << ',';
+        }
+
+        file << data.back() << '\n';
+        file.flush();
+
+        if(left_distance < scan_x_min) {
+          scan_x_min = left_distance;
+           spdlog::get("cads")->debug(R"({{where = '{}',  msg = '{}, line:{} partition minimum X:{}'}})", 
+            __func__,
+            filename,
+            line,
+            scan_x_min);
+
+        }
+
+        line++;
+      }
+    }
+
+    co_return m;
+
+  }
 
 msg prs_to_scan(msg m)
 {
@@ -422,12 +491,19 @@ msg prs_to_scan(msg m)
         continue;
       }
 
-      if(right_edge_filtered > iz.size()) {
-        spdlog::get("cads")->error("{} > z.size()", "right_edge_filtered",right_edge_filtered);
+      
+      if((size_t)right_edge_filtered > iz.size()) {
+        
+        // right_edge_filtered will sometimes stablise just above iz.size(). If for example there is no right pulley visible.
+        // Not really worth reporting as it can fill the logs
+        if((size_t)right_edge_filtered-6 > iz.size()) {
+          spdlog::get("cads")->error("{} > z.size()", "right_edge_filtered",right_edge_filtered);
+        }
+        
         right_edge_filtered = (z_element)iz.size(); 
       } 
       
-      if(left_edge_filtered > iz.size()) {
+      if((size_t)left_edge_filtered > iz.size()) {
         spdlog::get("cads")->error("{} > z.size()", "left_edge_filtered",left_edge_filtered);
         continue;
       } 
@@ -468,7 +544,7 @@ msg prs_to_scan(msg m)
       PulleyRevolution ps;
       if (config.RevolutionSensor.source == RevolutionSensorConfig::Source::height_raw)
       {
-        ps = pulley_rev(pulley_filtered);
+        ps = pulley_rev(pulley_level);
       }
       else if(config.RevolutionSensor.source == RevolutionSensorConfig::Source::length) 
       {

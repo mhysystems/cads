@@ -777,10 +777,10 @@ namespace cads
   }
   
 
-  coro<std::tuple<int, profile>> fetch_belt_coro(int revid, long last_idx, long first_index, int size, std::string name)
+  coro<std::tuple<int, profile>> fetch_belt_coro(long last_idx, long first_index, int size, std::string name)
   {
     //auto query = fmt::format(R"(SELECT idx,y,x_off,z FROM PROFILE WHERE REVID = {} AND IDX >= ? AND IDX < ?)", revid);
-    auto query = fmt::format(R"(SELECT rowid - 1,y,x,z FROM Profiles WHERE rowid >= ? + 1 AND rowid < ? + 1)", revid);
+    auto query = fmt::format(R"(SELECT rowid - 1,y,x,z FROM Profiles WHERE rowid >= ? + 1 AND rowid < ? + 1)");
     auto db_config_name = name.empty() ? database_names.profile_db_name : name;
     auto [stmt,db] = prepare_query(db_config_name, query);
 
