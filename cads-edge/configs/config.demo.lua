@@ -18,34 +18,30 @@ iirfilter = {
 }
 
 conveyor = {
-  Id = 1,
   Org  = "MHY",
   Site = "site1",
   Name = "belt1",
   Timezone = "Australia/Perth",
   PulleyCircumference = 4197.696,
-  TypicalSpeed = 6.09,
-  Belt = 1,
-  Length = 12565200,
-  WidthN = 1890
+  TypicalSpeed = 6.09
 }
 
 belt = {
-  Id = 1,
-  Installed = "2023-01-14T00:00:00Z",
+  Serial = "MHYDemo",
   PulleyCover = 7.0,
   CordDiameter = 9.1,
   TopCover = 14.0,
   Width = 1600,
-  Length = 12565200,
-  LengthN = conveyor.TypicalSpeed / gocatorFps, 
-  Splices = 1,
-  Conveyor = 1
+  Length = 12565200.0,
+  WidthN = 1890
 }
 
 dbscan = {
   InClusterRadius = 12,
-  MinPoints = 11
+  MinPoints = 11,
+  ZMergeRadius = 10,
+  XMergeRadius = 50,
+  MaxClusters = 2
 }
 
 revolutionsensor = {
@@ -67,15 +63,14 @@ sqlitegocatorConfig = {
   Forever = true,
   Source = "../../profiles/rawprofile_cv001_2023-08-30.db",
   TypicalSpeed = conveyor.TypicalSpeed,
-  Sleep = true
+  Sleep = false --true
 }
 
 
 
 laserConf = {
   Trim = true,
-  TypicalResolution = y_res_mm,
-  Fov = 250.0 --mm
+  TypicalResolution = y_res_mm
 }
 
 anomaly = {
@@ -95,21 +90,34 @@ profileConfig = {
   Width = belt.Width,
   NaNPercentage = 0.15,
   ClipHeight = 35.0,
+  ClampToZeroHeight = 10.0,
   PulleyEstimatorInit = -15.0,
+  PulleyCircumference = conveyor.PulleyCircumference,
+  TypicalSpeed = conveyor.TypicalSpeed,
+  WidthN = belt.WidthN,
   IIRFilter = iirfilter,
-  PulleySamplesExtend = 10,
   RevolutionSensor = revolutionsensor,
-  Conveyor = conveyor,
-  Dbscan = dbscan,
   Measures = measures
 }
 
 dynamicProcessingConfig = {
-  WidthN = conveyor.WidthN,
+  WidthN = belt.WidthN,
   WindowSize = 2,
   InitValue = 30.0,
   LuaCode = LuaCodeSelfRef,
   Entry = "process"  
+}
+
+scanMeta = {
+  Version = 0,
+  ZEncoding = 1
+}
+
+scanstorageConfig = {
+  Conveyor = conveyor,
+  Belt = belt,
+  ScanMeta = scanMeta,
+  RegisterUpload = true
 }
 
 fiducialOriginConfig = {
@@ -123,7 +131,9 @@ fiducialOriginConfig = {
     FiducialGap = 40,
     EdgeHeight = 30.1
   },
-  Conveyor = conveyor
+  length = belt.Length,
+  avg_y_res = y_res_mm,
+  width_n = belt.WidthN
 }
 
 function process(width,height)
@@ -225,8 +235,11 @@ function main(sendmsg)
     local origin_dynamic = BlockingReaderWriterQueue()
     local dynamic_savedb = BlockingReaderWriterQueue()
     local luamain = BlockingReaderWriterQueue()
-    --local laser = sqlitegocator(sqlitegocatorConfig,decimate) 
-    local laser = sqlitegocator(sqlitegocatorConfig,gocator_cads) 
+    --local laser = sqlitegocator(sqlitegocatorConfig,decimate)
+
+    local align_profile = alignProfile(iirfilter.Skip,gocator_cads)
+    local partition_profile = partitionProfile(dbscan,align_profile)
+    local laser = sqlitegocator(sqlitegocatorConfig,partition_profile) 
 
     if laser == nil then
       return
@@ -238,9 +251,10 @@ function main(sendmsg)
     --local thread_origin = loop_beltlength_thread(conveyor,cads_origin,origin_dynamic)
     local thread_origin = fiducial_origin_thread(fiducialOriginConfig,cads_origin,origin_dynamic)
     local thread_dynamic = dynamic_processing_thread(dynamicProcessingConfig,origin_dynamic,dynamic_savedb)
-    local thread_send_save = save_send_thread(conveyor,dynamic_savedb,luamain)
-
+    local thread_send_save = save_send_thread(scanstorageConfig,dynamic_savedb,luamain)
+    
     laser:Start(gocatorFps)
+
 
     repeat
       local is_value,msg_id,data = wait_for(luamain)
@@ -250,6 +264,8 @@ function main(sendmsg)
           run = false
           break 
         elseif msg_id == 7 then break
+        elseif msg_id == 12 then
+          cadsLog(data)
         elseif msg_id == 11 then
           send(sendmsg,measurements,table.unpack(data))
         end
