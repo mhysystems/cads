@@ -27,7 +27,7 @@
 
       <MudTooltip Placement="Placement.End"
         Text="The circle represents the entire belt. Damage locations that match the search criteria are indicated in white. Clicking on the circle triggers the plot to jump to that location. If too many damage locations are found they are limited">
-        <DoughnutPlot @ref="doughnutPlot" Style="display:contents" Length="@scanLimits.Length" Y="@UpdateYAsync" />
+        <DoughnutPlot @ref="doughnutPlot" Style="display:contents" Circumference="@scanLimits.Length" Y="@UpdateYAsync" />
       </MudTooltip>
       <MudContainer Class="d-flex flex-column ">
         <ZDepthQuery @ref="zDepthQuery" Scan="@scan"></ZDepthQuery>
