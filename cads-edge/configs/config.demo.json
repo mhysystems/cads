@@ -28,5 +28,5 @@
     "Period_ms" : 10000
   },
 
-  "luascript" : "../configs/config.demo2.lua"
+  "luascript" : "../configs/config.demo.lua"
 }
