@@ -100,7 +100,7 @@ namespace cads
         }else{
           auto sleep = current_time + pulley_period - std::chrono::high_resolution_clock::now();
           std::this_thread::sleep_for(sleep);
-          current_time = std::chrono::high_resolution_clock::now();
+          current_time += pulley_period;
         }
         cnt++;
                      
