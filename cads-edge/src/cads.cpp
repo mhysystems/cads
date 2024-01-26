@@ -176,17 +176,29 @@ std::function<msg(msg)>
 
   }
 
-msg prs_to_scan(msg m)
-{
-  auto id = std::get<0>(m);
-  if(id == msgid::pulley_revolution_scan)
+  msg prs_to_scan(msg m)
   {
-    auto prs = std::get<PulleyRevolutionScan>(std::get<1>(m));
-    return {msgid::scan,std::get<2>(prs)};
-  }else{
-    return m;
+    auto id = std::get<0>(m);
+    if(id == msgid::pulley_revolution_scan)
+    {
+      auto prs = std::get<PulleyRevolutionScan>(std::get<1>(m));
+      return {msgid::scan,std::get<2>(prs)};
+    }else{
+      return m;
+    }
   }
-}
+
+  msg profilePartion_to_scan(msg m)
+  {
+    auto id = std::get<0>(m);
+    if(id == msgid::profile_partitioned)
+    {
+      auto prs = std::get<ProfilePartitioned>(std::get<1>(m));
+      return {msgid::scan,prs.scan};
+    }else{
+      return m;
+    }
+  }
 
   coro<cads::msg,cads::msg,1> profile_decimation_coro(long long widthn, long long modulo, cads::Io<msg> &next)
   {

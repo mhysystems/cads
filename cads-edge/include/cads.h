@@ -44,6 +44,7 @@ namespace cads
   void process_identity(Io<msg>& gocatorFifo, Io<msg>& next);
 
   msg prs_to_scan(msg);
+  msg profilePartion_to_scan(msg m);
   std::tuple<std::string,std::string,std::string> caasMsg(std::string sub,std::string head, std::string data);
 
 

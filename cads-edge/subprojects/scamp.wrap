@@ -5,3 +5,4 @@ depth=1
 
 [provide]
 scamp = scamp_dep
+scam_lib = scamplib

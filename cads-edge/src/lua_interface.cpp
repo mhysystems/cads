@@ -1626,6 +1626,20 @@ std::optional<cads::Belt> tobelt(lua_State *L, int index)
     return 1;
   }
 
+  int profilePartionToScan(lua_State *L)
+  {
+    auto out = static_cast<cads::Io<cads::msg> *>(lua_touserdata(L, -1));
+    std::function<cads::msg(cads::msg)> fn(cads::profilePartion_to_scan);
+
+    new (lua_newuserdata(L, sizeof(cads::AdaptFn<cads::msg>))) cads::AdaptFn<cads::msg>(TransformMsg(fn, out));
+
+    lua_createtable(L, 0, 1);
+    lua_pushcfunction(L, Io_gc);
+    lua_setfield(L, -2, "__gc");
+    lua_setmetatable(L, -2);
+    return 1;
+  }
+
   int extractPartition(lua_State *L)
   {
     auto out = static_cast<cads::Io<cads::z_type> *>(lua_touserdata(L, -1));
@@ -2174,6 +2188,9 @@ namespace cads
       
       lua_pushcfunction(L, ::prsToScan);
       lua_setglobal(L, "prsToScan");
+
+      lua_pushcfunction(L, ::profilePartionToScan);
+      lua_setglobal(L, "profilePartionToScan");
 
       lua_pushcfunction(L, ::extractPartition);
       lua_setglobal(L, "extractPartition");
