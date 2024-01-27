@@ -575,7 +575,7 @@ coro<remote_msg,bool> remote_control_coro(std::atomic<bool>& terminate)
 
     auto scan_limits = fetch_scan_limits(db_name);
     
-    if (scan_limits.error())
+    if (!scan_limits)
     {
       spdlog::get("cads")->info("{} fetch_scan_limits failed - {}", __func__, db_name);
       return {scan,true};
@@ -583,7 +583,7 @@ coro<remote_msg,bool> remote_control_coro(std::atomic<bool>& terminate)
   
     auto scan_meta = fetch_scan_meta(db_name);
     
-    if (scan_meta.error())
+    if (!scan_meta)
     {
       spdlog::get("cads")->info("{} fetch_scan_limits failed - {}", __func__, db_name);
       return {scan,true};
