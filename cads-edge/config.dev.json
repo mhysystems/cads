@@ -6,8 +6,7 @@
   "upload" : {
     "Period" : 5,
     "webapi" : {
-      "add_meta" : ["https://dev.noxmlhere.com/api/meta",false],
-      "add_belt" : ["http://localhost:5000/api/scan",false]
+      "add_scan" : ["http://localhost:5000/api/scan",false]
     }
   },
 

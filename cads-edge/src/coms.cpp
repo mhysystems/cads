@@ -555,7 +555,7 @@ coro<remote_msg,bool> remote_control_coro(std::atomic<bool>& terminate)
     } 
     
 
-    auto do_upload = std::get<1>(urls.add_belt);
+    auto do_upload = std::get<1>(urls.add_scan);
     auto [conveyor, conveyor_err] = fetch_scan_conveyor(db_name);
 
     if (conveyor_err < 0)
@@ -564,7 +564,7 @@ coro<remote_msg,bool> remote_control_coro(std::atomic<bool>& terminate)
       return {scan,true};
     }
 
-    auto url = mk_post_profile_url(scan.scanned_utc,conveyor.Site,conveyor.Name, std::get<0>(urls.add_belt));
+    auto url = mk_post_profile_url(scan.scanned_utc,conveyor.Site,conveyor.Name, std::get<0>(urls.add_scan));
     auto [belt, belt_err] = fetch_scan_belt(db_name);
     
     if (belt_err < 0)

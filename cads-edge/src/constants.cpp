@@ -34,10 +34,9 @@ namespace {
 
   auto mk_webapi_urls(nlohmann::json config) {
     
-    auto add_meta = config["add_meta"].get<cads::webapi_urls::value_type>();
-    auto add_belt = config["add_belt"].get<cads::webapi_urls::value_type>();
+    auto add_scan = config["add_scan"].get<cads::webapi_urls::value_type>();
 
-    return cads::webapi_urls{add_meta,add_belt};
+    return cads::webapi_urls{add_scan};
 
   }
 
