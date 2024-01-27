@@ -58,9 +58,10 @@ namespace cads
     using namespace std::chrono_literals;
 
     auto data_src = config.Source.generic_string();
-    auto [params, err2] = fetch_profile_parameters(data_src);
+    //auto [params, err2] = fetch_profile_parameters(data_src);
+    auto gocator = fetch_scan_gocator(data_src);
 
-    m_gocatorFifo.enqueue({msgid::gocator_properties, params});
+    m_gocatorFifo.enqueue({msgid::gocator_properties, *gocator});
 
     double y_resolution = 1000 * config.TypicalSpeed / config.Fps;
     auto pulley_period = 1000000us / (int)config.Fps;

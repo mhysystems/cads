@@ -734,7 +734,7 @@ namespace cads
   }
 
 
-  std::tuple<std::deque<std::tuple<int, profile>>, sqlite3_stmt_t> fetch_belt_coro_step(sqlite3_stmt_t stmt, int idx_begin, int idx_end)
+  std::tuple<std::deque<std::tuple<int, profile>>, sqlite3_stmt_t> fetch_belt_coro_step(sqlite3_stmt_t stmt, int idx_begin, int idx_end, ScanMeta scan_meta, double z_res)
   {
 
     std::deque<std::tuple<int, profile>> rtn;
@@ -758,7 +758,13 @@ namespace cads
         z_element *z = (z_element *)sqlite3_column_blob(stmt.get(), 3); // Freed on next call to sqlite3_step
         int len = sqlite3_column_bytes(stmt.get(), 3) / sizeof(*z);
 
-        rtn.push_back({idx, {std::chrono::high_resolution_clock::now(),y, x_off, {z, z + len}}}); //FIXME
+        if(scan_meta.ZEncoding == 1) {
+          rtn.push_back({idx, unpackzbits({std::chrono::high_resolution_clock::now(),y, x_off, {z, z + len}},z_res)}); //FIXME
+        }else {
+          rtn.push_back({idx, {std::chrono::high_resolution_clock::now(),y, x_off, {z, z + len}}}); //FIXME
+        }
+
+        
       }
       else if (err == SQLITE_DONE)
       {
@@ -779,6 +785,22 @@ namespace cads
 
   coro<std::tuple<int, profile>> fetch_belt_coro(long last_idx, long first_index, int size, std::string name)
   {
+    auto scan_meta = fetch_scan_meta(name);
+    
+    if (!scan_meta)
+    {
+      spdlog::get("cads")->info("{} fetch_scan_limits failed - {}", __func__, name);
+      co_return {-1,{}};
+    }
+
+    auto scan_gocator = fetch_scan_gocator(name);
+    
+    if (!scan_gocator)
+    {
+      spdlog::get("cads")->info("{} fetch_scan_gocator failed - {}", __func__, name);
+      co_return {-1,{}};
+    }
+    
     //auto query = fmt::format(R"(SELECT idx,y,x_off,z FROM PROFILE WHERE REVID = {} AND IDX >= ? AND IDX < ?)", revid);
     auto query = fmt::format(R"(SELECT rowid - 1,y,x,z FROM Profiles WHERE rowid >= ? + 1 AND rowid < ? + 1)");
     auto db_config_name = name.empty() ? database_names.profile_db_name : name;
@@ -789,7 +811,7 @@ namespace cads
       auto iend = i + size; 
       if(iend > last_idx) iend = last_idx;
       
-      auto [p, s] = fetch_belt_coro_step(std::move(stmt), i, iend);
+      auto [p, s] = fetch_belt_coro_step(std::move(stmt), i, iend, *scan_meta, (*scan_gocator).zResolution);
       stmt = std::move(s);
 
       if (p.empty())
