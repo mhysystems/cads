@@ -6,7 +6,7 @@ sqlitegocatorConfig = {
   Range = {0,99999999999999},
   Fps = gocatorFps,
   Forever = true,
-  Source = "../../profiles/rawprofile_cv311_2023-11-08.db",
+  Source = "../../profiles/FMG-Demo-2024-01-27-02275",
   TypicalSpeed = 6.0,
   Sleep = true
 }

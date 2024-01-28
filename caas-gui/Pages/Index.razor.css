@@ -38,7 +38,7 @@ mainview {
   grid-row: 2;
   display : grid;
   grid-template-columns: 1fr;
-  grid-template-rows: 1fr;
+  grid-template-rows: 100%;
   height : 100%;
   width : 100%;
   justify-items: center;
@@ -47,7 +47,7 @@ mainview {
 fixedwidth {
   display : grid;
   grid-template-columns: 1fr;
-  grid-template-rows:1fr;
+  grid-template-rows:100%;
   height : 100%;
   max-width: var(--content-max-width);
   width : min(100vw,var(--content-max-width));
@@ -58,7 +58,7 @@ fixedwidth {
 beltscan {
   display: grid;
   grid-template-columns: 1fr;
-  grid-template-rows: 2.5rem 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr;
   height : 100%;
   width : 100%;
   align-items: end;
@@ -68,7 +68,7 @@ beltscan {
 main {
   display: grid;
   grid-template-columns: 1fr;
-  grid-template-rows: var(--top-row-height) 1fr;
+  grid-template-rows: var(--top-row-height) calc(100% - var(--top-row-height));
   height: 100%;
 }
 
