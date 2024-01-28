@@ -25,6 +25,7 @@ public class AppSettings
 
   public string AlignmentCode { get; set; } = "alignment.lua";
   public bool Obfuscate { get; set; } = true;
+  public int? DeviceSerial { get; set; } = null;
 }
 
 public class Device
@@ -44,6 +45,7 @@ public class Conveyor
   public int Id { get; set; } = 0;
   public string Name { get; set; } = string.Empty;
   public string Org { get; set; } = string.Empty;
+  public string Site { get; set; } = string.Empty;
   public string LuaCode { get; set; } = string.Empty;
 
 }

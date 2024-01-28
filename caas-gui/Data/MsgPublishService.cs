@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Google.FlatBuffers;
 using CadsFlatbuffers;
 using Caas;
+using System.Security.Authentication;
 
 namespace caas_gui.Data;
 
@@ -25,10 +26,17 @@ public class MsgPublishService
   }
 
   public Device? GetDevice(string serialCipherText) {
-    var id = _config.Obfuscate switch {
-      true  => SerialToInt(serialCipherText,_config.UrlKey),
-      _     => Int32.Parse(serialCipherText)
-    };
+    
+    int? id = _config.DeviceSerial;
+
+    if(!String.IsNullOrEmpty(serialCipherText)) {
+    
+      id = _config.Obfuscate switch {
+        true  => SerialToInt(serialCipherText,_config.UrlKey),
+        _     => Int32.Parse(serialCipherText)
+      };
+    
+    }
     
     if(!id.HasValue) return null;
 

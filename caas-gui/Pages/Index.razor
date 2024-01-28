@@ -1,4 +1,5 @@
 ﻿@page "/remote/{deviceCipherText}"
+@page "/"
 
 @using Microsoft.AspNetCore.SignalR.Client
 @using caas_gui.Data
@@ -11,26 +12,17 @@
 
 
 <main>
-  @if (device is not null && hubConnection is not null && device.State.HasFlag(DeviceState.Connected))
-  {
-    <PageTitle>Caas Remote</PageTitle>
-    <div class="top-row">
-    <div>@device.Serial</div>
-    <img class="mhylogo img-fluid vertical-fit"
-      src="https://cadswebsite.blob.core.windows.net/wwwroot/MHY Systems Logo.png" alt="Mhy Systems logo" />
-  </div>
-    <mainview>
-      <fixedwidth>
-    @if (!device.State.HasFlag(DeviceState.Aligned))
-      {
-        <Alignment @ref="alignView" aligned="@AlignedUpdate"></Alignment>
-      }
-      else
-      {
-        <beltscan>
+          <beltscan>
+          <input list="datalistSites" @onchange="@((ChangeEventArgs __e) => Site = __e?.Value?.ToString())" />
+          <datalist id="datalistSites">
+            @foreach (var site in conveyors.Select( c => c.Site).Distinct())
+            {
+              <option value="@site" />
+            }
+          </datalist>
           <input list="datalistOptions" @onchange="@((ChangeEventArgs __e) => selectedConveyor = __e?.Value?.ToString())" />
           <datalist id="datalistOptions">
-            @foreach (var conveyor in conveyors)
+            @foreach (var conveyor in conveyors.Where(c => Site is not null ? c.Site == Site : true))
             {
               <option value="@conveyor.Name" />
             }
@@ -47,15 +39,7 @@
             <button class="btn btn-primary" @onclick="CancelClicked" disabled="@(!isConnected)">Cancel</button>
           </bottomrow>
         </beltscan>
-      }
-    </fixedwidth>
-    </mainview>
-  }
-  else if (device is not null)
-  {
-    <PageTitle>Error</PageTitle>
-    <p>Unable to connect to Caas Device</p>
-  }
+  
 </main>
 
 
@@ -65,6 +49,7 @@
   public string deviceCipherText { get; set; } = string.Empty;
   protected Device? device = null;
 
+  protected string? Site = null;
   protected IEnumerable<Conveyor> conveyors = Enumerable.Empty<Conveyor>();
 
   protected string? selectedConveyor { get; set; }
